@@ -152,7 +152,7 @@ export function BrowserNavigationTabs({ navigation }: { navigation: Navigation }
       <BrowserToolbarButton ref={actionsTrigger} tooltip="Navigation tabs" className="browser-navigation-actions-trigger" aria-label="Navigation tabs" aria-haspopup={compact ? 'dialog' : 'menu'} aria-expanded={Boolean(anchor)} onClick={showActions}><Codicon name="ellipsis" size="1rem" /></BrowserToolbarButton>
     </div>
     <BrowserActionSurface title="Navigation tabs" hideTitle anchor={anchor} compact={compact} fallbackFocus={actionsTrigger} onClose={() => setAnchor(null)} groups={[{ key: 'tabs', label: 'Tabs', actions: NAVIGATION_TABS.map(value => ({
-      key: value, label: NAVIGATION_TAB_LABELS[value], checked: visibleTabs.includes(value), disabled: visibleTabs.includes(value) && visibleTabs.length === 1, keepOpen: true, run: () => navigation.toggleTab(value)
+      key: value, label: NAVIGATION_TAB_LABELS[value], icon: <Codicon name={value === 'sessions' ? 'history' : 'hubot'} size="1rem" />, checked: visibleTabs.includes(value), disabled: visibleTabs.includes(value) && visibleTabs.length === 1, keepOpen: true, run: () => navigation.toggleTab(value)
     })) }, { key: 'sections', label: 'Sections', actions: navigation.sections.actions }]} />
   </>
 }

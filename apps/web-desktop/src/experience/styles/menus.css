@@ -228,9 +228,15 @@
 /* Responsive rows follow one density contract. Keep horizontal insets
    owned by each component so icons, checks, and nested actions stay aligned. */
 
-/* Submenu triggers should align their leading content with sibling menu rows. */
-:is([data-slot='dropdown-menu-sub-trigger'], [data-slot='context-menu-sub-trigger']) {
-  padding-inline-start: var(--web-space-2) !important;
+/* Submenu triggers add a flex gap around children. Action icons already carry
+   their own right margin, so remove that extra gap to align submenu labels. */
+:is(.browser-action-menu, .browser-action-sheet)
+:is(
+  [data-slot='dropdown-menu-sub-trigger'],
+  [data-slot='context-menu-sub-trigger'],
+  .browser-action-item[aria-haspopup='menu']
+) {
+  gap: 0 !important;
 }
 
 :is(

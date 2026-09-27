@@ -256,7 +256,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
-    "reason": "Hide desktop profile/card controls and expose None grouping.",
+    "reason": "Hide desktop profile/card controls, expose None grouping, and add leading icons to filter menu actions.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -272,7 +272,7 @@
     "sourceHash": "46e4a7442ecb76d75365364864c6f532af4f3c0e046e63a9cd769a6868785b61",
     "sourceRoot": "renderer",
     "inputHash": "46e4a7442ecb76d75365364864c6f532af4f3c0e046e63a9cd769a6868785b61",
-    "outputHash": "10ef3a750803a748131b4f91e018b4858d787844e5f3b47bf61c285dd0ebb809"
+    "outputHash": "70e6c80852eb88ac6564a725f31c3019a560991ed18dcb9710049f67480a2658"
   },
   {
     "name": "hidden-bot-roster",
@@ -476,7 +476,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/session-actions-menu.tsx",
-    "reason": "Remove tab/window actions while retaining session mutations.",
+    "reason": "Remove tab/window actions, retain session mutations, and add leading icons to project destinations.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -491,7 +491,7 @@
     "sourceHash": "235143c976b1d6b777dd2f13ad1f1ddadd6d0a3ff2b5bb83034d8fc9b630dc71",
     "sourceRoot": "renderer",
     "inputHash": "235143c976b1d6b777dd2f13ad1f1ddadd6d0a3ff2b5bb83034d8fc9b630dc71",
-    "outputHash": "35284ef964e4a55db080169c5255b6b377a3e61c3f32052e4d627cafcded82db"
+    "outputHash": "32bdc2d791c9ca731bdfd0e22c1e60ca307c73002d485cdb56cf0838fefa0f6c"
   },
   {
     "name": "canonical-bot-row-actions",

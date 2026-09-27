@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useId, useState, type ReactNode } from 'react'
 import { BrowserActionSurface, type BrowserActionAnchor, type BrowserAction } from './ui/action-surface'
 import { useMobileBrowser } from './ui/use-compact-browser'
+import { Codicon } from '../upstream/browser-api'
 
 import { HIDDEN_SECTIONS_KEY, readHiddenSections } from './sidebar-section-preferences'
 
@@ -43,6 +44,7 @@ export function useBrowserSidebarSections() {
   const actions: BrowserAction[] = availableSections.filter(section => section.key !== 'sessions').map(section => ({
     key: section.key,
     label: section.label,
+    icon: <Codicon name={section.key === 'cron-jobs' ? 'watch' : section.key.startsWith('messaging:') ? 'comment' : section.key === 'pinned' ? 'pin' : 'folder'} size="1rem" />,
     checked: !hiddenSections.includes(section.key),
     keepOpen: true,
     run: () => setHiddenSections(current => current.includes(section.key) ? current.filter(key => key !== section.key) : [...current, section.key])
