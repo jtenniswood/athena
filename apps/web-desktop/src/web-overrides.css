@@ -4,6 +4,10 @@
    clip content above it. Dynamic height also follows mobile browser chrome. */
 html {
   height: calc(100dvh / var(--web-ui-scale, 1)) !important;
+  /* iPadOS defaults text-size-adjust to none. WebKit then skips CSS zoom for
+     explicitly sized text in some layouts, even while it scales the boxes. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* Size the app to the area above the keyboard and follow focus-driven panning.
