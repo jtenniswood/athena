@@ -113,6 +113,7 @@ export function BrowserProfileNavigation({ hidden = false }: { hidden?: boolean 
             {
               key: 'all-profiles',
               label: 'All Profiles',
+              icon: <Codicon name="organization" size="1rem" />,
               checked: !hideAllProfilesButton,
               keepOpen: true,
               run: () => setHideAllProfilesButton(value => !value)
@@ -120,6 +121,7 @@ export function BrowserProfileNavigation({ hidden = false }: { hidden?: boolean 
             ...profileItems.map(item => ({
               key: `profile-${item.key}`,
               label: item.label,
+              icon: <Codicon name="account" size="1rem" />,
               checked: !hiddenProfiles.includes(item.key),
               keepOpen: true,
               run: () => toggleProfile(item.key)

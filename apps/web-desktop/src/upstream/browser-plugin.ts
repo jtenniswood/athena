@@ -449,7 +449,37 @@ export function useBrowserSearchLabel(source: string, root: string): string {
 function filterBrowserSessionMenu(source: string): string {
   const target = 'function OptionCheckbox({ checked, onCheck, option }: { checked: boolean; onCheck: () => void; option: Option }) {'
   if (source.split(target).length !== 2) throw new Error('Browser session filter menu target changed')
-  return source.replace(target, target + "\n  if (['card-rows', 'profile-rail', 'all-profiles'].includes(option.id)) return null\n")
+  const replacements: [string, string][] = [
+    [
+      'function OptionGlyph({ option }: { option: Option }) {',
+      `const OPTION_ICONS: Record<string, string> = { 'all-profiles': 'account', archived: 'archive' }
+
+function OptionGlyph({ option }: { option: Option }) {`
+    ],
+    [
+      "  return option.icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={option.icon} size=\"0.8125rem\" /> : null",
+      "  const icon = option.icon || OPTION_ICONS[option.id]\n  return icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={icon} size=\"0.8125rem\" /> : null"
+    ],
+    ['<DropdownMenuSubTrigger hideChevron>\n              Grouping', '<DropdownMenuSubTrigger hideChevron>\n              <Codicon name="list-tree" size="0.8125rem" />\n              Grouping'],
+    ['<DropdownMenuSubTrigger>Ordering</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="list-ordered" size="0.8125rem" />Ordering</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger>Show</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="eye" size="0.8125rem" />Show</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="pulse" size="0.8125rem" />Status</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger>Pull request</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="git-pull-request" size="0.8125rem" />Pull request</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger>Profile</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="account" size="0.8125rem" />Profile</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger>Project</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="root-folder" size="0.8125rem" />Project</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuItem onSelect={requestProfileCreate}>{t.profiles.newProfile}</DropdownMenuItem>', '<DropdownMenuItem onSelect={requestProfileCreate}><Codicon name="add" size="0.8125rem" />{t.profiles.newProfile}</DropdownMenuItem>'],
+    ['<DropdownMenuItem onSelect={() => void runImportProfileFlow()}>\n                {t.profiles.importProfile}', '<DropdownMenuItem onSelect={() => void runImportProfileFlow()}>\n                <Codicon name="cloud-download" size="0.8125rem" />\n                {t.profiles.importProfile}'],
+    ['<DropdownMenuItem onSelect={resetSidebarView}>Reset to defaults</DropdownMenuItem>', '<DropdownMenuItem onSelect={resetSidebarView}><Codicon name="refresh" size="0.8125rem" />Reset to defaults</DropdownMenuItem>'],
+    ["            {foldCollapsed ? 'Expand all' : 'Collapse all'}", "            <Codicon name={foldCollapsed ? 'expand-all' : 'collapse-all'} size=\"0.8125rem\" />\n            {foldCollapsed ? 'Expand all' : 'Collapse all'}"],
+    ['          Mark all as read\n', '          <Codicon name="check-all" size="0.8125rem" />\n          Mark all as read\n']
+  ]
+  let output = source
+  for (const [before, after] of replacements) {
+    if (output.split(before).length !== 2) throw new Error(`Browser session menu icon contract changed: ${before.slice(0, 48)}`)
+    output = output.replace(before, after)
+  }
+  const hideDesktopOnlyRows = "\n  if (['card-rows', 'profile-rail', 'all-profiles'].includes(option.id)) return null\n"
+  return output.replace(target, target + hideDesktopOnlyRows)
 }
 
 export function showHiddenBotsInBrowserRoster(source: string): string {
@@ -573,13 +603,16 @@ export function disableBrowserSessionRowTabs(source: string): string {
 export function disableBrowserSessionOpenActions(source: string): string {
   const tabCondition = "...(surface === 'row' && !alreadyTabbed"
   const windowCondition = '...(canOpenSessionWindow()'
+  const projectTarget = '        >\n          {node.label}\n        </kit.Item>'
   const contract = contracts.find(item => item.module === 'app/chat/sidebar/session-actions-menu.tsx')!
-  if (createHash('sha256').update(source).digest('hex') !== contract.sourceHash || source.split(tabCondition).length !== 2 || source.split(windowCondition).length !== 2) {
+  if (createHash('sha256').update(source).digest('hex') !== contract.sourceHash || source.split(tabCondition).length !== 2 || source.split(windowCondition).length !== 2 || source.split(projectTarget).length !== 2) {
     throw new Error('Browser session open-action contract changed')
   }
   // Browser chat is single-view. Keep the session action menu for rename,
-  // pinning, export and other actions, but remove the desktop tab/window hops.
+  // pinning, export and other actions, but remove tab/window hops. Project
+  // destinations retain their names and gain the same leading folder cue.
   return source.replace(tabCondition, '...(false').replace(windowCondition, '...(false')
+    .replace(projectTarget, '        >\n          <Codicon name="root-folder" size="0.875rem" />\n          {node.label}\n        </kit.Item>')
 }
 
 export function filterBrowserKeybinds(source: string): string {
