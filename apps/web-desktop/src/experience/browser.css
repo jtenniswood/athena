@@ -99,6 +99,7 @@
 /* Header actions share one square target. Let the filter's grid wrapper grow
    with its button instead of keeping the upstream desktop-only size. */
 .browser-sessions-pane [data-browser-section-header] button[data-size="icon-xs"] { margin:0; }
+.browser-sessions-pane [data-browser-section-header] button[data-size="icon-xs"] .codicon { font-size:var(--web-icon-small) !important; }
 .browser-sessions-pane [data-browser-section-header] button[data-size="icon-xs"]:is(:hover,:focus-visible) { background:var(--web-hover); color:var(--web-text); opacity:1; }
 .browser-sessions-pane [data-browser-section-header] div:has(> button[aria-label="Filters"]) { width:auto; height:auto; flex-shrink:0; }
 /* Center the empty state in its chat viewport without composer-dependent
@@ -170,7 +171,7 @@
  .browser-sessions-pane [data-browser-section-header] { min-height:var(--web-touch-min); align-items:center; }
  .browser-sessions-pane [data-browser-section-label] { box-sizing:border-box; min-width:var(--web-touch-min); align-items:center; }
  .browser-sessions-pane [class*="group/handle"] { box-sizing:border-box; min-width:var(--web-touch-target); min-height:var(--web-touch-target); }
- .browser-sessions-pane [data-row-actions] { gap:var(--web-space-1); }
+ .browser-sessions-pane [data-row-actions] { gap:var(--web-space-1); margin-inline-end:calc(-1 * var(--web-space-2)); }
  .browser-sessions-pane [data-row-actions] button { position:relative; box-sizing:border-box; min-width:var(--web-touch-min); width:var(--web-touch-min); min-height:var(--web-touch-min); height:var(--web-touch-min); flex-shrink:0; color:var(--web-text-subtle) !important; }
  /* Session ages can sit beside the row button. Hide their separator too and
     keep the always-visible context button in flow so it has its own space. */
