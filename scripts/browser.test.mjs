@@ -55,6 +55,7 @@ test('settings customization hides known sections and fields while inheriting ne
     assert.equal(isSettingsSectionVisible('providers'), true)
     assert.deepEqual(orderSettingsSections([{ id: 'config:model' }, { id: 'config:appearance' }]).map(item => item.id), ['config:appearance', 'config:model'])
     assert.equal(isSettingsFieldVisible('display.show_reasoning'), false)
+    assert.equal(isSettingsFieldVisible('browser.use_real_profile'), true)
     assert.equal(isSettingsFieldVisible('new.upstream_option'), true)
   } finally {
     hiddenSections.length = 0
@@ -82,13 +83,13 @@ test('settings groups retain new upstream pages and search keeps old names and d
     { id: 'sp-about', label: 'About', run }
   ], (id, label) => ({ id: `set-${id}`, label, run: () => id }))
   const gateway = entries.find(entry => entry.id === 'sp-gateway')
-  assert.equal(gateway.label, 'Server connection')
+  assert.equal(gateway.label, 'Server Connection')
   assert.ok(gateway.keywords.includes('Gateways'))
   assert.equal(gateway.run, run)
   const providers = entries.find(entry => entry.id === 'sp-providers&pview=accounts')
   assert.ok(providers.keywords.includes('Providers'))
   assert.equal(providers.run, run)
-  assert.equal(entries.find(entry => entry.id === 'sp-keys&kview=settings').label, 'Credentials — Server credentials')
+  assert.equal(entries.find(entry => entry.id === 'sp-keys&kview=settings').label, 'Credentials — Server Credentials')
   assert.equal(entries.find(entry => entry.label === 'Configuration').run(), 'config:browser-configuration')
   assert.ok(entries.find(entry => entry.label === 'Configuration').keywords.includes('Backup & reset'))
   assert.ok(entries.find(entry => entry.label === 'Memory').keywords.includes('Memory & context'))
@@ -96,7 +97,7 @@ test('settings groups retain new upstream pages and search keeps old names and d
   assert.equal(entries.at(-1).id, 'sp-future')
   const target = { view: 'config:browser', field: 'browser.use_real_profile' }
   const field = presentSettingsSearchEntry({ context: 'Browser', keywords: ['profile'], target })
-  assert.equal(field.context, 'Browser automation')
+  assert.equal(field.context, 'Browser Automation')
   assert.ok(field.keywords.includes('Browser'))
   assert.equal(field.target, target)
 })

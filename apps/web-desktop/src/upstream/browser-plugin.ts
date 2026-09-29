@@ -244,12 +244,6 @@ export function hideBrowserAppearanceOnlySettings(source: string): string {
   return output
 }
 
-export function hideBrowserServerBrowserProfile(source: string): string {
-  const target = "{toolset.name === 'browser' && <BrowserRealProfilePanel profile={profile} />}"
-  if (source.split(target).length !== 2) throw new Error('Browser server-profile capability boundary changed')
-  return source.replace(target, "{!window.__HERMES_WEB_BRIDGE__ && toolset.name === 'browser' && <BrowserRealProfilePanel profile={profile} />}")
-}
-
 export function hideBrowserLocalProjectDirectory(source: string): string {
   const target = '<DefaultProjectDirSetting />'
   if (source.split(target).length !== 2) throw new Error('Browser archived-chat directory boundary changed')
@@ -871,7 +865,6 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
     hideBrowserAppearanceOnlySettings,
     hideBrowserLocalProjectDirectory,
-    hideBrowserServerBrowserProfile,
     filterBrowserSettingsSearch: source => filterBrowserSettingsSearch(source, root),
     filterBrowserSettingsPalette: source => filterBrowserSettingsPalette(source, root),
     useBrowserPinWrites: source => useBrowserPinWrites(source, root),

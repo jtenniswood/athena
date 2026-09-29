@@ -56,7 +56,6 @@ export const settingsPolicy = {
       // do not receive from the configured gateway.
       'appearance.app-actions',
       'appearance.translucency',
-      'browser.use_real_profile',
       'terminal.font_family',
       'updates.non_interactive_local_changes',
       'voice.client_direct',

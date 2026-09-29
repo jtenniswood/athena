@@ -2240,27 +2240,5 @@
       }
     ],
     "removal": "Remove once this control has a browser implementation for selecting a server-side project directory."
-  },
-  {
-    "name": "browser-real-profile-capability",
-    "kind": "browser-transform",
-    "order": 20,
-    "module": "app/skills/index.tsx",
-    "sourceRoot": "renderer",
-    "sourceHash": "16758986e506b3449cbe196b612fa71e3ae39345e6c861458d8cf4dcc4039754",
-    "inputHash": "16758986e506b3449cbe196b612fa71e3ae39345e6c861458d8cf4dcc4039754",
-    "outputHash": "a23ad654463dcf8f74c7ad694bb9c35a512b9d7bac7a53c807225cea0ed77513",
-    "handlers": [
-      "hideBrowserServerBrowserProfile"
-    ],
-    "reason": "Hide the server browser-profile selector until the configured host advertises that capability.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
-    "tests": [
-      {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "settings and command center use one upstream overlay and preserve the chat"
-      }
-    ],
-    "removal": "Remove when the configured gateway exposes a reliable browser-profile capability for this control."
   }
 ]

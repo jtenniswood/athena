@@ -62,7 +62,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const pageNotice = activeView === 'billing'
     ? 'This page shows billing from the configured Hermes server, such as Nous usage. It does not include external model provider or web hosting charges.'
     : activeView === 'config:browser'
-      ? 'Browser automation runs on the configured Hermes server. Private URLs and local network access refer to networks visible from that server.'
+      ? 'Browser automation runs on the configured Hermes server. “Use My Real Browser Profile” uses that server’s supported Chromium profile, not the browser viewing this page. Private URLs and local network access refer to networks visible from that server.'
       : activeView === 'vault'
         ? 'Saved logins are stored and used by the configured Hermes server for browser automation.'
         : null
