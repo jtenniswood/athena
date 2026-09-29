@@ -2087,5 +2087,53 @@
     ],
     "removal": "Remove when upstream controlled dialogs restore their opening control and constrain resizable content to the scaled browser viewport.",
     "specifier": "@hermes/plugin-sdk"
+  },
+  {
+    "name": "browser-settings-frame",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/index.tsx",
+    "reason": "Keep upstream settings navigation and content while replacing only the browser presentation with a responsive full-viewport frame.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings fills the viewport and uses compact list and detail navigation"
+      }
+    ],
+    "removal": "Remove when upstream exposes a settings-only responsive composition slot with equivalent category, content, focus, and close behavior.",
+    "sourceRoot": "renderer",
+    "sourceHash": "2505834a903fa6250bbb5bcd754248b90532e5ebaa7469b1ef22980e508ee8cd",
+    "inputHash": "2505834a903fa6250bbb5bcd754248b90532e5ebaa7469b1ef22980e508ee8cd",
+    "outputHash": "ac4d76f045c6ac73c8ec9647f0c7181192ee18cd4a9e6f42d3590ba011249574",
+    "handlers": [
+      "useBrowserSettingsFrame"
+    ]
+  },
+  {
+    "name": "browser-settings-pending-saves",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/config-settings.tsx",
+    "reason": "Keep the latest debounced settings save alive across page exit and make it part of safe PWA activation.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/pending-work.test.mjs",
+        "scenario": "pending work waits for each owner before reporting readiness"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings actions retain drafts and transfer modal focus"
+      }
+    ],
+    "removal": "Remove when settings exposes an equivalent supported save completion and browser update readiness contract.",
+    "sourceRoot": "renderer",
+    "sourceHash": "e557900fdf12bed8efda0865281dd3462fe6fa79455f2c3021daf1d8bcdce4f6",
+    "inputHash": "e557900fdf12bed8efda0865281dd3462fe6fa79455f2c3021daf1d8bcdce4f6",
+    "outputHash": "042548ff7f86c08b0baa156f88e19fe6813d9720eb26ce08cb1dc30d247f5887",
+    "handlers": [
+      "trackBrowserSettingsSaves"
+    ]
   }
 ]

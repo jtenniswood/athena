@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { Codicon } from '@/components/ui/codicon'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { useI18n } from '@/i18n'
-import { readDesktopDir, setDesktopFsRemotePicker } from '@/lib/desktop-fs'
-import { displayPath, pathLeaf } from '@/lib/display-path'
-import { cn } from '@/lib/utils'
+import { Codicon, Dialog, DialogContent, DialogDescription, DialogTitle, useI18n } from '../upstream/browser-api'
+import { displayPath, pathLeaf, readDesktopDir, setDesktopFsRemotePicker, cn } from '../upstream/remote-folder-picker-api'
 import { apiFetch } from '../platform/connection'
 import { Button, Input } from '../upstream/ui'
 

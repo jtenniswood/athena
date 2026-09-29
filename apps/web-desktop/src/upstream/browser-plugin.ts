@@ -412,6 +412,43 @@ export function useBrowserSectionStyleHooks(source: string): string {
   return source
 }
 
+export function trackBrowserSettingsSaves(source: string, root: string): string {
+  const reactImport = "import { useEffect, useMemo, useRef, useState } from 'react'"
+  const reactBrowserImport = "import { useEffect, useId, useMemo, useRef, useState } from 'react'"
+  const queue = '  const saveQueueRef = useRef<Promise<void>>(Promise.resolve())'
+  const trackedQueue = `${queue}\n  const browserWorkId = useId()\n  const browserSavePendingRef = useRef(false)\n  const browserSaveFailureRef = useRef<string | null>(null)\n  const browserSaveWaitersRef = useRef(new Set<() => void>())\n  const browserWorkReleaseRef = useRef<(() => void) | null>(null)`
+  const cacheWrite = '          writeConfigCache(snapshot)'
+  const confirmedWrite = `${cacheWrite}\n\n          if (saveVersionRef.current === v) {\n            browserSavePendingRef.current = false\n            browserSaveFailureRef.current = null\n            for (const wake of browserSaveWaitersRef.current) wake()\n            browserSaveWaitersRef.current.clear()\n            browserWorkReleaseRef.current?.()\n            browserWorkReleaseRef.current = null\n          }`
+  const apply = `  const applyConfig = (next: HermesConfigRecord) => {\n    saveVersionRef.current += 1\n    setConfig(next)\n    setSaveVersion(saveVersionRef.current)\n  }`
+  const trackedApply = `  const applyConfig = (next: HermesConfigRecord) => {\n    saveVersionRef.current += 1\n    browserSavePendingRef.current = true\n    browserSaveFailureRef.current = null\n    if (!browserWorkReleaseRef.current) {\n      browserWorkReleaseRef.current = registerPendingBrowserWork({\n        id: \`settings-config:\${browserWorkId}\`,\n        async prepare() {\n          // The renderer's existing autosave is debounced by 550ms. Give its\n          // effect time to enqueue the latest edit before waiting on its queue.\n          await new Promise(resolve => window.setTimeout(resolve, 600))\n          if (browserSaveFailureRef.current) return { ready: false, reason: browserSaveFailureRef.current }\n          if (browserSavePendingRef.current) {\n            await new Promise<void>(resolve => browserSaveWaitersRef.current.add(resolve))\n          }\n          return browserSaveFailureRef.current\n            ? { ready: false, reason: browserSaveFailureRef.current }\n            : browserSavePendingRef.current\n              ? { ready: false, reason: 'A settings change is still being saved. Try the update again.' }\n              : { ready: true }\n        }\n      })\n    }\n    setConfig(next)\n    setSaveVersion(saveVersionRef.current)\n  }`
+  const cleanup = '    return () => window.clearTimeout(t)'
+  const retainedCleanup = `    return () => {\n      // A route close must not cancel the last debounced save. A newer edit\n      // or profile switch changes the version and still cancels this timer.\n      if (saveVersionRef.current !== v) window.clearTimeout(t)\n    }`
+  const failedSave = `          if (saveVersionRef.current === v) {\n            notifyError(err, c.autosaveFailed)\n          }`
+  const reportedFailure = `          if (saveVersionRef.current === v) {\n            browserSaveFailureRef.current = 'A settings change could not be saved. Reopen Settings and save it before updating.'\n            for (const wake of browserSaveWaitersRef.current) wake()\n            browserSaveWaitersRef.current.clear()\n            notifyError(err, c.autosaveFailed)\n          }`
+  let output = source
+  for (const [before, after] of [
+    [reactImport, reactBrowserImport],
+    [queue, trackedQueue],
+    [cacheWrite, confirmedWrite],
+    [cleanup, retainedCleanup],
+    [failedSave, reportedFailure],
+    [apply, trackedApply]
+  ]) {
+    if (output.split(before).length !== 2) throw new Error('Browser settings save lifecycle contract changed')
+    output = output.replace(before, after)
+  }
+  const service = JSON.stringify(path.join(root, 'src/platform/pending-work'))
+  return `import { registerPendingBrowserWork } from ${service}\n${output}`
+}
+
+export function useBrowserSettingsFrame(source: string, root: string): string {
+  const target = `  return (\n    <OverlayView closeLabel={t.settings.closeSettings} edgeBadge={searchPill} onClose={onClose}>\n      <OverlaySplitLayout>\n        <OverlayNav footer={navFooter} groups={navGroups} />\n\n        <OverlayMain className="px-0 pb-0">{activeSettingsContent}</OverlayMain>\n      </OverlaySplitLayout>\n    </OverlayView>\n  )`
+  const replacement = `  return (\n    <BrowserSettingsFrame\n      backLabel={t.common.back}\n      closeLabel={t.settings.closeSettings}\n      footer={navFooter}\n      groups={navGroups}\n      onClose={onClose}\n      search={searchPill}\n      title={t.settings.nav.keysSettings}\n    >\n      {activeSettingsContent}\n    </BrowserSettingsFrame>\n  )`
+  if (source.split(target).length !== 2) throw new Error('Browser settings frame composition contract changed')
+  const frame = JSON.stringify(path.join(root, 'src/experience/settings/settings-frame'))
+  return `import { BrowserSettingsFrame } from ${frame}\n${source.replace(target, replacement)}`
+}
+
 export function useBrowserProjectDisclosure(source: string): string {
   const changes: [string, string][] = [
     [
@@ -733,6 +770,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserBotSelection: source => useBrowserRosterSelection(source, root, 'bot'),
     useBrowserGroupSelection: source => useBrowserRosterSelection(source, root, 'group'),
     useBrowserCreatedGroupSelection: source => useBrowserRosterSelection(source, root, 'created-group'),
+    trackBrowserSettingsSaves: source => trackBrowserSettingsSaves(source, root),
+    useBrowserSettingsFrame: source => useBrowserSettingsFrame(source, root),
     useBrowserSearchLabel: source => useBrowserSearchLabel(source, root),
     ungroupedStore: source => enableBrowserUngroupedSessions(source, 'store'),
     ungroupedMenu: source => enableBrowserUngroupedSessions(source, 'menu'),

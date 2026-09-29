@@ -1,3 +1,5 @@
+import { flushPendingBrowserWork } from './pending-work'
+
 export interface DraftSnapshot {
   blocked: boolean
   storageKey: string
@@ -66,6 +68,8 @@ export function assertSafeReload(): void {
 export async function reloadReadinessAfterSaving(): Promise<ReturnType<typeof reloadReadiness>> {
   const state = reloadReadiness(false)
   if (!state.ready) return state
+  const pendingWork = await flushPendingBrowserWork()
+  if (!pendingWork.ready) return { ready: false, reason: pendingWork.reason }
   try { await window.__HERMES_WEB_FLUSH_DRAFTS__?.() }
   catch { return { ready: false, reason: 'Your text draft could not be saved. Copy it before reloading.' } }
   // Capture again after the await: activity or composer content may have changed.
