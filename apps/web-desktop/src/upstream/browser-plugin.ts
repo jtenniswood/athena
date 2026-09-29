@@ -449,6 +449,40 @@ export function useBrowserSettingsFrame(source: string, root: string): string {
   return `import { BrowserSettingsFrame } from ${frame}\n${source.replace(target, replacement)}`
 }
 
+export function useBrowserProjectDisclosure(source: string): string {
+  const changes: [string, string][] = [
+    [
+      '  if (color && !icon) {\n    return (\n      <SidebarRowLeadGlyph>\n        <span aria-hidden="true" className="size-1 rounded-full" style={{ backgroundColor: color }} />\n      </SidebarRowLeadGlyph>\n    )\n  }\n\n',
+      ''
+    ],
+    [
+      "name={icon || (isNoProject ? 'home' : isAuto ? 'repo' : 'folder-library')}",
+      "name={isNoProject ? icon || 'home' : open ? 'folder-opened' : 'folder'}"
+    ],
+    [
+      'export function projectIcon({ color, icon, isAuto, isNoProject }: SidebarProjectTree) {',
+      'export function projectIcon({ color, icon, isNoProject }: SidebarProjectTree, open = false) {'
+    ],
+    [
+      '      {projectIcon(project)}\n    </SidebarRowGrab>',
+      '      <button aria-label={s.projects.toggle(project.label, !open)} className="grid size-full place-items-center bg-transparent" onClick={event => { event.stopPropagation(); toggleOpen() }} type="button">{projectIcon(project, open)}</button>\n    </SidebarRowGrab>'
+    ],
+    [
+      '    <SidebarRowLead>{projectIcon(project)}</SidebarRowLead>',
+      '    <SidebarRowLead><button aria-label={s.projects.toggle(project.label, !open)} className="grid size-full place-items-center bg-transparent" onClick={event => { event.stopPropagation(); toggleOpen() }} type="button">{projectIcon(project, open)}</button></SidebarRowLead>'
+    ],
+    [
+      '      aria-label={\n        project.isAuto\n          ? `${s.projects.enter(project.label)} (${s.projects.autoDiscovered})`\n          : s.projects.enter(project.label)\n      }',
+      '      aria-label={s.projects.toggle(project.label, !open)}'
+    ],
+    [
+      '      onClick={() => onEnter?.(project.id)}\n    >',
+      '      onClick={toggleOpen}\n      onDoubleClick={() => onEnter?.(project.id)}\n    >'
+    ]
+  ]
+  return replaceBrowserContract(source, changes)
+}
+
 export function useBrowserSearchLabel(source: string, root: string): string {
   const ariaTarget = 'aria-label={s.searchAria}'
   const placeholderTarget = 'placeholder={s.searchPlaceholder}'
@@ -726,6 +760,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserSectionIdentity: source => useBrowserSectionIdentity(source, root),
     useBrowserTouchHooks, useBrowserCodingActionHooks, useBrowserSectionIds, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
+    useBrowserProjectDisclosure,
     exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction, fixBrowserTooltipBoundary,
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth, filterBrowserSessionMenu,

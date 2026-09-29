@@ -1722,6 +1722,28 @@
     "outputHash": "09d4ec7325bdd8d9d28166c1aed5de0bf154766b979a02e6c06827ba9b0613af"
   },
   {
+    "name": "browser-project-group-disclosure",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/projects/overview-row.tsx",
+    "reason": "Use open and closed folder glyphs and make the project group icon, title, and disclosure control toggle its preview.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "section headers preserve disclosure and browser styling"
+      }
+    ],
+    "removal": "Remove when upstream project group rows expose a browser-friendly disclosure control across the group header.",
+    "sourceRoot": "renderer",
+    "sourceHash": "f9f8a864ddb3246f5906ded933acf67a2f8a2bd3e5b49ed51bc4928cee03465a",
+    "inputHash": "f9f8a864ddb3246f5906ded933acf67a2f8a2bd3e5b49ed51bc4928cee03465a",
+    "outputHash": "7801a2163a4a3325278b7427a9ebce88dd0ab40889c1f446c36632e6fcd2f9ee",
+    "handlers": [
+      "useBrowserProjectDisclosure"
+    ]
+  },
+  {
     "name": "browser-cron-jobs-section-styling",
     "kind": "browser-transform",
     "order": 20,
