@@ -23,15 +23,28 @@ function rewrite(code: string, id: string): { code: string; map: null } | null {
     if (normalizedId.endsWith('/desktop/src/components/boot-failure-overlay.tsx')) {
       let patched = code.replace("  if (view === 'connect') {", `
   if (window.__HERMES_WEB_BRIDGE__) {
-    actions = [settingsAction, { ...retryAction, variant: 'secondary', onClick: () => {
+    const configuredRetryAction = { ...retryAction, variant: 'secondary', onClick: () => {
       setBusy('retry')
       void window.hermesDesktop.applyConnectionConfig({ mode: 'remote' })
         .catch(error => notifyError(error, 'Could not reconnect'))
         .finally(() => setBusy(null))
-    } }]
-    hint = 'Sign in to the configured gateway, or retry when it is available. The browser app does not run a local backend.'
+    } }
+    actions = remoteReauth
+      ? [
+          { key: 'signin', label, onClick: () => void signInRemote(), icon: <LogIn />, busy: 'signin' },
+          { ...settingsAction, variant: 'secondary' },
+          configuredRetryAction
+        ]
+      : [settingsAction, configuredRetryAction]
+    hint = remoteReauth
+      ? 'Sign in to restore your gateway session. Your chats and settings are preserved.'
+      : 'Reconnect to the configured gateway, or check its settings if the problem continues.'
   }
   if (view === 'connect') {`)
+      patched = patched.replace(
+        "      await desktop?.oauthLogoutConnectionConfig?.(remoteReauth.url)",
+        "      if (!window.__HERMES_WEB_BRIDGE__) await desktop?.oauthLogoutConnectionConfig?.(remoteReauth.url)"
+      )
       patched = patched.replace(
         '<Button onClick={openLogs} variant="ghost">',
         '{!window.__HERMES_WEB_BRIDGE__ && <Button onClick={openLogs} variant="ghost">'

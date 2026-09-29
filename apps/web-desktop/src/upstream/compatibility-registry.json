@@ -196,7 +196,7 @@
     "kind": "renderer-transform",
     "order": 30,
     "module": "components/boot-failure-overlay.tsx",
-    "reason": "Offer configured-gateway settings and soft retry without native backend or log actions",
+    "reason": "Offer direct browser sign-in for expired gateway sessions, configured-gateway settings, and soft retry without native backend or log actions",
     "owner": "apps/web-desktop/src/upstream/transforms.ts",
     "tests": [
       {
@@ -206,7 +206,7 @@
     ],
     "removal": "Remove when upstream recovery offers configured-gateway actions without native backend/log assumptions.",
     "sourceHash": "43d0c90ed67d36fd54bf61df9f1182539d0754db045b968c25d9e4a793350078",
-    "outputHash": "2ea2f51f9ab1608bb0c09344dcb4221c9c597ed2ae7f5231819ab347d55f6b12",
+    "outputHash": "4df0d7a2ff4f86bd69e0a1c247ac7524f43038697d444db4ac3c745a94c4bdd1",
     "handler": "browser-gateway-recovery",
     "sourceRoot": "renderer"
   },
