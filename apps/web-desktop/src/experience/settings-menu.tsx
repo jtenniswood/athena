@@ -1,9 +1,8 @@
 import { useState, type RefObject } from 'react'
-import { useStore } from '@nanostores/react'
-import { $activeGatewayProfile } from '@/store/profile'
-import { useGatewayRequest } from '@/app/gateway/hooks/use-gateway-request'
 import { APP_ROUTES, Codicon, useI18n, type StatusbarItem } from '../upstream/browser-api'
 import { useBrowserApproval } from '../upstream/approval'
+import { useBrowserActiveProfile } from '../upstream/profiles'
+import { useBrowserGatewayRequest } from '../upstream/gateway-request'
 import type { BrowserApprovalMode } from './contracts/actions'
 import { useBrowserSettings } from '../upstream/settings'
 import { BrowserActionSurface, type BrowserActionAnchor, type BrowserActionGroup } from './ui/action-surface'
@@ -51,8 +50,8 @@ export function SettingsMenu({ triggerRef, backendVersion, onOpenGateway, onOpen
   const compact = useMobileBrowser()
   const [anchor, setAnchor] = useState<BrowserActionAnchor | null>(null)
   const { t } = useI18n()
-  const activeProfile = useStore($activeGatewayProfile)
-  const { requestGateway } = useGatewayRequest()
+  const activeProfile = useBrowserActiveProfile()
+  const requestGateway = useBrowserGatewayRequest()
   const { mode, setMode } = useBrowserApproval(activeProfile || 'default', requestGateway)
   const approvalCopy = t.shell.approvalMode
   const approvalLabels: Record<BrowserApprovalMode, string> = { manual: approvalCopy.manual, smart: approvalCopy.smart, off: approvalCopy.off }

@@ -196,7 +196,7 @@
     "kind": "renderer-transform",
     "order": 30,
     "module": "components/boot-failure-overlay.tsx",
-    "reason": "Offer direct browser sign-in for expired gateway sessions, configured-gateway settings, and soft retry without native backend or log actions",
+    "reason": "Offer configured-gateway settings and soft retry without native backend or log actions",
     "owner": "apps/web-desktop/src/upstream/transforms.ts",
     "tests": [
       {
@@ -206,7 +206,7 @@
     ],
     "removal": "Remove when upstream recovery offers configured-gateway actions without native backend/log assumptions.",
     "sourceHash": "43d0c90ed67d36fd54bf61df9f1182539d0754db045b968c25d9e4a793350078",
-    "outputHash": "4df0d7a2ff4f86bd69e0a1c247ac7524f43038697d444db4ac3c745a94c4bdd1",
+    "outputHash": "2ea2f51f9ab1608bb0c09344dcb4221c9c597ed2ae7f5231819ab347d55f6b12",
     "handler": "browser-gateway-recovery",
     "sourceRoot": "renderer"
   },
@@ -272,7 +272,7 @@
     "sourceHash": "46e4a7442ecb76d75365364864c6f532af4f3c0e046e63a9cd769a6868785b61",
     "sourceRoot": "renderer",
     "inputHash": "46e4a7442ecb76d75365364864c6f532af4f3c0e046e63a9cd769a6868785b61",
-    "outputHash": "70e6c80852eb88ac6564a725f31c3019a560991ed18dcb9710049f67480a2658"
+    "outputHash": "7f2620c4101503a3e187db4906dd8414d1b983c4b8df2a924f5a221b31be9c21"
   },
   {
     "name": "hidden-bot-roster",
@@ -469,7 +469,7 @@
     "sourceHash": "9f667fd4b055f69b4919c6f5eeefc560a4e68bafc2d255b6db0c7773c3fda911",
     "sourceRoot": "renderer",
     "inputHash": "9f667fd4b055f69b4919c6f5eeefc560a4e68bafc2d255b6db0c7773c3fda911",
-    "outputHash": "0c257ba4ef9ddee55578fb68597bb7e6d6c31dc4b45bea309309b49f3a55bb24"
+    "outputHash": "642b23dff706be1223efa38437f7e13a297b3832a4b733802607df1617c1e320"
   },
   {
     "name": "single-conversation-menus",
@@ -2240,5 +2240,53 @@
       }
     ],
     "removal": "Remove once this control has a browser implementation for selecting a server-side project directory."
+  },
+  {
+    "name": "browser-project-group-disclosure",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/projects/overview-row.tsx",
+    "reason": "Use open and closed folder glyphs and make the project group icon, title, and disclosure control toggle its preview.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "section headers preserve disclosure and browser styling"
+      }
+    ],
+    "removal": "Remove when upstream project group rows expose a browser-friendly disclosure control across the group header.",
+    "sourceRoot": "renderer",
+    "sourceHash": "f9f8a864ddb3246f5906ded933acf67a2f8a2bd3e5b49ed51bc4928cee03465a",
+    "inputHash": "f9f8a864ddb3246f5906ded933acf67a2f8a2bd3e5b49ed51bc4928cee03465a",
+    "outputHash": "7801a2163a4a3325278b7427a9ebce88dd0ab40889c1f446c36632e6fcd2f9ee",
+    "handlers": [
+      "useBrowserProjectDisclosure"
+    ]
+  },
+  {
+    "name": "browser-settings-pending-saves",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/config-settings.tsx",
+    "reason": "Keep the latest debounced settings save alive across page exit and make it part of safe PWA activation.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/pending-work.test.mjs",
+        "scenario": "pending work waits for each owner before reporting readiness"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings actions retain drafts and transfer modal focus"
+      }
+    ],
+    "removal": "Remove when settings exposes an equivalent supported save completion and browser update readiness contract.",
+    "sourceRoot": "renderer",
+    "sourceHash": "e557900fdf12bed8efda0865281dd3462fe6fa79455f2c3021daf1d8bcdce4f6",
+    "inputHash": "e557900fdf12bed8efda0865281dd3462fe6fa79455f2c3021daf1d8bcdce4f6",
+    "outputHash": "042548ff7f86c08b0baa156f88e19fe6813d9720eb26ce08cb1dc30d247f5887",
+    "handlers": [
+      "trackBrowserSettingsSaves"
+    ]
   }
 ]

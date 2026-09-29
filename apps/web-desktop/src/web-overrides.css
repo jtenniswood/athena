@@ -57,6 +57,40 @@ body,
   opacity: 1 !important;
 }
 
+[data-sessions-project][data-session-drop-active] > * {
+  background: var(--ui-sidebar-accent, var(--ui-accent)) !important;
+  outline: 2px solid var(--ui-accent);
+  outline-offset: -2px;
+}
+
+[data-web-session-id][data-session-order-drop='before']::before,
+[data-web-session-id][data-session-order-drop='after']::after {
+  position: absolute;
+  z-index: 20;
+  inset-inline: 0.45rem;
+  height: 0.18rem;
+  border-radius: 999px;
+  background: var(--web-accent);
+  box-shadow: 0 0 0.45rem color-mix(in srgb, var(--web-accent) 70%, transparent);
+  content: '';
+  pointer-events: none;
+}
+
+[data-web-session-id][data-session-order-drop='before']::before { top: -0.09rem; }
+[data-web-session-id][data-session-order-drop='after']::after { bottom: -0.09rem; }
+
+/* Keep session titles truncated in the browser sidebar when hovered. The
+   upstream renderer arms a marquee on pointer entry, which makes long titles
+   slide sideways beneath the pointer. */
+.browser-sessions-pane .hover-marquee[data-marquee='true'] {
+  text-overflow: ellipsis !important;
+}
+
+.browser-sessions-pane .hover-marquee-inner {
+  animation: none !important;
+  transform: none !important;
+}
+
 /* Body-level Radix portals use viewport coordinates, already scaled by the
    root's CSS zoom. Keep their positioning wrapper in viewport units and scale
    only the content, so both anchoring and collision detection use its actual
@@ -267,4 +301,158 @@ body > [data-slot='fan-menu'] {
 .browser-gateway-settings :is(input, select) {
   max-width: 100%;
   font-size: max(1rem, calc(16px / var(--web-ui-scale, 1)));
+}
+
+.browser-settings-surface {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding-top: env(safe-area-inset-top);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  background: var(--ui-chat-surface-background);
+  color: var(--foreground);
+}
+
+.browser-settings-header {
+  z-index: 1;
+  display: flex;
+  min-height: 3.75rem;
+  flex: none;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid var(--ui-stroke-secondary);
+  padding: 0.5rem 0.75rem 0.5rem 1.25rem;
+  background: var(--ui-chat-surface-background);
+}
+
+.browser-settings-header h1,
+.browser-settings-detail-title {
+  min-width: 0;
+  flex: 1;
+  margin: 0;
+  overflow: hidden;
+  font-size: 1rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser-settings-header-actions {
+  display: flex;
+  min-width: 0;
+  flex: none;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.browser-settings-header-actions > button:first-child { min-height: 2.75rem; }
+
+.browser-settings-close,
+.browser-settings-back {
+  display: inline-flex;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border: 1px solid var(--ui-stroke-secondary);
+  border-radius: 0.6rem;
+  background: var(--ui-bg-secondary);
+  color: var(--foreground);
+}
+
+.browser-settings-back { padding: 0 0.65rem; }
+.browser-settings-back span { font-size: 0.85rem; }
+.browser-settings-detail-title { display: none; }
+
+.browser-settings-body {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+}
+
+.browser-settings-navigation {
+  display: flex;
+  width: clamp(15rem, 23vw, 19rem);
+  min-width: 14rem;
+  flex: none;
+  flex-direction: column;
+  border-right: 1px solid var(--ui-stroke-secondary);
+  background: var(--ui-sidebar-surface-background);
+}
+
+.browser-settings-nav-list {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.2rem;
+  overflow: auto;
+  padding: 0.75rem;
+}
+
+.browser-settings-nav-item {
+  display: flex;
+  min-width: 0;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  padding: 0.45rem 0.7rem;
+  background: transparent;
+  color: var(--ui-text-secondary);
+  text-align: left;
+}
+
+.browser-settings-nav-item:hover,
+.browser-settings-nav-item.is-active {
+  background: var(--ui-bg-tertiary);
+  color: var(--foreground);
+}
+
+.browser-settings-nav-item.is-active { border-color: var(--ui-stroke-tertiary); }
+.browser-settings-nav-item.is-nested { margin-left: 1rem; min-height: 2.5rem; }
+.browser-settings-nav-item > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.browser-settings-nav-icon { width: 1rem; height: 1rem; flex: none; opacity: 0.8; }
+
+.browser-settings-footer {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.35rem;
+  border-top: 1px solid var(--ui-stroke-secondary);
+  padding: 0.6rem 0.75rem;
+}
+
+.browser-settings-content {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.browser-settings-navigation[hidden],
+.browser-settings-content[hidden] { display: none; }
+
+@media (max-width: 47.99rem), (pointer: coarse) and (max-height: 27rem) {
+  .browser-settings-header { gap: 0.5rem; padding-left: 0.75rem; }
+  .browser-settings-header h1 { font-size: 0.95rem; }
+  .browser-settings-back { min-width: 2.75rem; padding: 0 0.5rem; }
+  .browser-settings-detail-title { display: block; }
+  .browser-settings-navigation { width: 100%; min-width: 0; border-right: 0; }
+  .browser-settings-nav-list { padding: 0.75rem; }
+  .browser-settings-nav-item { min-height: 2.9rem; }
+  .browser-settings-nav-item.is-nested { margin-left: 0.75rem; }
 }
