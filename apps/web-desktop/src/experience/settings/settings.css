@@ -126,10 +126,6 @@
 .browser-settings-category-icon { width: var(--web-icon-size); height: var(--web-icon-size); flex: 0 0 auto; color: var(--web-text-subtle); }
 .browser-settings-category-button.is-active .browser-settings-category-icon { color: var(--web-text); }
 .browser-settings-category-chevron { display: none !important; }
-.browser-settings-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--web-space-2); padding: var(--web-space-2) var(--web-space-2) var(--web-sheet-padding-bottom) var(--web-sheet-padding-start); border-top: 1px solid var(--web-border-subtle); }
-.browser-settings-footer > span { color: var(--web-text-subtle); font-size: var(--web-text-caption); }
-.browser-settings-actions { display: flex; align-items: center; gap: var(--web-space-1); }
-.browser-settings-actions button { width: var(--web-control-regular); height: var(--web-control-regular); border-radius: var(--web-radius-control); }
 
 .browser-settings-detail { display: flex; min-width: 0; min-height: 0; flex-direction: column; overflow: hidden; padding: var(--web-space-6) clamp(1rem, 3vw, 3rem) var(--web-sheet-padding-bottom); }
 .browser-settings-detail > * { width: 100%; max-width: 54rem; margin-inline: auto; }
@@ -155,10 +151,9 @@
   .browser-settings-category-button.is-active { background: transparent; }
   .browser-settings-category-button:hover { background: var(--web-hover); }
   .browser-settings-category-chevron { display: inline-flex !important; margin-left: auto; color: var(--web-text-subtle); font-size: var(--web-icon-small); }
-  .browser-settings-footer { padding-right: var(--web-sheet-padding-end); }
   .browser-settings-detail { display: none; }
   .browser-settings-layout.is-compact.show-detail .browser-settings-detail { display: flex; flex: 1; padding: var(--web-space-3) var(--web-sheet-padding-end) var(--web-sheet-padding-bottom) var(--web-sheet-padding-start); }
-  .browser-settings-back[data-browser-toolbar-button], .browser-settings-actions button,
+  .browser-settings-back[data-browser-toolbar-button],
   .browser-settings-fullscreen-card > .pointer-events-none button { width: var(--web-touch-min); height: var(--web-touch-min); }
   .browser-settings-frame :is(button:not(.browser-settings-category-button), input:not([type='checkbox'], [type='radio']), select, textarea) { min-height: var(--web-touch-min); }
   .browser-settings-frame :is(input:not([type='checkbox'], [type='radio']), textarea, select) { font-size: max(1rem, calc(16px / var(--web-ui-scale, 1))); }
@@ -171,3 +166,29 @@
 @media (pointer: coarse) {
   .browser-settings-category-button { height: auto; padding-block: var(--web-space-2); }
 }
+
+.browser-configuration-page h2 { margin: 0 0 var(--web-space-2); font-size: var(--web-text-heading); font-weight: 600; }
+.browser-configuration-page > p { margin: 0 0 var(--web-space-6); color: var(--web-text-muted); }
+.browser-configuration-actions { display: flex; flex-direction: column; }
+.browser-configuration-action {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: var(--web-space-3);
+  padding: var(--web-space-4) var(--web-space-3);
+  border: 0;
+  border-bottom: 1px solid var(--web-border-subtle);
+  border-radius: var(--web-radius-control);
+  text-align: left;
+  color: var(--web-text);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.browser-configuration-action:hover { background: var(--web-hover); }
+.browser-configuration-action > svg { flex: 0 0 var(--web-icon-size); width: var(--web-icon-size); height: var(--web-icon-size); margin-top: .125rem; color: var(--web-text-muted); }
+.browser-configuration-action > span { min-width: 0; }
+.browser-configuration-action-label { display: block; font-weight: 500; }
+.browser-configuration-action-description { display: block; margin-top: var(--web-space-1); color: var(--web-text-muted); line-height: var(--web-line-body); }
+.browser-configuration-action:last-child { margin-top: var(--web-space-6); border: 1px solid var(--web-border-subtle); }
+.browser-configuration-action:last-child :is(svg, .browser-configuration-action-label) { color: var(--web-danger); }

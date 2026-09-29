@@ -2074,16 +2074,20 @@
     "sourceRoot": "renderer",
     "sourceHash": "2505834a903fa6250bbb5bcd754248b90532e5ebaa7469b1ef22980e508ee8cd",
     "inputHash": "2505834a903fa6250bbb5bcd754248b90532e5ebaa7469b1ef22980e508ee8cd",
-    "outputHash": "4e650f093dc498f3b8f6426859ec3df92cf086bc887e6094c87a7c48479c0f2c",
+    "outputHash": "d7c34b1b3b7c8cde90a0312e89533fe8ee038bb385119ee9fea2d1648c3e944c",
     "handlers": [
       "useBrowserSettingsPresentation"
     ],
-    "reason": "Keep the responsive browser settings presentation and user visibility preferences in the wrapper while upstream owns settings content and persistence.",
+    "reason": "Keep the responsive settings layout, configuration management page, and visibility policy in the wrapper while upstream owns settings content and persistence.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "settings full-screen modal scales across compact and wide viewports"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "configuration page retains import export and reset behavior"
       }
     ],
     "removal": "Remove when upstream SettingsView provides an equivalent responsive browser presentation seam while retaining upstream settings pages and actions."
@@ -2096,16 +2100,21 @@
     "sourceRoot": "renderer",
     "sourceHash": "e557900fdf12bed8efda0865281dd3462fe6fa79455f2c3021daf1d8bcdce4f6",
     "inputHash": "e557900fdf12bed8efda0865281dd3462fe6fa79455f2c3021daf1d8bcdce4f6",
-    "outputHash": "b3056fe4d7953ef6c90b720aabde0ff7dae18fa6721f0abf7a34b2e2fc160456",
+    "outputHash": "158734435d3945b709c9a5364b259447d6b5773c5fb36c9ed2332510e53ec469",
     "handlers": [
-      "filterBrowserSettingsFields"
+      "filterBrowserSettingsFields",
+      "useBrowserConfigurationSettings"
     ],
-    "reason": "Keep the responsive browser settings presentation and user visibility preferences in the wrapper while upstream owns settings content and persistence.",
+    "reason": "Keep the responsive settings layout, configuration management page, and visibility policy in the wrapper while upstream owns settings content and persistence.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "scripts/browser.test.mjs",
         "scenario": "settings customization hides known sections and fields while inheriting new ids"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "configuration page retains import export and reset behavior"
       }
     ],
     "removal": "Remove when upstream settings supports wrapper-owned visibility rules for config fields."

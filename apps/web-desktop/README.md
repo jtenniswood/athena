@@ -22,6 +22,9 @@ The browser settings layout and its hide/order policy live in
 `src/experience/settings/`. Edit `settings/policy.ts` to customize the
 presentation without changing stored configuration values or upstream files.
 Unlisted sections and fields inherit upstream visibility and order.
+Import, export, and reset are under **Settings → Configuration**. This local
+page uses the `config:browser-configuration` section id and retains upstream
+file handling, profile scoping, and reset confirmation.
 
 Examples:
 

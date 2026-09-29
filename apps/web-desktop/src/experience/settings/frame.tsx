@@ -23,7 +23,6 @@ type Props = {
   backLabel: string
   closeLabel: string
   groups: SettingsNavGroup[]
-  actions: ReactNode
   onClose: () => void
   search: ReactNode
   title: string
@@ -46,7 +45,7 @@ function useCompactSettings() {
   )
 }
 
-export function BrowserSettingsPresentation({ activeView, actions, backLabel, closeLabel, groups, onClose, search, title, children }: Props) {
+export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel, groups, onClose, search, title, children }: Props) {
   const frame = useRef<HTMLDivElement>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const navigation = useRef<HTMLElement>(null)
@@ -151,10 +150,6 @@ export function BrowserSettingsPresentation({ activeView, actions, backLabel, cl
                 })}
               </div>
             })}
-          </div>
-          <div className="browser-settings-footer">
-            <span>Configuration</span>
-            <div className="browser-settings-actions">{actions}</div>
           </div>
         </nav>
         <main className="browser-settings-detail" aria-label={activeGroup?.label ?? title}>

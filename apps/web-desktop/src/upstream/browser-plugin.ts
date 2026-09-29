@@ -160,6 +160,14 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
     ["<OverlayIconButton\n          onClick={() => {\n            triggerHaptic('open')", "<OverlayIconButton\n          aria-label={t.settings.importConfig}\n          onClick={() => {\n            triggerHaptic('open')"],
     ['<OverlayIconButton\n          className="hover:text-destructive"', '<OverlayIconButton\n          aria-label={t.settings.resetToDefaults}\n          className="hover:text-destructive"']
   ]
+  controlReplacements.push(
+    ["import { OverlayIconButton } from '../overlays/overlay-chrome'", ''],
+    ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  'config:browser-configuration',"],
+    ["      {\n        active: activeView === 'about',", "      {\n        active: activeView === 'config:browser-configuration',\n        gapBefore: true,\n        icon: Settings2,\n        id: 'config:browser-configuration',\n        label: 'Configuration',\n        onSelect: () => setActiveView('config:browser-configuration')\n      },\n      {\n        active: activeView === 'about',"],
+    ['        importInputRef={importInputRef}', '        importInputRef={importInputRef}\n        configurationActions={navFooter}'],
+    ['getHermesConfigRecord()', 'getHermesConfigRecord(scopeProfile)'],
+    ['saveHermesConfig(await getHermesConfigDefaults())', 'saveHermesConfig(await getHermesConfigDefaults(), scopeProfile)']
+  )
   for (const [before] of controlReplacements) {
     if (source.split(before).length !== 2) throw new Error('Browser settings control labels changed')
   }
@@ -167,11 +175,42 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
   let output = source
     .replace(importTarget, '')
     .replace(overlayImport, '')
-    .replace(overlayTarget, '<BrowserSettingsPresentation actions={navFooter} activeView={activeView} backLabel={t.common.back} closeLabel={t.settings.closeSettings} groups={navGroups} onClose={onClose} search={searchPill} title={t.commandCenter.settings}>')
+    .replace(overlayTarget, '<BrowserSettingsPresentation activeView={activeView} backLabel={t.common.back} closeLabel={t.settings.closeSettings} groups={navGroups} onClose={onClose} search={searchPill} title={t.commandCenter.settings}>')
     .replace(layoutTarget, '      {activeSettingsContent}')
     .replace('</OverlayView>', '</BrowserSettingsPresentation>')
   for (const [before, after] of controlReplacements) output = output.replace(before, after)
-  return `import { BrowserSettingsPresentation } from ${owner}\n` + output
+  if (output.split('</OverlayIconButton>').length !== 4) throw new Error('Browser configuration actions changed')
+  output = output
+    .replace('<OverlayIconButton aria-label={t.settings.exportConfig}', '<BrowserConfigurationAction description="Download the current settings as a JSON file." aria-label={t.settings.exportConfig}')
+    .replace('<OverlayIconButton\n          aria-label={t.settings.importConfig}', '<BrowserConfigurationAction\n          description="Restore settings from a previously exported JSON file."\n          aria-label={t.settings.importConfig}')
+    .replace('<OverlayIconButton\n          aria-label={t.settings.resetToDefaults}', '<BrowserConfigurationAction\n          description="Restore the default configuration. You will be asked to confirm."\n          aria-label={t.settings.resetToDefaults}')
+    .replaceAll('</OverlayIconButton>', '</BrowserConfigurationAction>')
+  const actionsOwner = JSON.stringify(path.join(root, 'src/experience/settings/configuration'))
+  return `import { BrowserConfigurationAction } from ${actionsOwner}\nimport { BrowserSettingsPresentation } from ${owner}\n` + output
+}
+
+export function useBrowserConfigurationSettings(source: string, root: string): string {
+  const replacements: [string, string][] = [
+    ['  importInputRef\n}: ConfigSettingsProps)', '  importInputRef,\n  configurationActions\n}: ConfigSettingsProps)'],
+    ['      importInputRef={importInputRef}', '      importInputRef={importInputRef}\n      configurationActions={configurationActions}'],
+    ['  importInputRef: React.RefObject<HTMLInputElement | null>', '  importInputRef: React.RefObject<HTMLInputElement | null>\n  configurationActions?: React.ReactNode'],
+    ['  importInputRef,\n  scopeProfile', '  importInputRef,\n  configurationActions,\n  scopeProfile'],
+    ["  const visibleFields =", `  if (activeSectionId === 'browser-configuration') {
+    return <SettingsContent>
+      <SettingsProfileScope className="mb-5" />
+      <BrowserConfigurationPage actions={configurationActions} />
+      <input accept=".json,application/json" className="hidden" onChange={handleImport} ref={importInputRef} type="file" />
+    </SettingsContent>
+  }
+
+  const visibleFields =`]
+  ]
+  let output = source
+  for (const [before, after] of replacements) {
+    if (output.split(before).length !== 2) throw new Error('Browser configuration page boundary changed')
+    output = output.replace(before, after)
+  }
+  return `import { BrowserConfigurationPage } from ${JSON.stringify(path.join(root, 'src/experience/settings/configuration'))}\n` + output
 }
 
 export function filterBrowserSettingsFields(source: string, root: string): string {
@@ -753,6 +792,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     respectBrowserOverlayFocusReturn: source => respectBrowserOverlayFocusReturn(source, root),
     useBrowserOverlayFocusOwner: source => useBrowserOverlayFocusOwner(source, root),
     useBrowserSettingsPresentation: source => useBrowserSettingsPresentation(source, root),
+    useBrowserConfigurationSettings: source => useBrowserConfigurationSettings(source, root),
     filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
     filterBrowserSettingsSearch: source => filterBrowserSettingsSearch(source, root),
     filterBrowserSettingsPalette: source => filterBrowserSettingsPalette(source, root),

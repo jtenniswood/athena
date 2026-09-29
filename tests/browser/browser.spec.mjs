@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { createPreviewGateway } from '../../scripts/preview/gateway.mjs'
 import { getBrowserTarget } from './test-target.mjs'
 import { installBrowserErrorCollector } from './error-collector.mjs'
@@ -1175,6 +1176,71 @@ for (const width of [390, 820, 1440]) {
     await expect(surface).toHaveCount(0)
     await expect(trigger).toBeFocused()
     await expect(editor(page)).toHaveText('Keep the chat draft behind full-screen settings')
+  })
+}
+
+for (const width of [390, 1440]) {
+  test(`configuration page retains import export and reset behavior at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    let config = { model: { default: 'preview-model', provider: 'custom' }, display: { show_reasoning: true } }
+    const writes = []
+    await page.route(/\/api\/config(?:\?|$)/, async route => {
+      const request = route.request()
+      if (request.method() === 'PUT') {
+        const body = request.postDataJSON()
+        writes.push({ body, profile: new URL(request.url()).searchParams.get('profile') })
+        config = { ...config, ...body.config }
+        await route.fulfill({ json: { ok: true } })
+      } else await route.fulfill({ json: config })
+    })
+    await open(page)
+    await editor(page).fill('Keep this draft while managing configuration')
+    const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+    await trigger.click()
+    const menuRole = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
+    await page.getByRole(menuRole, { name: 'Settings and workspace', exact: true })
+      .getByRole(menuRole === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Export config', exact: true })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Configuration', exact: true }).click()
+    await expect(page).toHaveURL(/tab=config%3Abrowser-configuration/)
+    const management = page.getByRole('region', { name: 'Configuration management' })
+    await expect(management).toBeVisible()
+    await page.getByRole('main', { name: 'Configuration', exact: true }).getByRole('button', { name: 'research', exact: true }).click()
+    await expect(management).toBeVisible()
+
+    const exportRequest = page.waitForRequest(request => request.method() === 'GET' && /\/api\/config\?/.test(request.url()) && new URL(request.url()).searchParams.get('profile') === 'research')
+    const downloadPromise = page.waitForEvent('download')
+    await management.getByRole('button', { name: 'Export config', exact: true }).click()
+    const download = await downloadPromise
+    await exportRequest
+    await download.saveAs(testInfo.outputPath('configuration.json'))
+    expect(JSON.parse(readFileSync(testInfo.outputPath('configuration.json'), 'utf8'))).toEqual(config)
+
+    const importFile = async content => {
+      const chooser = page.waitForEvent('filechooser')
+      await management.getByRole('button', { name: 'Import config', exact: true }).click()
+      await (await chooser).setFiles({ name: 'configuration.json', mimeType: 'application/json', buffer: Buffer.from(content) })
+    }
+    await importFile('{invalid json')
+    await expect(page.getByText('Invalid config JSON', { exact: true })).toBeVisible()
+    expect(writes).toHaveLength(0)
+    await importFile(JSON.stringify({ ...config, display: { show_reasoning: false } }))
+    await expect.poll(() => writes.length).toBe(1)
+    expect(writes[0]).toEqual({ body: { config: { display: { show_reasoning: false } } }, profile: 'research' })
+
+    const reset = management.getByRole('button', { name: 'Reset to defaults', exact: true })
+    await reset.click()
+    const confirmation = page.getByRole('dialog', { name: 'Reset all settings to Hermes defaults?', exact: true })
+    await expect(confirmation).toBeVisible()
+    await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click()
+    expect(writes).toHaveLength(1)
+    await reset.click()
+    await confirmation.getByRole('button', { name: 'Reset to defaults', exact: true }).click()
+    await expect.poll(() => writes.length).toBe(2)
+    expect(writes[1].profile).toBe('research')
+    await page.screenshot({ path: testInfo.outputPath('configuration-page.png') })
+    await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+    await expect(editor(page)).toHaveText('Keep this draft while managing configuration')
   })
 }
 

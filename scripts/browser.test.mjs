@@ -40,7 +40,7 @@ test('settings policy stays aligned across page fields, deep search, and palette
   const config = readFileSync(path.join(root, '../desktop/src/app/settings/config-settings.tsx'), 'utf8')
   const search = readFileSync(path.join(root, '../desktop/src/app/settings/use-settings-search.ts'), 'utf8')
   const palette = readFileSync(path.join(root, '../desktop/src/app/command-palette/index.tsx'), 'utf8')
-  assert.match(useBrowserSettingsPresentation(settings, root), /BrowserSettingsPresentation actions=\{navFooter\}/)
+  assert.match(useBrowserSettingsPresentation(settings, root), /BrowserSettingsPresentation activeView=\{activeView\}/)
   assert.match(filterBrowserSettingsFields(config, root), /isSettingsFieldVisible\(key\)/)
   assert.match(filterBrowserSettingsSearch(search, root), /appearanceEntries: appearanceEntries\.filter/)
   assert.match(filterBrowserSettingsSearch(search, root), /isSettingsSectionVisible\(entry\.target\.view\)/)
