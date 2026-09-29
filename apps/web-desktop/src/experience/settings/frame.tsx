@@ -114,7 +114,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
             {compact && showDetail ? activeGroup?.label ?? activeView : title}
           </h1>
         </div>
-        <div className="browser-settings-search">{search}</div>
+        {(!compact || !showDetail) && <div className="browser-settings-search">{search}</div>}
       </header>
       <div className={`browser-settings-layout${compact ? ' is-compact' : ''}${showDetail ? ' show-detail' : ''}`}>
         <nav ref={navigation} className="browser-settings-navigation" aria-label="Settings categories" hidden={compact && showDetail}>

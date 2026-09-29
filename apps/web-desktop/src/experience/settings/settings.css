@@ -139,12 +139,13 @@
 .browser-settings-frame :is(button, input, select, textarea):focus-visible { outline: var(--web-focus-ring); outline-offset: -2px; }
 
 @media (max-width: 55.999rem), (pointer: coarse) and (max-height: 27rem) {
-  .browser-settings-header { position: relative; flex-wrap: wrap; gap: 0; padding: 0 var(--web-sheet-padding-end) var(--web-space-3) var(--web-sheet-padding-start); }
-  .browser-settings-heading { width: 100%; min-height: var(--settings-header-height); padding-right: calc(var(--web-touch-min) + var(--web-space-2)); }
+  .browser-settings-header { gap: var(--web-space-2); padding-right: calc(var(--web-sheet-padding-end) + var(--web-touch-min) + var(--web-space-2)); }
+  .browser-settings-heading { flex: 1; min-height: var(--settings-header-height); }
   .browser-settings-heading h1 { font-size: var(--web-text-heading); }
-  .browser-settings-search { width: 100%; margin: 0; }
-  .browser-settings-search > button { height: var(--web-touch-min); }
-  .browser-settings-search kbd { display: none; }
+  .browser-settings-search { width: var(--web-touch-min); flex: 0 0 auto; margin: 0; }
+  .browser-settings-search > button { height: var(--web-touch-min); justify-content: center; padding: 0; border-color: transparent; background: transparent; }
+  .browser-settings-search > button > :not(svg) { display: none; }
+  .browser-settings-search > button > svg { width: var(--web-icon-size); height: var(--web-icon-size); }
   .browser-settings-layout.is-compact { display: flex; flex-direction: column; }
   .browser-settings-navigation { flex: 1; border-right: 0; }
   .browser-settings-navigation[hidden] { display: none; }
