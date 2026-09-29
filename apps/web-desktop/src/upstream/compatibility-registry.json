@@ -272,7 +272,7 @@
     "sourceHash": "46e4a7442ecb76d75365364864c6f532af4f3c0e046e63a9cd769a6868785b61",
     "sourceRoot": "renderer",
     "inputHash": "46e4a7442ecb76d75365364864c6f532af4f3c0e046e63a9cd769a6868785b61",
-    "outputHash": "70e6c80852eb88ac6564a725f31c3019a560991ed18dcb9710049f67480a2658"
+    "outputHash": "7f2620c4101503a3e187db4906dd8414d1b983c4b8df2a924f5a221b31be9c21"
   },
   {
     "name": "hidden-bot-roster",
@@ -469,7 +469,7 @@
     "sourceHash": "9f667fd4b055f69b4919c6f5eeefc560a4e68bafc2d255b6db0c7773c3fda911",
     "sourceRoot": "renderer",
     "inputHash": "9f667fd4b055f69b4919c6f5eeefc560a4e68bafc2d255b6db0c7773c3fda911",
-    "outputHash": "0c257ba4ef9ddee55578fb68597bb7e6d6c31dc4b45bea309309b49f3a55bb24"
+    "outputHash": "642b23dff706be1223efa38437f7e13a297b3832a4b733802607df1617c1e320"
   },
   {
     "name": "single-conversation-menus",

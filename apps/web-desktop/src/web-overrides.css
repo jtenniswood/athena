@@ -57,6 +57,28 @@ body,
   opacity: 1 !important;
 }
 
+[data-sessions-project][data-session-drop-active] > * {
+  background: var(--ui-sidebar-accent, var(--ui-accent)) !important;
+  outline: 2px solid var(--ui-accent);
+  outline-offset: -2px;
+}
+
+[data-web-session-id][data-session-order-drop='before']::before,
+[data-web-session-id][data-session-order-drop='after']::after {
+  position: absolute;
+  z-index: 20;
+  inset-inline: 0.45rem;
+  height: 0.18rem;
+  border-radius: 999px;
+  background: var(--web-accent);
+  box-shadow: 0 0 0.45rem color-mix(in srgb, var(--web-accent) 70%, transparent);
+  content: '';
+  pointer-events: none;
+}
+
+[data-web-session-id][data-session-order-drop='before']::before { top: -0.09rem; }
+[data-web-session-id][data-session-order-drop='after']::after { bottom: -0.09rem; }
+
 /* Keep session titles truncated in the browser sidebar when hovered. The
    upstream renderer arms a marquee on pointer entry, which makes long titles
    slide sideways beneath the pointer. */
