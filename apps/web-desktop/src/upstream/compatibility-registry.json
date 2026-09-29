@@ -2100,12 +2100,12 @@
     "sourceRoot": "renderer",
     "sourceHash": "e557900fdf12bed8efda0865281dd3462fe6fa79455f2c3021daf1d8bcdce4f6",
     "inputHash": "e557900fdf12bed8efda0865281dd3462fe6fa79455f2c3021daf1d8bcdce4f6",
-    "outputHash": "40bfbc9fb9af4b406a150bae7975a77e5ef04cdce854e0c1b71627006ba8d47f",
+    "outputHash": "1101c029b0d788b3931ec3fb78a146361a3523290de961a2c1b8bd8abaab4767",
     "handlers": [
       "filterBrowserSettingsFields",
       "useBrowserConfigurationSettings"
     ],
-    "reason": "Keep the responsive settings layout, configuration management page, and visibility policy in the wrapper while upstream owns settings content and persistence.",
+    "reason": "Hide unsupported device controls and apply wrapper-owned visibility rules while retaining upstream settings storage and forms.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -2153,11 +2153,11 @@
     "sourceRoot": "renderer",
     "sourceHash": "8323bd0e62fa8eeeea7a7e3c544f7c0dac3da2aba387634205187173a364e014",
     "inputHash": "8323bd0e62fa8eeeea7a7e3c544f7c0dac3da2aba387634205187173a364e014",
-    "outputHash": "75eabe6957470d0aee9f090ba7827c7fb2a66763074ad4340bcff7e5faafe30f",
+    "outputHash": "c6cf3943c2e4a2b4005312fffa7c169e0bc15afd0ec88d1651c98103573932eb",
     "handlers": [
       "filterBrowserSettingsPalette"
     ],
-    "reason": "Keep grouped settings labels, legacy search aliases, and visibility policy in the wrapper while upstream owns forms and persistence.",
+    "reason": "Keep settings search policy and remove the unavailable Marketplace theme installer from the browser palette.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -2196,5 +2196,71 @@
       }
     ],
     "removal": "Remove when upstream compares the previous profile identity before dispatching profile-switch cleanup."
+  },
+  {
+    "name": "browser-appearance-capabilities",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/appearance-settings.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "ef59234538915465699ca6e257a273057994a2a088cdc6166c6bead9a7ff8b0c",
+    "inputHash": "ef59234538915465699ca6e257a273057994a2a088cdc6166c6bead9a7ff8b0c",
+    "outputHash": "c72173a87223f2abce0a277dd562f23b68228c5e446ce032d5c834cf247ebf2d",
+    "handlers": [
+      "hideBrowserAppearanceOnlySettings"
+    ],
+    "reason": "Hide the unused terminal font and theme marketplace controls while retaining installed browser themes.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+      }
+    ],
+    "removal": "Remove once upstream exposes browser capability flags for terminal surfaces and theme marketplace support."
+  },
+  {
+    "name": "browser-archived-directory-capability",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/sessions-settings.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "d7d72ee931a9d893e26fa8c6dc030731130a4dca346436a4522de469028efbe4",
+    "inputHash": "d7d72ee931a9d893e26fa8c6dc030731130a4dca346436a4522de469028efbe4",
+    "outputHash": "867afae2a99775352b5388699c4a00de6e587f113f8fdb8e91e1ef935787991a",
+    "handlers": [
+      "hideBrowserLocalProjectDirectory"
+    ],
+    "reason": "Hide the desktop-local project directory picker while keeping remote working-directory settings.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+      }
+    ],
+    "removal": "Remove once this control has a browser implementation for selecting a server-side project directory."
+  },
+  {
+    "name": "browser-real-profile-capability",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/skills/index.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "16758986e506b3449cbe196b612fa71e3ae39345e6c861458d8cf4dcc4039754",
+    "inputHash": "16758986e506b3449cbe196b612fa71e3ae39345e6c861458d8cf4dcc4039754",
+    "outputHash": "a23ad654463dcf8f74c7ad694bb9c35a512b9d7bac7a53c807225cea0ed77513",
+    "handlers": [
+      "hideBrowserServerBrowserProfile"
+    ],
+    "reason": "Hide the server browser-profile selector until the configured host advertises that capability.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+      }
+    ],
+    "removal": "Remove when the configured gateway exposes a reliable browser-profile capability for this control."
   }
 ]

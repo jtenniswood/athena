@@ -16,7 +16,7 @@ export function BrowserConfigurationAction({ description, children, className = 
 export function BrowserConfigurationPage({ actions }: { actions: ReactNode }) {
   return <section className="browser-configuration-page" aria-label="Configuration management">
     <h2>{settingsPageLabel('config:browser-configuration', 'Configuration')}</h2>
-    <p>Back up, restore, or reset your configuration.</p>
+    <p>Manage the current profile configuration: export, restore, or reset. These actions do not include conversations, credentials, or server files.</p>
     <div className="browser-configuration-actions">{actions}</div>
   </section>
 }

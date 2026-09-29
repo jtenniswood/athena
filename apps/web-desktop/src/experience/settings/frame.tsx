@@ -59,6 +59,13 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const navigationGroups = groupSettingsSections(groups)
   const visibleGroups = navigationGroups.flatMap(group => group.items)
   const activeGroup = visibleGroups.find(group => group.active)
+  const pageNotice = activeView === 'billing'
+    ? 'This page shows billing from the configured Hermes server, such as Nous usage. It does not include external model provider or web hosting charges.'
+    : activeView === 'config:browser'
+      ? 'Browser automation runs on the configured Hermes server. Private URLs and local network access refer to networks visible from that server.'
+      : activeView === 'vault'
+        ? 'Saved logins are stored and used by the configured Hermes server for browser automation.'
+        : null
   const activeVisible = Boolean(activeGroup)
   const activeChildren = orderSettingsSections(activeGroup?.children ?? []).map(child => ({ ...child, label: settingsPageLabel(child.id, child.label) }))
   const showDetail = activeVisible && (!compact || compactDetailOpen || (hasDirectTarget && compactBackToList !== location.key))
@@ -163,7 +170,10 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
             <h2>{title}</h2>
             <p>{activeVisible ? 'Choose a category to view and change its options.' : 'This settings category is hidden. Choose another category or close settings.'}</p>
           </div>}
-          <div className="browser-settings-content-slot" hidden={!showDetail} inert={!showDetail}>{children}</div>
+          <div className="browser-settings-content-slot" hidden={!showDetail} inert={!showDetail}>
+            {pageNotice && <p className="browser-settings-page-notice" role="note">{pageNotice}</p>}
+            {children}
+          </div>
         </main>
       </div>
     </div>

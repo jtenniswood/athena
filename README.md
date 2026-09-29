@@ -51,8 +51,9 @@ For shared design tokens, component choices, and responsive checks, see the
 
 Settings uses the same five groups on phone, tablet, and desktop: Preferences,
 Assistant, Tools, Service, and Maintenance.
-Configuration contains configuration import, export, and reset. Search accepts
-both the current page names and previous upstream names.
+Configuration lets you export, restore, or reset the current profile. It does not
+include conversations, credentials, or server files. Search accepts current and
+previous upstream page names.
 
 Edit `apps/web-desktop/src/experience/settings/policy.ts` to customize the menu:
 
@@ -60,12 +61,14 @@ Edit `apps/web-desktop/src/experience/settings/policy.ts` to customize the menu:
 - `pageLabels` and `pageAliases` define display names and additional search terms.
 - `settingsPolicy.sections.hidden` hides pages using their existing IDs.
 - `settingsPolicy.sections.order` overrides page order within groups.
-- `settingsPolicy.fields.hidden` hides specific configuration fields.
+- `settingsPolicy.fields.hidden` hides fields and appearance controls without
+  deleting their saved values.
 
-Keep page IDs unchanged so existing settings links continue to work. New upstream
-fields remain in their original pages, and new pages appear under Other Settings
-until assigned a group. About is hidden by default. These presentation changes
-reuse upstream forms, profile selection, and save handlers.
+The web wrapper also gates custom desktop controls through fingerprinted renderer
+transforms. Keep page IDs unchanged so existing settings links continue to work.
+New upstream fields remain in their original pages, and new pages appear under
+Other Settings until assigned a group. About is hidden by default. The wrapper
+reuses upstream forms and save handlers for controls that remain available.
 
 ## Build and deploy
 

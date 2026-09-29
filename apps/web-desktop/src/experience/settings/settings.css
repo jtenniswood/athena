@@ -135,6 +135,7 @@
 .browser-settings-detail > * { width: 100%; max-width: 54rem; margin-inline: auto; }
 .browser-settings-content-slot { display: flex; min-height: 0; flex: 1; flex-direction: column; }
 .browser-settings-content-slot[hidden] { display: none; }
+.browser-settings-page-notice { max-width: 54rem; margin: 0 auto var(--web-space-3); color: var(--web-text-muted); font-size: var(--web-text-caption); }
 .browser-settings-content-slot > section.min-h-0.overflow-hidden { width: 100%; min-height: 0; flex: 1; }
 .browser-settings-content-slot > section.min-h-0.overflow-hidden > .h-full.min-h-0.overflow-y-auto { overscroll-behavior: contain; padding-inline: var(--web-space-1); }
 .browser-settings-home h2 { font-size: var(--web-text-heading); font-weight: 600; }

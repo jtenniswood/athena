@@ -49,9 +49,19 @@ export const settingsPolicy = {
     order: settingsGroups.flatMap(group => group.pages)
   },
   fields: {
-    // Use config schema keys or stable appearance ids such as
-    // `display.show_reasoning` and `appearance.theme`.
-    hidden: [] as string[]
+    // Use config schema keys, stable appearance IDs, or supported custom controls.
+    hidden: [
+      // These values remain in the remote configuration but have no working
+      // control in the browser deployment, or require host capability data we
+      // do not receive from the configured gateway.
+      'appearance.app-actions',
+      'appearance.translucency',
+      'browser.use_real_profile',
+      'terminal.font_family',
+      'updates.non_interactive_local_changes',
+      'voice.client_direct',
+      'voice.record_key'
+    ] as string[]
   }
 } as const
 

@@ -226,12 +226,50 @@ export function useBrowserConfigurationSettings(source: string, root: string): s
   return `import { BrowserConfigurationPage } from ${JSON.stringify(path.join(root, 'src/experience/settings/configuration'))}\n` + output
 }
 
+export function hideBrowserAppearanceOnlySettings(source: string): string {
+  const replacements: [string, string][] = [
+    ['          <TerminalFontSetting />', '          {!window.__HERMES_WEB_BRIDGE__ && <TerminalFontSetting />}'],
+    [
+      '                  <MarketplaceThemeResults installs={installs} onInstalled={name => setTheme(name)} query={query} />',
+      '                  {!window.__HERMES_WEB_BRIDGE__ && <MarketplaceThemeResults installs={installs} onInstalled={name => setTheme(name)} query={query} />}'
+    ],
+    ['placeholder={a.themeSearchPlaceholder}', 'placeholder="Search available themes"'],
+    ['description={a.themeDesc}', 'description="Choose from themes available in this web app."']
+  ]
+  let output = source
+  for (const [before, after] of replacements) {
+    if (output.split(before).length !== 2) throw new Error('Browser appearance capability boundary changed')
+    output = output.replace(before, after)
+  }
+  return output
+}
+
+export function hideBrowserServerBrowserProfile(source: string): string {
+  const target = "{toolset.name === 'browser' && <BrowserRealProfilePanel profile={profile} />}"
+  if (source.split(target).length !== 2) throw new Error('Browser server-profile capability boundary changed')
+  return source.replace(target, "{!window.__HERMES_WEB_BRIDGE__ && toolset.name === 'browser' && <BrowserRealProfilePanel profile={profile} />}")
+}
+
+export function hideBrowserLocalProjectDirectory(source: string): string {
+  const target = '<DefaultProjectDirSetting />'
+  if (source.split(target).length !== 2) throw new Error('Browser archived-chat directory boundary changed')
+  return source.replace(target, '{!window.__HERMES_WEB_BRIDGE__ && <DefaultProjectDirSetting />}')
+}
+
 export function filterBrowserSettingsFields(source: string, root: string): string {
   const owner = JSON.stringify(path.join(root, 'src/experience/settings/policy'))
   const target = "  const visibleFields = activeSectionId === 'voice' ? fields.filter(([key]) => voiceFieldVisible(key, config)) : fields"
   if (source.split(target).length !== 2) throw new Error('Browser settings field visibility target changed')
-  return `import { isSettingsFieldVisible } from ${owner}\n` +
-    source.replace(target, target + '.filter(([key]) => isSettingsFieldVisible(key))')
+  let output = source.replace(target, target + '.filter(([key]) => isSettingsFieldVisible(key))')
+  const browserOnlyControls: [string, string][] = [
+    ["activeSectionId === 'advanced' && (", "activeSectionId === 'advanced' && !window.__HERMES_WEB_BRIDGE__ && ("],
+    ["activeSectionId === 'chat' ? <AttachmentSizeSetting /> : null", "activeSectionId === 'chat' && !window.__HERMES_WEB_BRIDGE__ ? <AttachmentSizeSetting /> : null"]
+  ]
+  for (const [before, after] of browserOnlyControls) {
+    if (output.split(before).length !== 2) throw new Error('Browser device-only configuration boundary changed')
+    output = output.replace(before, after)
+  }
+  return `import { isSettingsFieldVisible } from ${owner}\n` + output
 }
 
 export function filterBrowserSettingsSearch(source: string, root: string): string {
@@ -266,7 +304,17 @@ export function filterBrowserSettingsPalette(source: string, root: string): stri
           }))
         ]`
   if (source.split(start).length !== 3 || source.split(end).length !== 3) throw new Error('Browser settings palette grouping changed')
-  return `import { isSettingsSectionVisible, presentSettingsPalette, settingsPageLabel } from ${owner}\n` + source
+  const marketplaceGroup = `// Pinned at the top: drills into the Marketplace browser.
+          {
+            items: [`
+  if (source.split(marketplaceGroup).length !== 2) throw new Error('Browser theme marketplace palette boundary changed')
+  let browserSource = source.replace(marketplaceGroup, `// Desktop-only Marketplace search has no browser implementation.
+          {
+            items: window.__HERMES_WEB_BRIDGE__ ? [] : [`)
+  const themePagePlaceholder = 'placeholder: t.settings.appearance.themeDesc,'
+  if (browserSource.split(themePagePlaceholder).length !== 2) throw new Error('Browser theme palette placeholder boundary changed')
+  browserSource = browserSource.replace(themePagePlaceholder, "placeholder: window.__HERMES_WEB_BRIDGE__ ? 'Choose an available theme.' : t.settings.appearance.themeDesc,")
+  return `import { isSettingsSectionVisible, presentSettingsPalette, settingsPageLabel } from ${owner}\n` + browserSource
     .replace(dialog, dialog + "\n        data-browser-command-palette=\"\"")
     .replaceAll(start, 'items: presentSettingsPalette([\n          ...SECTIONS.map')
     .replaceAll(end, `            run: go(settingsTab(entry.tab))
@@ -821,6 +869,9 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserSettingsPresentation: source => useBrowserSettingsPresentation(source, root),
     useBrowserConfigurationSettings: source => useBrowserConfigurationSettings(source, root),
     filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
+    hideBrowserAppearanceOnlySettings,
+    hideBrowserLocalProjectDirectory,
+    hideBrowserServerBrowserProfile,
     filterBrowserSettingsSearch: source => filterBrowserSettingsSearch(source, root),
     filterBrowserSettingsPalette: source => filterBrowserSettingsPalette(source, root),
     useBrowserPinWrites: source => useBrowserPinWrites(source, root),
