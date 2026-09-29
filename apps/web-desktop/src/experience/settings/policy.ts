@@ -10,24 +10,24 @@ export const settingsGroups = [
 const pageLabels: Record<string, string> = {
   'config:appearance': 'Appearance',
   notifications: 'Notifications',
-  keybinds: 'Keyboard shortcuts',
+  keybinds: 'Keyboard Shortcuts',
   'config:model': 'Models',
-  providers: 'AI connections',
+  providers: 'AI Connections',
   'config:chat': 'Chat',
   'config:voice': 'Voice',
   'config:memory': 'Memory',
   'config:workspace': 'Workspace',
-  'config:browser': 'Browser automation',
+  'config:browser': 'Browser Automation',
   'config:safety': 'Permissions',
-  vault: 'Saved logins',
+  vault: 'Saved Logins',
   keys: 'Credentials',
-  gateway: 'Server connection',
+  gateway: 'Server Connection',
   billing: 'Billing',
-  sessions: 'Archived chats',
+  sessions: 'Archived Chats',
   'config:browser-configuration': 'Configuration',
   'config:advanced': 'Advanced',
-  'kview:tools': 'Tool API keys',
-  'kview:settings': 'Server credentials'
+  'kview:tools': 'Tool API Keys',
+  'kview:settings': 'Server Credentials'
 }
 
 const pageAliases: Record<string, string[]> = {
