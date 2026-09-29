@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useId, useState, typ
 import { BrowserActionSurface, type BrowserActionAnchor, type BrowserAction } from './ui/action-surface'
 import { useMobileBrowser } from './ui/use-compact-browser'
 import { Codicon } from '../upstream/browser-api'
+import { notifyConversationOpen } from './conversation-navigation'
 
 import { HIDDEN_SECTIONS_KEY, readHiddenSections } from './sidebar-section-preferences'
 
@@ -65,6 +66,15 @@ export function BrowserSessionsPane({ hidden, sections, children }: { hidden: bo
     event.stopPropagation()
     const target = event.target instanceof Element ? event.target.closest<HTMLElement>('button,a,input,[tabindex]') : null
     setAnchor({ x: event.clientX, y: event.clientY, returnFocus: target || event.currentTarget })
+  }} onClickCapture={event => {
+    if (!compact || !(event.target instanceof Element)) return
+    const button = event.target.closest('button')
+    if (!button) return
+    const label = [button.getAttribute('aria-label'), button.getAttribute('title'), button.textContent]
+      .filter(Boolean)
+      .join(' ')
+      .trim()
+    if (/^New session(?:\s|$)/i.test(label)) notifyConversationOpen()
   }}>
     {children}
     <BrowserActionSurface title="Sidebar sections" actions={sections.actions} anchor={anchor} compact={compact} fallbackFocus={fallback} onClose={() => setAnchor(null)} />
