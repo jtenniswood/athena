@@ -1143,16 +1143,16 @@ for (const width of [390, 1440]) {
       'Preferences', 'Assistant', 'Tools', 'Service', 'Maintenance'
     ])
     await expect(page.locator('.browser-settings-category-button:not(.is-child) > span:not(.codicon)')).toHaveText([
-      'Appearance', 'Notifications', 'Keyboard shortcuts', 'Models', 'AI connections', 'Chat', 'Voice',
-      'Memory', 'Workspace', 'Browser automation', 'Permissions', 'Saved logins',
-      'Credentials', 'Server connection', 'Billing', 'Archived chats', 'Configuration', 'Advanced'
+      'Appearance', 'Notifications', 'Keyboard Shortcuts', 'Models', 'AI Connections', 'Chat', 'Voice',
+      'Memory', 'Workspace', 'Browser Automation', 'Permissions', 'Saved Logins',
+      'Credentials', 'Server Connection', 'Billing', 'Archived Chats', 'Configuration', 'Advanced'
     ])
     await page.screenshot({ path: testInfo.outputPath('settings-groups.png') })
     for (const [query, result, view, title] of [
-      ['Gateway', 'Server connection', 'gateway', 'Server connection'],
+      ['Gateway', 'Server Connection', 'gateway', 'Server Connection'],
       ['Backup & reset', 'Configuration', 'config:browser-configuration', 'Configuration'],
-      ['Providers', 'AI connections — Accounts', 'providers', 'AI connections'],
-      ['Server credentials', 'Credentials — Server credentials', 'keys', 'Credentials']
+      ['Providers', 'AI Connections — Accounts', 'providers', 'AI Connections'],
+      ['Server credentials', 'Credentials — Server Credentials', 'keys', 'Credentials']
     ]) {
       await page.locator('.browser-settings-search > button').click()
       const input = page.locator('input[role="combobox"]')
@@ -1174,7 +1174,7 @@ for (const width of [390, 1440]) {
       await expect(page.locator('.browser-settings-heading h1')).toHaveText(width < 896 ? title : 'Settings')
       expect(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('tab')).toBe(view)
       if (view === 'keys') {
-        await expect(page.getByRole('button', { name: 'Server credentials', exact: true })).toHaveAttribute('aria-current', 'page')
+        await expect(page.getByRole('button', { name: 'Server Credentials', exact: true })).toHaveAttribute('aria-current', 'page')
       }
       if (width < 896) {
         await expect(page.locator('.browser-settings-search')).toHaveCount(0)
@@ -1220,8 +1220,8 @@ for (const width of [390, 820, 1440]) {
       await page.getByRole('button', { name: 'Back', exact: true }).click()
       await expect(page.getByRole('navigation', { name: 'Settings categories' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Appearance', exact: true })).toBeFocused()
-      await page.getByRole('button', { name: 'AI connections', exact: true }).click()
-      const providerCategories = page.getByRole('navigation', { name: 'AI connections categories' })
+      await page.getByRole('button', { name: 'AI Connections', exact: true }).click()
+      const providerCategories = page.getByRole('navigation', { name: 'AI Connections categories' })
       await providerCategories.getByRole('button', { name: 'API keys', exact: true }).click()
       await expect(providerCategories.getByRole('button', { name: 'API keys', exact: true })).toHaveAttribute('aria-current', 'page')
     } else {
@@ -1298,6 +1298,7 @@ for (const width of [390, 1440]) {
     const management = page.getByRole('region', { name: 'Configuration management' })
     await expect(management).toBeVisible()
     await expect(page.getByRole('main', { name: 'Configuration', exact: true }).getByText('Applies to', { exact: true })).toHaveCount(0)
+    await expect(management.getByText('Applies to profile: research', { exact: true })).toBeVisible()
 
     const exportRequest = page.waitForRequest(request => request.method() === 'GET' && /\/api\/config\?/.test(request.url()) && new URL(request.url()).searchParams.get('profile') === 'research')
     const downloadPromise = page.waitForEvent('download')
@@ -1321,7 +1322,7 @@ for (const width of [390, 1440]) {
 
     const reset = management.getByRole('button', { name: 'Reset to defaults', exact: true })
     await reset.click()
-    const confirmation = page.getByRole('dialog', { name: 'Reset all settings to Hermes defaults?', exact: true })
+    const confirmation = page.getByRole('dialog', { name: 'Reset all settings to Hermes defaults? — research', exact: true })
     await expect(confirmation).toBeVisible()
     await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click()
     expect(writes).toHaveLength(1)

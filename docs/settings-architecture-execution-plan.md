@@ -1,12 +1,67 @@
 # Settings architecture: execution plan
 
-Status: planned; implementation has not started.
+Status: implemented at the available upstream adapter boundary. The catalog,
+capability/scope projection, compact navigation state, and typed Configuration
+actions are in place. The pinned upstream controller remains the checked
+fallback because its page registry and render dispatch are private; see the
+implementation record below.
 
 Baseline: `codex/settings-fullscreen` at `ba5edd6`, reviewed on September 29,
 2026. The renderer pin is
-`03b0c7947262b220f5148b75a30bb7a3faddcbb2`. Recheck both revisions and local
-changes before implementation. This document plans the settings expert-reset
-recommendations; it does not claim they have been implemented or validated.
+`03b0c7947262b220f5148b75a30bb7a3faddcbb2` and remains fixed through this
+migration. This document records the implementation of the settings
+expert-reset recommendations and the adapter boundary retained at this pin.
+
+## Implementation record
+
+The renderer remains the authority for setting schemas, values, page forms,
+profile stores, and persistence. Wrapper presentation metadata now lives in
+`src/experience/settings/catalog.ts`; `policy.ts` is a compatibility facade.
+The catalog provides section groups, titles, old-name aliases, hidden-page and
+field decisions, support evidence, and scope descriptions. Unknown renderer
+sections and fields continue through the existing fallback. About remains
+hidden, and its route no longer mounts its page content.
+
+The compact shell now uses an explicit `automatic` / `menu` / `detail`
+presentation state while keeping the renderer URL as the selected-page source
+of truth. Hidden generic fields are filtered before rendering and in search;
+the shell's DOM mutation observer has been removed. Existing renderer handling
+for handwritten controls remains in the checked browser adapter.
+
+Configuration now receives a typed command object for export, import, and
+reset rather than the old navigation-footer JSX. Those commands retain the
+upstream handlers, but bind reads and writes to the concrete profile captured by
+the settings view. The page displays that profile as read-only information and
+the reset confirmation names it. The profile picker remains absent.
+
+The pinned `SettingsView` keeps its page enumeration, route state, navigation,
+and `activeSettingsContent` dispatch private inside
+`apps/desktop/src/app/settings/index.tsx`. There is no exported registry or
+factory with which to compose every page directly. The current checked seam
+wraps that controller's actual page content, so new upstream pages retain their
+renderer and are grouped under Other Settings. The controller is intentionally
+retained as the adapter fallback; replacing it with a list of locally imported
+pages would break the upstream-inheritance requirement. No renderer files were
+edited.
+
+Validation completed: browser policy tests (28/28), compatibility registry
+tests (61/61), typecheck, compatibility registry verification, and a production
+Vite/PWA build to a temporary output directory. Focused Playwright flows passed
+at phone and desktop widths against Vite and the synthetic preview gateway:
+renamed navigation/search, Models and Chat loading, and Configuration
+export/import/reset with a selected profile (6/6). The standard build output
+directory is read-only in this worktree, so the build wrote under `/tmp`. The
+full browser suite was not run; only the focused settings flows were exercised.
+
+| Delivery | Current status | Remaining work |
+| --- | --- | --- |
+| 0. Baseline and feasibility | Complete | Browser-image execution remains a CI or configured-preview check. |
+| 1. Catalog | Complete | New wrapper presentation decisions go into the catalog; future consumers can migrate incrementally. |
+| 2. Capabilities and target identity | Complete for current wrapper controls | Runtime server capabilities remain unknown until the server exposes evidence; unknown options remain available. |
+| 3. Navigation and UI primitives | Complete at the current shell boundary | The full-screen shell already uses shared tokens and toolbar controls; no separate navigation row has two non-settings consumers. |
+| 4. Adapter pilot | Feasibility complete; checked controller retained | This is the fallback explicitly allowed by §7.3 while the renderer keeps its page registry private. |
+| 5. Page and action migration | Configuration commands migrated | Forms, routes, cache ownership, and unknown-page rendering remain with the upstream page dispatcher. |
+| 6. Compatibility retirement | DOM observer retired; required checked transforms remain | Remaining transforms encode the wrapper shell around private renderer APIs and retire when upstream exposes equivalent browser interfaces. |
 
 ## 1. Outcome
 

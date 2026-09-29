@@ -1,15 +1,29 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import vm from 'node:vm'
 import ts from 'typescript'
 const root = path.resolve('apps/web-desktop')
-function load(file, globals = {}) {
-  const filename = path.join(root, file)
-  const context = vm.createContext({ exports: {}, require: createRequire(filename), ...globals })
+function load(file, globals = {}, moduleCache = new Map()) {
+  const filename = path.resolve(root, file)
+  if (moduleCache.has(filename)) return moduleCache.get(filename)
+  const exports = {}
+  moduleCache.set(filename, exports)
+  const nodeRequire = createRequire(filename)
+  const context = vm.createContext({ exports: {}, require: specifier => {
+    if (specifier.startsWith('.')) {
+      const module = path.resolve(path.dirname(filename), specifier)
+      for (const extension of ['.ts', '.tsx']) {
+        const candidate = `${module}${extension}`
+        if (existsSync(candidate)) return load(path.relative(root, candidate), globals, moduleCache)
+      }
+    }
+    return nodeRequire(specifier)
+  }, ...globals })
+  context.exports = exports
   vm.runInContext(ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, context)
   return context.exports
 }
@@ -55,9 +69,9 @@ test('settings customization hides known sections and fields while inheriting ne
     assert.equal(isSettingsSectionVisible('providers'), true)
     assert.deepEqual(orderSettingsSections([{ id: 'config:model' }, { id: 'config:appearance' }]).map(item => item.id), ['config:appearance', 'config:model'])
     assert.equal(isSettingsFieldVisible('display.show_reasoning'), false)
-    assert.equal(isSettingsFieldVisible('browser.use_real_profile'), true)
-    assert.equal(isSettingsFieldVisible('new.upstream_option'), true)
-  } finally {
+  assert.equal(isSettingsFieldVisible('browser.use_real_profile'), true)
+  assert.equal(isSettingsFieldVisible('new.upstream_option'), true)
+} finally {
     hiddenSections.length = 0
     orderedSections.length = 0
     hiddenFields.length = 0
@@ -101,14 +115,28 @@ test('settings groups retain new upstream pages and search keeps old names and d
   assert.ok(field.keywords.includes('Browser'))
   assert.equal(field.target, target)
 })
+test('settings catalog records capability evidence and validates its authored destinations', () => {
+  const { settingsCapability, settingsFields, validateSettingsCatalog } = load('src/experience/settings/policy.ts')
+  assert.equal(validateSettingsCatalog().length, 0)
+  assert.equal(settingsCapability('server.real-browser-profile').state, 'unknown')
+  assert.equal(settingsFields.find(field => field.id === 'appearance.translucency').supportState, 'unsupported')
+  assert.equal(settingsFields.find(field => field.id === 'voice.client_direct').supportState, 'unknown')
+})
 test('settings policy stays aligned across page fields, deep search, and palette links', () => {
-  const { filterBrowserSettingsFields, filterBrowserSettingsSearch, filterBrowserSettingsPalette, useBrowserSettingsPresentation } = load('src/upstream/browser-plugin.ts')
+  const { filterBrowserSettingsFields, filterBrowserSettingsSearch, filterBrowserSettingsPalette, useBrowserSettingsPresentation, useBrowserConfigurationSettings } = load('src/upstream/browser-plugin.ts')
   const settings = readFileSync(path.join(root, '../desktop/src/app/settings/index.tsx'), 'utf8')
   const config = readFileSync(path.join(root, '../desktop/src/app/settings/config-settings.tsx'), 'utf8')
   const search = readFileSync(path.join(root, '../desktop/src/app/settings/use-settings-search.ts'), 'utf8')
   const palette = readFileSync(path.join(root, '../desktop/src/app/command-palette/index.tsx'), 'utf8')
-  assert.match(useBrowserSettingsPresentation(settings, root), /BrowserSettingsPresentation activeView=\{activeView\}/)
+  const adaptedSettings = useBrowserSettingsPresentation(settings, root)
+  assert.match(adaptedSettings, /BrowserSettingsPresentation activeView=\{activeView\}/)
+  assert.match(adaptedSettings, /configurationCommands=\{configurationCommands\}/)
+  assert.match(adaptedSettings, /configurationScopeProfile=\{scopeProfile\}/)
+  assert.match(adaptedSettings, /title: `\$\{t\.settings\.resetConfirm\} — \$\{scopeProfile\}`/)
   assert.match(filterBrowserSettingsFields(config, root), /isSettingsFieldVisible\(key\)/)
+  const adaptedConfig = useBrowserConfigurationSettings(config, root)
+  assert.match(adaptedConfig, /BrowserConfigurationPage commands=\{configurationCommands\} scopeProfile=\{configurationScopeProfile\}/)
+  assert.match(adaptedConfig, /activeSectionId === 'browser-configuration' \? configurationScopeProfile : requestScopeProfile/)
   assert.match(filterBrowserSettingsSearch(search, root), /appearanceEntries: appearanceEntries\.filter/)
   assert.match(filterBrowserSettingsSearch(search, root), /isSettingsSectionVisible\(entry\.target\.view\)/)
   assert.match(filterBrowserSettingsPalette(palette, root), /SECTIONS\.filter\(section => isSettingsSectionVisible/)

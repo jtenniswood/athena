@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
 import { useLocation } from 'react-router'
 import { Codicon, OverlayView } from '../../upstream/browser-api'
-import { groupSettingsSections, isSettingsFieldVisible, orderSettingsSections, settingsPageLabel } from './policy'
+import { groupSettingsSections, isSettingsSectionVisible, orderSettingsSections, settingsPageLabel, settingsScopeDescription } from './policy'
 import { BrowserToolbarButton } from '../ui/toolbar-button'
 import './settings.css'
 
@@ -29,6 +29,11 @@ type Props = {
   children: ReactNode
 }
 
+type CompactPresentation =
+  | { mode: 'automatic' }
+  | { mode: 'menu'; locationKey: string }
+  | { mode: 'detail' }
+
 const COMPACT_QUERY = '(width < 56rem), (pointer: coarse) and (max-height: 27rem)'
 
 function subscribeCompact(onChange: () => void) {
@@ -52,38 +57,19 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const moveFocus = useRef(false)
   const compact = useCompactSettings()
   const location = useLocation()
-  const [compactDetailOpen, setCompactDetailOpen] = useState(false)
-  const [compactBackToList, setCompactBackToList] = useState<string | null>(null)
+  const [compactPresentation, setCompactPresentation] = useState<CompactPresentation>({ mode: 'automatic' })
   const params = new URLSearchParams(location.search)
   const hasDirectTarget = params.has('tab') || params.has('field') || params.has('setting')
   const navigationGroups = groupSettingsSections(groups)
   const visibleGroups = navigationGroups.flatMap(group => group.items)
   const activeGroup = visibleGroups.find(group => group.active)
-  const pageNotice = activeView === 'billing'
-    ? 'This page shows billing from the configured Hermes server, such as Nous usage. It does not include external model provider or web hosting charges.'
-    : activeView === 'config:browser'
-      ? 'Browser automation runs on the configured Hermes server. “Use My Real Browser Profile” uses that server’s supported Chromium profile, not the browser viewing this page. Private URLs and local network access refer to networks visible from that server.'
-      : activeView === 'vault'
-        ? 'Saved logins are stored and used by the configured Hermes server for browser automation.'
-        : null
+  const pageNotice = settingsScopeDescription(activeView)
   const activeVisible = Boolean(activeGroup)
+  const pageVisible = isSettingsSectionVisible(activeView)
   const activeChildren = orderSettingsSections(activeGroup?.children ?? []).map(child => ({ ...child, label: settingsPageLabel(child.id, child.label) }))
-  const showDetail = activeVisible && (!compact || compactDetailOpen || (hasDirectTarget && compactBackToList !== location.key))
-
-  useLayoutEffect(() => {
-    const root = frame.current
-    if (!root) return
-    const applyVisibility = () => {
-      for (const element of root.querySelectorAll<HTMLElement>('[id^="setting-field-"]')) {
-        const key = element.id.slice('setting-field-'.length)
-        element.hidden = !isSettingsFieldVisible(key)
-      }
-    }
-    applyVisibility()
-    const observer = new MutationObserver(applyVisibility)
-    observer.observe(root, { childList: true, subtree: true })
-    return () => observer.disconnect()
-  }, [])
+  const directTargetOpensDetail = hasDirectTarget
+    && (compactPresentation.mode === 'automatic' || (compactPresentation.mode === 'menu' && compactPresentation.locationKey !== location.key))
+  const showDetail = activeVisible && (!compact || compactPresentation.mode === 'detail' || directTargetOpensDetail)
 
   useLayoutEffect(() => {
     if (!compact || !moveFocus.current) return
@@ -95,8 +81,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const selectCategory = (item: SettingsNavItem) => {
     moveFocus.current = compact
     item.onSelect()
-    setCompactBackToList(null)
-    setCompactDetailOpen(true)
+    setCompactPresentation({ mode: 'detail' })
   }
 
   return <OverlayView
@@ -114,8 +99,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
             aria-label={backLabel}
             onClick={() => {
               moveFocus.current = true
-              setCompactDetailOpen(false)
-              setCompactBackToList(location.key)
+              setCompactPresentation({ mode: 'menu', locationKey: location.key })
             }}
           ><Codicon name="arrow-left" /></BrowserToolbarButton> : null}
           <h1 ref={heading} tabIndex={-1} className={compact && showDetail ? 'browser-settings-mobile-title' : undefined}>
@@ -171,8 +155,8 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
             <p>{activeVisible ? 'Choose a category to view and change its options.' : 'This settings category is hidden. Choose another category or close settings.'}</p>
           </div>}
           <div className="browser-settings-content-slot" hidden={!showDetail} inert={!showDetail}>
-            {pageNotice && <p className="browser-settings-page-notice" role="note">{pageNotice}</p>}
-            {children}
+            {pageVisible && pageNotice && <p className="browser-settings-page-notice" role="note">{pageNotice}</p>}
+            {pageVisible && children}
           </div>
         </main>
       </div>

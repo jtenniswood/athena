@@ -181,7 +181,7 @@
   display: flex;
   width: 100%;
   align-items: flex-start;
-  gap: var(--web-space-3);
+  gap: 0;
   padding: var(--web-space-4) var(--web-space-3);
   border: 0;
   border-bottom: 1px solid var(--web-border-subtle);
@@ -193,7 +193,6 @@
   cursor: pointer;
 }
 .browser-configuration-action:hover { background: var(--web-hover); }
-.browser-configuration-action > svg { flex: 0 0 var(--web-icon-size); width: var(--web-icon-size); height: var(--web-icon-size); margin-top: .125rem; color: var(--web-text-muted); }
 .browser-configuration-action > span { min-width: 0; }
 .browser-configuration-action-label { display: block; font-weight: 500; }
 .browser-configuration-action-description { display: block; margin-top: var(--web-space-1); color: var(--web-text-muted); line-height: var(--web-line-body); }

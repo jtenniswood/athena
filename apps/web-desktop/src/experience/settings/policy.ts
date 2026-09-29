@@ -1,81 +1,48 @@
-/** Local presentation overrides. Unlisted settings inherit upstream behavior. */
-export const settingsGroups = [
-  { id: 'preferences', label: 'Preferences', pages: ['config:appearance', 'notifications', 'keybinds'] },
-  { id: 'assistant', label: 'Assistant', pages: ['config:model', 'providers', 'config:chat', 'config:voice', 'config:memory'] },
-  { id: 'tools', label: 'Tools', pages: ['config:workspace', 'config:browser', 'config:safety', 'vault', 'keys'] },
-  { id: 'service', label: 'Service', pages: ['gateway', 'billing'] },
-  { id: 'maintenance', label: 'Maintenance', pages: ['sessions', 'config:browser-configuration', 'config:advanced'] }
-]
+import {
+  hiddenSettingsPages,
+  hiddenPageDefinitions,
+  settingsCatalog,
+  settingsFields,
+  settingsGroups,
+  settingsPageAliases,
+  settingsPageId,
+  settingsPageIsVisible,
+  settingsPageLabel,
+  settingsPolicy,
+  settingsScopeDescription,
+  settingsFieldIsVisible,
+  validateSettingsCatalog
+} from './catalog'
 
-const pageLabels: Record<string, string> = {
-  'config:appearance': 'Appearance',
-  notifications: 'Notifications',
-  keybinds: 'Keyboard Shortcuts',
-  'config:model': 'Models',
-  providers: 'AI Connections',
-  'config:chat': 'Chat',
-  'config:voice': 'Voice',
-  'config:memory': 'Memory',
-  'config:workspace': 'Workspace',
-  'config:browser': 'Browser Automation',
-  'config:safety': 'Permissions',
-  vault: 'Saved Logins',
-  keys: 'Credentials',
-  gateway: 'Server Connection',
-  billing: 'Billing',
-  sessions: 'Archived Chats',
-  'config:browser-configuration': 'Configuration',
-  'config:advanced': 'Advanced',
-  'kview:tools': 'Tool API Keys',
-  'kview:settings': 'Server Credentials'
-}
-
-const pageAliases: Record<string, string[]> = {
-  'config:memory': ['Memory & context'],
-  'config:workspace': ['Workspace & files'],
-  'config:safety': ['Permissions & safety'],
-  billing: ['Usage & billing'],
-  providers: ['Providers', 'accounts', 'API keys', 'endpoints'],
-  vault: ['Passwords & Logins', 'vault'],
-  keys: ['Tools & Keys', 'Tool & service credentials'],
-  gateway: ['Gateways', 'gateway', 'sign in'],
-  'config:browser-configuration': ['Backup & reset', 'backup', 'import', 'export', 'reset']
-}
-
-export const settingsPolicy = {
-  sections: {
-    // Keep upstream ids stable for deep links and automatically inherited pages.
-    hidden: ['about'] as string[],
-    order: settingsGroups.flatMap(group => group.pages)
-  },
-  fields: {
-    // Use config schema keys, stable appearance IDs, or supported custom controls.
-    hidden: [
-      // These values remain in the remote configuration but have no working
-      // control in the browser deployment, or require host capability data we
-      // do not receive from the configured gateway.
-      'appearance.app-actions',
-      'appearance.translucency',
-      'terminal.font_family',
-      'updates.non_interactive_local_changes',
-      'voice.client_direct',
-      'voice.record_key'
-    ] as string[]
-  }
-} as const
-
-function settingsPageId(id: string): string {
-  return id.split('&')[0]
-}
-
-export function settingsPageLabel(id: string, fallback: string): string {
-  return pageLabels[settingsPageId(id)] ?? fallback
-}
+export {
+  hiddenSettingsPages,
+  hiddenPageDefinitions,
+  settingsCapabilities,
+  settingsCatalog,
+  settingsFields,
+  settingsGroups,
+  settingsPageAliases,
+  settingsPageDefinition,
+  settingsPageId,
+  settingsPageIsVisible,
+  settingsPageLabel,
+  settingsPolicy,
+  settingsScopeDescription,
+  settingsCapability,
+  settingsFieldIsVisible,
+  validateSettingsCatalog
+} from './catalog'
+export type {
+  SettingsCapability,
+  SettingsCapabilityState,
+  SettingsFieldDefinition,
+  SettingsGroupDefinition,
+  SettingsPageDefinition,
+  SettingsScope
+} from './catalog'
 
 export function isSettingsSectionVisible(id: string): boolean {
-  const page = settingsPageId(id)
-  const canonical = page.startsWith('config:') ? page.slice('config:'.length) : page
-  return !settingsPolicy.sections.hidden.includes(page) && !settingsPolicy.sections.hidden.includes(canonical)
+  return settingsPageIsVisible(id)
 }
 
 export function orderSettingsSections<T extends { id: string }>(sections: readonly T[]): T[] {
@@ -96,10 +63,15 @@ export function orderSettingsSections<T extends { id: string }>(sections: readon
 
 export function groupSettingsSections<T extends { id: string; label: string }>(sections: readonly T[]) {
   const visible = orderSettingsSections(sections).map(section => ({ ...section, label: settingsPageLabel(section.id, section.label) }))
-  const known = new Set(settingsGroups.flatMap(group => group.pages))
+  const known = new Set(settingsCatalog.flatMap(group => group.pages.map(page => page.id)))
   return [
-    ...settingsGroups.map(group => ({ ...group, items: visible.filter(item => group.pages.includes(item.id)) })),
-    { id: 'other', label: 'Other Settings', items: visible.filter(item => !known.has(item.id)) }
+    ...settingsCatalog.map(group => ({
+      id: group.id,
+      label: group.title,
+      pages: group.pages.map(page => page.id),
+      items: visible.filter(item => group.pages.some(page => page.id === settingsPageId(item.id)))
+    })),
+    { id: 'other', label: 'Other Settings', pages: [], items: visible.filter(item => !known.has(settingsPageId(item.id))) }
   ].filter(group => group.items.length > 0)
 }
 
@@ -122,7 +94,7 @@ export function presentSettingsPalette<T extends { id: string; label: string; ke
       : params.has('pview') ? `${parentLabel} — ${item.label}` : parentLabel
     return {
       id: tab,
-      item: { ...item, label, keywords: [...(item.keywords ?? []), item.label, ...(pageAliases[page] ?? [])] }
+      item: { ...item, label, keywords: [...(item.keywords ?? []), item.label, ...settingsPageAliases(page)] }
     }
   })).map(({ item }) => item)
 }
@@ -132,9 +104,9 @@ export function presentSettingsSearchEntry<T extends { context: string; keywords
   const label = settingsPageLabel(page, entry.context)
   const context = entry.target.keysView
     ? `${label} — ${settingsPageLabel(`kview:${entry.target.keysView}`, entry.context)}` : label
-  return { ...entry, context, keywords: [...entry.keywords, entry.context, ...(pageAliases[page] ?? [])] }
+  return { ...entry, context, keywords: [...entry.keywords, entry.context, ...settingsPageAliases(page)] }
 }
 
 export function isSettingsFieldVisible(key: string): boolean {
-  return !(settingsPolicy.fields.hidden as readonly string[]).includes(key)
+  return settingsFieldIsVisible(key)
 }

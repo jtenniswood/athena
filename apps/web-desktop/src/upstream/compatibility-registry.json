@@ -2074,7 +2074,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "2505834a903fa6250bbb5bcd754248b90532e5ebaa7469b1ef22980e508ee8cd",
     "inputHash": "2505834a903fa6250bbb5bcd754248b90532e5ebaa7469b1ef22980e508ee8cd",
-    "outputHash": "d7c34b1b3b7c8cde90a0312e89533fe8ee038bb385119ee9fea2d1648c3e944c",
+    "outputHash": "1bf7886d6cb8ff08c73e416a8b455fad971699b048053ce2ac20c16cea233e37",
     "handlers": [
       "useBrowserSettingsPresentation"
     ],
@@ -2100,7 +2100,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "e557900fdf12bed8efda0865281dd3462fe6fa79455f2c3021daf1d8bcdce4f6",
     "inputHash": "e557900fdf12bed8efda0865281dd3462fe6fa79455f2c3021daf1d8bcdce4f6",
-    "outputHash": "1101c029b0d788b3931ec3fb78a146361a3523290de961a2c1b8bd8abaab4767",
+    "outputHash": "f130436c4075d1dd325a622fca808c559d2cea3986afb54b27a3421a4417310c",
     "handlers": [
       "filterBrowserSettingsFields",
       "useBrowserConfigurationSettings"
