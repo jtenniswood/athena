@@ -1,7 +1,8 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
 import { useLocation } from 'react-router'
-import { OverlayView } from '../../upstream/browser-api'
+import { Codicon, OverlayView } from '../../upstream/browser-api'
 import { isSettingsFieldVisible, orderSettingsSections } from './policy'
+import { BrowserToolbarButton } from '../ui/toolbar-button'
 import './settings.css'
 
 type SettingsNavItem = {
@@ -47,6 +48,9 @@ function useCompactSettings() {
 
 export function BrowserSettingsPresentation({ activeView, actions, backLabel, closeLabel, groups, onClose, search, title, children }: Props) {
   const frame = useRef<HTMLDivElement>(null)
+  const heading = useRef<HTMLHeadingElement>(null)
+  const navigation = useRef<HTMLElement>(null)
+  const moveFocus = useRef(false)
   const compact = useCompactSettings()
   const location = useLocation()
   const [compactDetailOpen, setCompactDetailOpen] = useState(false)
@@ -54,7 +58,9 @@ export function BrowserSettingsPresentation({ activeView, actions, backLabel, cl
   const params = new URLSearchParams(location.search)
   const hasDirectTarget = params.has('tab') || params.has('field') || params.has('setting')
   const visibleGroups = orderSettingsSections(groups)
-  const activeVisible = visibleGroups.some(group => group.active)
+  const activeGroup = visibleGroups.find(group => group.active)
+  const activeVisible = Boolean(activeGroup)
+  const activeChildren = orderSettingsSections(activeGroup?.children ?? [])
   const showDetail = activeVisible && (!compact || compactDetailOpen || (hasDirectTarget && !compactBackToList))
 
   useLayoutEffect(() => {
@@ -72,6 +78,20 @@ export function BrowserSettingsPresentation({ activeView, actions, backLabel, cl
     return () => observer.disconnect()
   }, [])
 
+  useLayoutEffect(() => {
+    if (!compact || !moveFocus.current) return
+    moveFocus.current = false
+    if (showDetail) heading.current?.focus()
+    else navigation.current?.querySelector<HTMLButtonElement>('[aria-current="page"]')?.focus()
+  }, [compact, showDetail, activeView])
+
+  const selectCategory = (item: SettingsNavItem) => {
+    moveFocus.current = compact
+    item.onSelect()
+    setCompactBackToList(false)
+    setCompactDetailOpen(true)
+  }
+
   return <OverlayView
     closeLabel={closeLabel}
     onClose={onClose}
@@ -80,55 +100,67 @@ export function BrowserSettingsPresentation({ activeView, actions, backLabel, cl
   >
     <div ref={frame} className="browser-settings-frame" data-browser-settings-frame="" role="dialog" aria-modal="true" aria-label={title}>
       <header className="browser-settings-header">
-        {compact && showDetail && <button
-          type="button"
-          className="browser-settings-back"
-          onClick={() => { setCompactDetailOpen(false); setCompactBackToList(true) }}
-          aria-label={backLabel}
-        >‹ <span>{title}</span></button>}
-        {!compact && <h1>{title}</h1>}
-        <div className="browser-settings-tools">
-          <div className="browser-settings-search">{search}</div>
-          <div className="browser-settings-actions">{actions}</div>
+        <div className="browser-settings-heading">
+          {compact && showDetail ? <BrowserToolbarButton
+            className="browser-settings-back"
+            tooltip={backLabel}
+            aria-label={backLabel}
+            onClick={() => {
+              moveFocus.current = true
+              setCompactDetailOpen(false)
+              setCompactBackToList(true)
+            }}
+          ><Codicon name="arrow-left" /></BrowserToolbarButton> : <Codicon name="settings-gear" />}
+          <h1 ref={heading} tabIndex={-1} className={compact && showDetail ? 'browser-settings-mobile-title' : undefined}>
+            {compact && showDetail ? activeGroup?.label ?? activeView : title}
+          </h1>
         </div>
+        <div className="browser-settings-search">{search}</div>
       </header>
       <div className={`browser-settings-layout${compact ? ' is-compact' : ''}${showDetail ? ' show-detail' : ''}`}>
-        <nav className="browser-settings-navigation" aria-label="Settings categories" hidden={compact && showDetail}>
-          {visibleGroups.map(group => {
-            const Icon = group.icon
-            return <div className="browser-settings-category" key={group.id}>
-              {group.gapBefore && <div className="browser-settings-divider" aria-hidden="true" />}
-              <button
-                type="button"
-                className={`browser-settings-category-button${group.active ? ' is-active' : ''}`}
-                aria-current={group.active ? 'page' : undefined}
-                data-tour={`nav-${group.id}`}
-                onClick={() => { group.onSelect(); setCompactBackToList(false); setCompactDetailOpen(true) }}
-              >
-                <Icon className="browser-settings-category-icon" />
-                <span>{group.label}</span>
-              </button>
-              {group.active && group.children?.map(child => {
-                const ChildIcon = child.icon
-                return <button
+        <nav ref={navigation} className="browser-settings-navigation" aria-label="Settings categories" hidden={compact && showDetail}>
+          <div className="browser-settings-category-list">
+            {visibleGroups.map(group => {
+              const Icon = group.icon
+              return <div className="browser-settings-category" key={group.id}>
+                {group.gapBefore && <div className="browser-settings-divider" aria-hidden="true" />}
+                <button
                   type="button"
-                  className={`browser-settings-category-button is-child${child.active ? ' is-active' : ''}`}
-                  aria-current={child.active ? 'page' : undefined}
-                  key={child.id}
-                  data-tour={`nav-${child.id}`}
-                  onClick={() => { child.onSelect(); setCompactBackToList(false); setCompactDetailOpen(true) }}
+                  className={`browser-settings-category-button${group.active ? ' is-active' : ''}`}
+                  aria-current={group.active ? 'page' : undefined}
+                  data-tour={`nav-${group.id}`}
+                  onClick={() => selectCategory(group)}
                 >
-                  <ChildIcon className="browser-settings-category-icon" />
-                  <span>{child.label}</span>
+                  <Icon className="browser-settings-category-icon" />
+                  <span>{group.label}</span>
+                  <Codicon name="chevron-right" className="browser-settings-category-chevron" />
                 </button>
-              })}
-            </div>
-          })}
+                {!compact && group.active && activeChildren.map(child => {
+                  const ChildIcon = child.icon
+                  return <button
+                    type="button"
+                    className={`browser-settings-category-button is-child${child.active ? ' is-active' : ''}`}
+                    aria-current={child.active ? 'page' : undefined}
+                    key={child.id}
+                    data-tour={`nav-${child.id}`}
+                    onClick={() => selectCategory(child)}
+                  >
+                    <ChildIcon className="browser-settings-category-icon" />
+                    <span>{child.label}</span>
+                  </button>
+                })}
+              </div>
+            })}
+          </div>
+          <div className="browser-settings-footer">
+            <span>Configuration</span>
+            <div className="browser-settings-actions">{actions}</div>
+          </div>
         </nav>
-        <main className="browser-settings-detail" aria-label="Settings">
-          {compact && showDetail ? <div className="browser-settings-mobile-title">
-            {visibleGroups.find(group => group.active)?.label ?? activeView}
-          </div> : null}
+        <main className="browser-settings-detail" aria-label={activeGroup?.label ?? title}>
+          {compact && showDetail && activeChildren.length > 0 && <nav className="browser-settings-subnavigation" aria-label={`${activeGroup?.label} categories`}>
+            {activeChildren.map(child => <button key={child.id} type="button" aria-current={child.active ? 'page' : undefined} onClick={() => selectCategory(child)}>{child.label}</button>)}
+          </nav>}
           {!showDetail && <div className="browser-settings-home">
             <h2>{title}</h2>
             <p>{activeVisible ? 'Choose a category to view and change its options.' : 'This settings category is hidden. Choose another category or close settings.'}</p>

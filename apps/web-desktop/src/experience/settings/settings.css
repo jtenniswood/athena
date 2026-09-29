@@ -5,7 +5,7 @@
   width: calc(100vw / var(--web-ui-scale, 1));
   height: calc(var(--web-viewport-height, 100dvh) / var(--web-ui-scale, 1));
   padding: 0 !important;
-  background: var(--ui-chat-surface-background, #101114);
+  background: var(--web-bg);
   backdrop-filter: none;
 }
 
@@ -15,11 +15,8 @@
   height: 100%;
   min-height: 0;
   max-height: 100%;
-  border-radius: 0;
-}
-
-[data-overlay-surface]:has([data-browser-settings-frame]) .browser-settings-fullscreen-card {
   border: 0;
+  border-radius: 0;
   box-shadow: none;
 }
 
@@ -29,135 +26,132 @@
   padding: 0;
 }
 
+.browser-settings-fullscreen-card {
+  --settings-safe-top: calc(env(safe-area-inset-top, 0px) / var(--web-ui-scale, 1));
+  --settings-header-height: max(3.25rem, var(--web-touch-min));
+}
+
+/* Align the existing overlay close control with the browser toolbar. */
+.browser-settings-fullscreen-card > .pointer-events-none > .pointer-events-auto {
+  top: calc(var(--settings-safe-top) + var(--settings-header-height) / 2);
+  right: var(--web-sheet-padding-end);
+}
+.browser-settings-fullscreen-card > .pointer-events-none button {
+  width: var(--web-control-regular);
+  height: var(--web-control-regular);
+  border-radius: var(--web-radius-control);
+}
+
 .browser-settings-frame {
-  --settings-gutter: max(1.25rem, env(safe-area-inset-left));
   box-sizing: border-box;
   display: flex;
   width: 100%;
   height: 100%;
   min-height: 0;
   flex-direction: column;
-  padding: max(0.75rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom)) var(--settings-gutter);
-  color: var(--ui-text-primary, inherit);
-  background: var(--ui-chat-surface-background, #101114);
+  padding-top: var(--settings-safe-top);
+  color: var(--web-text);
+  background: var(--web-bg);
+  font-family: var(--web-font);
+  font-size: var(--web-text-body);
 }
 
 .browser-settings-header {
-  display: grid;
-  min-height: 5.25rem;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  min-height: var(--settings-header-height);
   align-items: center;
-  gap: 1rem;
+  gap: var(--web-space-6);
   flex: 0 0 auto;
-  padding: 2rem 4rem 0.875rem 0;
-  border-bottom: 1px solid var(--ui-stroke-secondary, rgb(127 127 127 / 20%));
+  padding: 0 calc(var(--web-sheet-padding-end) + var(--web-control-regular) + var(--web-space-3)) 0 var(--web-sheet-padding-start);
+  border-bottom: 1px solid var(--web-border-subtle);
+  background: var(--web-sidebar);
 }
-
-.browser-settings-header h1,
-.browser-settings-home h2 {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 600;
+.browser-settings-heading { display: flex; min-width: 0; align-items: center; gap: var(--web-space-2); }
+.browser-settings-heading > .codicon { color: var(--web-text-muted); font-size: var(--web-icon-size); }
+.browser-settings-heading h1 { margin: 0; font-size: var(--web-text-title); font-weight: 600; line-height: var(--web-line-body); }
+.browser-settings-heading h1:focus { outline: none; }
+.browser-settings-search { width: min(22rem, 45%); min-width: 0; margin-left: auto; }
+.browser-settings-search > button {
+  width: 100%;
+  height: var(--web-control-regular);
+  gap: var(--web-space-2);
+  padding-inline: var(--web-space-3);
+  border: 1px solid var(--web-border-subtle);
+  border-radius: var(--web-radius-control);
+  background: var(--web-bg);
+  color: var(--web-text-muted);
+  box-shadow: none;
 }
+.browser-settings-search > button:hover { background: var(--web-hover); color: var(--web-text); }
+.browser-settings-search > button > span:first-of-type { flex: 1; text-align: left; }
 
-.browser-settings-tools { display: flex; min-width: 0; align-items: center; justify-self: end; gap: 0.75rem; }
-.browser-settings-search { min-width: 0; }
-.browser-settings-actions { display: flex; min-height: 2.75rem; align-items: center; justify-content: flex-end; gap: 0.25rem; }
-
-.browser-settings-layout {
-  display: grid;
-  min-height: 0;
-  flex: 1 1 auto;
-  grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr);
-  overflow: hidden;
-}
-
-.browser-settings-navigation {
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 1rem 0.75rem 1rem 0;
-  border-right: 1px solid var(--ui-stroke-secondary, rgb(127 127 127 / 20%));
-  background: var(--ui-sidebar-surface-background, transparent);
-  -webkit-overflow-scrolling: touch;
-}
-
-.browser-settings-category { margin: 0.125rem 0; }
-.browser-settings-divider { height: 0.75rem; }
+.browser-settings-layout { display: grid; min-height: 0; flex: 1; grid-template-columns: 16rem minmax(0, 1fr); overflow: hidden; }
+.browser-settings-navigation { display: flex; min-height: 0; flex-direction: column; background: var(--web-sidebar); border-right: 1px solid var(--web-border-subtle); }
+.browser-settings-category-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--web-space-3) var(--web-space-2) var(--web-space-4) var(--web-sheet-padding-start); }
+.browser-settings-category { margin: 1px 0; }
+.browser-settings-divider { margin: var(--web-space-2) var(--web-space-2); border-top: 1px solid var(--web-border-subtle); }
 .browser-settings-category-button {
   display: flex;
   width: 100%;
-  min-height: 2.75rem;
+  min-height: max(2rem, var(--web-navigation-row));
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid transparent;
-  border-radius: 0.5rem;
-  color: var(--ui-text-secondary, inherit);
+  gap: var(--web-space-2);
+  padding: var(--web-space-2);
+  border: 0;
+  border-radius: var(--web-radius-control);
+  color: var(--web-text-muted);
   background: transparent;
   text-align: left;
   font: inherit;
+  line-height: var(--web-line-body);
   cursor: pointer;
 }
-.browser-settings-category-button:hover { background: var(--chrome-action-hover, rgb(127 127 127 / 12%)); }
-.browser-settings-category-button.is-active {
-  border-color: var(--ui-stroke-tertiary, transparent);
-  color: var(--ui-text-primary, inherit);
-  background: var(--ui-bg-tertiary, rgb(127 127 127 / 14%));
-}
-.browser-settings-category-button.is-child { min-height: 2.5rem; margin-left: 0.75rem; width: calc(100% - 0.75rem); padding-left: 0.6rem; }
-.browser-settings-category-icon { width: 1rem; height: 1rem; flex: 0 0 auto; opacity: 0.8; }
+.browser-settings-category-button > span:not(.codicon) { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.browser-settings-category-button:hover { background: var(--web-hover); color: var(--web-text); }
+.browser-settings-category-button.is-active { color: var(--web-text); background: var(--web-active); font-weight: 500; }
+.browser-settings-category-button.is-child { margin-left: var(--web-space-6); width: calc(100% - var(--web-space-6)); font-size: var(--web-text-caption); }
+.browser-settings-category-icon { width: var(--web-icon-size); height: var(--web-icon-size); flex: 0 0 auto; color: var(--web-text-subtle); }
+.browser-settings-category-button.is-active .browser-settings-category-icon { color: var(--web-text); }
+.browser-settings-category-chevron { display: none !important; }
+.browser-settings-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--web-space-2); padding: var(--web-space-2) var(--web-space-2) var(--web-sheet-padding-bottom) var(--web-sheet-padding-start); border-top: 1px solid var(--web-border-subtle); }
+.browser-settings-footer > span { color: var(--web-text-subtle); font-size: var(--web-text-caption); }
+.browser-settings-actions { display: flex; align-items: center; gap: var(--web-space-1); }
+.browser-settings-actions button { width: var(--web-control-regular); height: var(--web-control-regular); border-radius: var(--web-radius-control); }
 
-.browser-settings-detail {
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  flex-direction: column;
-  overflow: hidden;
-  overscroll-behavior: contain;
-  padding: 1.25rem clamp(1rem, 4vw, 3rem) 2rem;
-  -webkit-overflow-scrolling: touch;
-}
-.browser-settings-detail > * { width: 100%; max-width: 60rem; margin-inline: auto; }
-.browser-settings-content-slot { display: flex; min-height: 0; flex: 1 1 auto; flex-direction: column; }
-.browser-settings-content-slot > section.min-h-0.overflow-hidden { width: 100%; max-width: 60rem; min-height: 0; flex: 1 1 auto; margin-inline: auto; }
-.browser-settings-content-slot > section.min-h-0.overflow-hidden > .h-full.min-h-0.overflow-y-auto { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-.browser-settings-detail > section.min-h-0.overflow-hidden { width: 100%; max-width: 60rem; min-height: 0; flex: 1 1 auto; margin-inline: auto; }
-.browser-settings-detail > section.min-h-0.overflow-hidden > .h-full.min-h-0.overflow-y-auto { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-.browser-settings-home { padding-top: 1rem; }
-.browser-settings-home p { color: var(--ui-text-secondary, inherit); }
-.browser-settings-back { display: none; }
-.browser-settings-mobile-title { display: none; }
-.browser-settings-frame :is(button, input, select, textarea) { scroll-margin-block: 1rem; }
+.browser-settings-detail { display: flex; min-width: 0; min-height: 0; flex-direction: column; overflow: hidden; padding: var(--web-space-6) clamp(1rem, 3vw, 3rem) var(--web-sheet-padding-bottom); }
+.browser-settings-detail > * { width: 100%; max-width: 54rem; margin-inline: auto; }
+.browser-settings-content-slot { display: flex; min-height: 0; flex: 1; flex-direction: column; }
+.browser-settings-content-slot[hidden] { display: none; }
+.browser-settings-content-slot > section.min-h-0.overflow-hidden { width: 100%; min-height: 0; flex: 1; }
+.browser-settings-content-slot > section.min-h-0.overflow-hidden > .h-full.min-h-0.overflow-y-auto { overscroll-behavior: contain; padding-inline: var(--web-space-1); }
+.browser-settings-home h2 { font-size: var(--web-text-heading); font-weight: 600; }
+.browser-settings-home p { color: var(--web-text-muted); }
+.browser-settings-frame :is(button, input, select, textarea) { scroll-margin-block: var(--web-space-4); }
+.browser-settings-frame :is(button, input, select, textarea):focus-visible { outline: var(--web-focus-ring); outline-offset: -2px; }
 
 @media (max-width: 55.999rem), (pointer: coarse) and (max-height: 27rem) {
-  .browser-settings-frame { --settings-gutter: max(0.875rem, env(safe-area-inset-left)); padding-right: max(0.875rem, env(safe-area-inset-right)); }
-  .browser-settings-header { min-height: 4.75rem; grid-template-columns: minmax(0, 1fr); gap: 0.5rem; padding: 2rem 3.25rem 0.75rem 0; }
-  .browser-settings-header h1 { font-size: 1.2rem; }
-  .browser-settings-tools { width: 100%; flex-wrap: wrap; justify-self: stretch; gap: 0.375rem; }
-  .browser-settings-search { width: 100%; }
-  .browser-settings-search > * { width: 100%; justify-content: flex-start; }
-  .browser-settings-actions { justify-content: flex-start; }
-  .browser-settings-actions button { min-width: 2.75rem; min-height: 2.75rem; }
-  .browser-settings-layout.is-compact { display: block; }
-  .browser-settings-navigation[hidden] { display: none !important; }
-  .browser-settings-navigation:not([hidden]) { height: 100%; border-right: 0; padding: 0.5rem 0 1rem; }
-  .browser-settings-category-button { min-height: 3rem; padding-inline: 0.875rem; }
-  .browser-settings-category-button.is-child { min-height: 2.875rem; }
+  .browser-settings-header { position: relative; flex-wrap: wrap; gap: 0; padding: 0 var(--web-sheet-padding-end) var(--web-space-3) var(--web-sheet-padding-start); }
+  .browser-settings-heading { width: 100%; min-height: var(--settings-header-height); padding-right: calc(var(--web-touch-min) + var(--web-space-2)); }
+  .browser-settings-heading h1 { font-size: var(--web-text-heading); }
+  .browser-settings-search { width: 100%; margin: 0; }
+  .browser-settings-search > button { height: var(--web-touch-min); }
+  .browser-settings-search kbd { display: none; }
+  .browser-settings-layout.is-compact { display: flex; flex-direction: column; }
+  .browser-settings-navigation { flex: 1; border-right: 0; }
+  .browser-settings-navigation[hidden] { display: none; }
+  .browser-settings-category-list { padding: var(--web-space-2) var(--web-sheet-padding-end) var(--web-space-4) var(--web-sheet-padding-start); }
+  .browser-settings-category-button { min-height: max(3rem, var(--web-touch-min)); gap: var(--web-space-3); font-size: var(--web-text-title); }
+  .browser-settings-category-button.is-active { background: transparent; font-weight: 400; }
+  .browser-settings-category-button:hover { background: var(--web-hover); }
+  .browser-settings-category-chevron { display: inline-flex !important; margin-left: auto; color: var(--web-text-subtle); font-size: var(--web-icon-small); }
+  .browser-settings-footer { padding-right: var(--web-sheet-padding-end); }
   .browser-settings-detail { display: none; }
-  .browser-settings-layout.is-compact.show-detail .browser-settings-navigation { display: none; }
-  .browser-settings-layout.is-compact.show-detail .browser-settings-detail { display: flex; height: 100%; padding: 0.5rem 0.125rem 1.25rem; }
-  .browser-settings-home { flex: 0 0 auto; }
-  .browser-settings-back { display: inline-flex; min-height: 2.75rem; align-items: center; gap: 0.5rem; justify-self: start; padding: 0; border: 0; color: var(--ui-text-secondary, inherit); background: transparent; font: inherit; cursor: pointer; }
-  .browser-settings-mobile-title { display: block; margin: 0 0 0.75rem; font-size: 1.1rem; font-weight: 600; }
-  .browser-settings-frame :is(button, input, select, textarea) { min-height: max(2.75rem, var(--web-touch-min, 2.75rem)); }
-  .browser-settings-frame input, .browser-settings-frame textarea { font-size: max(1rem, 16px); }
-  .browser-settings-fullscreen-card > div > div > button { width: 2.75rem !important; height: 2.75rem !important; }
-}
-
-@media (max-height: 32rem) {
-  .browser-settings-header { min-height: 4rem; padding-top: 1.5rem; }
-  .browser-settings-header h1 { font-size: 1.1rem; }
-  .browser-settings-header { gap: 0.25rem; }
+  .browser-settings-layout.is-compact.show-detail .browser-settings-detail { display: flex; flex: 1; padding: var(--web-space-3) var(--web-sheet-padding-end) var(--web-sheet-padding-bottom) var(--web-sheet-padding-start); }
+  .browser-settings-back[data-browser-toolbar-button], .browser-settings-actions button,
+  .browser-settings-fullscreen-card > .pointer-events-none button { width: var(--web-touch-min); height: var(--web-touch-min); }
+  .browser-settings-frame :is(button, input:not([type='checkbox'], [type='radio']), select, textarea) { min-height: var(--web-touch-min); }
+  .browser-settings-frame :is(input:not([type='checkbox'], [type='radio']), textarea, select) { font-size: max(1rem, calc(16px / var(--web-ui-scale, 1))); }
+  .browser-settings-subnavigation { display: flex; gap: var(--web-space-1); flex-shrink: 0; overflow-x: auto; padding-bottom: var(--web-space-3); }
+  .browser-settings-subnavigation button { flex-shrink: 0; padding-inline: var(--web-space-3); border: 0; border-radius: var(--web-radius-control); background: transparent; color: var(--web-text-muted); font: inherit; }
+  .browser-settings-subnavigation button[aria-current='page'] { background: var(--web-active); color: var(--web-text); }
 }
