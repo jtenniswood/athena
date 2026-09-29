@@ -3,7 +3,7 @@ export const settingsPolicy = {
   sections: {
     // Section ids are upstream section ids such as `model`, or page ids such
     // as `config:model` and `keybinds` when hiding non-config pages.
-    hidden: [] as string[],
+    hidden: ['about'] as string[],
     order: [] as string[]
   },
   fields: {
