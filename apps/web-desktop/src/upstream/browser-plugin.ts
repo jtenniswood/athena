@@ -550,6 +550,9 @@ function OptionGlyph({ option }: { option: Option }) {`
     output = output.replace(before, after)
   }
   const hideDesktopOnlyRows = "\n  if (['card-rows', 'profile-rail', 'all-profiles'].includes(option.id)) return null\n"
+  const manualOrdering = "      return ordering === 'manual'"
+  if (output.split(manualOrdering).length !== 2) throw new Error('Browser manual ordering option contract changed')
+  output = output.replace(manualOrdering, '      return true')
   return output.replace(target, target + hideDesktopOnlyRows)
 }
 
@@ -668,7 +671,10 @@ export function disableBrowserSessionRowTabs(source: string): string {
   if (createHash('sha256').update(source).digest('hex') !== contract.sourceHash || source.split(tabAction).length !== 3 || source.split(windowAction).length !== 2) {
     throw new Error('Browser session row tab gesture contract changed')
   }
+  const rowTarget = '      <SidebarRowShell\n        actions={card ? undefined : actionsNode}\n'
+  if (source.split(rowTarget).length !== 2) throw new Error('Browser session project-drop row target changed')
   return source.replaceAll(tabAction, 'onResume()').replace(windowAction, 'onResume()')
+    .replace(rowTarget, `${rowTarget}        data-web-session-id={session.id}\n        data-web-session-profile={session.profile || 'default'}\n`)
 }
 
 export function disableBrowserSessionOpenActions(source: string): string {
