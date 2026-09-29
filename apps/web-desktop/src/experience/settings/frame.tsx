@@ -107,7 +107,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   >
     <div ref={frame} className="browser-settings-frame" data-browser-settings-frame="" role="dialog" aria-modal="true" aria-label={title}>
       <header className="browser-settings-header">
-        <div className="browser-settings-heading">
+        <div className={`browser-settings-heading${compact && showDetail ? '' : ' is-settings-home'}`}>
           {compact && showDetail ? <BrowserToolbarButton
             className="browser-settings-back"
             tooltip={backLabel}
@@ -117,7 +117,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
               setCompactDetailOpen(false)
               setCompactBackToList(location.key)
             }}
-          ><Codicon name="arrow-left" /></BrowserToolbarButton> : <Codicon name="settings-gear" />}
+          ><Codicon name="arrow-left" /></BrowserToolbarButton> : null}
           <h1 ref={heading} tabIndex={-1} className={compact && showDetail ? 'browser-settings-mobile-title' : undefined}>
             {compact && showDetail ? activeGroup?.label ?? activeView : title}
           </h1>

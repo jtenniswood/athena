@@ -67,6 +67,9 @@
   background: var(--web-sidebar);
 }
 .browser-settings-heading { display: flex; min-width: 0; align-items: center; gap: var(--web-space-2); }
+.browser-settings-heading.is-settings-home {
+  padding-left: calc(max(.625rem, calc(env(safe-area-inset-left, 0px) / var(--web-ui-scale, 1))) + var(--web-space-2) + var(--web-icon-size) + var(--web-space-2) - var(--web-sheet-padding-start));
+}
 .browser-settings-heading > .codicon { color: var(--web-text-muted); font-size: var(--web-icon-size); }
 .browser-settings-heading h1 { margin: 0; font-size: var(--web-text-title); font-weight: 600; line-height: var(--web-line-body); }
 .browser-settings-heading h1:focus { outline: none; }
