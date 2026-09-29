@@ -142,6 +142,76 @@ export function useBrowserOverlayFocusOwner(source: string, root: string): strin
     .replace(element, '    <div\n      ref={browserOverlayRef}\n      tabIndex={-1}\n      className={cn(')
 }
 
+export function useBrowserSettingsPresentation(source: string, root: string): string {
+  const importTarget = "import { OverlayMain, OverlayNav, type OverlayNavGroup, OverlaySplitLayout } from '../overlays/overlay-split-layout'"
+  const overlayImport = "import { OverlayView } from '../overlays/overlay-view'"
+  const layoutTarget = `      <OverlaySplitLayout>
+        <OverlayNav footer={navFooter} groups={navGroups} />
+
+        <OverlayMain className="px-0 pb-0">{activeSettingsContent}</OverlayMain>
+      </OverlaySplitLayout>`
+  const overlayTarget = '<OverlayView closeLabel={t.settings.closeSettings} edgeBadge={searchPill} onClose={onClose}>'
+  if (source.split(importTarget).length !== 2 || source.split(overlayImport).length !== 2 || source.split(layoutTarget).length !== 2 || source.split(overlayTarget).length !== 2) {
+    throw new Error('Browser settings presentation boundary changed')
+  }
+  const controlReplacements: [string, string][] = [
+    ['      type="button"\n    >\n      <Search className="size-3" />', '      aria-label={t.settings.search.pill}\n      type="button"\n    >\n      <Search className="size-3" />'],
+    ['<OverlayIconButton onClick={() => void exportConfig()}>', '<OverlayIconButton aria-label={t.settings.exportConfig} onClick={() => void exportConfig()}>'],
+    ["<OverlayIconButton\n          onClick={() => {\n            triggerHaptic('open')", "<OverlayIconButton\n          aria-label={t.settings.importConfig}\n          onClick={() => {\n            triggerHaptic('open')"],
+    ['<OverlayIconButton\n          className="hover:text-destructive"', '<OverlayIconButton\n          aria-label={t.settings.resetToDefaults}\n          className="hover:text-destructive"']
+  ]
+  for (const [before] of controlReplacements) {
+    if (source.split(before).length !== 2) throw new Error('Browser settings control labels changed')
+  }
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/frame'))
+  let output = source
+    .replace(importTarget, '')
+    .replace(overlayImport, '')
+    .replace(overlayTarget, '<BrowserSettingsPresentation actions={navFooter} activeView={activeView} backLabel={t.common.back} closeLabel={t.settings.closeSettings} groups={navGroups} onClose={onClose} search={searchPill} title={t.commandCenter.settings}>')
+    .replace(layoutTarget, '      {activeSettingsContent}')
+    .replace('</OverlayView>', '</BrowserSettingsPresentation>')
+  for (const [before, after] of controlReplacements) output = output.replace(before, after)
+  return `import { BrowserSettingsPresentation } from ${owner}\n` + output
+}
+
+export function filterBrowserSettingsFields(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/policy'))
+  const target = "  const visibleFields = activeSectionId === 'voice' ? fields.filter(([key]) => voiceFieldVisible(key, config)) : fields"
+  if (source.split(target).length !== 2) throw new Error('Browser settings field visibility target changed')
+  return `import { isSettingsFieldVisible } from ${owner}\n` +
+    source.replace(target, target + '.filter(([key]) => isSettingsFieldVisible(key))')
+}
+
+export function filterBrowserSettingsSearch(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/policy'))
+  const target = `  return {
+    appearanceEntries,
+    configEntries,
+    credentialEntries,
+    pluginEntries
+  }`
+  if (source.split(target).length !== 2) throw new Error('Browser settings search catalog target changed')
+  const filtered = `  return {
+    appearanceEntries: appearanceEntries.filter(entry => isSettingsFieldVisible(entry.target.setting ?? '')),
+    configEntries: configEntries.filter(entry => isSettingsSectionVisible(entry.target.view) && isSettingsFieldVisible(entry.target.field ?? '')),
+    credentialEntries,
+    pluginEntries
+  }`
+  return `import { isSettingsFieldVisible, isSettingsSectionVisible } from ${owner}\n` + source.replace(target, filtered)
+}
+
+export function filterBrowserSettingsPalette(source: string, root: string): string {
+  const sectionTarget = '...SECTIONS.map(section => ({'
+  const nonConfigTarget = '...NON_CONFIG_SETTINGS.map(entry => ({'
+  if (source.split(sectionTarget).length !== 3 || source.split(nonConfigTarget).length !== 3) {
+    throw new Error('Browser settings palette targets changed')
+  }
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/policy'))
+  return `import { isSettingsSectionVisible } from ${owner}\n` + source
+    .replaceAll(sectionTarget, '...SECTIONS.filter(section => isSettingsSectionVisible(section.id)).map(section => ({')
+    .replaceAll(nonConfigTarget, '...NON_CONFIG_SETTINGS.filter(entry => isSettingsSectionVisible(entry.tab)).map(entry => ({')
+}
+
 export function respectBrowserOverlayFocusReturn(source: string, root: string): string {
   const target = '    if (!inputDisabled && paneVisible && !floating) {'
   if (source.split(target).length !== 2) throw new Error('Browser composer autofocus owner changed')
@@ -682,6 +752,10 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     keepBrowserWorkspaceRoute: source => keepBrowserWorkspaceRoute(source, root),
     respectBrowserOverlayFocusReturn: source => respectBrowserOverlayFocusReturn(source, root),
     useBrowserOverlayFocusOwner: source => useBrowserOverlayFocusOwner(source, root),
+    useBrowserSettingsPresentation: source => useBrowserSettingsPresentation(source, root),
+    filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
+    filterBrowserSettingsSearch: source => filterBrowserSettingsSearch(source, root),
+    filterBrowserSettingsPalette: source => filterBrowserSettingsPalette(source, root),
     useBrowserPinWrites: source => useBrowserPinWrites(source, root),
     useBrowserOpenSessionOwner: source => useBrowserOpenSessionOwner(source, root),
     useBrowserFreshSessionOwner: source => useBrowserFreshSessionOwner(source, root),

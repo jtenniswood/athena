@@ -1128,6 +1128,50 @@ for (const width of [390, 1440]) {
   }
 }
 
+for (const width of [390, 820, 1440]) {
+  test(`settings full-screen modal scales across compact and wide viewports at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await open(page)
+    await editor(page).fill('Keep the chat draft behind full-screen settings')
+    const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+    await trigger.click()
+    const menuRole = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
+    const menu = page.getByRole(menuRole, { name: 'Settings and workspace', exact: true })
+    await menu.getByRole(menuRole === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+
+    const surface = page.getByRole('dialog', { name: 'Settings', exact: true })
+    const frame = page.locator('[data-browser-settings-frame]')
+    await expect(surface).toBeVisible()
+    await expect(frame).toBeVisible()
+    if (width < 896) {
+      const closeBounds = await page.getByRole('button', { name: 'Close settings', exact: true }).boundingBox()
+      expect(closeBounds.width).toBeGreaterThanOrEqual(44)
+      expect(closeBounds.height).toBeGreaterThanOrEqual(44)
+    }
+    const bounds = await page.locator('[data-overlay-surface]').boundingBox()
+    expect(bounds.x).toBeCloseTo(0, 0)
+    expect(bounds.y).toBeCloseTo(0, 0)
+    expect(bounds.width).toBeCloseTo(width, 0)
+    expect(bounds.height).toBeCloseTo(900, 0)
+
+    if (width < 896) {
+      await expect(page.getByRole('navigation', { name: 'Settings categories' })).toBeVisible()
+      await page.getByRole('button', { name: 'Appearance', exact: true }).click()
+      await expect(page.locator('.browser-settings-mobile-title')).toHaveText('Appearance')
+      await page.getByRole('button', { name: 'Back', exact: true }).click()
+      await expect(page.getByRole('navigation', { name: 'Settings categories' })).toBeVisible()
+    } else {
+      await expect(page.getByRole('navigation', { name: 'Settings categories' })).toBeVisible()
+      await expect(page.locator('.browser-settings-detail')).toBeVisible()
+    }
+
+    await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+    await expect(surface).toHaveCount(0)
+    await expect(trigger).toBeFocused()
+    await expect(editor(page)).toHaveText('Keep the chat draft behind full-screen settings')
+  })
+}
+
 test('desktop panel actions follow upstream visibility when reopening settings', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
   await open(page)

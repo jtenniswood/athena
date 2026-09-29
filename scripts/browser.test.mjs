@@ -14,6 +14,39 @@ function load(file, globals = {}) {
   return context.exports
 }
 const { browserPlugin, scopeBrowserStorage } = load('src/upstream/browser-plugin.ts')
+test('settings customization hides known sections and fields while inheriting new ids', () => {
+  const { settingsPolicy, isSettingsFieldVisible, isSettingsSectionVisible, orderSettingsSections } = load('src/experience/settings/policy.ts')
+  const hiddenSections = settingsPolicy.sections.hidden
+  const orderedSections = settingsPolicy.sections.order
+  const hiddenFields = settingsPolicy.fields.hidden
+  hiddenSections.push('voice')
+  orderedSections.push('config:appearance')
+  hiddenFields.push('display.show_reasoning')
+  try {
+    assert.equal(isSettingsSectionVisible('config:voice'), false)
+    assert.equal(isSettingsSectionVisible('providers'), true)
+    assert.deepEqual(orderSettingsSections([{ id: 'config:model' }, { id: 'config:appearance' }]).map(item => item.id), ['config:appearance', 'config:model'])
+    assert.equal(isSettingsFieldVisible('display.show_reasoning'), false)
+    assert.equal(isSettingsFieldVisible('new.upstream_option'), true)
+  } finally {
+    hiddenSections.length = 0
+    orderedSections.length = 0
+    hiddenFields.length = 0
+  }
+})
+test('settings policy stays aligned across page fields, deep search, and palette links', () => {
+  const { filterBrowserSettingsFields, filterBrowserSettingsSearch, filterBrowserSettingsPalette, useBrowserSettingsPresentation } = load('src/upstream/browser-plugin.ts')
+  const settings = readFileSync(path.join(root, '../desktop/src/app/settings/index.tsx'), 'utf8')
+  const config = readFileSync(path.join(root, '../desktop/src/app/settings/config-settings.tsx'), 'utf8')
+  const search = readFileSync(path.join(root, '../desktop/src/app/settings/use-settings-search.ts'), 'utf8')
+  const palette = readFileSync(path.join(root, '../desktop/src/app/command-palette/index.tsx'), 'utf8')
+  assert.match(useBrowserSettingsPresentation(settings, root), /BrowserSettingsPresentation actions=\{navFooter\}/)
+  assert.match(filterBrowserSettingsFields(config, root), /isSettingsFieldVisible\(key\)/)
+  assert.match(filterBrowserSettingsSearch(search, root), /appearanceEntries: appearanceEntries\.filter/)
+  assert.match(filterBrowserSettingsSearch(search, root), /isSettingsSectionVisible\(entry\.target\.view\)/)
+  assert.match(filterBrowserSettingsPalette(palette, root), /SECTIONS\.filter\(section => isSettingsSectionVisible/)
+  assert.match(filterBrowserSettingsPalette(palette, root), /NON_CONFIG_SETTINGS\.filter\(entry => isSettingsSectionVisible/)
+})
 test('browser omits generic activity toasts while preserving unread tracking and incoming messages', () => {
   const { filterBrowserActivityToasts, browserActivityNotificationsPlugin } = load('src/upstream/browser-plugin.ts')
   const filename = path.join(root, '../desktop/src/plugins/hermes-bots/roster-actions.ts')

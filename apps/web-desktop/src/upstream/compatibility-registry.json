@@ -2065,5 +2065,93 @@
     ],
     "removal": "Remove when upstream controlled dialogs restore their opening control and constrain resizable content to the scaled browser viewport.",
     "specifier": "@hermes/plugin-sdk"
+  },
+  {
+    "name": "browser-settings-fullscreen-frame",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/index.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "2505834a903fa6250bbb5bcd754248b90532e5ebaa7469b1ef22980e508ee8cd",
+    "inputHash": "2505834a903fa6250bbb5bcd754248b90532e5ebaa7469b1ef22980e508ee8cd",
+    "outputHash": "4e650f093dc498f3b8f6426859ec3df92cf086bc887e6094c87a7c48479c0f2c",
+    "handlers": [
+      "useBrowserSettingsPresentation"
+    ],
+    "reason": "Keep the responsive browser settings presentation and user visibility preferences in the wrapper while upstream owns settings content and persistence.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings full-screen modal scales across compact and wide viewports"
+      }
+    ],
+    "removal": "Remove when upstream SettingsView provides an equivalent responsive browser presentation seam while retaining upstream settings pages and actions."
+  },
+  {
+    "name": "browser-settings-field-policy",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/config-settings.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "e557900fdf12bed8efda0865281dd3462fe6fa79455f2c3021daf1d8bcdce4f6",
+    "inputHash": "e557900fdf12bed8efda0865281dd3462fe6fa79455f2c3021daf1d8bcdce4f6",
+    "outputHash": "b3056fe4d7953ef6c90b720aabde0ff7dae18fa6721f0abf7a34b2e2fc160456",
+    "handlers": [
+      "filterBrowserSettingsFields"
+    ],
+    "reason": "Keep the responsive browser settings presentation and user visibility preferences in the wrapper while upstream owns settings content and persistence.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "settings customization hides known sections and fields while inheriting new ids"
+      }
+    ],
+    "removal": "Remove when upstream settings supports wrapper-owned visibility rules for config fields."
+  },
+  {
+    "name": "browser-settings-search-policy",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/use-settings-search.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "66e55c9a10204f09d126b993cfe293d66466565b327e895ace7ea62d8c929f28",
+    "inputHash": "66e55c9a10204f09d126b993cfe293d66466565b327e895ace7ea62d8c929f28",
+    "outputHash": "4a1979ad145ea9e97a12bd49474c5802d55daa578514e062e0b36d235dd238a2",
+    "handlers": [
+      "filterBrowserSettingsSearch"
+    ],
+    "reason": "Keep the responsive browser settings presentation and user visibility preferences in the wrapper while upstream owns settings content and persistence.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "settings policy stays aligned across page fields, deep search, and palette links"
+      }
+    ],
+    "removal": "Remove when upstream settings search applies wrapper visibility policy to section and field results."
+  },
+  {
+    "name": "browser-settings-palette-policy",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/command-palette/index.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "8323bd0e62fa8eeeea7a7e3c544f7c0dac3da2aba387634205187173a364e014",
+    "inputHash": "8323bd0e62fa8eeeea7a7e3c544f7c0dac3da2aba387634205187173a364e014",
+    "outputHash": "038b0987d9384417d924ffbcbfe083dfdcb06c46074cb44c963cfa06167396dd",
+    "handlers": [
+      "filterBrowserSettingsPalette"
+    ],
+    "reason": "Keep the responsive browser settings presentation and user visibility preferences in the wrapper while upstream owns settings content and persistence.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "settings policy stays aligned across page fields, deep search, and palette links"
+      }
+    ],
+    "removal": "Remove when upstream settings navigation entries in the command palette support wrapper visibility policy."
   }
 ]
