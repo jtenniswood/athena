@@ -57,6 +57,18 @@ body,
   opacity: 1 !important;
 }
 
+/* Keep session titles truncated in the browser sidebar when hovered. The
+   upstream renderer arms a marquee on pointer entry, which makes long titles
+   slide sideways beneath the pointer. */
+.browser-sessions-pane .hover-marquee[data-marquee='true'] {
+  text-overflow: ellipsis !important;
+}
+
+.browser-sessions-pane .hover-marquee-inner {
+  animation: none !important;
+  transform: none !important;
+}
+
 /* Body-level Radix portals use viewport coordinates, already scaled by the
    root's CSS zoom. Keep their positioning wrapper in viewport units and scale
    only the content, so both anchoring and collision detection use its actual
