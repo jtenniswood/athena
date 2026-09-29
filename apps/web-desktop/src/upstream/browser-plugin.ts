@@ -244,12 +244,12 @@ export function filterBrowserSettingsSearch(source: string, root: string): strin
   }`
   if (source.split(target).length !== 2) throw new Error('Browser settings search catalog target changed')
   const filtered = `  return {
-    appearanceEntries: appearanceEntries.filter(entry => isSettingsFieldVisible(entry.target.setting ?? '')),
-    configEntries: configEntries.filter(entry => isSettingsSectionVisible(entry.target.view) && isSettingsFieldVisible(entry.target.field ?? '')),
-    credentialEntries,
+    appearanceEntries: appearanceEntries.filter(entry => isSettingsFieldVisible(entry.target.setting ?? '')).map(presentSettingsSearchEntry),
+    configEntries: configEntries.filter(entry => isSettingsSectionVisible(entry.target.view) && isSettingsFieldVisible(entry.target.field ?? '')).map(presentSettingsSearchEntry),
+    credentialEntries: credentialEntries.map(presentSettingsSearchEntry),
     pluginEntries
   }`
-  return `import { isSettingsFieldVisible, isSettingsSectionVisible } from ${owner}\n` + source.replace(target, filtered)
+  return `import { isSettingsFieldVisible, isSettingsSectionVisible, presentSettingsSearchEntry } from ${owner}\n` + source.replace(target, filtered)
 }
 
 export function filterBrowserSettingsPalette(source: string, root: string): string {
@@ -259,9 +259,22 @@ export function filterBrowserSettingsPalette(source: string, root: string): stri
     throw new Error('Browser settings palette targets changed')
   }
   const owner = JSON.stringify(path.join(root, 'src/experience/settings/policy'))
-  return `import { isSettingsSectionVisible } from ${owner}\n` + source
+  const dialog = '<DialogPrimitive.Content\n        aria-describedby={undefined}'
+  if (source.split(dialog).length !== 2) throw new Error('Browser settings search dialog changed')
+  const start = 'items: [\n          ...SECTIONS.map'
+  const end = `            run: go(settingsTab(entry.tab))
+          }))
+        ]`
+  if (source.split(start).length !== 3 || source.split(end).length !== 3) throw new Error('Browser settings palette grouping changed')
+  return `import { isSettingsSectionVisible, presentSettingsPalette, settingsPageLabel } from ${owner}\n` + source
+    .replace(dialog, dialog + "\n        data-browser-command-palette=\"\"")
+    .replaceAll(start, 'items: presentSettingsPalette([\n          ...SECTIONS.map')
+    .replaceAll(end, `            run: go(settingsTab(entry.tab))
+          }))
+        ], (tab, label) => ({ icon: Settings2, id: 'set-' + tab, label, keywords: ['settings'], run: go(settingsTab(tab)) }))`)
     .replaceAll(sectionTarget, '...SECTIONS.filter(section => isSettingsSectionVisible(section.id)).map(section => ({')
     .replaceAll(nonConfigTarget, '...NON_CONFIG_SETTINGS.filter(entry => isSettingsSectionVisible(entry.tab)).map(entry => ({')
+    .replaceAll('heading: t.settings.nav.apiKeys,', "heading: settingsPageLabel('keys', t.settings.nav.apiKeys),")
 }
 
 export function respectBrowserOverlayFocusReturn(source: string, root: string): string {

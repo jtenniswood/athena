@@ -1,3 +1,4 @@
+import { settingsPageLabel } from './policy'
 import { useId, type ComponentPropsWithRef, type ReactNode } from 'react'
 
 /** Keep upstream action handlers and confirmation flows on labelled controls. */
@@ -14,7 +15,7 @@ export function BrowserConfigurationAction({ description, children, className = 
 
 export function BrowserConfigurationPage({ actions }: { actions: ReactNode }) {
   return <section className="browser-configuration-page" aria-label="Configuration management">
-    <h2>Configuration</h2>
+    <h2>{settingsPageLabel('config:browser-configuration', 'Configuration')}</h2>
     <p>Back up, restore, or reset your configuration.</p>
     <div className="browser-configuration-actions">{actions}</div>
   </section>

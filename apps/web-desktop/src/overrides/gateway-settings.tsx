@@ -1,3 +1,4 @@
+import { settingsPageLabel } from '../experience/settings/policy'
 import { assertSafeConnectionChange } from '../platform/reload-safety'
 import { connectionState } from '../platform/connection-state'
 import { useEffect, useState } from 'react'
@@ -19,7 +20,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
     finally { setBusy(false) }
   }
   const content = <section className="browser-gateway-settings space-y-4 p-4" aria-label="Gateway connection">
-    <div><h2 className="text-lg font-semibold">Remote gateway</h2>
+    <div><h2 className="text-lg font-semibold">{settingsPageLabel('gateway', 'Remote gateway')}</h2>
       <p className="break-words text-sm">{runtimeConfig().gateway.name}</p>
       <p className="text-sm text-muted-foreground">This app connects to the server configured by its operator.</p></div>
     <label className="block space-y-2"><span>Sign-in method</span>

@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
 import { useLocation } from 'react-router'
 import { Codicon, OverlayView } from '../../upstream/browser-api'
-import { isSettingsFieldVisible, orderSettingsSections } from './policy'
+import { groupSettingsSections, isSettingsFieldVisible, orderSettingsSections, settingsPageLabel } from './policy'
 import { BrowserToolbarButton } from '../ui/toolbar-button'
 import './settings.css'
 
@@ -53,14 +53,15 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const compact = useCompactSettings()
   const location = useLocation()
   const [compactDetailOpen, setCompactDetailOpen] = useState(false)
-  const [compactBackToList, setCompactBackToList] = useState(false)
+  const [compactBackToList, setCompactBackToList] = useState<string | null>(null)
   const params = new URLSearchParams(location.search)
   const hasDirectTarget = params.has('tab') || params.has('field') || params.has('setting')
-  const visibleGroups = orderSettingsSections(groups)
+  const navigationGroups = groupSettingsSections(groups)
+  const visibleGroups = navigationGroups.flatMap(group => group.items)
   const activeGroup = visibleGroups.find(group => group.active)
   const activeVisible = Boolean(activeGroup)
-  const activeChildren = orderSettingsSections(activeGroup?.children ?? [])
-  const showDetail = activeVisible && (!compact || compactDetailOpen || (hasDirectTarget && !compactBackToList))
+  const activeChildren = orderSettingsSections(activeGroup?.children ?? []).map(child => ({ ...child, label: settingsPageLabel(child.id, child.label) }))
+  const showDetail = activeVisible && (!compact || compactDetailOpen || (hasDirectTarget && compactBackToList !== location.key))
 
   useLayoutEffect(() => {
     const root = frame.current
@@ -87,7 +88,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const selectCategory = (item: SettingsNavItem) => {
     moveFocus.current = compact
     item.onSelect()
-    setCompactBackToList(false)
+    setCompactBackToList(null)
     setCompactDetailOpen(true)
   }
 
@@ -107,11 +108,11 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
             onClick={() => {
               moveFocus.current = true
               setCompactDetailOpen(false)
-              setCompactBackToList(true)
+              setCompactBackToList(location.key)
             }}
           ><Codicon name="arrow-left" /></BrowserToolbarButton> : <Codicon name="settings-gear" />}
           <h1 ref={heading} tabIndex={-1} className={compact && showDetail ? 'browser-settings-mobile-title' : undefined}>
-            {compact && showDetail ? activeGroup?.label ?? activeView : title}
+            {showDetail ? activeGroup?.label ?? activeView : title}
           </h1>
         </div>
         {(!compact || !showDetail) && <div className="browser-settings-search">{search}</div>}
@@ -119,10 +120,11 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
       <div className={`browser-settings-layout${compact ? ' is-compact' : ''}${showDetail ? ' show-detail' : ''}`}>
         <nav ref={navigation} className="browser-settings-navigation" aria-label="Settings categories" hidden={compact && showDetail}>
           <div className="browser-settings-category-list">
-            {visibleGroups.map(group => {
+            {navigationGroups.map(section => <section className="browser-settings-nav-group" key={section.id} aria-labelledby={`settings-group-${section.id}`}>
+            <h2 className="browser-settings-group-heading" id={`settings-group-${section.id}`}>{section.label}</h2>
+            {section.items.map(group => {
               const Icon = group.icon
               return <div className="browser-settings-category" key={group.id}>
-                {group.gapBefore && <div className="browser-settings-divider" aria-hidden="true" />}
                 <button
                   type="button"
                   className={`browser-settings-category-button${group.active ? ' is-active' : ''}`}
@@ -150,6 +152,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
                 })}
               </div>
             })}
+            </section>)}
           </div>
         </nav>
         <main className="browser-settings-detail" aria-label={activeGroup?.label ?? title}>

@@ -1129,6 +1129,63 @@ for (const width of [390, 1440]) {
   }
 }
 
+for (const width of [390, 1440]) {
+  test.extend({ hasTouch: width === 390 })(`settings groups and renamed search preserve destinations at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await open(page)
+    await editor(page).fill('Keep my draft while finding renamed settings')
+    const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+    const role = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
+    await trigger.click()
+    await page.getByRole(role, { name: 'Settings and workspace', exact: true })
+      .getByRole(role === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+    await expect(page.locator('.browser-settings-group-heading')).toHaveText([
+      'Preferences', 'AI & conversations', 'Tools & permissions', 'Service', 'Data & maintenance'
+    ])
+    await expect(page.locator('.browser-settings-category-button:not(.is-child) > span:not(.codicon)')).toHaveText([
+      'Appearance', 'Notifications', 'Keyboard shortcuts', 'Models', 'AI connections', 'Chat', 'Voice',
+      'Memory & context', 'Workspace & files', 'Browser automation', 'Permissions & safety', 'Saved logins',
+      'Tool & service credentials', 'Server connection', 'Usage & billing', 'Archived chats', 'Backup & reset', 'Advanced'
+    ])
+    await page.screenshot({ path: testInfo.outputPath('settings-groups.png') })
+    for (const [query, result, view, title] of [
+      ['Gateway', 'Server connection', 'gateway', 'Server connection'],
+      ['Configuration', 'Backup & reset', 'config:browser-configuration', 'Backup & reset'],
+      ['Providers', 'AI connections — Accounts', 'providers', 'AI connections'],
+      ['Server credentials', 'Tool & service credentials — Server credentials', 'keys', 'Tool & service credentials']
+    ]) {
+      await page.locator('.browser-settings-search > button').click()
+      const input = page.locator('input[role="combobox"]')
+      await expect(input).toBeVisible()
+      await input.fill(query)
+      const palette = page.locator('[data-browser-command-palette]')
+      const bounds = await palette.boundingBox()
+      expect(bounds.x).toBeGreaterThanOrEqual(0)
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width)
+      if (query === 'Gateway') await page.screenshot({ path: testInfo.outputPath('settings-search.png') })
+      const option = page.getByRole('option', { name: result, exact: true })
+      if (width === 390) await option.tap()
+      else {
+        await page.mouse.move(10, 10)
+        await option.click()
+      }
+      await expect(input).toHaveCount(0)
+      await expect(page.getByRole('main', { name: title, exact: true })).toBeVisible()
+      await expect(page.locator('.browser-settings-heading h1')).toHaveText(title)
+      expect(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('tab')).toBe(view)
+      if (view === 'keys') {
+        await expect(page.getByRole('button', { name: 'Server credentials', exact: true })).toHaveAttribute('aria-current', 'page')
+      }
+      if (width < 896) {
+        await expect(page.locator('.browser-settings-search')).toHaveCount(0)
+        await page.getByRole('button', { name: 'Back', exact: true }).click()
+      }
+    }
+    await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+    await expect(editor(page)).toHaveText('Keep my draft while finding renamed settings')
+  })
+}
+
 for (const width of [390, 820, 1440]) {
   test(`settings full-screen modal scales across compact and wide viewports at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
@@ -1163,8 +1220,8 @@ for (const width of [390, 820, 1440]) {
       await page.getByRole('button', { name: 'Back', exact: true }).click()
       await expect(page.getByRole('navigation', { name: 'Settings categories' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Appearance', exact: true })).toBeFocused()
-      await page.getByRole('button', { name: 'Providers', exact: true }).click()
-      const providerCategories = page.getByRole('navigation', { name: 'Providers categories' })
+      await page.getByRole('button', { name: 'AI connections', exact: true }).click()
+      const providerCategories = page.getByRole('navigation', { name: 'AI connections categories' })
       await providerCategories.getByRole('button', { name: 'API keys', exact: true }).click()
       await expect(providerCategories.getByRole('button', { name: 'API keys', exact: true })).toHaveAttribute('aria-current', 'page')
     } else {
@@ -1196,7 +1253,7 @@ for (const width of [390, 1440]) {
       const role = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
       await page.getByRole(role, { name: 'Settings and workspace', exact: true })
         .getByRole(role === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
-      if (width < 896) await page.getByRole('button', { name: 'Model', exact: true }).click()
+      if (width < 896) await page.getByRole('button', { name: 'Models', exact: true }).click()
       await expect(page.locator('.browser-settings-detail').getByText('Auxiliary models', { exact: true })).toBeVisible()
       await expect(page.locator('[data-slot="model-settings-skeleton"]')).toHaveCount(0)
       if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
@@ -1233,14 +1290,14 @@ for (const width of [390, 1440]) {
     await page.getByRole(menuRole, { name: 'Settings and workspace', exact: true })
       .getByRole(menuRole === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Export config', exact: true })).toHaveCount(0)
-    if (width < 896) await page.getByRole('button', { name: 'Model', exact: true }).click()
-    await page.getByRole('main', { name: 'Model', exact: true }).getByRole('button', { name: 'research', exact: true }).click()
+    if (width < 896) await page.getByRole('button', { name: 'Models', exact: true }).click()
+    await page.getByRole('main', { name: 'Models', exact: true }).getByRole('button', { name: 'research', exact: true }).click()
     if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
-    await page.getByRole('button', { name: 'Configuration', exact: true }).click()
+    await page.getByRole('button', { name: 'Backup & reset', exact: true }).click()
     await expect(page).toHaveURL(/tab=config%3Abrowser-configuration/)
     const management = page.getByRole('region', { name: 'Configuration management' })
     await expect(management).toBeVisible()
-    await expect(page.getByRole('main', { name: 'Configuration', exact: true }).getByText('Applies to', { exact: true })).toHaveCount(0)
+    await expect(page.getByRole('main', { name: 'Backup & reset', exact: true }).getByText('Applies to', { exact: true })).toHaveCount(0)
 
     const exportRequest = page.waitForRequest(request => request.method() === 'GET' && /\/api\/config\?/.test(request.url()) && new URL(request.url()).searchParams.get('profile') === 'research')
     const downloadPromise = page.waitForEvent('download')

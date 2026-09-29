@@ -2127,16 +2127,20 @@
     "sourceRoot": "renderer",
     "sourceHash": "66e55c9a10204f09d126b993cfe293d66466565b327e895ace7ea62d8c929f28",
     "inputHash": "66e55c9a10204f09d126b993cfe293d66466565b327e895ace7ea62d8c929f28",
-    "outputHash": "4a1979ad145ea9e97a12bd49474c5802d55daa578514e062e0b36d235dd238a2",
+    "outputHash": "eabcb9e6a9139103fef403fe959f53f0142007d71d50220a1e0fe91aa9f4a1b6",
     "handlers": [
       "filterBrowserSettingsSearch"
     ],
-    "reason": "Keep the responsive browser settings presentation and user visibility preferences in the wrapper while upstream owns settings content and persistence.",
+    "reason": "Keep grouped settings labels, legacy search aliases, and visibility policy in the wrapper while upstream owns forms and persistence.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "scripts/browser.test.mjs",
         "scenario": "settings policy stays aligned across page fields, deep search, and palette links"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings groups and renamed search preserve destinations"
       }
     ],
     "removal": "Remove when upstream settings search applies wrapper visibility policy to section and field results."
@@ -2149,16 +2153,20 @@
     "sourceRoot": "renderer",
     "sourceHash": "8323bd0e62fa8eeeea7a7e3c544f7c0dac3da2aba387634205187173a364e014",
     "inputHash": "8323bd0e62fa8eeeea7a7e3c544f7c0dac3da2aba387634205187173a364e014",
-    "outputHash": "038b0987d9384417d924ffbcbfe083dfdcb06c46074cb44c963cfa06167396dd",
+    "outputHash": "75eabe6957470d0aee9f090ba7827c7fb2a66763074ad4340bcff7e5faafe30f",
     "handlers": [
       "filterBrowserSettingsPalette"
     ],
-    "reason": "Keep the responsive browser settings presentation and user visibility preferences in the wrapper while upstream owns settings content and persistence.",
+    "reason": "Keep grouped settings labels, legacy search aliases, and visibility policy in the wrapper while upstream owns forms and persistence.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "scripts/browser.test.mjs",
         "scenario": "settings policy stays aligned across page fields, deep search, and palette links"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings groups and renamed search preserve destinations"
       }
     ],
     "removal": "Remove when upstream settings navigation entries in the command palette support wrapper visibility policy."

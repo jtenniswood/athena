@@ -99,7 +99,10 @@
   padding: calc(var(--web-space-3) / 2) max(.625rem, calc(env(safe-area-inset-right, 0px) / var(--web-ui-scale, 1))) var(--web-space-4) max(.625rem, calc(env(safe-area-inset-left, 0px) / var(--web-ui-scale, 1)));
 }
 .browser-settings-category { flex-shrink: 0; }
-.browser-settings-divider { margin: var(--web-space-2) var(--web-space-2); border-top: 1px solid var(--web-border-subtle); }
+.browser-settings-nav-group { flex-shrink: 0; }
+.browser-settings-nav-group + .browser-settings-nav-group { margin-top: var(--web-space-4); }
+.browser-settings-group-heading { margin: 0; padding: var(--web-space-2); color: var(--web-text-subtle); font-size: var(--web-text-caption); font-weight: 600; }
+.browser-settings-category + .browser-settings-category { margin-top: 1px; }
 .browser-settings-category-button {
   display: flex;
   width: 100%;
@@ -141,7 +144,7 @@
 @media (max-width: 55.999rem), (pointer: coarse) and (max-height: 27rem) {
   .browser-settings-header { gap: var(--web-space-2); padding-right: calc(var(--web-sheet-padding-end) + var(--web-touch-min) + var(--web-space-2)); }
   .browser-settings-heading { flex: 1; min-height: var(--settings-header-height); }
-  .browser-settings-heading h1 { font-size: var(--web-text-heading); }
+  .browser-settings-heading h1 { font-size: var(--web-text-heading); overflow-wrap: anywhere; }
   .browser-settings-search { width: var(--web-touch-min); flex: 0 0 auto; margin: 0; }
   .browser-settings-search > button { height: var(--web-touch-min); justify-content: center; padding: 0; border-color: transparent; background: transparent; }
   .browser-settings-search > button > :not(svg) { display: none; }
@@ -193,3 +196,15 @@
 .browser-configuration-action-description { display: block; margin-top: var(--web-space-1); color: var(--web-text-muted); line-height: var(--web-line-body); }
 .browser-configuration-action:last-child { margin-top: var(--web-space-6); border: 1px solid var(--web-border-subtle); }
 .browser-configuration-action:last-child :is(svg, .browser-configuration-action-label) { color: var(--web-danger); }
+
+/* The palette portals outside the frame, so account for browser UI scaling. */
+body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: min(34rem, calc(100vw / var(--web-ui-scale, 1) - 2rem)); }
+@media (max-width: 55.999rem), (pointer: coarse) and (max-height: 27rem) {
+  body:has([data-browser-settings-frame]) [data-browser-command-palette] [data-slot="command-input"] { font-size: max(1rem, calc(16px / var(--web-ui-scale, 1))); }
+  body:has([data-browser-settings-frame]) [data-browser-command-palette] [data-slot="command-item"] { min-height: var(--web-touch-min); }
+}
+
+/* Touch search results cannot depend on the upstream mouse-movement guard. */
+@media (pointer: coarse) {
+  body:has([data-browser-settings-frame]) [data-browser-command-palette] [data-slot="command-list"] { pointer-events: auto; }
+}

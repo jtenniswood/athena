@@ -62,6 +62,42 @@ test('settings customization hides known sections and fields while inheriting ne
     hiddenFields.length = 0
   }
 })
+test('settings groups retain new upstream pages and search keeps old names and destinations', () => {
+  const { groupSettingsSections, presentSettingsPalette, presentSettingsSearchEntry } = load('src/experience/settings/policy.ts', { URLSearchParams })
+  const groups = groupSettingsSections([
+    { id: 'future', label: 'New upstream page' },
+    { id: 'config:model', label: 'Model' },
+    { id: 'about', label: 'About' },
+    { id: 'config:appearance', label: 'Appearance' }
+  ])
+  assert.deepEqual(Array.from(groups, group => group.label), ['Preferences', 'AI & conversations', 'Other settings'])
+  assert.equal(groups.at(-1).items[0].id, 'future')
+  assert.equal(groups[1].items[0].label, 'Models')
+  const run = () => 'original-action'
+  const entries = presentSettingsPalette([
+    { id: 'sp-gateway', label: 'Gateways', run },
+    { id: 'sp-providers&pview=accounts', label: 'Accounts', run },
+    { id: 'sp-keys&kview=settings', label: 'Settings', run },
+    { id: 'sp-future', label: 'New upstream page', run },
+    { id: 'sp-about', label: 'About', run }
+  ], (id, label) => ({ id: `set-${id}`, label, run: () => id }))
+  const gateway = entries.find(entry => entry.id === 'sp-gateway')
+  assert.equal(gateway.label, 'Server connection')
+  assert.ok(gateway.keywords.includes('Gateways'))
+  assert.equal(gateway.run, run)
+  const providers = entries.find(entry => entry.id === 'sp-providers&pview=accounts')
+  assert.ok(providers.keywords.includes('Providers'))
+  assert.equal(providers.run, run)
+  assert.equal(entries.find(entry => entry.id === 'sp-keys&kview=settings').label, 'Tool & service credentials — Server credentials')
+  assert.equal(entries.find(entry => entry.label === 'Backup & reset').run(), 'config:browser-configuration')
+  assert.ok(!entries.some(entry => entry.id === 'sp-about'))
+  assert.equal(entries.at(-1).id, 'sp-future')
+  const target = { view: 'config:browser', field: 'browser.use_real_profile' }
+  const field = presentSettingsSearchEntry({ context: 'Browser', keywords: ['profile'], target })
+  assert.equal(field.context, 'Browser automation')
+  assert.ok(field.keywords.includes('Browser'))
+  assert.equal(field.target, target)
+})
 test('settings policy stays aligned across page fields, deep search, and palette links', () => {
   const { filterBrowserSettingsFields, filterBrowserSettingsSearch, filterBrowserSettingsPalette, useBrowserSettingsPresentation } = load('src/upstream/browser-plugin.ts')
   const settings = readFileSync(path.join(root, '../desktop/src/app/settings/index.tsx'), 'utf8')
