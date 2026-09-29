@@ -87,23 +87,36 @@
 
 .browser-settings-layout { display: grid; min-height: 0; flex: 1; grid-template-columns: 16rem minmax(0, 1fr); overflow: hidden; }
 .browser-settings-navigation { display: flex; min-height: 0; flex-direction: column; background: var(--web-sidebar); border-right: 1px solid var(--web-border-subtle); }
-.browser-settings-category-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--web-space-3) var(--web-space-2) var(--web-space-4) var(--web-sheet-padding-start); }
-.browser-settings-category { margin: 1px 0; }
+.browser-settings-category-list {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Chat navigation uses px-2.5, 6px top clearance, and a 1px row gap. */
+  padding: calc(var(--web-space-3) / 2) max(.625rem, calc(env(safe-area-inset-right, 0px) / var(--web-ui-scale, 1))) var(--web-space-4) max(.625rem, calc(env(safe-area-inset-left, 0px) / var(--web-ui-scale, 1)));
+}
+.browser-settings-category { flex-shrink: 0; }
 .browser-settings-divider { margin: var(--web-space-2) var(--web-space-2); border-top: 1px solid var(--web-border-subtle); }
 .browser-settings-category-button {
   display: flex;
   width: 100%;
-  min-height: max(2rem, var(--web-navigation-row));
+  height: var(--web-navigation-row);
+  min-height: var(--web-navigation-row);
   align-items: center;
   gap: var(--web-space-2);
   padding: var(--web-space-2);
-  border: 0;
+  border: 1px solid transparent;
   border-radius: var(--web-radius-control);
   color: var(--web-text-muted);
   background: transparent;
   text-align: left;
   font: inherit;
-  line-height: var(--web-line-body);
+  font-size: var(--web-text-body);
+  font-weight: 500;
+  line-height: var(--text-sm--line-height);
   cursor: pointer;
 }
 .browser-settings-category-button > span:not(.codicon) { min-width: 0; flex: 1; overflow-wrap: anywhere; }
@@ -139,9 +152,7 @@
   .browser-settings-layout.is-compact { display: flex; flex-direction: column; }
   .browser-settings-navigation { flex: 1; border-right: 0; }
   .browser-settings-navigation[hidden] { display: none; }
-  .browser-settings-category-list { padding: var(--web-space-2) var(--web-sheet-padding-end) var(--web-space-4) var(--web-sheet-padding-start); }
-  .browser-settings-category-button { min-height: max(3rem, var(--web-touch-min)); gap: var(--web-space-3); font-size: var(--web-text-title); }
-  .browser-settings-category-button.is-active { background: transparent; font-weight: 400; }
+  .browser-settings-category-button.is-active { background: transparent; }
   .browser-settings-category-button:hover { background: var(--web-hover); }
   .browser-settings-category-chevron { display: inline-flex !important; margin-left: auto; color: var(--web-text-subtle); font-size: var(--web-icon-small); }
   .browser-settings-footer { padding-right: var(--web-sheet-padding-end); }
@@ -149,9 +160,14 @@
   .browser-settings-layout.is-compact.show-detail .browser-settings-detail { display: flex; flex: 1; padding: var(--web-space-3) var(--web-sheet-padding-end) var(--web-sheet-padding-bottom) var(--web-sheet-padding-start); }
   .browser-settings-back[data-browser-toolbar-button], .browser-settings-actions button,
   .browser-settings-fullscreen-card > .pointer-events-none button { width: var(--web-touch-min); height: var(--web-touch-min); }
-  .browser-settings-frame :is(button, input:not([type='checkbox'], [type='radio']), select, textarea) { min-height: var(--web-touch-min); }
+  .browser-settings-frame :is(button:not(.browser-settings-category-button), input:not([type='checkbox'], [type='radio']), select, textarea) { min-height: var(--web-touch-min); }
   .browser-settings-frame :is(input:not([type='checkbox'], [type='radio']), textarea, select) { font-size: max(1rem, calc(16px / var(--web-ui-scale, 1))); }
   .browser-settings-subnavigation { display: flex; gap: var(--web-space-1); flex-shrink: 0; overflow-x: auto; padding-bottom: var(--web-space-3); }
   .browser-settings-subnavigation button { flex-shrink: 0; padding-inline: var(--web-space-3); border: 0; border-radius: var(--web-radius-control); background: transparent; color: var(--web-text-muted); font: inherit; }
   .browser-settings-subnavigation button[aria-current='page'] { background: var(--web-active); color: var(--web-text); }
+}
+
+/* Match chat navigation's touch density without enlarging mouse layouts. */
+@media (pointer: coarse) {
+  .browser-settings-category-button { height: auto; padding-block: var(--web-space-2); }
 }
