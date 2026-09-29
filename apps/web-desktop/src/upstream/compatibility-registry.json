@@ -2162,5 +2162,31 @@
       }
     ],
     "removal": "Remove when upstream settings navigation entries in the command palette support wrapper visibility policy."
+  },
+  {
+    "name": "browser-profile-switch-lifecycle",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/hooks/use-on-profile-switch.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "beeb2342986607d6f9393d7a9addf4e5acd1e67a5855c38c0b940323ead4799a",
+    "inputHash": "beeb2342986607d6f9393d7a9addf4e5acd1e67a5855c38c0b940323ead4799a",
+    "outputHash": "3959b003436800ca10358528de7ec745b4c46c6aa6fbfe74f609ebfb78387b63",
+    "handlers": [
+      "respectBrowserProfileSwitches"
+    ],
+    "reason": "Do not clear loaded settings drafts when React StrictMode replays mount effects for the same profile.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "profile switch hook ignores repeated mount effects but handles real profile changes"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "model and chat settings load with a warm configuration cache"
+      }
+    ],
+    "removal": "Remove when upstream compares the previous profile identity before dispatching profile-switch cleanup."
   }
 ]

@@ -142,6 +142,20 @@ export function useBrowserOverlayFocusOwner(source: string, root: string): strin
     .replace(element, '    <div\n      ref={browserOverlayRef}\n      tabIndex={-1}\n      className={cn(')
 }
 
+export function respectBrowserProfileSwitches(source: string): string {
+  const initial = '  const first = useRef(true)'
+  const guard = `    if (first.current) {
+      first.current = false
+
+      return
+    }`
+  if (source.split(initial).length !== 2 || source.split(guard).length !== 2) throw new Error('Browser profile switch lifecycle changed')
+  return source
+    .replace(initial, '  const previousProfile = useRef(profile)')
+    .replace(guard, `    if (previousProfile.current === profile) return
+    previousProfile.current = profile`)
+}
+
 export function useBrowserSettingsPresentation(source: string, root: string): string {
   const importTarget = "import { OverlayMain, OverlayNav, type OverlayNavGroup, OverlaySplitLayout } from '../overlays/overlay-split-layout'"
   const overlayImport = "import { OverlayView } from '../overlays/overlay-view'"
@@ -791,6 +805,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     keepBrowserWorkspaceRoute: source => keepBrowserWorkspaceRoute(source, root),
     respectBrowserOverlayFocusReturn: source => respectBrowserOverlayFocusReturn(source, root),
     useBrowserOverlayFocusOwner: source => useBrowserOverlayFocusOwner(source, root),
+    respectBrowserProfileSwitches,
     useBrowserSettingsPresentation: source => useBrowserSettingsPresentation(source, root),
     useBrowserConfigurationSettings: source => useBrowserConfigurationSettings(source, root),
     filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),

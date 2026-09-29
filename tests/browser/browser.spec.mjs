@@ -1180,6 +1180,38 @@ for (const width of [390, 820, 1440]) {
 }
 
 for (const width of [390, 1440]) {
+  test(`model and chat settings load with a warm configuration cache at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.route(/\/api\/config(?:\?|$)/, route => route.fulfill({ json: {
+      model: { default: 'preview-model', provider: 'custom' }, display: { show_reasoning: true }
+    } }))
+    await page.route(/\/api\/config\/schema(?:\?|$)/, route => route.fulfill({ json: {
+      fields: { 'display.show_reasoning': { type: 'boolean', description: 'Show reasoning in chat' } }
+    } }))
+    await open(page)
+    await editor(page).fill('Preserve this draft while settings load')
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+      await trigger.click()
+      const role = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
+      await page.getByRole(role, { name: 'Settings and workspace', exact: true })
+        .getByRole(role === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+      if (width < 896) await page.getByRole('button', { name: 'Model', exact: true }).click()
+      await expect(page.locator('.browser-settings-detail').getByText('Auxiliary models', { exact: true })).toBeVisible()
+      await expect(page.locator('[data-slot="model-settings-skeleton"]')).toHaveCount(0)
+      if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
+      await page.getByRole('button', { name: 'Chat', exact: true }).click()
+      const reasoning = page.locator('[id="setting-field-display.show_reasoning"]').getByRole('switch')
+      await expect(reasoning).toBeVisible()
+      await expect(reasoning).toBeChecked()
+      await page.screenshot({ path: testInfo.outputPath(`chat-settings-${attempt}.png`) })
+      await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+      await expect(editor(page)).toHaveText('Preserve this draft while settings load')
+    }
+  })
+}
+
+for (const width of [390, 1440]) {
   test(`configuration page retains import export and reset behavior at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
     let config = { model: { default: 'preview-model', provider: 'custom' }, display: { show_reasoning: true } }

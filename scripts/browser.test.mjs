@@ -14,6 +14,34 @@ function load(file, globals = {}) {
   return context.exports
 }
 const { browserPlugin, scopeBrowserStorage } = load('src/upstream/browser-plugin.ts')
+test('profile switch hook ignores repeated mount effects but handles real profile changes', () => {
+  const { respectBrowserProfileSwitches } = load('src/upstream/browser-plugin.ts')
+  const original = readFileSync(path.join(root, '../desktop/src/app/hooks/use-on-profile-switch.ts'), 'utf8')
+  const source = respectBrowserProfileSwitches(original)
+  let profile = 'default', reference, effect
+  const calls = []
+  const context = vm.createContext({ exports: {}, require: name => {
+    if (name === 'react') return { useRef: initial => reference ??= { current: initial }, useEffect: callback => { effect = callback } }
+    if (name === '@nanostores/react') return { useStore: () => profile }
+    if (name === '@/store/profile') return { $activeGatewayProfile: {} }
+    throw new Error(`Unexpected import: ${name}`)
+  } })
+  vm.runInContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context)
+  const render = () => context.exports.useOnProfileSwitch(() => calls.push(profile))
+  render()
+  effect()
+  effect() // React StrictMode replays mount effects with the same refs.
+  assert.deepEqual(calls, [])
+  profile = 'research'
+  render()
+  effect()
+  effect()
+  assert.deepEqual(calls, ['research'])
+  profile = 'default'
+  render()
+  effect()
+  assert.deepEqual(calls, ['research', 'default'])
+})
 test('settings customization hides known sections and fields while inheriting new ids', () => {
   const { settingsPolicy, isSettingsFieldVisible, isSettingsSectionVisible, orderSettingsSections } = load('src/experience/settings/policy.ts')
   const hiddenSections = settingsPolicy.sections.hidden
