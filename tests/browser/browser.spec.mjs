@@ -1140,19 +1140,19 @@ for (const width of [390, 1440]) {
     await page.getByRole(role, { name: 'Settings and workspace', exact: true })
       .getByRole(role === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
     await expect(page.locator('.browser-settings-group-heading')).toHaveText([
-      'Preferences', 'AI & Conversations', 'Tools & Permissions', 'Service', 'Data & Maintenance'
+      'Preferences', 'Assistant', 'Tools', 'Service', 'Maintenance'
     ])
     await expect(page.locator('.browser-settings-category-button:not(.is-child) > span:not(.codicon)')).toHaveText([
       'Appearance', 'Notifications', 'Keyboard shortcuts', 'Models', 'AI connections', 'Chat', 'Voice',
-      'Memory & context', 'Workspace & files', 'Browser automation', 'Permissions & safety', 'Saved logins',
-      'Tool & service credentials', 'Server connection', 'Usage & billing', 'Archived chats', 'Backup & reset', 'Advanced'
+      'Memory', 'Workspace', 'Browser automation', 'Permissions', 'Saved logins',
+      'Credentials', 'Server connection', 'Billing', 'Archived chats', 'Configuration', 'Advanced'
     ])
     await page.screenshot({ path: testInfo.outputPath('settings-groups.png') })
     for (const [query, result, view, title] of [
       ['Gateway', 'Server connection', 'gateway', 'Server connection'],
-      ['Configuration', 'Backup & reset', 'config:browser-configuration', 'Backup & reset'],
+      ['Backup & reset', 'Configuration', 'config:browser-configuration', 'Configuration'],
       ['Providers', 'AI connections — Accounts', 'providers', 'AI connections'],
-      ['Server credentials', 'Tool & service credentials — Server credentials', 'keys', 'Tool & service credentials']
+      ['Server credentials', 'Credentials — Server credentials', 'keys', 'Credentials']
     ]) {
       await page.locator('.browser-settings-search > button').click()
       const input = page.locator('input[role="combobox"]')
@@ -1293,11 +1293,11 @@ for (const width of [390, 1440]) {
     if (width < 896) await page.getByRole('button', { name: 'Models', exact: true }).click()
     await page.getByRole('main', { name: 'Models', exact: true }).getByRole('button', { name: 'research', exact: true }).click()
     if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
-    await page.getByRole('button', { name: 'Backup & reset', exact: true }).click()
+    await page.getByRole('button', { name: 'Configuration', exact: true }).click()
     await expect(page).toHaveURL(/tab=config%3Abrowser-configuration/)
     const management = page.getByRole('region', { name: 'Configuration management' })
     await expect(management).toBeVisible()
-    await expect(page.getByRole('main', { name: 'Backup & reset', exact: true }).getByText('Applies to', { exact: true })).toHaveCount(0)
+    await expect(page.getByRole('main', { name: 'Configuration', exact: true }).getByText('Applies to', { exact: true })).toHaveCount(0)
 
     const exportRequest = page.waitForRequest(request => request.method() === 'GET' && /\/api\/config\?/.test(request.url()) && new URL(request.url()).searchParams.get('profile') === 'research')
     const downloadPromise = page.waitForEvent('download')

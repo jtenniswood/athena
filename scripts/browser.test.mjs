@@ -70,7 +70,7 @@ test('settings groups retain new upstream pages and search keeps old names and d
     { id: 'about', label: 'About' },
     { id: 'config:appearance', label: 'Appearance' }
   ])
-  assert.deepEqual(Array.from(groups, group => group.label), ['Preferences', 'AI & conversations', 'Other settings'])
+  assert.deepEqual(Array.from(groups, group => group.label), ['Preferences', 'Assistant', 'Other Settings'])
   assert.equal(groups.at(-1).items[0].id, 'future')
   assert.equal(groups[1].items[0].label, 'Models')
   const run = () => 'original-action'
@@ -88,8 +88,10 @@ test('settings groups retain new upstream pages and search keeps old names and d
   const providers = entries.find(entry => entry.id === 'sp-providers&pview=accounts')
   assert.ok(providers.keywords.includes('Providers'))
   assert.equal(providers.run, run)
-  assert.equal(entries.find(entry => entry.id === 'sp-keys&kview=settings').label, 'Tool & service credentials — Server credentials')
-  assert.equal(entries.find(entry => entry.label === 'Backup & reset').run(), 'config:browser-configuration')
+  assert.equal(entries.find(entry => entry.id === 'sp-keys&kview=settings').label, 'Credentials — Server credentials')
+  assert.equal(entries.find(entry => entry.label === 'Configuration').run(), 'config:browser-configuration')
+  assert.ok(entries.find(entry => entry.label === 'Configuration').keywords.includes('Backup & reset'))
+  assert.ok(entries.find(entry => entry.label === 'Memory').keywords.includes('Memory & context'))
   assert.ok(!entries.some(entry => entry.id === 'sp-about'))
   assert.equal(entries.at(-1).id, 'sp-future')
   const target = { view: 'config:browser', field: 'browser.use_real_profile' }

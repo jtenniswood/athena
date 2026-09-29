@@ -50,8 +50,8 @@ For shared design tokens, component choices, and responsive checks, see the
 ## Settings customization
 
 Settings uses the same five groups on phone, tablet, and desktop: Preferences,
-AI & Conversations, Tools & Permissions, Service, and Data & Maintenance.
-Backup & reset contains configuration import, export, and reset. Search accepts
+Assistant, Tools, Service, and Maintenance.
+Configuration contains configuration import, export, and reset. Search accepts
 both the current page names and previous upstream names.
 
 Edit `apps/web-desktop/src/experience/settings/policy.ts` to customize the menu:

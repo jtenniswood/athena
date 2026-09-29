@@ -1,10 +1,10 @@
 /** Local presentation overrides. Unlisted settings inherit upstream behavior. */
 export const settingsGroups = [
   { id: 'preferences', label: 'Preferences', pages: ['config:appearance', 'notifications', 'keybinds'] },
-  { id: 'assistant', label: 'AI & Conversations', pages: ['config:model', 'providers', 'config:chat', 'config:voice', 'config:memory'] },
-  { id: 'tools', label: 'Tools & Permissions', pages: ['config:workspace', 'config:browser', 'config:safety', 'vault', 'keys'] },
+  { id: 'assistant', label: 'Assistant', pages: ['config:model', 'providers', 'config:chat', 'config:voice', 'config:memory'] },
+  { id: 'tools', label: 'Tools', pages: ['config:workspace', 'config:browser', 'config:safety', 'vault', 'keys'] },
   { id: 'service', label: 'Service', pages: ['gateway', 'billing'] },
-  { id: 'maintenance', label: 'Data & Maintenance', pages: ['sessions', 'config:browser-configuration', 'config:advanced'] }
+  { id: 'maintenance', label: 'Maintenance', pages: ['sessions', 'config:browser-configuration', 'config:advanced'] }
 ]
 
 const pageLabels: Record<string, string> = {
@@ -15,27 +15,31 @@ const pageLabels: Record<string, string> = {
   providers: 'AI connections',
   'config:chat': 'Chat',
   'config:voice': 'Voice',
-  'config:memory': 'Memory & context',
-  'config:workspace': 'Workspace & files',
+  'config:memory': 'Memory',
+  'config:workspace': 'Workspace',
   'config:browser': 'Browser automation',
-  'config:safety': 'Permissions & safety',
+  'config:safety': 'Permissions',
   vault: 'Saved logins',
-  keys: 'Tool & service credentials',
+  keys: 'Credentials',
   gateway: 'Server connection',
-  billing: 'Usage & billing',
+  billing: 'Billing',
   sessions: 'Archived chats',
-  'config:browser-configuration': 'Backup & reset',
+  'config:browser-configuration': 'Configuration',
   'config:advanced': 'Advanced',
   'kview:tools': 'Tool API keys',
   'kview:settings': 'Server credentials'
 }
 
 const pageAliases: Record<string, string[]> = {
+  'config:memory': ['Memory & context'],
+  'config:workspace': ['Workspace & files'],
+  'config:safety': ['Permissions & safety'],
+  billing: ['Usage & billing'],
   providers: ['Providers', 'accounts', 'API keys', 'endpoints'],
   vault: ['Passwords & Logins', 'vault'],
-  keys: ['Tools & Keys'],
+  keys: ['Tools & Keys', 'Tool & service credentials'],
   gateway: ['Gateways', 'gateway', 'sign in'],
-  'config:browser-configuration': ['Configuration', 'backup', 'import', 'export', 'reset']
+  'config:browser-configuration': ['Backup & reset', 'backup', 'import', 'export', 'reset']
 }
 
 export const settingsPolicy = {
