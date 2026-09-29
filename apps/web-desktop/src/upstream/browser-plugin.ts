@@ -211,7 +211,6 @@ export function useBrowserConfigurationSettings(source: string, root: string): s
     ['  importInputRef,\n  scopeProfile', '  importInputRef,\n  configurationActions,\n  scopeProfile'],
     ["  const visibleFields =", `  if (activeSectionId === 'browser-configuration') {
     return <SettingsContent>
-      <SettingsProfileScope className="mb-5" />
       <BrowserConfigurationPage actions={configurationActions} />
       <input accept=".json,application/json" className="hidden" onChange={handleImport} ref={importInputRef} type="file" />
     </SettingsContent>
