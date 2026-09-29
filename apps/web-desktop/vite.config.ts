@@ -293,7 +293,9 @@ export default defineConfig(({ command, mode }) => {
         navigateFallback: 'index.html',
         // Gateway, proxy sign-in callbacks, and deployment metadata must hit
         // the network even while an older app shell controls this browser.
-        navigateFallbackDenylist: [/^\/(?:api|auth|login|plugins|desktop-plugins|cdn-cgi)(?:\/|$)/, /^\/(?:runtime-config|gateway-config)\.js$/, /^\/build-info\.json$/]
+        // Startup recovery must reach the edge to renew an expired sign-in,
+        // even when a cached app shell is available to the service worker.
+        navigateFallbackDenylist: [/[?&]hermes-reconnect=1(?:&|$)/, /^\/(?:api|auth|login|plugins|desktop-plugins|cdn-cgi)(?:\/|$)/, /^\/(?:runtime-config|gateway-config)\.js$/, /^\/build-info\.json$/]
       },
       devOptions: {
         // Keep the SW off in dev so it can't shadow the Vite proxy.
