@@ -1171,7 +1171,7 @@ for (const width of [390, 1440]) {
       }
       await expect(input).toHaveCount(0)
       await expect(page.getByRole('main', { name: title, exact: true })).toBeVisible()
-      await expect(page.locator('.browser-settings-heading h1')).toHaveText(title)
+      await expect(page.locator('.browser-settings-heading h1')).toHaveText(width < 896 ? title : 'Settings')
       expect(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('tab')).toBe(view)
       if (view === 'keys') {
         await expect(page.getByRole('button', { name: 'Server credentials', exact: true })).toHaveAttribute('aria-current', 'page')

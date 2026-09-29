@@ -112,7 +112,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
             }}
           ><Codicon name="arrow-left" /></BrowserToolbarButton> : <Codicon name="settings-gear" />}
           <h1 ref={heading} tabIndex={-1} className={compact && showDetail ? 'browser-settings-mobile-title' : undefined}>
-            {showDetail ? activeGroup?.label ?? activeView : title}
+            {compact && showDetail ? activeGroup?.label ?? activeView : title}
           </h1>
         </div>
         {(!compact || !showDetail) && <div className="browser-settings-search">{search}</div>}
