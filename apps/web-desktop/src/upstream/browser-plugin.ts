@@ -142,6 +142,205 @@ export function useBrowserOverlayFocusOwner(source: string, root: string): strin
     .replace(element, '    <div\n      ref={browserOverlayRef}\n      tabIndex={-1}\n      className={cn(')
 }
 
+export function respectBrowserProfileSwitches(source: string): string {
+  const initial = '  const first = useRef(true)'
+  const guard = `    if (first.current) {
+      first.current = false
+
+      return
+    }`
+  if (source.split(initial).length !== 2 || source.split(guard).length !== 2) throw new Error('Browser profile switch lifecycle changed')
+  return source
+    .replace(initial, '  const previousProfile = useRef(profile)')
+    .replace(guard, `    if (previousProfile.current === profile) return
+    previousProfile.current = profile`)
+}
+
+export function useBrowserSettingsPresentation(source: string, root: string): string {
+  const importTarget = "import { OverlayMain, OverlayNav, type OverlayNavGroup, OverlaySplitLayout } from '../overlays/overlay-split-layout'"
+  const overlayImport = "import { OverlayView } from '../overlays/overlay-view'"
+  const layoutTarget = `      <OverlaySplitLayout>
+        <OverlayNav footer={navFooter} groups={navGroups} />
+
+        <OverlayMain className="px-0 pb-0">{activeSettingsContent}</OverlayMain>
+      </OverlaySplitLayout>`
+  const overlayTarget = '<OverlayView closeLabel={t.settings.closeSettings} edgeBadge={searchPill} onClose={onClose}>'
+  if (source.split(importTarget).length !== 2 || source.split(overlayImport).length !== 2 || source.split(layoutTarget).length !== 2 || source.split(overlayTarget).length !== 2) {
+    throw new Error('Browser settings presentation boundary changed')
+  }
+  const controlReplacements: [string, string][] = [
+    ['      type="button"\n    >\n      <Search className="size-3" />', '      aria-label={t.settings.search.pill}\n      type="button"\n    >\n      <Search className="size-3" />'],
+  ]
+  controlReplacements.push(
+    ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  'config:browser-configuration',"],
+    ["      {\n        active: activeView === 'about',", "      {\n        active: activeView === 'config:browser-configuration',\n        gapBefore: true,\n        icon: Settings2,\n        id: 'config:browser-configuration',\n        label: 'Configuration',\n        onSelect: () => setActiveView('config:browser-configuration')\n      },\n      {\n        active: activeView === 'about',"],
+    ['        importInputRef={importInputRef}', '        importInputRef={importInputRef}\n        configurationCommands={configurationCommands}\n        configurationScopeProfile={scopeProfile}'],
+    ['getHermesConfigRecord()', 'getHermesConfigRecord(scopeProfile)'],
+    ['saveHermesConfig(await getHermesConfigDefaults())', 'saveHermesConfig(await getHermesConfigDefaults(), scopeProfile)'],
+    ['title: t.settings.resetConfirm', 'title: `${t.settings.resetConfirm} — ${scopeProfile}`']
+  )
+  for (const [before] of controlReplacements) {
+    if (source.split(before).length !== 2) throw new Error('Browser settings control labels changed')
+  }
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/frame'))
+  const navFooterStart = '  const navFooter = ('
+  const activeContentStart = '\n\n  const activeSettingsContent ='
+  if (source.split(navFooterStart).length !== 2 || source.split(activeContentStart).length !== 2) {
+    throw new Error('Browser configuration command boundary changed')
+  }
+  const navFooter = `  const configurationCommands = {
+    export: {
+      description: 'Download this profile’s configuration as a JSON file.',
+      label: t.settings.exportConfig,
+      run: exportConfig
+    },
+    import: {
+      description: 'Restore this profile’s configuration from a JSON file.',
+      label: t.settings.importConfig,
+      run: () => {
+        triggerHaptic('open')
+        importInputRef.current?.click()
+      }
+    },
+    reset: {
+      description: 'Restore this profile’s configuration defaults, including hidden options. You will be asked to confirm.',
+      label: t.settings.resetToDefaults,
+      run: () => {
+        triggerHaptic('warning')
+        return resetConfig()
+      }
+    }
+  }`
+  let output = source
+    .replace(importTarget, '')
+    .replace(overlayImport, '')
+    .replace(overlayTarget, '<BrowserSettingsPresentation activeView={activeView} backLabel={t.common.back} closeLabel={t.settings.closeSettings} groups={navGroups} onClose={onClose} search={searchPill} title={t.commandCenter.settings}>')
+    .replace(layoutTarget, '      {activeSettingsContent}')
+    .replace('</OverlayView>', '</BrowserSettingsPresentation>')
+  const transformedNavStart = output.indexOf(navFooterStart)
+  const transformedNavEnd = output.indexOf(activeContentStart, transformedNavStart)
+  output = output.slice(0, transformedNavStart) + navFooter + output.slice(transformedNavEnd)
+  for (const [before, after] of controlReplacements) output = output.replace(before, after)
+  return `import { BrowserSettingsPresentation } from ${owner}\n` + output
+}
+
+export function useBrowserConfigurationSettings(source: string, root: string): string {
+  const replacements: [string, string][] = [
+    ['  importInputRef\n}: ConfigSettingsProps)', '  importInputRef,\n  configurationCommands,\n  configurationScopeProfile\n}: ConfigSettingsProps)'],
+    ['      importInputRef={importInputRef}', '      importInputRef={importInputRef}\n      configurationCommands={configurationCommands}\n      configurationScopeProfile={configurationScopeProfile}'],
+    ['  importInputRef: React.RefObject<HTMLInputElement | null>', '  importInputRef: React.RefObject<HTMLInputElement | null>\n  configurationCommands: BrowserConfigurationCommands\n  configurationScopeProfile?: string'],
+    ['  importInputRef,\n  scopeProfile', '  importInputRef,\n  configurationCommands,\n  configurationScopeProfile,\n  scopeProfile'],
+    ['  const scopeProfile = useStore($settingsRequestProfile)', '  const requestScopeProfile = useStore($settingsRequestProfile)\n  const scopeProfile = activeSectionId === \'browser-configuration\' ? configurationScopeProfile : requestScopeProfile'],
+    ["  const visibleFields =", `  if (activeSectionId === 'browser-configuration') {
+    return <SettingsContent>
+      <BrowserConfigurationPage commands={configurationCommands} scopeProfile={configurationScopeProfile} />
+      <input accept=".json,application/json" className="hidden" onChange={handleImport} ref={importInputRef} type="file" />
+    </SettingsContent>
+  }
+
+  const visibleFields =`]
+  ]
+  let output = source
+  for (const [before, after] of replacements) {
+    if (output.split(before).length !== 2) throw new Error('Browser configuration page boundary changed')
+    output = output.replace(before, after)
+  }
+  return `import type { BrowserConfigurationCommands } from ${JSON.stringify(path.join(root, 'src/experience/settings/configuration'))}\nimport { BrowserConfigurationPage } from ${JSON.stringify(path.join(root, 'src/experience/settings/configuration'))}\n` + output
+}
+
+export function hideBrowserAppearanceOnlySettings(source: string): string {
+  const replacements: [string, string][] = [
+    ['          <TerminalFontSetting />', '          {!window.__HERMES_WEB_BRIDGE__ && <TerminalFontSetting />}'],
+    [
+      '                  <MarketplaceThemeResults installs={installs} onInstalled={name => setTheme(name)} query={query} />',
+      '                  {!window.__HERMES_WEB_BRIDGE__ && <MarketplaceThemeResults installs={installs} onInstalled={name => setTheme(name)} query={query} />}'
+    ],
+    ['placeholder={a.themeSearchPlaceholder}', 'placeholder="Search available themes"'],
+    ['description={a.themeDesc}', 'description="Choose from themes available in this web app."']
+  ]
+  let output = source
+  for (const [before, after] of replacements) {
+    if (output.split(before).length !== 2) throw new Error('Browser appearance capability boundary changed')
+    output = output.replace(before, after)
+  }
+  return output
+}
+
+export function hideBrowserLocalProjectDirectory(source: string): string {
+  const target = '<DefaultProjectDirSetting />'
+  if (source.split(target).length !== 2) throw new Error('Browser archived-chat directory boundary changed')
+  return source.replace(target, '{!window.__HERMES_WEB_BRIDGE__ && <DefaultProjectDirSetting />}')
+}
+
+export function filterBrowserSettingsFields(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/policy'))
+  const target = "  const visibleFields = activeSectionId === 'voice' ? fields.filter(([key]) => voiceFieldVisible(key, config)) : fields"
+  if (source.split(target).length !== 2) throw new Error('Browser settings field visibility target changed')
+  let output = source.replace(target, target + '.filter(([key]) => isSettingsFieldVisible(key))')
+  const browserOnlyControls: [string, string][] = [
+    ["activeSectionId === 'advanced' && (", "activeSectionId === 'advanced' && !window.__HERMES_WEB_BRIDGE__ && ("],
+    ["activeSectionId === 'chat' ? <AttachmentSizeSetting /> : null", "activeSectionId === 'chat' && !window.__HERMES_WEB_BRIDGE__ ? <AttachmentSizeSetting /> : null"]
+  ]
+  for (const [before, after] of browserOnlyControls) {
+    if (output.split(before).length !== 2) throw new Error('Browser device-only configuration boundary changed')
+    output = output.replace(before, after)
+  }
+  return `import { isSettingsFieldVisible } from ${owner}\n` + output
+}
+
+export function filterBrowserSettingsSearch(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/policy'))
+  const target = `  return {
+    appearanceEntries,
+    configEntries,
+    credentialEntries,
+    pluginEntries
+  }`
+  if (source.split(target).length !== 2) throw new Error('Browser settings search catalog target changed')
+  const filtered = `  return {
+    appearanceEntries: appearanceEntries.filter(entry => isSettingsFieldVisible(entry.target.setting ?? '')).map(presentSettingsSearchEntry),
+    configEntries: configEntries.filter(entry => isSettingsSectionVisible(entry.target.view) && isSettingsFieldVisible(entry.target.field ?? '')).map(presentSettingsSearchEntry),
+    credentialEntries: credentialEntries.map(presentSettingsSearchEntry),
+    pluginEntries
+  }`
+  return `import { isSettingsFieldVisible, isSettingsSectionVisible, presentSettingsSearchEntry } from ${owner}\n` + source.replace(target, filtered)
+}
+
+export function filterBrowserSettingsPalette(source: string, root: string): string {
+  const sectionTarget = '...SECTIONS.map(section => ({'
+  const nonConfigTarget = '...NON_CONFIG_SETTINGS.map(entry => ({'
+  if (source.split(sectionTarget).length !== 3 || source.split(nonConfigTarget).length !== 3) {
+    throw new Error('Browser settings palette targets changed')
+  }
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/policy'))
+  const dialog = '<DialogPrimitive.Content\n        aria-describedby={undefined}'
+  if (source.split(dialog).length !== 2) throw new Error('Browser settings search dialog changed')
+  const start = 'items: [\n          ...SECTIONS.map'
+  const end = `            run: go(settingsTab(entry.tab))
+          }))
+        ]`
+  if (source.split(start).length !== 3 || source.split(end).length !== 3) throw new Error('Browser settings palette grouping changed')
+  const marketplaceGroup = `// Pinned at the top: drills into the Marketplace browser.
+          {
+            items: [`
+  if (source.split(marketplaceGroup).length !== 2) throw new Error('Browser theme marketplace palette boundary changed')
+  let browserSource = source.replace(marketplaceGroup, `// Desktop-only Marketplace search has no browser implementation.
+          {
+            items: window.__HERMES_WEB_BRIDGE__ ? [] : [`)
+  const themePagePlaceholder = 'placeholder: t.settings.appearance.themeDesc,'
+  if (browserSource.split(themePagePlaceholder).length !== 2) throw new Error('Browser theme palette placeholder boundary changed')
+  browserSource = browserSource.replace(themePagePlaceholder, "placeholder: window.__HERMES_WEB_BRIDGE__ ? 'Choose an available theme.' : t.settings.appearance.themeDesc,")
+  return `import { isSettingsSectionVisible, presentSettingsPalette, settingsPageLabel } from ${owner}\n` + browserSource
+    .replace(dialog, dialog + "\n        data-browser-command-palette=\"\"")
+    .replaceAll(start, 'items: presentSettingsPalette([\n          ...SECTIONS.map')
+    .replaceAll(end, `            run: go(settingsTab(entry.tab))
+          }))
+        ], (tab, label) => ({ icon: Settings2, id: 'set-' + tab, label, keywords: ['settings'], run: go(settingsTab(tab)) }))`)
+    .replaceAll(sectionTarget, '...SECTIONS.filter(section => isSettingsSectionVisible(section.id)).map(section => ({')
+    .replaceAll(nonConfigTarget, '...NON_CONFIG_SETTINGS.filter(entry => isSettingsSectionVisible(entry.tab)).map(entry => ({')
+    .replaceAll('heading: t.settings.nav.apiKeys,', "heading: settingsPageLabel('keys', t.settings.nav.apiKeys),")
+}
+
 export function respectBrowserOverlayFocusReturn(source: string, root: string): string {
   const target = '    if (!inputDisabled && paneVisible && !floating) {'
   if (source.split(target).length !== 2) throw new Error('Browser composer autofocus owner changed')
@@ -759,6 +958,14 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     keepBrowserWorkspaceRoute: source => keepBrowserWorkspaceRoute(source, root),
     respectBrowserOverlayFocusReturn: source => respectBrowserOverlayFocusReturn(source, root),
     useBrowserOverlayFocusOwner: source => useBrowserOverlayFocusOwner(source, root),
+    respectBrowserProfileSwitches,
+    useBrowserSettingsPresentation: source => useBrowserSettingsPresentation(source, root),
+    useBrowserConfigurationSettings: source => useBrowserConfigurationSettings(source, root),
+    filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
+    hideBrowserAppearanceOnlySettings,
+    hideBrowserLocalProjectDirectory,
+    filterBrowserSettingsSearch: source => filterBrowserSettingsSearch(source, root),
+    filterBrowserSettingsPalette: source => filterBrowserSettingsPalette(source, root),
     useBrowserPinWrites: source => useBrowserPinWrites(source, root),
     useBrowserOpenSessionOwner: source => useBrowserOpenSessionOwner(source, root),
     useBrowserFreshSessionOwner: source => useBrowserFreshSessionOwner(source, root),

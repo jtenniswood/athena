@@ -1,19 +1,147 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import vm from 'node:vm'
 import ts from 'typescript'
 const root = path.resolve('apps/web-desktop')
-function load(file, globals = {}) {
-  const filename = path.join(root, file)
-  const context = vm.createContext({ exports: {}, require: createRequire(filename), ...globals })
+function load(file, globals = {}, moduleCache = new Map()) {
+  const filename = path.resolve(root, file)
+  if (moduleCache.has(filename)) return moduleCache.get(filename)
+  const exports = {}
+  moduleCache.set(filename, exports)
+  const nodeRequire = createRequire(filename)
+  const context = vm.createContext({ exports: {}, require: specifier => {
+    if (specifier.startsWith('.')) {
+      const module = path.resolve(path.dirname(filename), specifier)
+      for (const extension of ['.ts', '.tsx']) {
+        const candidate = `${module}${extension}`
+        if (existsSync(candidate)) return load(path.relative(root, candidate), globals, moduleCache)
+      }
+    }
+    return nodeRequire(specifier)
+  }, ...globals })
+  context.exports = exports
   vm.runInContext(ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, context)
   return context.exports
 }
 const { browserPlugin, scopeBrowserStorage } = load('src/upstream/browser-plugin.ts')
+test('profile switch hook ignores repeated mount effects but handles real profile changes', () => {
+  const { respectBrowserProfileSwitches } = load('src/upstream/browser-plugin.ts')
+  const original = readFileSync(path.join(root, '../desktop/src/app/hooks/use-on-profile-switch.ts'), 'utf8')
+  const source = respectBrowserProfileSwitches(original)
+  let profile = 'default', reference, effect
+  const calls = []
+  const context = vm.createContext({ exports: {}, require: name => {
+    if (name === 'react') return { useRef: initial => reference ??= { current: initial }, useEffect: callback => { effect = callback } }
+    if (name === '@nanostores/react') return { useStore: () => profile }
+    if (name === '@/store/profile') return { $activeGatewayProfile: {} }
+    throw new Error(`Unexpected import: ${name}`)
+  } })
+  vm.runInContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context)
+  const render = () => context.exports.useOnProfileSwitch(() => calls.push(profile))
+  render()
+  effect()
+  effect() // React StrictMode replays mount effects with the same refs.
+  assert.deepEqual(calls, [])
+  profile = 'research'
+  render()
+  effect()
+  effect()
+  assert.deepEqual(calls, ['research'])
+  profile = 'default'
+  render()
+  effect()
+  assert.deepEqual(calls, ['research', 'default'])
+})
+test('settings customization hides known sections and fields while inheriting new ids', () => {
+  const { settingsPolicy, isSettingsFieldVisible, isSettingsSectionVisible, orderSettingsSections } = load('src/experience/settings/policy.ts')
+  const hiddenSections = settingsPolicy.sections.hidden
+  const orderedSections = settingsPolicy.sections.order
+  const hiddenFields = settingsPolicy.fields.hidden
+  hiddenSections.push('voice')
+  orderedSections.push('config:appearance')
+  hiddenFields.push('display.show_reasoning')
+  try {
+    assert.equal(isSettingsSectionVisible('config:voice'), false)
+    assert.equal(isSettingsSectionVisible('providers'), true)
+    assert.deepEqual(orderSettingsSections([{ id: 'config:model' }, { id: 'config:appearance' }]).map(item => item.id), ['config:appearance', 'config:model'])
+    assert.equal(isSettingsFieldVisible('display.show_reasoning'), false)
+  assert.equal(isSettingsFieldVisible('browser.use_real_profile'), true)
+  assert.equal(isSettingsFieldVisible('new.upstream_option'), true)
+} finally {
+    hiddenSections.length = 0
+    orderedSections.length = 0
+    hiddenFields.length = 0
+  }
+})
+test('settings groups retain new upstream pages and search keeps old names and destinations', () => {
+  const { groupSettingsSections, presentSettingsPalette, presentSettingsSearchEntry } = load('src/experience/settings/policy.ts', { URLSearchParams })
+  const groups = groupSettingsSections([
+    { id: 'future', label: 'New upstream page' },
+    { id: 'config:model', label: 'Model' },
+    { id: 'about', label: 'About' },
+    { id: 'config:appearance', label: 'Appearance' }
+  ])
+  assert.deepEqual(Array.from(groups, group => group.label), ['Preferences', 'Assistant', 'Other Settings'])
+  assert.equal(groups.at(-1).items[0].id, 'future')
+  assert.equal(groups[1].items[0].label, 'Models')
+  const run = () => 'original-action'
+  const entries = presentSettingsPalette([
+    { id: 'sp-gateway', label: 'Gateways', run },
+    { id: 'sp-providers&pview=accounts', label: 'Accounts', run },
+    { id: 'sp-keys&kview=settings', label: 'Settings', run },
+    { id: 'sp-future', label: 'New upstream page', run },
+    { id: 'sp-about', label: 'About', run }
+  ], (id, label) => ({ id: `set-${id}`, label, run: () => id }))
+  const gateway = entries.find(entry => entry.id === 'sp-gateway')
+  assert.equal(gateway.label, 'Server Connection')
+  assert.ok(gateway.keywords.includes('Gateways'))
+  assert.equal(gateway.run, run)
+  const providers = entries.find(entry => entry.id === 'sp-providers&pview=accounts')
+  assert.ok(providers.keywords.includes('Providers'))
+  assert.equal(providers.run, run)
+  assert.equal(entries.find(entry => entry.id === 'sp-keys&kview=settings').label, 'Credentials — Server Credentials')
+  assert.equal(entries.find(entry => entry.label === 'Configuration').run(), 'config:browser-configuration')
+  assert.ok(entries.find(entry => entry.label === 'Configuration').keywords.includes('Backup & reset'))
+  assert.ok(entries.find(entry => entry.label === 'Memory').keywords.includes('Memory & context'))
+  assert.ok(!entries.some(entry => entry.id === 'sp-about'))
+  assert.equal(entries.at(-1).id, 'sp-future')
+  const target = { view: 'config:browser', field: 'browser.use_real_profile' }
+  const field = presentSettingsSearchEntry({ context: 'Browser', keywords: ['profile'], target })
+  assert.equal(field.context, 'Browser Automation')
+  assert.ok(field.keywords.includes('Browser'))
+  assert.equal(field.target, target)
+})
+test('settings catalog records capability evidence and validates its authored destinations', () => {
+  const { settingsCapability, settingsFields, validateSettingsCatalog } = load('src/experience/settings/policy.ts')
+  assert.equal(validateSettingsCatalog().length, 0)
+  assert.equal(settingsCapability('server.real-browser-profile').state, 'unknown')
+  assert.equal(settingsFields.find(field => field.id === 'appearance.translucency').supportState, 'unsupported')
+  assert.equal(settingsFields.find(field => field.id === 'voice.client_direct').supportState, 'unknown')
+})
+test('settings policy stays aligned across page fields, deep search, and palette links', () => {
+  const { filterBrowserSettingsFields, filterBrowserSettingsSearch, filterBrowserSettingsPalette, useBrowserSettingsPresentation, useBrowserConfigurationSettings } = load('src/upstream/browser-plugin.ts')
+  const settings = readFileSync(path.join(root, '../desktop/src/app/settings/index.tsx'), 'utf8')
+  const config = readFileSync(path.join(root, '../desktop/src/app/settings/config-settings.tsx'), 'utf8')
+  const search = readFileSync(path.join(root, '../desktop/src/app/settings/use-settings-search.ts'), 'utf8')
+  const palette = readFileSync(path.join(root, '../desktop/src/app/command-palette/index.tsx'), 'utf8')
+  const adaptedSettings = useBrowserSettingsPresentation(settings, root)
+  assert.match(adaptedSettings, /BrowserSettingsPresentation activeView=\{activeView\}/)
+  assert.match(adaptedSettings, /configurationCommands=\{configurationCommands\}/)
+  assert.match(adaptedSettings, /configurationScopeProfile=\{scopeProfile\}/)
+  assert.match(adaptedSettings, /title: `\$\{t\.settings\.resetConfirm\} — \$\{scopeProfile\}`/)
+  assert.match(filterBrowserSettingsFields(config, root), /isSettingsFieldVisible\(key\)/)
+  const adaptedConfig = useBrowserConfigurationSettings(config, root)
+  assert.match(adaptedConfig, /BrowserConfigurationPage commands=\{configurationCommands\} scopeProfile=\{configurationScopeProfile\}/)
+  assert.match(adaptedConfig, /activeSectionId === 'browser-configuration' \? configurationScopeProfile : requestScopeProfile/)
+  assert.match(filterBrowserSettingsSearch(search, root), /appearanceEntries: appearanceEntries\.filter/)
+  assert.match(filterBrowserSettingsSearch(search, root), /isSettingsSectionVisible\(entry\.target\.view\)/)
+  assert.match(filterBrowserSettingsPalette(palette, root), /SECTIONS\.filter\(section => isSettingsSectionVisible/)
+  assert.match(filterBrowserSettingsPalette(palette, root), /NON_CONFIG_SETTINGS\.filter\(entry => isSettingsSectionVisible/)
+})
 test('browser omits generic activity toasts while preserving unread tracking and incoming messages', () => {
   const { filterBrowserActivityToasts, browserActivityNotificationsPlugin } = load('src/upstream/browser-plugin.ts')
   const filename = path.join(root, '../desktop/src/plugins/hermes-bots/roster-actions.ts')

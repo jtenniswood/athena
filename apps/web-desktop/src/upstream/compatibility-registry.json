@@ -1722,28 +1722,6 @@
     "outputHash": "09d4ec7325bdd8d9d28166c1aed5de0bf154766b979a02e6c06827ba9b0613af"
   },
   {
-    "name": "browser-project-group-disclosure",
-    "kind": "browser-transform",
-    "order": 20,
-    "module": "app/chat/sidebar/projects/overview-row.tsx",
-    "reason": "Use open and closed folder glyphs and make the project group icon, title, and disclosure control toggle its preview.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
-    "tests": [
-      {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "section headers preserve disclosure and browser styling"
-      }
-    ],
-    "removal": "Remove when upstream project group rows expose a browser-friendly disclosure control across the group header.",
-    "sourceRoot": "renderer",
-    "sourceHash": "f9f8a864ddb3246f5906ded933acf67a2f8a2bd3e5b49ed51bc4928cee03465a",
-    "inputHash": "f9f8a864ddb3246f5906ded933acf67a2f8a2bd3e5b49ed51bc4928cee03465a",
-    "outputHash": "7801a2163a4a3325278b7427a9ebce88dd0ab40889c1f446c36632e6fcd2f9ee",
-    "handlers": [
-      "useBrowserProjectDisclosure"
-    ]
-  },
-  {
     "name": "browser-cron-jobs-section-styling",
     "kind": "browser-transform",
     "order": 20,
@@ -2089,25 +2067,200 @@
     "specifier": "@hermes/plugin-sdk"
   },
   {
-    "name": "browser-settings-frame",
+    "name": "browser-settings-fullscreen-frame",
     "kind": "browser-transform",
     "order": 20,
     "module": "app/settings/index.tsx",
-    "reason": "Keep upstream settings navigation and content while replacing only the browser presentation with a responsive full-viewport frame.",
+    "sourceRoot": "renderer",
+    "sourceHash": "2505834a903fa6250bbb5bcd754248b90532e5ebaa7469b1ef22980e508ee8cd",
+    "inputHash": "2505834a903fa6250bbb5bcd754248b90532e5ebaa7469b1ef22980e508ee8cd",
+    "outputHash": "1bf7886d6cb8ff08c73e416a8b455fad971699b048053ce2ac20c16cea233e37",
+    "handlers": [
+      "useBrowserSettingsPresentation"
+    ],
+    "reason": "Keep the responsive settings layout, configuration management page, and visibility policy in the wrapper while upstream owns settings content and persistence.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "settings fills the viewport and uses compact list and detail navigation"
+        "scenario": "settings full-screen modal scales across compact and wide viewports"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "configuration page retains import export and reset behavior"
       }
     ],
-    "removal": "Remove when upstream exposes a settings-only responsive composition slot with equivalent category, content, focus, and close behavior.",
+    "removal": "Remove when upstream SettingsView provides an equivalent responsive browser presentation seam while retaining upstream settings pages and actions."
+  },
+  {
+    "name": "browser-settings-field-policy",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/config-settings.tsx",
     "sourceRoot": "renderer",
-    "sourceHash": "2505834a903fa6250bbb5bcd754248b90532e5ebaa7469b1ef22980e508ee8cd",
-    "inputHash": "2505834a903fa6250bbb5bcd754248b90532e5ebaa7469b1ef22980e508ee8cd",
-    "outputHash": "ac4d76f045c6ac73c8ec9647f0c7181192ee18cd4a9e6f42d3590ba011249574",
+    "sourceHash": "e557900fdf12bed8efda0865281dd3462fe6fa79455f2c3021daf1d8bcdce4f6",
+    "inputHash": "e557900fdf12bed8efda0865281dd3462fe6fa79455f2c3021daf1d8bcdce4f6",
+    "outputHash": "f130436c4075d1dd325a622fca808c559d2cea3986afb54b27a3421a4417310c",
     "handlers": [
-      "useBrowserSettingsFrame"
+      "filterBrowserSettingsFields",
+      "useBrowserConfigurationSettings"
+    ],
+    "reason": "Hide unsupported device controls and apply wrapper-owned visibility rules while retaining upstream settings storage and forms.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "settings customization hides known sections and fields while inheriting new ids"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "configuration page retains import export and reset behavior"
+      }
+    ],
+    "removal": "Remove when upstream settings supports wrapper-owned visibility rules for config fields."
+  },
+  {
+    "name": "browser-settings-search-policy",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/use-settings-search.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "66e55c9a10204f09d126b993cfe293d66466565b327e895ace7ea62d8c929f28",
+    "inputHash": "66e55c9a10204f09d126b993cfe293d66466565b327e895ace7ea62d8c929f28",
+    "outputHash": "eabcb9e6a9139103fef403fe959f53f0142007d71d50220a1e0fe91aa9f4a1b6",
+    "handlers": [
+      "filterBrowserSettingsSearch"
+    ],
+    "reason": "Keep grouped settings labels, legacy search aliases, and visibility policy in the wrapper while upstream owns forms and persistence.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "settings policy stays aligned across page fields, deep search, and palette links"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings groups and renamed search preserve destinations"
+      }
+    ],
+    "removal": "Remove when upstream settings search applies wrapper visibility policy to section and field results."
+  },
+  {
+    "name": "browser-settings-palette-policy",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/command-palette/index.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "8323bd0e62fa8eeeea7a7e3c544f7c0dac3da2aba387634205187173a364e014",
+    "inputHash": "8323bd0e62fa8eeeea7a7e3c544f7c0dac3da2aba387634205187173a364e014",
+    "outputHash": "c6cf3943c2e4a2b4005312fffa7c169e0bc15afd0ec88d1651c98103573932eb",
+    "handlers": [
+      "filterBrowserSettingsPalette"
+    ],
+    "reason": "Keep settings search policy and remove the unavailable Marketplace theme installer from the browser palette.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "settings policy stays aligned across page fields, deep search, and palette links"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings groups and renamed search preserve destinations"
+      }
+    ],
+    "removal": "Remove when upstream settings navigation entries in the command palette support wrapper visibility policy."
+  },
+  {
+    "name": "browser-profile-switch-lifecycle",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/hooks/use-on-profile-switch.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "beeb2342986607d6f9393d7a9addf4e5acd1e67a5855c38c0b940323ead4799a",
+    "inputHash": "beeb2342986607d6f9393d7a9addf4e5acd1e67a5855c38c0b940323ead4799a",
+    "outputHash": "3959b003436800ca10358528de7ec745b4c46c6aa6fbfe74f609ebfb78387b63",
+    "handlers": [
+      "respectBrowserProfileSwitches"
+    ],
+    "reason": "Do not clear loaded settings drafts when React StrictMode replays mount effects for the same profile.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "profile switch hook ignores repeated mount effects but handles real profile changes"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "model and chat settings load with a warm configuration cache"
+      }
+    ],
+    "removal": "Remove when upstream compares the previous profile identity before dispatching profile-switch cleanup."
+  },
+  {
+    "name": "browser-appearance-capabilities",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/appearance-settings.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "ef59234538915465699ca6e257a273057994a2a088cdc6166c6bead9a7ff8b0c",
+    "inputHash": "ef59234538915465699ca6e257a273057994a2a088cdc6166c6bead9a7ff8b0c",
+    "outputHash": "c72173a87223f2abce0a277dd562f23b68228c5e446ce032d5c834cf247ebf2d",
+    "handlers": [
+      "hideBrowserAppearanceOnlySettings"
+    ],
+    "reason": "Hide the unused terminal font and theme marketplace controls while retaining installed browser themes.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+      }
+    ],
+    "removal": "Remove once upstream exposes browser capability flags for terminal surfaces and theme marketplace support."
+  },
+  {
+    "name": "browser-archived-directory-capability",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/sessions-settings.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "d7d72ee931a9d893e26fa8c6dc030731130a4dca346436a4522de469028efbe4",
+    "inputHash": "d7d72ee931a9d893e26fa8c6dc030731130a4dca346436a4522de469028efbe4",
+    "outputHash": "867afae2a99775352b5388699c4a00de6e587f113f8fdb8e91e1ef935787991a",
+    "handlers": [
+      "hideBrowserLocalProjectDirectory"
+    ],
+    "reason": "Hide the desktop-local project directory picker while keeping remote working-directory settings.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+      }
+    ],
+    "removal": "Remove once this control has a browser implementation for selecting a server-side project directory."
+  },
+  {
+    "name": "browser-project-group-disclosure",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/projects/overview-row.tsx",
+    "reason": "Use open and closed folder glyphs and make the project group icon, title, and disclosure control toggle its preview.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "section headers preserve disclosure and browser styling"
+      }
+    ],
+    "removal": "Remove when upstream project group rows expose a browser-friendly disclosure control across the group header.",
+    "sourceRoot": "renderer",
+    "sourceHash": "f9f8a864ddb3246f5906ded933acf67a2f8a2bd3e5b49ed51bc4928cee03465a",
+    "inputHash": "f9f8a864ddb3246f5906ded933acf67a2f8a2bd3e5b49ed51bc4928cee03465a",
+    "outputHash": "7801a2163a4a3325278b7427a9ebce88dd0ab40889c1f446c36632e6fcd2f9ee",
+    "handlers": [
+      "useBrowserProjectDisclosure"
     ]
   },
   {

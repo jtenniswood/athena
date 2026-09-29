@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { createPreviewGateway } from '../../scripts/preview/gateway.mjs'
 import { getBrowserTarget } from './test-target.mjs'
 import { installBrowserErrorCollector } from './error-collector.mjs'
@@ -1154,6 +1155,213 @@ for (const width of [390, 1440]) {
       await expect(editor(page)).toHaveText('Keep this settings actions draft')
     })
   }
+}
+
+for (const width of [390, 1440]) {
+  test.extend({ hasTouch: width === 390 })(`settings groups and renamed search preserve destinations at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await open(page)
+    await editor(page).fill('Keep my draft while finding renamed settings')
+    const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+    const role = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
+    await trigger.click()
+    await page.getByRole(role, { name: 'Settings and workspace', exact: true })
+      .getByRole(role === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+    await expect(page.locator('.browser-settings-group-heading')).toHaveText([
+      'Preferences', 'Assistant', 'Tools', 'Service', 'Maintenance'
+    ])
+    await expect(page.locator('.browser-settings-category-button:not(.is-child) > span:not(.codicon)')).toHaveText([
+      'Appearance', 'Notifications', 'Keyboard Shortcuts', 'Models', 'AI Connections', 'Chat', 'Voice',
+      'Memory', 'Workspace', 'Browser Automation', 'Permissions', 'Saved Logins',
+      'Credentials', 'Server Connection', 'Billing', 'Archived Chats', 'Configuration', 'Advanced'
+    ])
+    await page.screenshot({ path: testInfo.outputPath('settings-groups.png') })
+    for (const [query, result, view, title] of [
+      ['Gateway', 'Server Connection', 'gateway', 'Server Connection'],
+      ['Backup & reset', 'Configuration', 'config:browser-configuration', 'Configuration'],
+      ['Providers', 'AI Connections — Accounts', 'providers', 'AI Connections'],
+      ['Server credentials', 'Credentials — Server Credentials', 'keys', 'Credentials']
+    ]) {
+      await page.locator('.browser-settings-search > button').click()
+      const input = page.locator('input[role="combobox"]')
+      await expect(input).toBeVisible()
+      await input.fill(query)
+      const palette = page.locator('[data-browser-command-palette]')
+      const bounds = await palette.boundingBox()
+      expect(bounds.x).toBeGreaterThanOrEqual(0)
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width)
+      if (query === 'Gateway') await page.screenshot({ path: testInfo.outputPath('settings-search.png') })
+      const option = page.getByRole('option', { name: result, exact: true })
+      if (width === 390) await option.tap()
+      else {
+        await page.mouse.move(10, 10)
+        await option.click()
+      }
+      await expect(input).toHaveCount(0)
+      await expect(page.getByRole('main', { name: title, exact: true })).toBeVisible()
+      await expect(page.locator('.browser-settings-heading h1')).toHaveText(width < 896 ? title : 'Settings')
+      expect(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('tab')).toBe(view)
+      if (view === 'keys') {
+        await expect(page.getByRole('button', { name: 'Server Credentials', exact: true })).toHaveAttribute('aria-current', 'page')
+      }
+      if (width < 896) {
+        await expect(page.locator('.browser-settings-search')).toHaveCount(0)
+        await page.getByRole('button', { name: 'Back', exact: true }).click()
+      }
+    }
+    await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+    await expect(editor(page)).toHaveText('Keep my draft while finding renamed settings')
+  })
+}
+
+for (const width of [390, 820, 1440]) {
+  test(`settings full-screen modal scales across compact and wide viewports at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await open(page)
+    await editor(page).fill('Keep the chat draft behind full-screen settings')
+    const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+    await trigger.click()
+    const menuRole = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
+    const menu = page.getByRole(menuRole, { name: 'Settings and workspace', exact: true })
+    await menu.getByRole(menuRole === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+
+    const surface = page.getByRole('dialog', { name: 'Settings', exact: true })
+    const frame = page.locator('[data-browser-settings-frame]')
+    await expect(surface).toBeVisible()
+    await expect(frame).toBeVisible()
+    if (width < 896) {
+      const closeBounds = await page.getByRole('button', { name: 'Close settings', exact: true }).boundingBox()
+      expect(closeBounds.width).toBeGreaterThanOrEqual(44)
+      expect(closeBounds.height).toBeGreaterThanOrEqual(44)
+    }
+    const bounds = await page.locator('[data-overlay-surface]').boundingBox()
+    expect(bounds.x).toBeCloseTo(0, 0)
+    expect(bounds.y).toBeCloseTo(0, 0)
+    expect(bounds.width).toBeCloseTo(width, 0)
+    expect(bounds.height).toBeCloseTo(900, 0)
+
+    if (width < 896) {
+      await expect(page.getByRole('navigation', { name: 'Settings categories' })).toBeVisible()
+      await page.getByRole('button', { name: 'Appearance', exact: true }).click()
+      await expect(page.locator('.browser-settings-mobile-title')).toHaveText('Appearance')
+      await expect(page.locator('.browser-settings-mobile-title')).toBeFocused()
+      await page.getByRole('button', { name: 'Back', exact: true }).click()
+      await expect(page.getByRole('navigation', { name: 'Settings categories' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Appearance', exact: true })).toBeFocused()
+      await page.getByRole('button', { name: 'AI Connections', exact: true }).click()
+      const providerCategories = page.getByRole('navigation', { name: 'AI Connections categories' })
+      await providerCategories.getByRole('button', { name: 'API keys', exact: true }).click()
+      await expect(providerCategories.getByRole('button', { name: 'API keys', exact: true })).toHaveAttribute('aria-current', 'page')
+    } else {
+      await expect(page.getByRole('navigation', { name: 'Settings categories' })).toBeVisible()
+      await expect(page.locator('.browser-settings-detail')).toBeVisible()
+    }
+
+    await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+    await expect(surface).toHaveCount(0)
+    await expect(trigger).toBeFocused()
+    await expect(editor(page)).toHaveText('Keep the chat draft behind full-screen settings')
+  })
+}
+
+for (const width of [390, 1440]) {
+  test(`model and chat settings load with a warm configuration cache at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.route(/\/api\/config(?:\?|$)/, route => route.fulfill({ json: {
+      model: { default: 'preview-model', provider: 'custom' }, display: { show_reasoning: true }
+    } }))
+    await page.route(/\/api\/config\/schema(?:\?|$)/, route => route.fulfill({ json: {
+      fields: { 'display.show_reasoning': { type: 'boolean', description: 'Show reasoning in chat' } }
+    } }))
+    await open(page)
+    await editor(page).fill('Preserve this draft while settings load')
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+      await trigger.click()
+      const role = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
+      await page.getByRole(role, { name: 'Settings and workspace', exact: true })
+        .getByRole(role === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+      if (width < 896) await page.getByRole('button', { name: 'Models', exact: true }).click()
+      await expect(page.locator('.browser-settings-detail').getByText('Auxiliary models', { exact: true })).toBeVisible()
+      await expect(page.locator('[data-slot="model-settings-skeleton"]')).toHaveCount(0)
+      if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
+      await page.getByRole('button', { name: 'Chat', exact: true }).click()
+      const reasoning = page.locator('[id="setting-field-display.show_reasoning"]').getByRole('switch')
+      await expect(reasoning).toBeVisible()
+      await expect(reasoning).toBeChecked()
+      await page.screenshot({ path: testInfo.outputPath(`chat-settings-${attempt}.png`) })
+      await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+      await expect(editor(page)).toHaveText('Preserve this draft while settings load')
+    }
+  })
+}
+
+for (const width of [390, 1440]) {
+  test(`configuration page retains import export and reset behavior at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    let config = { model: { default: 'preview-model', provider: 'custom' }, display: { show_reasoning: true } }
+    const writes = []
+    await page.route(/\/api\/config(?:\?|$)/, async route => {
+      const request = route.request()
+      if (request.method() === 'PUT') {
+        const body = request.postDataJSON()
+        writes.push({ body, profile: new URL(request.url()).searchParams.get('profile') })
+        config = { ...config, ...body.config }
+        await route.fulfill({ json: { ok: true } })
+      } else await route.fulfill({ json: config })
+    })
+    await open(page)
+    await editor(page).fill('Keep this draft while managing configuration')
+    const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+    await trigger.click()
+    const menuRole = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
+    await page.getByRole(menuRole, { name: 'Settings and workspace', exact: true })
+      .getByRole(menuRole === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Export config', exact: true })).toHaveCount(0)
+    if (width < 896) await page.getByRole('button', { name: 'Models', exact: true }).click()
+    await page.getByRole('main', { name: 'Models', exact: true }).getByRole('button', { name: 'research', exact: true }).click()
+    if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await page.getByRole('button', { name: 'Configuration', exact: true }).click()
+    await expect(page).toHaveURL(/tab=config%3Abrowser-configuration/)
+    const management = page.getByRole('region', { name: 'Configuration management' })
+    await expect(management).toBeVisible()
+    await expect(page.getByRole('main', { name: 'Configuration', exact: true }).getByText('Applies to', { exact: true })).toHaveCount(0)
+    await expect(management.getByText('Applies to profile: research', { exact: true })).toBeVisible()
+
+    const exportRequest = page.waitForRequest(request => request.method() === 'GET' && /\/api\/config\?/.test(request.url()) && new URL(request.url()).searchParams.get('profile') === 'research')
+    const downloadPromise = page.waitForEvent('download')
+    await management.getByRole('button', { name: 'Export config', exact: true }).click()
+    const download = await downloadPromise
+    await exportRequest
+    await download.saveAs(testInfo.outputPath('configuration.json'))
+    expect(JSON.parse(readFileSync(testInfo.outputPath('configuration.json'), 'utf8'))).toEqual(config)
+
+    const importFile = async content => {
+      const chooser = page.waitForEvent('filechooser')
+      await management.getByRole('button', { name: 'Import config', exact: true }).click()
+      await (await chooser).setFiles({ name: 'configuration.json', mimeType: 'application/json', buffer: Buffer.from(content) })
+    }
+    await importFile('{invalid json')
+    await expect(page.getByText('Invalid config JSON', { exact: true })).toBeVisible()
+    expect(writes).toHaveLength(0)
+    await importFile(JSON.stringify({ ...config, display: { show_reasoning: false } }))
+    await expect.poll(() => writes.length).toBe(1)
+    expect(writes[0]).toEqual({ body: { config: { display: { show_reasoning: false } } }, profile: 'research' })
+
+    const reset = management.getByRole('button', { name: 'Reset to defaults', exact: true })
+    await reset.click()
+    const confirmation = page.getByRole('dialog', { name: 'Reset all settings to Hermes defaults? — research', exact: true })
+    await expect(confirmation).toBeVisible()
+    await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click()
+    expect(writes).toHaveLength(1)
+    await reset.click()
+    await confirmation.getByRole('button', { name: 'Reset to defaults', exact: true }).click()
+    await expect.poll(() => writes.length).toBe(2)
+    expect(writes[1].profile).toBe('research')
+    await page.screenshot({ path: testInfo.outputPath('configuration-page.png') })
+    await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+    await expect(editor(page)).toHaveText('Keep this draft while managing configuration')
+  })
 }
 
 test('desktop panel actions follow upstream visibility when reopening settings', async ({ page }) => {
