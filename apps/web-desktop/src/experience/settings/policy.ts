@@ -1,10 +1,10 @@
 /** Local presentation overrides. Unlisted settings inherit upstream behavior. */
 export const settingsGroups = [
   { id: 'preferences', label: 'Preferences', pages: ['config:appearance', 'notifications', 'keybinds'] },
-  { id: 'assistant', label: 'AI & conversations', pages: ['config:model', 'providers', 'config:chat', 'config:voice', 'config:memory'] },
-  { id: 'tools', label: 'Tools & permissions', pages: ['config:workspace', 'config:browser', 'config:safety', 'vault', 'keys'] },
+  { id: 'assistant', label: 'AI & Conversations', pages: ['config:model', 'providers', 'config:chat', 'config:voice', 'config:memory'] },
+  { id: 'tools', label: 'Tools & Permissions', pages: ['config:workspace', 'config:browser', 'config:safety', 'vault', 'keys'] },
   { id: 'service', label: 'Service', pages: ['gateway', 'billing'] },
-  { id: 'maintenance', label: 'Data & maintenance', pages: ['sessions', 'config:browser-configuration', 'config:advanced'] }
+  { id: 'maintenance', label: 'Data & Maintenance', pages: ['sessions', 'config:browser-configuration', 'config:advanced'] }
 ]
 
 const pageLabels: Record<string, string> = {
@@ -86,7 +86,7 @@ export function groupSettingsSections<T extends { id: string; label: string }>(s
   const known = new Set(settingsGroups.flatMap(group => group.pages))
   return [
     ...settingsGroups.map(group => ({ ...group, items: visible.filter(item => group.pages.includes(item.id)) })),
-    { id: 'other', label: 'Other settings', items: visible.filter(item => !known.has(item.id)) }
+    { id: 'other', label: 'Other Settings', items: visible.filter(item => !known.has(item.id)) }
   ].filter(group => group.items.length > 0)
 }
 

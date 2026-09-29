@@ -1140,7 +1140,7 @@ for (const width of [390, 1440]) {
     await page.getByRole(role, { name: 'Settings and workspace', exact: true })
       .getByRole(role === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
     await expect(page.locator('.browser-settings-group-heading')).toHaveText([
-      'Preferences', 'AI & conversations', 'Tools & permissions', 'Service', 'Data & maintenance'
+      'Preferences', 'AI & Conversations', 'Tools & Permissions', 'Service', 'Data & Maintenance'
     ])
     await expect(page.locator('.browser-settings-category-button:not(.is-child) > span:not(.codicon)')).toHaveText([
       'Appearance', 'Notifications', 'Keyboard shortcuts', 'Models', 'AI connections', 'Chat', 'Voice',

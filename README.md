@@ -50,7 +50,7 @@ For shared design tokens, component choices, and responsive checks, see the
 ## Settings customization
 
 Settings uses the same five groups on phone, tablet, and desktop: Preferences,
-AI & conversations, Tools & permissions, Service, and Data & maintenance.
+AI & Conversations, Tools & Permissions, Service, and Data & Maintenance.
 Backup & reset contains configuration import, export, and reset. Search accepts
 both the current page names and previous upstream names.
 
@@ -63,7 +63,7 @@ Edit `apps/web-desktop/src/experience/settings/policy.ts` to customize the menu:
 - `settingsPolicy.fields.hidden` hides specific configuration fields.
 
 Keep page IDs unchanged so existing settings links continue to work. New upstream
-fields remain in their original pages, and new pages appear under Other settings
+fields remain in their original pages, and new pages appear under Other Settings
 until assigned a group. About is hidden by default. These presentation changes
 reuse upstream forms, profile selection, and save handlers.
 
