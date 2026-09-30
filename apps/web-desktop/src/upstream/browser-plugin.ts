@@ -251,6 +251,7 @@ export function useBrowserConfigurationSettings(source: string, root: string): s
 export function hideBrowserAppearanceOnlySettings(source: string): string {
   const replacements: [string, string][] = [
     ['          <TerminalFontSetting />', '          {!window.__HERMES_WEB_BRIDGE__ && <TerminalFontSetting />}'],
+    ['          {TRANSLUCENCY_SUPPORTED && (', '          {TRANSLUCENCY_SUPPORTED && !window.__HERMES_WEB_BRIDGE__ && ('],
     [
       '                  <MarketplaceThemeResults installs={installs} onInstalled={name => setTheme(name)} query={query} />',
       '                  {!window.__HERMES_WEB_BRIDGE__ && <MarketplaceThemeResults installs={installs} onInstalled={name => setTheme(name)} query={query} />}'
@@ -263,6 +264,19 @@ export function hideBrowserAppearanceOnlySettings(source: string): string {
     if (output.split(before).length !== 2) throw new Error('Browser appearance capability boundary changed')
     output = output.replace(before, after)
   }
+  for (const title of ['tabStripTitle', 'appActionsTitle']) {
+    const marker = `title={a.${title}}`
+    if (output.split(marker).length !== 2) throw new Error(`Browser appearance setting boundary changed: ${title}`)
+    const titleIndex = output.indexOf(marker)
+    const start = output.lastIndexOf('          <ListRow', titleIndex)
+    const end = output.indexOf('          />', titleIndex)
+    if (start < 0 || end < 0) throw new Error(`Browser appearance setting boundary changed: ${title}`)
+    const close = end + '          />'.length
+    output = `${output.slice(0, start)}{!window.__HERMES_WEB_BRIDGE__ && (\n${output.slice(start, end)}          />\n          )}${output.slice(close)}`
+  }
+  const translucency = '{TRANSLUCENCY_SUPPORTED && ('
+  if (output.split(translucency).length !== 2) throw new Error('Browser translucency capability boundary changed')
+  output = output.replace(translucency, '{TRANSLUCENCY_SUPPORTED && !window.__HERMES_WEB_BRIDGE__ && (')
   return output
 }
 
@@ -582,6 +596,20 @@ export function useBrowserTouchHooks(source: string): string {
   return replaceBrowserContract(source, targets.map(target => [target, `data-browser-composer-action="" ${target}`]))
 }
 
+export function removeBrowserConversationalVoiceEntry(source: string, module: 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'): string {
+  if (module.endsWith('voice-menu.tsx')) {
+    const start = source.indexOf('        <DropdownMenuItem\n', source.indexOf('<DropdownMenuContent'))
+    const end = source.indexOf('        <VoiceEngineRows', start)
+    if (start < 0 || end < 0) throw new Error('Browser conversational voice menu boundary changed')
+    const itemStart = source.indexOf('        <DropdownMenuSeparator />\n', start)
+    if (itemStart < 0 || itemStart > end) throw new Error('Browser conversational voice separator boundary changed')
+    return source.slice(0, start) + source.slice(end)
+  }
+  const start = source.indexOf('export function StartVoiceButton(')
+  if (start < 0) throw new Error('Browser conversational voice button boundary changed')
+  return 'export function StartVoiceButton(_props: { disabled: boolean; label: string; onStart: () => void }) {\n  return null\n}\n'
+}
+
 export function useBrowserCodingActionHooks(source: string): string {
   return replaceBrowserContract(source, [
     ['{resolvedRepoPath && (\n              <div ', '{resolvedRepoPath && (\n              <div data-browser-coding-path="" '],
@@ -893,7 +921,7 @@ export function disableBrowserSessionOpenActions(source: string): string {
 
 export function filterBrowserKeybinds(source: string): string {
   const importMarker = "import { SettingsContent } from './primitives'\n"
-  const browserSet = `${importMarker}\nconst BROWSER_UNSUPPORTED_KEYBINDS = new Set([\n  'session.newTab', 'session.newWindow', 'session.next', 'session.prev',\n  'view.showBrowser', 'view.toggleHud', 'view.showTerminal', 'view.newTerminal',\n  'view.nextTerminal', 'view.prevTerminal', 'view.closeTerminal',\n  'view.terminalCopy', 'view.terminalPaste', 'hud.snapToPointer'\n])\n`
+  const browserSet = `${importMarker}\nconst BROWSER_UNSUPPORTED_KEYBINDS = new Set([\n  'session.newTab', 'session.newWindow', 'session.next', 'session.prev',\n  'view.showBrowser', 'view.toggleHud', 'view.showTerminal', 'view.newTerminal',\n  'view.nextTerminal', 'view.prevTerminal', 'view.closeTerminal',\n  'view.terminalCopy', 'view.terminalPaste', 'hud.snapToPointer',\n  'view.findInPage', 'view.findNext', 'view.findPrevious'\n])\n`
   const actionTarget = '  const actionList = allKeybindActions(contributions)'
   const readonlyTarget = '  const [query, setQuery] = useState(\'\')'
   if (source.includes('BROWSER_UNSUPPORTED_KEYBINDS')) return source
@@ -972,6 +1000,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserDirectResumeOwner: source => useBrowserDirectResumeOwner(source),
     useBrowserSectionIdentity: source => useBrowserSectionIdentity(source, root),
     useBrowserTouchHooks, useBrowserCodingActionHooks, useBrowserSectionIds, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
+    removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source, entry.module as 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     useBrowserProjectDisclosure,
     exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut,

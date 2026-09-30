@@ -1921,7 +1921,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/composer/voice-menu.tsx",
-    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "reason": "Remove the full voice-conversation entry while preserving dictation and other voice controls.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -1935,19 +1935,19 @@
     ],
     "removal": "Remove when upstream exposes equivalent stable browser hooks.",
     "handlers": [
-      "useBrowserTouchHooks"
+      "removeBrowserConversationalVoiceEntry"
     ],
     "sourceRoot": "renderer",
     "sourceHash": "392cff54e8ea488091c1ec952742b1119e8bcafbd6276756682085312853ef45",
     "inputHash": "392cff54e8ea488091c1ec952742b1119e8bcafbd6276756682085312853ef45",
-    "outputHash": "a249a2f76694d88cc84168070546a41d14e67d306a2aef6c47033c7fa430f96f"
+    "outputHash": "b42c0593c9b2020ece4dbb857c9847360188883c8b9cc05e580edc3b0fad7784"
   },
   {
     "name": "browser-semantic-start-voice-button",
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/composer/start-voice-button.tsx",
-    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "reason": "Remove the standalone full voice-conversation entry from the browser composer.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -1961,12 +1961,12 @@
     ],
     "removal": "Remove when upstream exposes equivalent stable browser hooks.",
     "handlers": [
-      "useBrowserTouchHooks"
+      "removeBrowserConversationalVoiceEntry"
     ],
     "sourceRoot": "renderer",
     "sourceHash": "8cb1d7ae40a0ee2477e194d4fc9e9bcb5b59801e316345d329eb822f8b3477d1",
     "inputHash": "8cb1d7ae40a0ee2477e194d4fc9e9bcb5b59801e316345d329eb822f8b3477d1",
-    "outputHash": "7e5e6690dbc0889073615723f2da52f17f38c52ddd9913b6593a009f00f97c9a"
+    "outputHash": "d522a97a6a96c6771a03b82918d3fde5d7861076e41fb45f6c4b1f6667f17846"
   },
   {
     "name": "browser-semantic-coding-row",
@@ -2209,7 +2209,7 @@
     "handlers": [
       "hideBrowserAppearanceOnlySettings"
     ],
-    "reason": "Hide the unused terminal font and theme marketplace controls while retaining installed browser themes.",
+    "reason": "Hide window-only appearance controls and unused terminal font and theme marketplace controls while retaining installed browser themes.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
