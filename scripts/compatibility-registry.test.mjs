@@ -52,6 +52,16 @@ test('registry generates its inventory and aliases without accepting changed ups
   assert.equal(coverageReport(registry).withBehavioralVerification, registry.length)
 })
 
+for (const entry of registry.filter(entry => entry.kind === 'renderer-transform')) {
+  test(`registered renderer transform fingerprint: ${entry.name}`, () => {
+    const filename = path.join(root, '../desktop/src', entry.module)
+    const source = readFileSync(filename, 'utf8')
+    const output = transformRenderer(source, filename)
+    assert.ok(output, `expected ${entry.name} to produce a transformed renderer module`)
+    assert.ok(output.code.startsWith(`// hermes-web-compatibility:${entry.name}\\n`))
+  })
+}
+
 test('early preflight distinguishes uninstalled dependencies from missing renderer sources', () => {
   const contracts = registryContracts(registry)
   const results = inspectContracts(contracts, () => { throw Object.assign(new Error('Not installed'), { code: 'ENOENT' }) }, { deferDependencies: true })
