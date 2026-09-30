@@ -2153,7 +2153,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "8323bd0e62fa8eeeea7a7e3c544f7c0dac3da2aba387634205187173a364e014",
     "inputHash": "8323bd0e62fa8eeeea7a7e3c544f7c0dac3da2aba387634205187173a364e014",
-    "outputHash": "c6cf3943c2e4a2b4005312fffa7c169e0bc15afd0ec88d1651c98103573932eb",
+    "outputHash": "de569ac9b014407b29c79eecb5a758dd5cdfcd7fe9f48903ff7fbcc8f377cf00",
     "handlers": [
       "filterBrowserSettingsPalette"
     ],
@@ -2205,7 +2205,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "ef59234538915465699ca6e257a273057994a2a088cdc6166c6bead9a7ff8b0c",
     "inputHash": "ef59234538915465699ca6e257a273057994a2a088cdc6166c6bead9a7ff8b0c",
-    "outputHash": "db5e55853db61bca5df0c68f184ac2224a9e16fd49b1af726b2afb1eaaf671fe",
+    "outputHash": "569a09a99c12d6c0ea76e77a448ff9b8e76c4a317fac41563aa550831e1a1ac8",
     "handlers": [
       "hideBrowserAppearanceOnlySettings"
     ],
@@ -2288,5 +2288,49 @@
     "handlers": [
       "trackBrowserSettingsSaves"
     ]
+  },
+  {
+    "name": "browser-remove-pet-avatar-tab",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "plugins/hermes-bots/avatar-picker.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "c0ddd39f18607878c2103420dee169203b7d99d50bed87a6d3457222840b5213",
+    "inputHash": "c0ddd39f18607878c2103420dee169203b7d99d50bed87a6d3457222840b5213",
+    "outputHash": "b90f8cd63adf7bda28542a61387d44ad1195919f8110685319dfe3b8656730bc",
+    "handlers": [
+      "removeBrowserPetAvatarTab"
+    ],
+    "reason": "Remove the pet avatar option from browser bot profile editing.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+      }
+    ],
+    "removal": "Remove when Hermes no longer includes the desktop pet avatar tab or exposes browser capability flags for avatar choices."
+  },
+  {
+    "name": "browser-remove-pet-slash-commands",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "lib/desktop-slash-commands.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "25ec3a9fb259306fbf087979618ec475359e878bfb4039329ad440764b7e0448",
+    "inputHash": "25ec3a9fb259306fbf087979618ec475359e878bfb4039329ad440764b7e0448",
+    "outputHash": "664b0e7e6a2442cf0e18e005fbcf9c9fd26bdc9c6cbf2c2d923dd6f8927eaaef",
+    "handlers": [
+      "removeBrowserPetSlashCommands"
+    ],
+    "reason": "Remove pet management and generation slash-command suggestions from the browser app.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+      }
+    ],
+    "removal": "Remove when Hermes no longer exposes desktop-only pet slash commands or provides browser capability filtering."
   }
 ]
