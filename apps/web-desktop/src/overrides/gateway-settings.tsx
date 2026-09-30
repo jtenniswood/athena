@@ -19,19 +19,19 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
     try { await action() } catch (error) { setMessage(error instanceof Error ? error.message : 'The connection could not be updated.') }
     finally { setBusy(false) }
   }
-  const content = <section className="browser-gateway-settings space-y-4 p-4" aria-label="Gateway connection">
-    <div><h2 className="text-lg font-semibold">{settingsPageLabel('gateway', 'Remote gateway')}</h2>
-      <p className="break-words text-sm">{runtimeConfig().gateway.name}</p>
-      <p className="text-sm text-muted-foreground">This app connects to the server configured by its operator.</p></div>
-    <label className="block space-y-2"><span>Sign-in method</span>
+  const content = <section className="browser-gateway-settings" aria-label="Gateway connection">
+    <div className="browser-gateway-settings-intro"><h2>{settingsPageLabel('gateway', 'Remote gateway')}</h2>
+      <p className="browser-gateway-settings-name">{runtimeConfig().gateway.name}</p>
+      <p className="browser-gateway-settings-description">This app connects to the server configured by its operator.</p></div>
+    <label className="browser-gateway-settings-field"><span>Sign-in method</span>
       <select className="block rounded border bg-background p-2" value={mode} disabled={busy} onChange={event => setMode(event.target.value as 'oauth' | 'token')}>
         <option value="oauth">Browser sign-in</option><option value="token">Session token</option>
       </select>
     </label>
-    {mode === 'token' && <label className="block space-y-2"><span>Session token</span>
+    {mode === 'token' && <label className="browser-gateway-settings-field"><span>Session token</span>
       <Input type="password" autoComplete="off" value={token} onChange={event => setToken(event.target.value)} placeholder={gateway.token ? 'Leave blank to keep the saved token' : 'Enter a session token'} />
     </label>}
-    <div className="flex flex-wrap gap-2">
+    <div className="browser-gateway-settings-actions">
       <Button disabled={busy} onClick={() => void run(async () => {
         assertSafeConnectionChange()
         updateGateway(gateway.id, { authMode: mode, ...(mode === 'oauth' ? { token: '' } : token ? { token } : {}) })
