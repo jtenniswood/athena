@@ -60,6 +60,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const [compactPresentation, setCompactPresentation] = useState<CompactPresentation>({ mode: 'automatic' })
   const params = new URLSearchParams(location.search)
   const hasDirectTarget = params.has('tab') || params.has('field') || params.has('setting')
+  const opensDefaultSettingsTab = !hasDirectTarget && activeView === 'config:appearance'
   const navigationGroups = groupSettingsSections(groups)
   const visibleGroups = navigationGroups.flatMap(group => group.items)
   const activeGroup = visibleGroups.find(group => group.active)
@@ -67,7 +68,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const activeVisible = Boolean(activeGroup)
   const pageVisible = isSettingsSectionVisible(activeView)
   const activeChildren = orderSettingsSections(activeGroup?.children ?? []).map(child => ({ ...child, label: settingsPageLabel(child.id, child.label) }))
-  const directTargetOpensDetail = hasDirectTarget
+  const directTargetOpensDetail = (hasDirectTarget || opensDefaultSettingsTab)
     && (compactPresentation.mode === 'automatic' || (compactPresentation.mode === 'menu' && compactPresentation.locationKey !== location.key))
   const showDetail = activeVisible && (!compact || compactPresentation.mode === 'detail' || directTargetOpensDetail)
 

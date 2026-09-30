@@ -170,6 +170,7 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
   }
   const controlReplacements: [string, string][] = [
     ['      type="button"\n    >\n      <Search className="size-3" />', '      aria-label={t.settings.search.pill}\n      type="button"\n    >\n      <Search className="size-3" />'],
+    ["useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:model' as SettingsViewId)", "useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:appearance' as SettingsViewId)"],
   ]
   controlReplacements.push(
     ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  'config:browser-configuration',"],
@@ -251,6 +252,7 @@ export function useBrowserConfigurationSettings(source: string, root: string): s
 export function hideBrowserAppearanceOnlySettings(source: string): string {
   const replacements: [string, string][] = [
     ['          <TerminalFontSetting />', '          {!window.__HERMES_WEB_BRIDGE__ && <TerminalFontSetting />}'],
+    ['      <div className="mt-6">\n        <PetSettings />\n      </div>', '      {!window.__HERMES_WEB_BRIDGE__ && (\n        <div className="mt-6">\n          <PetSettings />\n        </div>\n      )}'],
     ['          {TRANSLUCENCY_SUPPORTED && (', '          {TRANSLUCENCY_SUPPORTED && !window.__HERMES_WEB_BRIDGE__ && ('],
     [
       '                  <MarketplaceThemeResults installs={installs} onInstalled={name => setTheme(name)} query={query} />',
@@ -274,9 +276,6 @@ export function hideBrowserAppearanceOnlySettings(source: string): string {
     const close = end + '          />'.length
     output = `${output.slice(0, start)}{!window.__HERMES_WEB_BRIDGE__ && (\n${output.slice(start, end)}          />\n          )}${output.slice(close)}`
   }
-  const translucency = '{TRANSLUCENCY_SUPPORTED && ('
-  if (output.split(translucency).length !== 2) throw new Error('Browser translucency capability boundary changed')
-  output = output.replace(translucency, '{TRANSLUCENCY_SUPPORTED && !window.__HERMES_WEB_BRIDGE__ && (')
   return output
 }
 
@@ -344,7 +343,19 @@ export function filterBrowserSettingsPalette(source: string, root: string): stri
   const themePagePlaceholder = 'placeholder: t.settings.appearance.themeDesc,'
   if (browserSource.split(themePagePlaceholder).length !== 2) throw new Error('Browser theme palette placeholder boundary changed')
   browserSource = browserSource.replace(themePagePlaceholder, "placeholder: window.__HERMES_WEB_BRIDGE__ ? 'Choose an available theme.' : t.settings.appearance.themeDesc,")
-  return `import { isSettingsSectionVisible, presentSettingsPalette, settingsPageLabel } from ${owner}\n` + browserSource
+  const petItems = [
+    `          {\n            icon: PawPrint,\n            id: 'appearance-pets',\n            keywords: ['pet', 'petdex', 'mascot', 'pets', '/pet', 'paw'],\n            label: cc.pets.title,\n            to: 'pets'\n          },\n`,
+    `          {\n            icon: Egg,\n            id: 'appearance-generate-pet',\n            keywords: ['pet', 'generate', 'create', 'make', 'new pet', 'mascot', 'hatch', 'ai'],\n            label: cc.generatePet.title,\n            run: () => openPetGenerate()\n          }\n`
+  ]
+  let paletteSource = browserSource
+  for (const item of petItems) {
+    if (paletteSource.split(item).length !== 2) throw new Error('Browser pet palette item changed')
+    paletteSource = paletteSource.replace(item, '')
+  }
+  paletteSource = paletteSource.replace('right={page === \'pets\' ? <PetInlineToggle /> : undefined}', 'right={undefined}')
+  paletteSource = paletteSource.replace(`{page === 'pets' ? (\n              <PetPalettePage\n                onGenerate={() => {\n                  closeCommandPalette()\n                  openPetGenerate()\n                }}\n                search={search}\n              />\n            ) : page === 'install-theme' ? (`, `{page === 'install-theme' ? (`)
+  if (paletteSource === browserSource) throw new Error('Browser pet palette controls changed')
+  return `import { isSettingsSectionVisible, presentSettingsPalette, settingsPageLabel } from ${owner}\n` + paletteSource
     .replace(dialog, dialog + "\n        data-browser-command-palette=\"\"")
     .replaceAll(start, 'items: presentSettingsPalette([\n          ...SECTIONS.map')
     .replaceAll(end, `            run: go(settingsTab(entry.tab))
@@ -353,6 +364,28 @@ export function filterBrowserSettingsPalette(source: string, root: string): stri
     .replaceAll(sectionTarget, '...SECTIONS.filter(section => isSettingsSectionVisible(section.id)).map(section => ({')
     .replaceAll(nonConfigTarget, '...NON_CONFIG_SETTINGS.filter(entry => isSettingsSectionVisible(entry.tab)).map(entry => ({')
     .replaceAll('heading: t.settings.nav.apiKeys,', "heading: settingsPageLabel('keys', t.settings.nav.apiKeys),")
+}
+
+export function removeBrowserPetAvatarTab(source: string): string {
+  const option = "          { id: 'pet', label: b.avatar.tabPet }\n"
+  const render = "      {tab === 'pet' ? <PetTab image={image} onImage={onImage} /> : null}\n"
+  if (source.split(option).length !== 2 || source.split(render).length !== 2) {
+    throw new Error('Browser pet avatar tab boundary changed')
+  }
+  return source.replace(option, '').replace(render, '')
+}
+
+export function removeBrowserPetSlashCommands(source: string): string {
+  const commands = [
+    `  {\n    name: '/pet',\n    description: 'Toggle or adopt a petdex mascot (/pet, /pet list, /pet boba)',\n    surface: action('pet'),\n    argumentMode: 'options'\n  },\n`,
+    `  {\n    name: '/hatch',\n    description: 'Generate a new pet (opens the pet generator)',\n    aliases: ['/generate-pet'],\n    surface: action('hatch')\n  },\n`
+  ]
+  let output = source
+  for (const command of commands) {
+    if (output.split(command).length !== 2) throw new Error('Browser pet slash-command boundary changed')
+    output = output.replace(command, '')
+  }
+  return output
 }
 
 export function respectBrowserOverlayFocusReturn(source: string, root: string): string {
@@ -992,6 +1025,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
     hideBrowserAppearanceOnlySettings,
     hideBrowserLocalProjectDirectory,
+    removeBrowserPetAvatarTab,
+    removeBrowserPetSlashCommands,
     filterBrowserSettingsSearch: source => filterBrowserSettingsSearch(source, root),
     filterBrowserSettingsPalette: source => filterBrowserSettingsPalette(source, root),
     useBrowserPinWrites: source => useBrowserPinWrites(source, root),
@@ -1024,6 +1059,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     if (!handlers[handler]) throw new Error(`Unknown browser compatibility handler: ${handler}`)
     output = handlers[handler](output)
   }
-  if (output === code || digest(output) !== entry.outputHash) throw new Error(`Incomplete browser compatibility transform: ${entry.name}`)
+  if (output === code || digest(output) !== entry.outputHash) {
+    throw new Error(`Incomplete browser compatibility transform: ${entry.name} (expected ${entry.outputHash}, got ${digest(output)})`)
+  }
   return { code: output, map: null }
 }
