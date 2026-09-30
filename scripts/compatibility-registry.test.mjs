@@ -60,6 +60,16 @@ test('early preflight distinguishes uninstalled dependencies from missing render
   assert.ok(inspectContracts(contracts, () => { throw Object.assign(new Error('Missing'), { code: 'ENOENT' }) }).every(entry => entry.status === 'missing'))
 })
 
+for (const entry of registry.filter(entry => entry.kind === 'renderer-transform')) {
+  test(`registered renderer transform fingerprint: ${entry.name}`, () => {
+    const filename = path.join(root, '../desktop/src', entry.module)
+    const source = readFileSync(filename, 'utf8')
+    const output = transformRenderer(source, filename)
+    assert.ok(output, `expected ${entry.name} to produce a transformed renderer module`)
+    assert.ok(output.code.startsWith(`// hermes-web-compatibility:${entry.name}\n`))
+  })
+}
+
 for (const entry of registry.filter(entry => entry.kind === 'browser-transform')) {
   test(`registered browser pipeline: ${entry.name}`, () => {
     const filename = path.join(root, '../desktop/src', entry.module)
