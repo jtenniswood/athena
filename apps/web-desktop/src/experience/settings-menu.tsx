@@ -55,7 +55,7 @@ export function SettingsMenu({ triggerRef, backendVersion, onOpenGateway, onOpen
   const { mode, setMode } = useBrowserApproval(activeProfile || 'default', requestGateway)
   const approvalCopy = t.shell.approvalMode
   const approvalLabels: Record<BrowserApprovalMode, string> = { manual: approvalCopy.manual, smart: approvalCopy.smart, off: approvalCopy.off }
-  const approvalDescriptions: Record<BrowserApprovalMode, string> = { manual: approvalCopy.manualDescription, smart: 'Ask when needed', off: approvalCopy.offDescription }
+  const approvalDescriptions: Record<BrowserApprovalMode, string> = { manual: approvalCopy.manualDescription, smart: 'Ask when needed', off: 'Enable YOLO mode — automatically grant all access requests' }
   const model = useBrowserSettings(panelPanes.map(pane => ({ id: pane.id, collapsible: Boolean((pane.data as { collapsible?: boolean } | undefined)?.collapsible) })))
   const groups: BrowserActionGroup[] = [
     { key: 'panels', label: 'Panels', actions: model.panels.map(panel => {
