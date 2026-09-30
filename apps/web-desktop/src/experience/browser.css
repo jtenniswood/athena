@@ -70,8 +70,10 @@
 .browser-sessions-pane [data-browser-section-hidden] { display:none !important; }
 /* Use one stack gap for Pinned, Sessions, messaging services, and Cron. The
    upstream sections carry different content padding, which otherwise makes
-   the visible gap change from one section to the next. */
-.browser-sessions-pane [data-sessions-mode] { row-gap:var(--web-space-2); padding-top:var(--web-space-2); }
+   the visible gap change from one section to the next. The session scroller
+   reserves a stable scrollbar gutter, so extend its box into the gutter to
+   give rows more room without moving the scrollbar. */
+.browser-sessions-pane [data-sessions-mode] { row-gap:var(--web-space-2); padding-top:var(--web-space-2); width:calc(100% + .5rem); margin-inline-end:-.5rem; }
 .browser-sessions-pane [data-sessions-mode] > [data-sidebar="group"] > [data-browser-section-header] { min-height:1.75rem; padding-block:var(--web-space-1); }
 .browser-sessions-pane [data-sessions-mode] > [data-sidebar="group"] { padding-bottom:0 !important; }
 .browser-sessions-pane [data-sessions-mode] > [data-sidebar="group"] > [data-sidebar="group-content"] { padding-bottom:0 !important; }
