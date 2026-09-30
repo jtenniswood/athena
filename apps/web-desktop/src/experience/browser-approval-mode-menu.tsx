@@ -16,7 +16,7 @@ export function useApprovalModeStatusbarItem(profile: string, requestGateway: Ap
   const copy = t.shell.approvalMode
   const { mode, setMode } = useBrowserApproval(profile, requestGateway)
   const labels = useMemo<Record<ApprovalMode, string>>(() => ({ manual: copy.manual, smart: copy.smart, off: copy.off }), [copy.manual, copy.off, copy.smart])
-  const descriptions = useMemo<Record<ApprovalMode, string>>(() => ({ manual: copy.manualDescription, smart: 'Ask when needed', off: 'YOLO mode: automatically approve all access requests' }), [copy.manualDescription])
+  const descriptions = useMemo<Record<ApprovalMode, string>>(() => ({ manual: copy.manualDescription, smart: 'Ask when needed', off: 'All request will be automatically approved' }), [copy.manualDescription])
 
   return {
     className: mode === 'off' ? 'bg-(--chrome-action-hover) text-foreground' : undefined,
