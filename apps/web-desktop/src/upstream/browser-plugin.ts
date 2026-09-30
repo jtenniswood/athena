@@ -252,6 +252,7 @@ export function useBrowserConfigurationSettings(source: string, root: string): s
 export function hideBrowserAppearanceOnlySettings(source: string): string {
   const replacements: [string, string][] = [
     ['          <TerminalFontSetting />', '          {!window.__HERMES_WEB_BRIDGE__ && <TerminalFontSetting />}'],
+    ['          {TRANSLUCENCY_SUPPORTED && (', '          {TRANSLUCENCY_SUPPORTED && !window.__HERMES_WEB_BRIDGE__ && ('],
     [
       '                  <MarketplaceThemeResults installs={installs} onInstalled={name => setTheme(name)} query={query} />',
       '                  {!window.__HERMES_WEB_BRIDGE__ && <MarketplaceThemeResults installs={installs} onInstalled={name => setTheme(name)} query={query} />}'
@@ -263,6 +264,16 @@ export function hideBrowserAppearanceOnlySettings(source: string): string {
   for (const [before, after] of replacements) {
     if (output.split(before).length !== 2) throw new Error('Browser appearance capability boundary changed')
     output = output.replace(before, after)
+  }
+  for (const title of ['tabStripTitle', 'appActionsTitle']) {
+    const marker = `title={a.${title}}`
+    if (output.split(marker).length !== 2) throw new Error(`Browser appearance setting boundary changed: ${title}`)
+    const titleIndex = output.indexOf(marker)
+    const start = output.lastIndexOf('          <ListRow', titleIndex)
+    const end = output.indexOf('          />', titleIndex)
+    if (start < 0 || end < 0) throw new Error(`Browser appearance setting boundary changed: ${title}`)
+    const close = end + '          />'.length
+    output = `${output.slice(0, start)}{!window.__HERMES_WEB_BRIDGE__ && (\n${output.slice(start, end)}          />\n          )}${output.slice(close)}`
   }
   return output
 }
