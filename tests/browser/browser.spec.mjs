@@ -1540,7 +1540,63 @@ test('profile context menus stay beside their originating profile', async ({ pag
   expect(origin).not.toBeNull()
   expect(position).not.toBeNull()
   expect(Math.abs(position.x - origin.x)).toBeLessThan(120)
-  expect(Math.abs(position.y - origin.y)).toBeLessThan(140)
+  // Collision handling can place a taller menu above the bottom avatar rail.
+  expect(Math.min(Math.abs(position.y - origin.y), Math.abs(position.y + position.height - origin.y))).toBeLessThan(40)
+})
+
+test('Sessions avatar editing preserves the conversation and targets the clicked profile', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
+  const writes = []
+  page.on('websocket', socket => socket.on('framesent', ({ payload }) => {
+    try {
+      const frame = JSON.parse(String(payload))
+      if (frame.method === 'profiles.configure') writes.push(frame.params)
+    } catch { /* Ignore non-JSON transport frames. */ }
+  }))
+  await open(page)
+  await editor(page).fill('Keep this draft while editing another profile')
+  const originalUrl = page.url()
+  const allProfiles = page.getByRole('button', { name: 'All profiles', exact: true })
+  const originalScope = await allProfiles.getAttribute('aria-pressed')
+  // Edit from Sessions before ever opening the Bots tab.
+  const writer = page.locator('[data-profile-key="writer"]')
+  await writer.click({ button: 'right' })
+  const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
+  await menu.getByRole('menuitem', { name: 'Edit profile', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Edit profile', exact: true })
+  await expect(dialog).toContainText('(writer).')
+  await expect(menu).toBeHidden()
+  await expect.poll(() => dialog.evaluate(node => node.contains(document.activeElement))).toBe(true)
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(writer).toBeFocused()
+  await expect(editor(page)).toHaveText('Keep this draft while editing another profile')
+  expect(page.url()).toBe(originalUrl)
+  await expect(allProfiles).toHaveAttribute('aria-pressed', originalScope)
+  expect(writes).toEqual([])
+
+  await writer.click({ button: 'right' })
+  await menu.getByRole('menuitem', { name: 'Edit profile', exact: true }).click()
+  await expect(dialog).toContainText('(writer).')
+  const title = dialog.getByRole('textbox').first()
+  const originalTitle = await title.inputValue()
+  await title.fill('Writer from Sessions')
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  expect(writes.at(-1)?.name).toBe('writer')
+  expect(writes.at(-1)?.ui_meta?.['hermes-bots']?.title).toBe('Writer from Sessions')
+  await expect(editor(page)).toHaveText('Keep this draft while editing another profile')
+  expect(page.url()).toBe(originalUrl)
+  await expect(allProfiles).toHaveAttribute('aria-pressed', originalScope)
+
+  await writer.click({ button: 'right' })
+  await menu.getByRole('menuitem', { name: 'Edit profile', exact: true }).click()
+  await expect(title).toHaveValue('Writer from Sessions')
+  await title.fill(originalTitle)
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(dialog).toBeHidden()
+
+  await allProfiles.click({ button: 'right' })
+  await expect(menu.getByRole('menuitem', { name: 'Edit profile', exact: true })).toHaveCount(0)
 })
 
 test('profiles can reorder and hide the default Hermes profile', async ({ page }) => {

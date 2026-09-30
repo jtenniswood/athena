@@ -4,6 +4,7 @@ import { BrowserToolbarButton } from './ui/toolbar-button'
 import { useMobileBrowser } from './ui/use-compact-browser'
 import { BotFace, avatarColor, Codicon, Tip } from '../upstream/browser-api'
 import { useBrowserProfiles } from '../upstream/profiles'
+import { BrowserProfileEditor } from '../upstream/profile-editor'
 import { readHideAllProfilesButton, readHiddenProfiles, writeBrowserPreference } from './browser-preferences'
 
 export function BrowserProfileNavigation({ hidden = false }: { hidden?: boolean }) {
@@ -15,6 +16,7 @@ export function BrowserProfileNavigation({ hidden = false }: { hidden?: boolean 
   const [hiddenProfiles, setHiddenProfiles] = useState<string[]>(readHiddenProfiles)
   const [hideAllProfilesButton, setHideAllProfilesButton] = useState(readHideAllProfilesButton)
   const [profileContextMenuPosition, setProfileContextMenuPosition] = useState<(BrowserActionAnchor & { profile: string | null }) | null>(null)
+  const [editingProfile, setEditingProfile] = useState<string | null>(null)
   const visibleProfileAvatars = model.items.filter(item => !hiddenProfiles.includes(item.key))
   const visibleFallback = model.fallback && !hiddenProfiles.includes(model.fallback.key) ? model.fallback : null
   useEffect(() => { if (hidden) setProfileContextMenuPosition(null) }, [hidden])
@@ -107,6 +109,16 @@ export function BrowserProfileNavigation({ hidden = false }: { hidden?: boolean 
       onClose={() => setProfileContextMenuPosition(null)}
       groups={[
         {
+          key: 'edit',
+          actions: profileContextMenuPosition?.profile ? [{
+            key: 'edit-profile',
+            label: 'Edit profile',
+            icon: <Codicon name="edit" size="1rem" />,
+            afterClose: true,
+            run: () => setEditingProfile(profileContextMenuPosition.profile)
+          }] : []
+        },
+        {
           key: 'profiles',
           label: 'Profiles',
           actions: [
@@ -130,5 +142,6 @@ export function BrowserProfileNavigation({ hidden = false }: { hidden?: boolean 
         }
       ]}
     />
+    <BrowserProfileEditor profile={editingProfile} onClose={() => setEditingProfile(null)} />
   </>
 }
