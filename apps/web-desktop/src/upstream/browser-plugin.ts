@@ -170,6 +170,7 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
   }
   const controlReplacements: [string, string][] = [
     ['      type="button"\n    >\n      <Search className="size-3" />', '      aria-label={t.settings.search.pill}\n      type="button"\n    >\n      <Search className="size-3" />'],
+    ["useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:model' as SettingsViewId)", "useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:appearance' as SettingsViewId)"],
   ]
   controlReplacements.push(
     ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  'config:browser-configuration',"],
@@ -995,6 +996,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     if (!handlers[handler]) throw new Error(`Unknown browser compatibility handler: ${handler}`)
     output = handlers[handler](output)
   }
-  if (output === code || digest(output) !== entry.outputHash) throw new Error(`Incomplete browser compatibility transform: ${entry.name}`)
+  if (output === code || digest(output) !== entry.outputHash) {
+    throw new Error(`Incomplete browser compatibility transform: ${entry.name} (expected ${entry.outputHash}, got ${digest(output)})`)
+  }
   return { code: output, map: null }
 }

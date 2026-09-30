@@ -2074,7 +2074,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "2505834a903fa6250bbb5bcd754248b90532e5ebaa7469b1ef22980e508ee8cd",
     "inputHash": "2505834a903fa6250bbb5bcd754248b90532e5ebaa7469b1ef22980e508ee8cd",
-    "outputHash": "1bf7886d6cb8ff08c73e416a8b455fad971699b048053ce2ac20c16cea233e37",
+    "outputHash": "4eb914f09d02830f0775e8758c00c3ab3f03d77cb5c4536acbac9bdf3d7e87ee",
     "handlers": [
       "useBrowserSettingsPresentation"
     ],
