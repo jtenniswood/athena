@@ -149,6 +149,17 @@ body > [data-slot='fan-menu'] {
   font-size: 0.75rem !important;
 }
 
+/* Align the voice menu hint beside the mic like the other composer dropdowns. */
+[data-slot='composer-root'] [data-slot='fan-menu-anchor'] {
+  align-items: center;
+}
+
+[data-slot='composer-root'] [data-slot='fan-menu-anchor'] > .codicon-chevron-up {
+  position: static;
+  font-size: 0.625rem !important;
+  transform: rotate(180deg);
+}
+
 /* Replace the running row's animated arc with a spinner in the timestamp slot.
    The renderer marks live turns on the row itself and renders the age as time. */
 .browser-sessions-pane [class*='shimmer'],
