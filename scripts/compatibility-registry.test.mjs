@@ -58,7 +58,7 @@ for (const entry of registry.filter(entry => entry.kind === 'renderer-transform'
     const source = readFileSync(filename, 'utf8')
     const output = transformRenderer(source, filename)
     assert.ok(output, `expected ${entry.name} to produce a transformed renderer module`)
-    assert.ok(output.code.startsWith(`// hermes-web-compatibility:${entry.name}\\n`))
+    assert.ok(output.code.startsWith(`// hermes-web-compatibility:${entry.name}\n`))
   })
 }
 
