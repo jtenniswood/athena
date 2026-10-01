@@ -1,6 +1,7 @@
 import { compatibilityRegistryPlugin } from '../../scripts/compatibility-registry.mjs'
 import { dependencyCompatibilityPlugin } from './src/upstream/dependency-compatibility'
 import { browserPlugin, browserActivityNotificationsPlugin } from './src/upstream/browser-plugin'
+import { athenaBranding } from './src/upstream/athena-branding'
 import { rendererOverrides } from './src/upstream/overrides'
 import { runtimeConfiguration, runtimeScripts, matchesGatewayRoute, type HostingConfiguration } from '../../scripts/runtime-config.mjs'
 import { rendererAliases, compatibilityAliases, compatibilitySingletons } from '../../scripts/aliases.mjs'
@@ -252,6 +253,7 @@ export default defineConfig(({ command, mode }) => {
     compatibilityRegistryPlugin(path.resolve(__dirname, '../..')),
     dependencyCompatibilityPlugin(__dirname),
     buildInfoPlugin(),
+    athenaBranding(),
     rendererOverrides(__dirname),
     browserPlugin(__dirname),
     hermesDynamicProxy(),
@@ -262,9 +264,9 @@ export default defineConfig(({ command, mode }) => {
       // We register the SW ourselves from src/pwa/register.ts.
       injectRegister: null,
       manifest: {
-        name: 'Hermes',
-        short_name: 'Hermes',
-        description: 'A UI for the Hermes agent.',
+        name: 'Athena for Hermes Agent',
+        short_name: 'Athena',
+        description: 'Athena, a web interface for Hermes Agent.',
         display: 'standalone',
         // Hash-routed SPA at the domain root.
         start_url: '.',
