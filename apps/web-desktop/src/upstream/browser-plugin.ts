@@ -392,8 +392,8 @@ export function respectBrowserOverlayFocusReturn(source: string, root: string): 
   const target = '    if (!inputDisabled && paneVisible && !floating) {'
   if (source.split(target).length !== 2) throw new Error('Browser composer autofocus owner changed')
   const owner = JSON.stringify(path.join(root, 'src/experience/ui/overlay-focus'))
-  return `import { browserOverlayOwnsReturnedFocus } from ${owner}\n` + source
-    .replace(target, '    if (!inputDisabled && paneVisible && !floating && !browserOverlayOwnsReturnedFocus()) {')
+  return `import { browserOverlayOwnsReturnedFocus, browserShouldSkipAutomaticComposerFocus } from ${owner}\n` + source
+    .replace(target, '    if (!inputDisabled && paneVisible && !floating && !browserOverlayOwnsReturnedFocus() && !browserShouldSkipAutomaticComposerFocus()) {')
 }
 
 export function useBrowserDirectResumeOwner(source: string): string {
