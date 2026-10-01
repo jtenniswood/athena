@@ -5,6 +5,13 @@ for self-hosting. The renderer is fetched from
 [`NousResearch/hermes-agent`](https://github.com/NousResearch/hermes-agent) at
 build time.
 
+## License
+
+The Hermes Web wrapper is licensed under the [MIT License](LICENSE). The
+renderer fetched from [`NousResearch/hermes-agent`](https://github.com/NousResearch/hermes-agent)
+retains its own MIT license and copyright notices. Third-party dependencies
+remain under their respective licenses.
+
 > This is an unofficial, AI-generated project. It is intended for private
 > networks such as Tailscale and is not hardened for the public internet.
 
