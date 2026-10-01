@@ -11,6 +11,7 @@ import { useLocation, useNavigate } from 'react-router'
 import { BrowserSidebarNavigation } from './sidebar-extras'
 import { BrowserSessionsPane } from './sidebar-sections'
 import { SettingsMenu } from './settings-menu'
+import { installFollowupBehavior } from './followup-preferences'
 import { Codicon, ContribWiring, WiredPane, SidebarProvider, ContribRender, ContribBoundary, useContributions, navigateToWorkspacePage, SessionTileCloseConfirm, BrowserWorkspace, SessionActionsMenu } from '../upstream/browser-api'
 import { useBrowserConversation } from '../upstream/conversation'
 import { useBrowserSessionActions } from '../upstream/conversation-actions'
@@ -47,6 +48,7 @@ export function BrowserShell() {
 function BrowserLayout() {
   useRendererMenuCompatibility()
   useEffect(() => installConversationSubmitScroll(), [])
+  useEffect(() => installFollowupBehavior(), [])
   const sessionProjectDrag = useRef<SessionProjectDrag | null>(null)
   const sessionReorderDrag = useRef<SessionReorderDrag | null>(null)
   useEffect(() => {
