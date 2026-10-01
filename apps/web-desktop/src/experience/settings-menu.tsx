@@ -20,7 +20,7 @@ const TOOL_ROUTE_META: Record<string, { label: string; icon: string }> = {
   agents: { label: 'Agents', icon: 'hubot' }
 }
 
-export const WORKSPACE_ROUTE_IDS = new Set(['command-center', 'webhooks', 'profiles', 'agents'])
+export const WORKSPACE_ROUTE_IDS = new Set(['command-center', 'webhooks', 'agents'])
 
 export function toolRouteIcon(id: string) {
   return TOOL_ROUTE_META[id]?.icon || 'folder'
@@ -65,6 +65,10 @@ export function SettingsMenu({ triggerRef, backendVersion, onOpenGateway, onOpen
     { key: 'systems', label: 'Systems', actions: [
       { key: 'settings', label: 'Settings', icon: <Codicon name="settings-gear" size="1rem" />, afterClose: true, run: () => onOpenRoute('/settings') },
       { key: 'gateway', label: 'Gateway', icon: <Codicon name="pulse" size="1rem" />, afterClose: true, run: onOpenGateway },
+      { key: 'profiles', label: 'Profiles', icon: <Codicon name={toolRouteIcon('profiles')} size="1rem" />, afterClose: true, run: () => {
+        const route = APP_ROUTES.find(item => item.id === 'profiles')
+        if (route) onOpenRoute(route.path)
+      } },
       { key: 'workspace-options', label: 'Workspace', icon: <Codicon name="folder" size="1rem" />, children: [{ key: 'workspace-routes', actions: APP_ROUTES.filter(route => WORKSPACE_ROUTE_IDS.has(route.id)).map(route => ({ key: route.path, label: toolRouteLabel(route.id), icon: <Codicon name={toolRouteIcon(route.id)} size="1rem" />, afterClose: true, run: () => onOpenRoute(route.path) })) }], run: () => {} },
       { key: 'approval-mode', label: 'Approval mode', hideSubmenuTitle: true, icon: <Codicon name="shield" size="1rem" />, children: [{ key: 'approval-modes', selection: 'single', actions: (['manual', 'smart', 'off'] as const).map(value => ({ key: value, label: approvalLabels[value], description: approvalDescriptions[value], icon: <Codicon name={value === 'manual' ? 'shield' : value === 'smart' ? 'sparkle' : 'circle-slash'} size="1rem" />, checked: mode === value, afterClose: true, run: () => void setMode(value) })) }], run: () => {} }
     ] },
