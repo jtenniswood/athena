@@ -1,7 +1,7 @@
-# Athena
+# Hermes Web
 
-Athena is a web app and installable PWA for Hermes Agent, with a Docker image
-for self-hosting. The pinned Hermes Desktop renderer is fetched from
+Hermes Desktop’s chat UI as a web app and installable PWA, with a Docker image
+for self-hosting. The renderer is fetched from
 [`NousResearch/hermes-agent`](https://github.com/NousResearch/hermes-agent) at
 build time.
 
@@ -10,7 +10,7 @@ build time.
 
 ## Repository
 
-- `apps/web-desktop/` — Athena web app, bridge, styles, and overrides
+- `apps/web-desktop/` — web app, bridge, styles, and overrides
 - `flake.nix` — Nix development and production build
 - `Dockerfile` — Nix-free frontend image using nginx
 - `apps/web-desktop/.env.example` — local and Docker configuration template
@@ -102,16 +102,16 @@ To use the current `main` image:
 
 ```bash
 docker pull ghcr.io/jtenniswood/hermes-desktop-web-mobile-pwa:latest
-docker tag ghcr.io/jtenniswood/athena:latest athena:local
+docker tag ghcr.io/jtenniswood/hermes-desktop-web-mobile-pwa:latest hermes-web:local
 ```
 
 For a specific build, replace `latest` with its `sha-<revision>` or release tag
-in both commands. The later run command uses the local name `athena:local`.
+in both commands. The later run command uses the local name `hermes-web:local`.
 
 To build from source instead, run this from the repository root:
 
 ```bash
-docker build -t athena:local .
+docker build -t hermes-web:local .
 ```
 
 The build fetches the renderer revision pinned in `flake.lock`. For a release
@@ -121,7 +121,7 @@ or CI image, pass the wrapper revision and release channel explicitly:
 docker build \
   --build-arg HERMES_WRAPPER_REV="$(git rev-parse HEAD)" \
   --build-arg HERMES_RELEASE_CHANNEL=local \
-  -t athena:local .
+  -t hermes-web:local .
 ```
 
 ### 2. Create an environment file
