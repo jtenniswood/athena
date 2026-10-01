@@ -89,9 +89,28 @@ Hermes gateway or model runtime. At startup, nginx reads the gateway settings
 from environment variables and proxies the browser’s REST, login, and
 WebSocket requests to that gateway.
 
-### 1. Build the image
+### 1. Choose an image
 
-From the repository root:
+You can run the image published by GitHub Actions or build one from this
+checkout. Published images are `linux/amd64` and are available at
+`ghcr.io/jtenniswood/hermes-desktop-web-mobile-pwa`. The `latest` tag follows
+the most recent successful image publication; `sha-<revision>` tags identify a
+specific source revision, and version tags are published for releases. Builds
+from `main`, version tags, and manual workflow runs all publish `latest`.
+
+To track builds from the `main` branch:
+
+```bash
+docker pull ghcr.io/jtenniswood/hermes-desktop-web-mobile-pwa:main
+docker tag ghcr.io/jtenniswood/hermes-desktop-web-mobile-pwa:main hermes-web:local
+```
+
+To use the newest publication regardless of its source, replace `main` with
+`latest` in both commands. For a specific build, use its `sha-<revision>` or
+release tag instead. The later run command uses the local name
+`hermes-web:local`.
+
+To build from source instead, run this from the repository root:
 
 ```bash
 docker build -t hermes-web:local .
@@ -160,6 +179,12 @@ the host’s LAN or Tailscale address, for example
 `http://dev.example.ts.net:4174/`. Keep the device on the same tailnet when
 using a Tailscale address.
 
+The mounted `$HOME/.hermes` directory is used to serve installed `plugins/`
+and `desktop-plugins/` assets. It does not run the gateway or model runtime and
+does not store chat history. Keep the gateway’s own data directory and the
+browser’s site data backed up separately. If you do not use filesystem plugins,
+the volume can be omitted.
+
 For microphone recording and other browser features that require a secure
 context, put the container behind HTTPS or use Tailscale Serve. Plain HTTP is
 supported for normal chat but browsers generally block microphone access.
@@ -196,6 +221,12 @@ To stop it without removing the container:
 ```bash
 docker stop hermes-web
 ```
+
+To update to a newly published image, pull and retag the desired image as
+`hermes-web:local`, then remove and recreate the container using the command
+above. The image does not need to be rebuilt on the Docker host when using a
+published tag. Keep the same environment file and volume mount when recreating
+it.
 
 ### Docker environment settings
 
