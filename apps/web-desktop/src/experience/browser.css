@@ -130,6 +130,17 @@
 .browser-shell [data-sidebar="menu-item"]:has([data-tour="sidebar-nav-skills"]),
 .browser-shell [data-sidebar="menu-item"]:has([data-tour="sidebar-nav-messaging"]),
 .browser-shell [data-sidebar="menu-item"]:has([data-tour="sidebar-nav-artifacts"]) { display:none !important; }
+/* Keep only user input and assistant prose in the transcript when the
+   browser-level conversation preference is switched off. Required inline
+   questions and error recovery remain available. */
+body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assistant-message-root"] > :not([data-slot="aui_assistant-message-content"]),
+body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assistant-message-content"]:not(:has([data-clarify-choices])):not(:has([role="alert"])) > :not(.aui-md),
+body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_system-message-root"]:not(:has([role="alert"])) {
+  display: none !important;
+}
+body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assistant-message-root"]:not(:has(> [data-slot="aui_assistant-message-content"] > .aui-md)):not(:has([data-clarify-choices])):not(:has([role="alert"])) {
+  display: none !important;
+}
 .browser-main { position:relative; flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; outline:none; overflow:hidden; }
 .browser-main[hidden] { display:none; }
 /* Keep the dock at the workspace edge with one small margin. Safe-area values
