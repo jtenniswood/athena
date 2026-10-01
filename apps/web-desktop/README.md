@@ -1,6 +1,6 @@
-# Hermes Desktop in the browser
+# Athena for Hermes Agent
 
-This workspace composes the upstream Hermes Desktop renderer with browser
+This workspace composes the pinned Hermes Desktop renderer with Athena's browser
 services. Upstream files are fetched at the exact revision in the root
 `flake.lock`; they are never edited here.
 
@@ -50,7 +50,7 @@ The renderer is pinned in the root `flake.lock`. New upstream UI is incorporated
 when that pin is upgraded and reviewed; it does not update in place at runtime.
 The checked settings composition and visibility adapters live in
 `src/upstream/browser-plugin.ts` and are fingerprinted in the compatibility
-registry. Review those contracts when updating Hermes Desktop.
+registry. Review those contracts when updating the pinned renderer.
 
 Docker and development serve `runtime-config.js` with no caching. Browser
 requests stay on the app origin and the server forwards them to its one

@@ -23,7 +23,7 @@ async function start(): Promise<void> {
     completeStartup()
   } catch (error) {
     if (recoverStartupChunk(error, buildInfo.wrapperRevision)) return
-    console.error('Hermes Web startup failed', error)
+    console.error('Athena startup failed', error)
     showStartupRecovery(error, buildInfo.wrapperRevision)
   }
 }

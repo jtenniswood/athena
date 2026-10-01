@@ -1,7 +1,7 @@
-# Hermes Web
+# Athena
 
-Hermes Desktop’s chat UI as a web app and installable PWA, with a Docker image
-for self-hosting. The renderer is fetched from
+Athena is a web app and installable PWA for Hermes Agent, with a Docker image
+for self-hosting. The pinned Hermes Desktop renderer is fetched from
 [`NousResearch/hermes-agent`](https://github.com/NousResearch/hermes-agent) at
 build time.
 
@@ -10,7 +10,7 @@ build time.
 
 ## Repository
 
-- `apps/web-desktop/` — web app, bridge, styles, and overrides
+- `apps/web-desktop/` — Athena web app, bridge, styles, and overrides
 - `flake.nix` — Nix development and production build
 - `Dockerfile` — Nix-free frontend image using nginx
 - `apps/web-desktop/.env.example` — local and Docker configuration template
@@ -89,12 +89,29 @@ Hermes gateway or model runtime. At startup, nginx reads the gateway settings
 from environment variables and proxies the browser’s REST, login, and
 WebSocket requests to that gateway.
 
-### 1. Build the image
+### 1. Choose an image
 
-From the repository root:
+You can run the image published by GitHub Actions or build one from this
+checkout. Published images are `linux/amd64` and are available at
+`ghcr.io/jtenniswood/athena`. The `latest` tag follows
+the most recent successful image publication; `sha-<revision>` tags identify a
+specific source revision, and version tags are published for releases. Builds
+from `main`, version tags, and manual workflow runs all publish `latest`.
+
+To use the current `main` image:
 
 ```bash
-docker build -t hermes-web:local .
+docker pull ghcr.io/jtenniswood/athena:latest
+docker tag ghcr.io/jtenniswood/athena:latest athena:local
+```
+
+For a specific build, replace `latest` with its `sha-<revision>` or release tag
+in both commands. The later run command uses the local name `athena:local`.
+
+To build from source instead, run this from the repository root:
+
+```bash
+docker build -t athena:local .
 ```
 
 The build fetches the renderer revision pinned in `flake.lock`. For a release
@@ -104,7 +121,7 @@ or CI image, pass the wrapper revision and release channel explicitly:
 docker build \
   --build-arg HERMES_WRAPPER_REV="$(git rev-parse HEAD)" \
   --build-arg HERMES_RELEASE_CHANNEL=local \
-  -t hermes-web:local .
+  -t athena:local .
 ```
 
 ### 2. Create an environment file
@@ -152,13 +169,19 @@ docker run -d \
   --add-host host.docker.internal:host-gateway \
   -p 4174:80 \
   -v "$HOME/.hermes:/data/hermes" \
-  hermes-web:local
+  athena:local
 ```
 
 Open <http://localhost:4174/> on the Docker host. From another device, use
 the host’s LAN or Tailscale address, for example
 `http://dev.example.ts.net:4174/`. Keep the device on the same tailnet when
 using a Tailscale address.
+
+The mounted `$HOME/.hermes` directory is used to serve installed `plugins/`
+and `desktop-plugins/` assets. It does not run the gateway or model runtime and
+does not store chat history. Keep the gateway’s own data directory and the
+browser’s site data backed up separately. If you do not use filesystem plugins,
+the volume can be omitted.
 
 For microphone recording and other browser features that require a secure
 context, put the container behind HTTPS or use Tailscale Serve. Plain HTTP is
@@ -188,7 +211,7 @@ docker run -d \
   --add-host host.docker.internal:host-gateway \
   -p 4174:80 \
   -v "$HOME/.hermes:/data/hermes" \
-  hermes-web:local
+  athena:local
 ```
 
 To stop it without removing the container:
@@ -196,6 +219,12 @@ To stop it without removing the container:
 ```bash
 docker stop hermes-web
 ```
+
+To update to a newly published image, pull and retag the desired image as
+`athena:local`, then remove and recreate the container using the command
+above. The image does not need to be rebuilt on the Docker host when using a
+published tag. Keep the same environment file and volume mount when recreating
+it.
 
 ### Docker environment settings
 
@@ -249,9 +278,9 @@ the environment file.
 For a remote gateway, make sure the Docker host can reach the gateway address
 and that the gateway accepts the host’s forwarded HTTP/WebSocket requests. A
 gateway that is reachable from the host but blocked from Docker’s network will
-still appear unavailable in Hermes Web.
+still appear unavailable in Athena.
 
-When placing Hermes Web behind Cloudflare or another TLS-terminating proxy,
+When placing Athena behind Cloudflare or another TLS-terminating proxy,
 enable WebSocket proxying and preserve the original `X-Forwarded-Proto` header.
 The bundled nginx forwards the original `http` or `https` scheme to the gateway
 so OAuth redirects and secure session cookies use the browser-facing scheme.
@@ -339,7 +368,7 @@ Run browser checks against a built image:
 
 ```sh
 pnpm exec playwright install chromium webkit
-HERMES_TEST_IMAGE=hermes-web pnpm exec playwright test
+HERMES_TEST_IMAGE=athena pnpm exec playwright test
 ```
 
 The tests use a local synthetic backend without model requests. They cover
