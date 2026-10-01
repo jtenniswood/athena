@@ -259,3 +259,37 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
 @media (pointer: coarse) {
   body:has([data-browser-settings-frame]) [data-browser-command-palette] [data-slot="command-list"] { pointer-events: auto; }
 }
+.browser-followup-setting {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.browser-followup-setting h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.browser-followup-setting p {
+  margin: 0.35rem 0 0.85rem;
+  color: var(--muted-foreground);
+}
+
+.browser-followup-options {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.browser-followup-options button {
+  min-width: 5rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  color: var(--muted-foreground);
+}
+
+.browser-followup-options button.is-selected {
+  background: var(--accent);
+  color: var(--foreground);
+}

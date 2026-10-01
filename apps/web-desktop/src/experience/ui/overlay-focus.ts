@@ -2,6 +2,19 @@ import { useLayoutEffect, useRef } from 'react'
 
 const restoredFocus = new WeakSet<HTMLElement>()
 
+/** Mobile chat selection should not open the on-screen keyboard implicitly. */
+export function browserShouldSkipAutomaticComposerFocus() {
+  return window.matchMedia('(pointer: coarse)').matches &&
+    window.matchMedia('(width < 48rem), (pointer:coarse) and (max-height:27rem)').matches
+}
+
+/** Close the on-screen keyboard when a mobile user selects another chat. */
+export function blurBrowserComposerForMobileSelection() {
+  if (!browserShouldSkipAutomaticComposerFocus()) return
+  const active = document.activeElement
+  if (active instanceof HTMLElement && active.closest('[data-slot="composer-rich-input"]')) active.blur()
+}
+
 /** Automatic composer visibility changes must yield to an overlay's return target.
  * Explicit composer focus requests still work and release this claim on blur. */
 export function browserOverlayOwnsReturnedFocus() {

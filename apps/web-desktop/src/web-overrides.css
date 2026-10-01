@@ -160,6 +160,20 @@ body > [data-slot='fan-menu'] {
   transform: rotate(180deg);
 }
 
+/* Keep the composer text on its own row and place its controls underneath,
+   matching the touch layout at every dock width. The grid rows remain
+   content-sized so long drafts can keep expanding the composer naturally. */
+[data-slot='composer-root']:not([data-popped-out]) [data-slot='composer-fade'] > div.grid.w-full:has([data-slot='composer-rich-input']) {
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  grid-template-areas: 'input input' 'menu controls' !important;
+  row-gap: var(--composer-row-gap) !important;
+}
+
+[data-slot='composer-root']:not([data-popped-out]) [data-slot='composer-fade'] > div.grid.w-full:has([data-slot='composer-rich-input']) > [class*='grid-area:menu'] {
+  align-self: center;
+  translate: none !important;
+}
+
 /* Replace the running row's animated arc with a spinner in the timestamp slot.
    The renderer marks live turns on the row itself and renders the age as time. */
 .browser-sessions-pane [class*='shimmer'],
@@ -205,6 +219,12 @@ body > [data-slot='fan-menu'] {
 
 @keyframes browser-session-spinner {
   to { transform: rotate(1turn); }
+}
+
+/* Keep the send/stop affordance visible while the composer draft is empty. */
+[data-slot='composer-dock']:not([data-popped-out]) [data-browser-send-action] {
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 /* On narrow browser viewports the fixed app controls share the top edge with
