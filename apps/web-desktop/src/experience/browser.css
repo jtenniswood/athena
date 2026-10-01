@@ -183,6 +183,7 @@
  .browser-main :has(> button[aria-label="Branch in new chat"]) { opacity:1 !important; pointer-events:auto !important; }
  .browser-main :is(button[aria-label="Branch in new chat"],button[aria-label="Copy"],button[aria-label="Read aloud"],button[aria-label="Refresh"],button[aria-label="Restore checkpoint"],button[aria-label="Scroll to bottom"]) { box-sizing:border-box; min-width:var(--web-touch-target); min-height:var(--web-touch-target); }
  .browser-profile-choice { width:var(--web-touch-target); height:var(--web-touch-target); flex-basis:var(--web-touch-target); }
+ .browser-profile-choice > :is(img,span) { width:calc(var(--web-touch-target) - 2px) !important; height:calc(var(--web-touch-target) - 2px) !important; }
  .browser-profile-slot { flex-basis:var(--web-touch-target); }
  .browser-update-panel-heading button { min-width:var(--web-touch-target); min-height:var(--web-touch-target); }
  .browser-overlay-title button { box-sizing:border-box; min-width:var(--web-touch-target); min-height:var(--web-touch-target); }
