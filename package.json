@@ -2,7 +2,7 @@
   "name": "hermes-mobile",
   "private": true,
   "version": "0.1.1",
-  "description": "Hermes Desktop \u2014 Web & Mobile (PWA) version. Official Hermes chat UI as a browser/PWA app; nix-free Docker build.",
+  "description": "Unofficial Hermes Desktop web and mobile PWA wrapper; nix-free Docker build.",
   "scripts": {
     "dev": "pnpm --filter web-desktop run dev",
     "build": "pnpm --filter web-desktop run build",
@@ -20,5 +20,6 @@
   "devDependencies": {
     "@playwright/test": "1.63.0",
     "ws": "8.21.3"
-  }
+  },
+  "license": "MIT"
 }
