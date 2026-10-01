@@ -4,7 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 // Creates or strengthens only our dedicated ruleset. Other protection stays intact.
-const repository = process.env.GITHUB_REPOSITORY || 'jtenniswood/hermes-web'
+const repository = process.env.GITHUB_REPOSITORY || 'jtenniswood/athena'
 if (!/^[\w.-]+\/[\w.-]+$/.test(repository)) throw new Error('Invalid repository')
 const automatic = process.argv.includes('--automation')
 const desired = ['compatibility', ...(automatic ? ['renderer-update-policy'] : [])]

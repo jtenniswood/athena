@@ -41,7 +41,7 @@
         # Build tree: our web code + the upstream renderer sources (pinned
         # input) placed at the relative paths our vite config expects
         # (../desktop/src, ../shared/src).
-        src = pkgs.runCommand "hermes-web-src" { } ''
+        src = pkgs.runCommand "athena-src" { } ''
           mkdir -p $out
           cp -r ${webSrc}/. $out/
           # Store paths are read-only; make the copy writable so pnpm can
@@ -109,7 +109,7 @@
         # Serve the pinned static artifact with the same nginx contract as Docker.
         apps.default = {
           type = "app";
-          program = "${pkgs.writeShellScript "hermes-web-serve" ''
+          program = "${pkgs.writeShellScript "athena-serve" ''
             set -eu
             runtime_dir=$(mktemp -d)
             trap 'rm -rf "$runtime_dir"' EXIT
@@ -144,10 +144,11 @@
     # Home-manager module defining the persistent Athena systemd service
     # (static hosting and the configured gateway proxy on :4174). Wiring into
     # the main nix-config:
-    #   imports = [ inputs.hermes-mobile.homeManagerModules.hermes-web ];
+    #   imports = [ inputs.athena.homeManagerModules.athena ];
     #   services.hermes-web.enable = true;
     homeManagerModules = {
       default = import ./modules/hermes-web.nix;
+      athena = import ./modules/hermes-web.nix;
       hermes-web = import ./modules/hermes-web.nix;
     };
   };
