@@ -623,10 +623,11 @@ export function omitBrowserDesktopUpdateNotice(source: string): string {
 }
 
 export function useBrowserTouchHooks(source: string): string {
+  const sendTarget = 'aria-label={showStop ? c.stop : c.send}'
   const labels = ['c.queueMessage', 'showStop ? c.stop : c.send', 'state.tools.label', 'copy.openModelPicker', 'triggerLabel', 'label', 'title']
   const targets = labels.map(label => `aria-label={${label}}`).filter(target => source.includes(target))
   if (!targets.length) throw new Error('Browser composer touch controls changed')
-  return replaceBrowserContract(source, targets.map(target => [target, `data-browser-composer-action="" ${target}`]))
+  return replaceBrowserContract(source, targets.map(target => [target, `${target === sendTarget ? 'data-browser-send-action="" ' : ''}data-browser-composer-action="" ${target}`]))
 }
 
 export function removeBrowserConversationalVoiceEntry(source: string, module: 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'): string {

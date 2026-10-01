@@ -1862,7 +1862,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "61d99e91f129a01708775866a651e88e439b0271b97600d9fcc65fb9fde6507c",
     "inputHash": "61d99e91f129a01708775866a651e88e439b0271b97600d9fcc65fb9fde6507c",
-    "outputHash": "a105b7c7474ade4e1a42b026d70ca7ee48a77b428bcc6da7a9a18859918442a2"
+    "outputHash": "b032336a06b7079e3eddee4c6bf191e821d6287cf22f6e1c21dc16a622695212"
   },
   {
     "name": "browser-semantic-context-menu",
