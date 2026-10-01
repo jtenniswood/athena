@@ -41,7 +41,7 @@
 .browser-navigation-section-list button:hover,.browser-navigation-section-list button:focus-visible { color:var(--web-text); background:var(--web-hover); }
 .browser-profile-footer { position:relative; display:flex; align-items:center; gap:var(--web-space-1); min-width:0; flex-shrink:0; padding:var(--web-space-2) var(--web-space-3) var(--web-space-3); background:var(--web-sidebar); }
 .browser-profile-footer[hidden] { display:none; }
-.browser-profile-rail { min-width:0; flex:1 1 auto; display:flex; align-items:center; gap:var(--web-space-2); overflow-x:auto; scrollbar-width:none; }
+.browser-profile-rail { min-width:0; flex:1 1 auto; display:flex; align-items:center; gap:var(--web-space-1); overflow-x:auto; scrollbar-width:none; }
 .browser-profile-slot { position:relative; display:flex; align-items:center; flex:0 0 2.5rem; }
 .browser-profile-slot > .browser-profile-drop-indicator { position:absolute; top:50%; left:-.3rem; transform:translateY(-50%); }
 .browser-profile-choice img { pointer-events:none; -webkit-user-drag:none; }
