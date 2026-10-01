@@ -112,6 +112,7 @@ function reserveResponseSpace(viewport: HTMLElement, prompt: HTMLElement) {
 
 /** Keep a submitted prompt and the start of its response together in view. */
 export function installConversationSubmitScroll(): () => void {
+  const mobileViewport = window.matchMedia('(width < 48rem)')
   let observer: MutationObserver | null = null
   let timeout = 0
   let firstFrame = 0
@@ -127,6 +128,13 @@ export function installConversationSubmitScroll(): () => void {
   }
 
   const onSubmit = (event: Event) => {
+    if (mobileViewport.matches) {
+      clearPending()
+      space?.dispose()
+      space = null
+      return
+    }
+
     const target = event.target
     if (!(target instanceof Element) || !target.closest(COMPOSER) || target.closest(EDIT_COMPOSER)) return
 
@@ -152,7 +160,7 @@ export function installConversationSubmitScroll(): () => void {
       space = reserveResponseSpace(viewport, nextPrompt)
       firstFrame = window.requestAnimationFrame(() => {
         secondFrame = window.requestAnimationFrame(() => {
-          if (viewport.isConnected && nextPrompt.isConnected) space?.align()
+          if (!mobileViewport.matches && viewport.isConnected && nextPrompt.isConnected) space?.align()
         })
       })
     })
@@ -166,12 +174,20 @@ export function installConversationSubmitScroll(): () => void {
     if (!(event.target instanceof Element) || !event.target.closest('[data-slot="composer-rich-input"]')) return
     onSubmit(event)
   }
+  const onViewportModeChange = () => {
+    if (!mobileViewport.matches) return
+    clearPending()
+    space?.dispose()
+    space = null
+  }
 
   document.addEventListener('submit', onSubmit, true)
   document.addEventListener('keydown', onKeyDown, true)
+  mobileViewport.addEventListener('change', onViewportModeChange)
   return () => {
     document.removeEventListener('submit', onSubmit, true)
     document.removeEventListener('keydown', onKeyDown, true)
+    mobileViewport.removeEventListener('change', onViewportModeChange)
     clearPending()
     space?.dispose()
   }
