@@ -5,6 +5,13 @@ for self-hosting. The pinned Hermes Desktop renderer is fetched from
 [`NousResearch/hermes-agent`](https://github.com/NousResearch/hermes-agent) at
 build time.
 
+## License
+
+The Athena wrapper is licensed under the [MIT License](LICENSE). The renderer
+fetched from [`NousResearch/hermes-agent`](https://github.com/NousResearch/hermes-agent)
+retains its own MIT license and copyright notices. Third-party dependencies
+remain under their respective licenses.
+
 > This is an unofficial, AI-generated project. It is intended for private
 > networks such as Tailscale and is not hardened for the public internet.
 
@@ -98,15 +105,16 @@ the most recent successful image publication; `sha-<revision>` tags identify a
 specific source revision, and version tags are published for releases. Builds
 from `main`, version tags, and manual workflow runs all publish `latest`.
 
-To use the current `main` image:
+To track builds from the `main` branch:
 
 ```bash
-docker pull ghcr.io/jtenniswood/athena:latest
-docker tag ghcr.io/jtenniswood/athena:latest athena:local
+docker pull ghcr.io/jtenniswood/athena:main
+docker tag ghcr.io/jtenniswood/athena:main athena:local
 ```
 
-For a specific build, replace `latest` with its `sha-<revision>` or release tag
-in both commands. The later run command uses the local name `athena:local`.
+To use the newest publication regardless of its source, replace `main` with
+`latest` in both commands. For a specific build, use its `sha-<revision>` or
+release tag instead. The later run command uses the local name `athena:local`.
 
 To build from source instead, run this from the repository root:
 

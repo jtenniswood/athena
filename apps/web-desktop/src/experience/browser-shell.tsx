@@ -12,6 +12,7 @@ import { BrowserSidebarNavigation } from './sidebar-extras'
 import { BrowserSessionsPane } from './sidebar-sections'
 import { SettingsMenu } from './settings-menu'
 import { installFollowupBehavior } from './followup-preferences'
+import { installTranscriptPreferences } from './transcript-preferences'
 import { Codicon, ContribWiring, WiredPane, SidebarProvider, ContribRender, ContribBoundary, useContributions, navigateToWorkspacePage, SessionTileCloseConfirm, BrowserWorkspace, SessionActionsMenu } from '../upstream/browser-api'
 import { useBrowserConversation } from '../upstream/conversation'
 import { useBrowserSessionActions } from '../upstream/conversation-actions'
@@ -49,6 +50,7 @@ function BrowserLayout() {
   useRendererMenuCompatibility()
   useEffect(() => installConversationSubmitScroll(), [])
   useEffect(() => installFollowupBehavior(), [])
+  useEffect(() => installTranscriptPreferences(), [])
   const sessionProjectDrag = useRef<SessionProjectDrag | null>(null)
   const sessionReorderDrag = useRef<SessionReorderDrag | null>(null)
   useEffect(() => {

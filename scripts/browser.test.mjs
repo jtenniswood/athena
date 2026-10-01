@@ -439,5 +439,6 @@ test('entry recovery has an independent static fallback', () => {
   assert.match(index, /location\.reload\(\)/)
   const source = readFileSync(path.join(root, 'src/platform/startup-recovery.ts'), 'utf8')
   assert.match(source, /showStartupRecovery/)
-  assert.match(source, /Copy diagnostics/)
+  assert.match(source, /stage === 'configuration' \? 'Sign in' : 'Retry'/)
+  assert.doesNotMatch(source, /Build \$\{|Copy diagnostics/)
 })

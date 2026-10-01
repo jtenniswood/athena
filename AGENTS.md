@@ -34,7 +34,21 @@ the pinned `hermes-agent` at build time.
 - `origin` — GitHub (`https://github.com/jtenniswood/athena.git`) — **primary** and the target for all pull requests.
 - The upstream of `main` is `origin/main`.
 
-After every meaningful commit:
+For every user-requested code change, finish by opening a pull request on
+`origin` once the change is reviewable. This includes small fixes and generated
+code; do not treat a request for implementation as complete after only editing
+the working tree. Commit the requested changes, push the feature branch, and
+create the PR. Keep unrelated existing work out of the PR. Do not merge or
+deploy unless explicitly requested. If the user asks for code without a PR,
+follow that specific instruction for that request.
+
+Before editing, inspect the working tree and preserve pre-existing changes.
+Stage and commit only the requested work. Give each PR a clear title, a short
+summary of the change, and the verification performed. If a push or PR creation
+is blocked by GitHub availability or permissions, leave the work ready for
+review and report the specific blocker; do not claim the task is complete.
+
+After every meaningful commit, push the branch:
 ```bash
 git push origin <branch>
 ```
@@ -46,8 +60,10 @@ git push origin <branch>
 - **Dev loop:** `pnpm prepare:renderer` → `pnpm install --frozen-lockfile` →
   `pnpm dev` (port 5174). `nix develop` is an optional development environment;
   do not run Nix builds on the VPS.
-- **Verify:** `pnpm typecheck` and `pnpm build`, then manually exercise the
-  affected workflow. Report checks that could not be completed.
+- **Verify:** For application changes, run `pnpm typecheck` and `pnpm build`
+  when practical, then exercise the affected workflow. For documentation or
+  low-risk changes, use checks appropriate to the change. Report checks that
+  could not be completed.
 
 ## Development scope
 
