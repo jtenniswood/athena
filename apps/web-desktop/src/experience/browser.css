@@ -31,12 +31,12 @@
 .browser-navigation-body { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; background:var(--web-sidebar); }
 /* Keep the disclosure in the search/navigation flow so expansion reserves space. */
 .browser-navigation-section { width:calc(100% + 1rem); margin:1px -.5rem 0; }
-.browser-navigation-section-trigger { width:100%; height:1.5rem; display:flex; align-items:center; gap:var(--web-space-2); padding:0 var(--web-space-2); border:1px solid transparent; border-radius:var(--web-radius-control); color:var(--web-text-muted); background:transparent; font:inherit; font-size:var(--web-text-label); font-weight:500; text-align:left; cursor:pointer; }
+.browser-navigation-section-trigger { width:100%; height:var(--browser-session-control-height); display:flex; align-items:center; gap:var(--web-space-2); padding:0 var(--web-space-2); border:1px solid transparent; border-radius:var(--web-radius-control); color:var(--web-text-muted); background:transparent; font:inherit; font-size:var(--web-text-label); font-weight:500; text-align:left; cursor:pointer; }
 .browser-navigation-section-trigger > .codicon { width:1rem; flex:0 0 1rem; text-align:center; }
 .browser-navigation-section-trigger:hover,.browser-navigation-section-trigger:focus-visible { color:var(--web-text); background:var(--web-hover); }
 .browser-navigation-section-list { display:flex; flex-direction:column; gap:1px; margin-bottom:var(--web-space-1); }
 .browser-navigation-section-list[hidden] { display:none; }
-.browser-navigation-section-list button { width:100%; height:var(--web-navigation-row); display:flex; align-items:center; gap:var(--web-space-2); padding:0 var(--web-space-2); border:1px solid transparent; border-radius:var(--web-radius-control); color:var(--web-text-muted); background:transparent; font:inherit; font-size:var(--web-text-body); font-weight:500; text-align:left; cursor:pointer; }
+.browser-navigation-section-list button { width:100%; height:var(--browser-session-control-height); display:flex; align-items:center; gap:var(--web-space-2); padding:0 var(--web-space-2); border:1px solid transparent; border-radius:var(--web-radius-control); color:var(--web-text-muted); background:transparent; font:inherit; font-size:var(--web-text-body); font-weight:500; text-align:left; cursor:pointer; }
 .browser-navigation-section-list button > .codicon { color:color-mix(in srgb,currentColor 72%,transparent); }
 .browser-navigation-section-list button:hover,.browser-navigation-section-list button:focus-visible { color:var(--web-text); background:var(--web-hover); }
 .browser-profile-footer { position:relative; display:flex; align-items:center; gap:var(--web-space-1); min-width:0; flex-shrink:0; padding:var(--web-space-2) var(--web-space-3) var(--web-space-3); background:var(--web-sidebar); }
@@ -66,7 +66,9 @@
 .browser-update-panel-action { width:100%; padding:var(--web-space-1) var(--web-space-2); border:1px solid var(--web-border); border-radius:var(--web-radius-control); color:var(--web-text); background:var(--web-active); font:inherit; font-size:var(--web-text-label); cursor:pointer; }
 .browser-update-panel-action:hover,.browser-update-panel-action:focus-visible { border-color:transparent; background:var(--web-hover); outline:none; }
 .browser-pane { height:100%; min-height:0; background:var(--web-sidebar); }
-.browser-sessions-pane { padding-top:var(--web-space-2); }
+/* Share compact control height while retaining the token's touch target floor. */
+.browser-sessions-pane { --browser-session-control-height:var(--web-control-compact); padding-top:var(--web-space-2); }
+.browser-sessions-pane [data-sidebar="menu-button"] { height:var(--browser-session-control-height); min-height:var(--browser-session-control-height); padding-block:0; }
 .browser-sessions-pane [data-browser-section-hidden] { display:none !important; }
 /* Use one stack gap for Pinned, Sessions, messaging services, and Cron. The
    upstream sections carry different content padding, which otherwise makes
@@ -87,7 +89,7 @@
    upstream field intentionally recedes until focused; browser navigation
    treats it as a normal menu item and uses the short "Search" label. */
 .browser-sessions-pane { flex:1 1 auto; height:auto; min-height:0; overflow:auto; }
-.browser-sessions-pane .browser-session-search { width:calc(100% + 1rem); max-width:none; height:var(--web-navigation-row); min-height:var(--web-navigation-row); display:flex; align-items:center; gap:var(--web-space-2); margin-top:0; margin-left:-.5rem; margin-right:-.5rem; padding:var(--web-space-2); border:1px solid transparent; border-radius:var(--web-radius-control); color:var(--web-text-muted); font-size:var(--web-text-body); font-weight:500; line-height:var(--web-line-body); opacity:1 !important; }
+.browser-sessions-pane .browser-session-search { width:calc(100% + 1rem); max-width:none; height:var(--browser-session-control-height); min-height:var(--browser-session-control-height); display:flex; align-items:center; gap:var(--web-space-2); margin-top:0; margin-left:-.5rem; margin-right:-.5rem; padding:0 var(--web-space-2); border:1px solid transparent; border-radius:var(--web-radius-control); color:var(--web-text-muted); font-size:var(--web-text-body); font-weight:500; line-height:var(--web-line-body); opacity:1 !important; }
 .browser-sessions-pane .browser-session-search:focus-within { border-color:transparent; background:var(--web-hover); color:var(--web-text); }
 .browser-sessions-pane .browser-session-search > svg { width:1rem; height:1rem; flex:0 0 1rem; color:color-mix(in srgb,currentColor 72%,transparent); }
 .browser-sessions-pane .browser-session-search > input { height:1.25rem; min-width:0; font:inherit; font-size:inherit; line-height:inherit; color:inherit; }
