@@ -297,6 +297,12 @@ export default defineConfig(({ command, mode }) => {
         // the network even while an older app shell controls this browser.
         // Startup recovery must reach the edge to renew an expired sign-in,
         // even when a cached app shell is available to the service worker.
+        runtimeCaching: [
+          {
+            urlPattern: /\/(?:runtime-config|gateway-config)\.js(?:\?.*)?$/,
+            handler: 'NetworkOnly'
+          }
+        ],
         navigateFallbackDenylist: [/[?&]hermes-reconnect=1(?:&|$)/, /^\/(?:api|auth|login|plugins|desktop-plugins|cdn-cgi)(?:\/|$)/, /^\/(?:runtime-config|gateway-config)\.js$/, /^\/build-info\.json$/]
       },
       devOptions: {
