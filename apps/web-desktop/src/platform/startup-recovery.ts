@@ -9,12 +9,8 @@ function stageFor(error: unknown): RecoveryStage {
   return 'application'
 }
 
-function safeRevision(revision: string): string {
-  return String(revision || 'unknown').replace(/[^a-z0-9._-]/gi, '').slice(0, 80) || 'unknown'
-}
-
 /** Render recovery without importing React, the renderer, or the gateway. */
-export function showStartupRecovery(error: unknown, revision: string): void {
+export function showStartupRecovery(error: unknown): void {
   const root = document.getElementById('root')
   if (!root) return
 
@@ -24,17 +20,16 @@ export function showStartupRecovery(error: unknown, revision: string): void {
     : stage === 'renderer'
       ? ['Hermes could not load the browser interface.', 'Reload once to retry the current build.']
       : ['Hermes could not finish starting.', 'Retry the current page. Your saved browser data was not cleared.']
-  const wrapperRevision = safeRevision(revision)
   const section = document.createElement('main')
   section.className = 'hermes-startup-recovery'
   section.setAttribute('role', 'alert')
-  section.innerHTML = `<h1>${copy[0]}</h1><p>${copy[1]}</p><p class="hermes-startup-recovery-meta">Build ${wrapperRevision}</p>`
+  section.innerHTML = `<h1>${copy[0]}</h1><p>${copy[1]}</p>`
   const actions = document.createElement('div')
   actions.className = 'hermes-startup-recovery-actions'
-  const retry = document.createElement('button')
-  retry.type = 'button'
-  retry.textContent = 'Retry'
-  retry.onclick = () => {
+  const reconnect = document.createElement('button')
+  reconnect.type = 'button'
+  reconnect.textContent = stage === 'configuration' ? 'Sign in' : 'Retry'
+  reconnect.onclick = () => {
     if (stage !== 'configuration') { window.location.reload(); return }
     // A cached shell can outlive proxy authentication. Reach the server as a
     // top-level navigation so its sign-in redirect can complete in the browser.
@@ -42,15 +37,7 @@ export function showStartupRecovery(error: unknown, revision: string): void {
     url.searchParams.set('hermes-reconnect', '1')
     window.location.assign(url.href)
   }
-  actions.append(retry)
-  const copyButton = document.createElement('button')
-  copyButton.type = 'button'
-  copyButton.textContent = 'Copy diagnostics'
-  copyButton.onclick = () => {
-    const diagnostics = `Hermes Web startup failure\nStage: ${stage}\nBuild: ${wrapperRevision}`
-    void navigator.clipboard?.writeText(diagnostics)
-  }
-  actions.append(copyButton)
+  actions.append(reconnect)
   section.append(actions)
   root.replaceChildren(section)
 }

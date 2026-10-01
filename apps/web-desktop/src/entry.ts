@@ -24,7 +24,7 @@ async function start(): Promise<void> {
   } catch (error) {
     if (recoverStartupChunk(error, buildInfo.wrapperRevision)) return
     console.error('Hermes Web startup failed', error)
-    showStartupRecovery(error, buildInfo.wrapperRevision)
+    showStartupRecovery(error)
   }
 }
 void start()
