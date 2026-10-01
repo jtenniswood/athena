@@ -98,15 +98,17 @@ the most recent successful image publication; `sha-<revision>` tags identify a
 specific source revision, and version tags are published for releases. Builds
 from `main`, version tags, and manual workflow runs all publish `latest`.
 
-To use the current `main` image:
+To track builds from the `main` branch:
 
 ```bash
-docker pull ghcr.io/jtenniswood/hermes-desktop-web-mobile-pwa:latest
-docker tag ghcr.io/jtenniswood/hermes-desktop-web-mobile-pwa:latest hermes-web:local
+docker pull ghcr.io/jtenniswood/hermes-desktop-web-mobile-pwa:main
+docker tag ghcr.io/jtenniswood/hermes-desktop-web-mobile-pwa:main hermes-web:local
 ```
 
-For a specific build, replace `latest` with its `sha-<revision>` or release tag
-in both commands. The later run command uses the local name `hermes-web:local`.
+To use the newest publication regardless of its source, replace `main` with
+`latest` in both commands. For a specific build, use its `sha-<revision>` or
+release tag instead. The later run command uses the local name
+`hermes-web:local`.
 
 To build from source instead, run this from the repository root:
 
