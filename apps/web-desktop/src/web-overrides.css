@@ -207,6 +207,12 @@ body > [data-slot='fan-menu'] {
   to { transform: rotate(1turn); }
 }
 
+/* Keep the send/stop affordance visible while the composer draft is empty. */
+[data-slot='composer-dock']:not([data-popped-out]) [data-browser-send-action] {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
 /* On narrow browser viewports the fixed app controls share the top edge with
    the layout-tree tabs. The upstream titlebar measurement reserves horizontal
    space for those controls, but the tab strip can still occupy their vertical
