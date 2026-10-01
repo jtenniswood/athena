@@ -203,6 +203,11 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-statusbar { height:auto; min-height:var(--web-touch-target); padding:var(--web-space-1) var(--web-space-2); gap:var(--web-space-1); }
  .browser-status-controls :is(button,a) { min-height:var(--web-touch-target); height:auto; font-size:var(--web-text-label); padding:.3rem var(--web-space-2); }
 }
+@media (width < 48rem) {
+ .browser-profile-choice { width:calc(var(--web-touch-target) + .5rem); height:calc(var(--web-touch-target) + .5rem); flex-basis:calc(var(--web-touch-target) + .5rem); }
+ .browser-profile-choice > :is(img,span) { width:calc(var(--web-touch-target) + .25rem) !important; height:calc(var(--web-touch-target) + .25rem) !important; }
+ .browser-profile-slot { flex-basis:calc(var(--web-touch-target) + .5rem); }
+}
 @media (prefers-reduced-motion:reduce) { .browser-navigation { transition:none; } }
 .browser-upstream-workspace { position:relative; display:flex; flex:1; min-height:0; min-width:0; }
 .browser-upstream-workspace [data-tree-group] :is(aside,[data-slot="sidebar"]) { border-left-width:0; border-right-width:0; box-shadow:none; }
