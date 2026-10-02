@@ -12,6 +12,17 @@ delivers the crucial message.
 > Intended for private networks such as Tailscale. Athena is not hardened for
 > the public internet.
 
+## Wiki guides
+
+Browse the [Athena Wiki](https://github.com/jtenniswood/athena/wiki) for setup and help:
+
+- [Quick start with Docker](https://github.com/jtenniswood/athena/wiki/Quick-Start)
+- [Run with Docker Compose](https://github.com/jtenniswood/athena/wiki/Run-with-Docker-Compose)
+- [Configure the Hermes Gateway](https://github.com/jtenniswood/athena/wiki/Gateway-Configuration)
+- [Access Athena remotely](https://github.com/jtenniswood/athena/wiki/Remote-Access)
+- [Update Athena](https://github.com/jtenniswood/athena/wiki/Updating-Athena)
+- [Troubleshooting](https://github.com/jtenniswood/athena/wiki/Troubleshooting)
+
 ## Run with Docker
 
 Athena’s Docker image contains the web app and nginx. It connects to a Hermes
