@@ -114,6 +114,31 @@ export function useBrowserRosterDialogFocus(source: string, root: string): strin
   return source.includes('import { useBrowserDialogReturnFocus }') ? source : `import { useBrowserDialogReturnFocus } from ${owner}\n` + source
 }
 
+export function useBrowserBotDialogFocus(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/ui/dialog-focus'))
+  const changes = [
+    ['export function CreateAgentDialog({ open, onClose, roster }: CreateAgentDialogProps) {', 'export function CreateAgentDialog({ open, onClose, roster }: CreateAgentDialogProps) {\n  const browserReturnFocus = useBrowserDialogReturnFocus(open)'],
+    ['export function CreateGroupChatDialog({ open, roster, onClose, onCreated }: CreateGroupChatDialogProps) {', 'export function CreateGroupChatDialog({ open, roster, onClose, onCreated }: CreateGroupChatDialogProps) {\n  const browserReturnFocus = useBrowserDialogReturnFocus(open)'],
+    ['      <DialogContent\n', '      <DialogContent\n        data-browser-bot-dialog={advanced ? \'advanced\' : \'create\'}\n        onCloseAutoFocus={browserReturnFocus}\n'],
+    ['      <DialogContent className="max-w-md">', '      <DialogContent className="max-w-md" data-browser-bot-dialog="group" onCloseAutoFocus={browserReturnFocus}>']
+  ]
+  for (const [before, after] of changes) {
+    if (source.split(before).length !== 2) throw new Error('Browser Bot dialog focus boundary changed')
+    source = source.replace(before, after)
+  }
+  return `import { useBrowserDialogReturnFocus } from ${owner}\n` + source
+}
+
+export function useBrowserSectionDialogFocus(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/ui/dialog-focus'))
+  const start = 'export function SectionNameDialog({ initialName, mode, onOpenChange, onSubmit, open }: SectionNameDialogProps) {'
+  const content = '      <DialogContent className="max-w-sm">'
+  if (source.split(start).length !== 2 || source.split(content).length !== 2) throw new Error('Browser section dialog focus boundary changed')
+  return `import { useBrowserDialogReturnFocus } from ${owner}\n` + source
+    .replace(start, start + '\n  const browserReturnFocus = useBrowserDialogReturnFocus(open)')
+    .replace(content, '      <DialogContent className="max-w-sm" data-browser-bot-dialog="section" onCloseAutoFocus={browserReturnFocus}>')
+}
+
 export function useBrowserRosterActionSurfaces(source: string, root: string): string {
   const owner = JSON.stringify(path.join(root, 'src/experience/browser-roster-actions'))
   const start = '  return (\n    <ContextMenu>'
@@ -141,31 +166,6 @@ export function useBrowserSectionActionSurface(source: string, root: string): st
   return `import { BrowserBotSectionHeader } from ${owner}\n` + source.slice(0, from) + '\n  return <BrowserBotSectionHeader {...{ canMoveDown, canMoveUp, collapsed, count, id, name, onDelete, onMove, onRename, onToggle }} />\n}\n' + source.slice(to)
 }
 
-export function useBrowserBotDialogFocus(source: string, root: string): string {
-  const owner = JSON.stringify(path.join(root, 'src/experience/ui/dialog-focus'))
-  const changes = [
-    ['export function CreateAgentDialog({ open, onClose, roster }: CreateAgentDialogProps) {', 'export function CreateAgentDialog({ open, onClose, roster }: CreateAgentDialogProps) {\n  const browserReturnFocus = useBrowserDialogReturnFocus(open)'],
-    ['export function CreateGroupChatDialog({ open, roster, onClose, onCreated }: CreateGroupChatDialogProps) {', 'export function CreateGroupChatDialog({ open, roster, onClose, onCreated }: CreateGroupChatDialogProps) {\n  const browserReturnFocus = useBrowserDialogReturnFocus(open)'],
-    ['      <DialogContent\n', '      <DialogContent\n        data-browser-bot-dialog={advanced ? \'advanced\' : \'create\'}\n        onCloseAutoFocus={browserReturnFocus}\n'],
-    ['      <DialogContent className="max-w-md">', '      <DialogContent className="max-w-md" data-browser-bot-dialog="group" onCloseAutoFocus={browserReturnFocus}>']
-  ]
-  for (const [before, after] of changes) {
-    if (source.split(before).length !== 2) throw new Error('Browser Bot dialog focus boundary changed')
-    source = source.replace(before, after)
-  }
-  return `import { useBrowserDialogReturnFocus } from ${owner}\n` + source
-}
-
-export function useBrowserSectionDialogFocus(source: string, root: string): string {
-  const owner = JSON.stringify(path.join(root, 'src/experience/ui/dialog-focus'))
-  const start = 'export function SectionNameDialog({ initialName, mode, onOpenChange, onSubmit, open }: SectionNameDialogProps) {'
-  const content = '      <DialogContent className="max-w-sm">'
-  if (source.split(start).length !== 2 || source.split(content).length !== 2) throw new Error('Browser section dialog focus boundary changed')
-  return `import { useBrowserDialogReturnFocus } from ${owner}\n` + source
-    .replace(start, start + '\n  const browserReturnFocus = useBrowserDialogReturnFocus(open)')
-    .replace(content, '      <DialogContent className="max-w-sm" data-browser-bot-dialog="section" onCloseAutoFocus={browserReturnFocus}>')
-}
-
 export function keepBrowserWorkspaceRoute(source: string, root: string): string {
   const target = "import { Navigate, Route, Routes, useParams } from 'react-router'"
   if (source.split(target).length !== 2) throw new Error('Browser workspace routes changed')
@@ -182,12 +182,251 @@ export function useBrowserOverlayFocusOwner(source: string, root: string): strin
     .replace(element, '    <div\n      ref={browserOverlayRef}\n      tabIndex={-1}\n      className={cn(')
 }
 
+export function useBrowserSettingsPresentation(source: string, root: string): string {
+  const importTarget = "import { OverlayMain, OverlayNav, type OverlayNavGroup, OverlaySplitLayout } from '../overlays/overlay-split-layout'"
+  const overlayImport = "import { OverlayView } from '../overlays/overlay-view'"
+  const overlayTarget = '<OverlayView closeLabel={t.settings.closeSettings} edgeBadge={searchPill} onClose={onClose}>'
+  const layoutStart = source.indexOf('      <OverlaySplitLayout>')
+  const layoutEnd = source.indexOf('      </OverlaySplitLayout>', layoutStart)
+  if (source.split(importTarget).length !== 2 || source.split(overlayImport).length !== 2 || layoutStart < 0 || layoutEnd < 0 || source.split(overlayTarget).length !== 2) {
+    throw new Error('Browser settings presentation boundary changed')
+  }
+  const controlReplacements: [string, string][] = [
+    ['      type="button"\n    >\n      <Search className="size-3" />', '      aria-label={t.settings.search.pill}\n      type="button"\n    >\n      <Search className="size-3" />'],
+    ["useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:model' as SettingsViewId)", "useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:appearance' as SettingsViewId)"],
+  ]
+  controlReplacements.push(
+    ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  'config:browser-configuration',"],
+    ["          {\n            active: activeView === 'about',", "          {\n            active: activeView === 'config:browser-configuration',\n            gapBefore: true,\n            icon: Settings2,\n            id: 'config:browser-configuration',\n            label: 'Configuration',\n            onSelect: () => setActiveView('config:browser-configuration')\n          },\n          {\n            active: activeView === 'about',"],
+    ['        importInputRef={importInputRef}', '        importInputRef={importInputRef}\n        configurationCommands={configurationCommands}\n        configurationScopeProfile={scopeProfile}'],
+    ['getHermesConfigRecord()', 'getHermesConfigRecord(scopeProfile)'],
+    ['saveHermesConfig(await getHermesConfigDefaults())', 'saveHermesConfig(await getHermesConfigDefaults(), scopeProfile)'],
+    ['title: t.settings.resetConfirm', 'title: `${t.settings.resetConfirm} — ${scopeProfile}`']
+  )
+  for (const [before] of controlReplacements) {
+    if (source.split(before).length !== 2) throw new Error('Browser settings control labels changed')
+  }
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/frame'))
+  const navFooterStart = '  const navFooter = ('
+  const activeContentStart = '\n\n  const activeSettingsContent ='
+  if (source.split(navFooterStart).length !== 2 || source.split(activeContentStart).length !== 2) {
+    throw new Error('Browser configuration command boundary changed')
+  }
+  const navFooter = `  const configurationCommands = {
+    export: {
+      description: 'Download this profile’s configuration as a JSON file.',
+      label: t.settings.exportConfig,
+      run: exportConfig
+    },
+    import: {
+      description: 'Restore this profile’s configuration from a JSON file.',
+      label: t.settings.importConfig,
+      run: () => {
+        triggerHaptic('open')
+        importInputRef.current?.click()
+      }
+    },
+    reset: {
+      description: 'Restore this profile’s configuration defaults, including hidden options. You will be asked to confirm.',
+      label: t.settings.resetToDefaults,
+      run: () => {
+        triggerHaptic('warning')
+        return resetConfig()
+      }
+    }
+  }`
+  const layoutTarget = source.slice(layoutStart, layoutEnd + '      </OverlaySplitLayout>'.length)
+  const layoutReplacement = `      <SettingsBreadcrumbContext.Provider value>
+        {activeGroup && <SettingsSubpageHeader child={activeChild} group={activeGroup} />}
+        {needsSubpageRedirect ? (
+          <Navigate replace to={{ hash, pathname, search: '?' + subpageSearch }} />
+        ) : (
+          activeSettingsContent
+        )}
+      </SettingsBreadcrumbContext.Provider>`
+  let output = source
+    .replace(importTarget, '')
+    .replace(overlayImport, '')
+    .replace(overlayTarget, '<BrowserSettingsPresentation activeView={activeView} backLabel={t.common.back} closeLabel={t.settings.closeSettings} groups={navGroups} onClose={onClose} search={searchPill} title={t.commandCenter.settings}>')
+    .replace(layoutTarget, layoutReplacement)
+    .replace('</OverlayView>', '</BrowserSettingsPresentation>')
+  const transformedNavStart = output.indexOf(navFooterStart)
+  const transformedNavEnd = output.indexOf(activeContentStart, transformedNavStart)
+  output = output.slice(0, transformedNavStart) + navFooter + output.slice(transformedNavEnd)
+  for (const [before, after] of controlReplacements) output = output.replace(before, after)
+  return `import { BrowserSettingsPresentation } from ${owner}\n` + output
+}
+
+export function useBrowserConfigurationSettings(source: string, root: string): string {
+  const replacements: [string, string][] = [
+    ['  importInputRef\n}: ConfigSettingsProps)', '  importInputRef,\n  configurationCommands,\n  configurationScopeProfile\n}: ConfigSettingsProps)'],
+    ['      importInputRef={importInputRef}', '      importInputRef={importInputRef}\n      configurationCommands={configurationCommands}\n      configurationScopeProfile={configurationScopeProfile}'],
+    ['  importInputRef: React.RefObject<HTMLInputElement | null>', '  importInputRef: React.RefObject<HTMLInputElement | null>\n  configurationCommands: BrowserConfigurationCommands\n  configurationScopeProfile?: string'],
+    ['  importInputRef,\n  scopeProfile', '  importInputRef,\n  configurationCommands,\n  configurationScopeProfile,\n  scopeProfile'],
+    ['  const scopeProfile = useStore($settingsRequestProfile)', '  const requestScopeProfile = useStore($settingsRequestProfile)\n  const scopeProfile = activeSectionId === \'browser-configuration\' ? configurationScopeProfile : requestScopeProfile'],
+    ["  const visibleFields =", `  if (activeSectionId === 'browser-configuration') {
+    return <SettingsContent>
+      <BrowserConfigurationPage commands={configurationCommands} scopeProfile={configurationScopeProfile} />
+      <input accept=".json,application/json" className="hidden" onChange={handleImport} ref={importInputRef} type="file" />
+    </SettingsContent>
+  }
+
+  const visibleFields =`]
+  ]
+  let output = source
+  for (const [before, after] of replacements) {
+    if (output.split(before).length !== 2) throw new Error('Browser configuration page boundary changed')
+    output = output.replace(before, after)
+  }
+  return `import type { BrowserConfigurationCommands } from ${JSON.stringify(path.join(root, 'src/experience/settings/configuration'))}\nimport { BrowserConfigurationPage } from ${JSON.stringify(path.join(root, 'src/experience/settings/configuration'))}\n` + output
+}
+
+export function hideBrowserAppearanceOnlySettings(source: string): string {
+  const replacements: [string, string][] = [
+    ['                <TerminalFontSetting />', '                {!window.__HERMES_WEB_BRIDGE__ && <TerminalFontSetting />}'],
+    ["{show('pet') && (", "{show('pet') && !window.__HERMES_WEB_BRIDGE__ && ("],
+    ["{show('window-layout') && TRANSLUCENCY_SUPPORTED && (", "{show('window-layout') && TRANSLUCENCY_SUPPORTED && !window.__HERMES_WEB_BRIDGE__ && ("],
+    [
+      '                  <MarketplaceThemeResults installs={installs} onInstalled={name => setTheme(name)} query={query} />',
+      '                  {!window.__HERMES_WEB_BRIDGE__ && <MarketplaceThemeResults installs={installs} onInstalled={name => setTheme(name)} query={query} />}'
+    ],
+    ['placeholder={a.themeSearchPlaceholder}', 'placeholder="Search available themes"'],
+    ['description={a.themeDesc}', 'description="Choose from themes available in this web app."']
+  ]
+  let output = source
+  for (const [before, after] of replacements) {
+    if (output.split(before).length !== 2) throw new Error('Browser appearance capability boundary changed')
+    output = output.replace(before, after)
+  }
+  for (const title of ['tabStripTitle', 'appActionsTitle']) {
+    const marker = `title={a.${title}}`
+    if (output.split(marker).length !== 2) throw new Error(`Browser appearance setting boundary changed: ${title}`)
+    const titleIndex = output.indexOf(marker)
+    const visibility = "{show('window-layout') && ("
+    const start = output.lastIndexOf(visibility, titleIndex)
+    if (start < 0) throw new Error(`Browser appearance setting boundary changed: ${title}`)
+    output = `${output.slice(0, start)}{show('window-layout') && !window.__HERMES_WEB_BRIDGE__ && (${output.slice(start + visibility.length)}`
+  }
+  return output
+}
+
+export function hideBrowserLocalProjectDirectory(source: string): string {
+  const target = 'function DefaultProjectDirSetting() {'
+  if (source.split(target).length !== 2) throw new Error('Browser archived-chat directory boundary changed')
+  return source.replace(target, `${target}\n  if (window.__HERMES_WEB_BRIDGE__) return null`)
+}
+
+export function filterBrowserSettingsFields(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/policy'))
+  const target = "  const visibleFields = activeSectionId === 'voice' ? fields.filter(([key]) => voiceFieldVisible(key, config)) : fields"
+  if (source.split(target).length !== 2) throw new Error('Browser settings field visibility target changed')
+  let output = source.replace(target, target + '.filter(([key]) => isSettingsFieldVisible(key))')
+  const browserOnlyControls: [string, string][] = [
+    ["const showDesktopSettings = activeSectionId === 'advanced'", "const showDesktopSettings = !window.__HERMES_WEB_BRIDGE__ && activeSectionId === 'advanced'"],
+    ["const showAttachments = activeSectionId === 'chat'", "const showAttachments = !window.__HERMES_WEB_BRIDGE__ && activeSectionId === 'chat'"]
+  ]
+  for (const [before, after] of browserOnlyControls) {
+    if (output.split(before).length !== 2) throw new Error('Browser device-only configuration boundary changed')
+    output = output.replace(before, after)
+  }
+  return `import { isSettingsFieldVisible } from ${owner}\n` + output
+}
+
+export function filterBrowserSettingsSearch(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/policy'))
+  const target = `  return {
+    subpageEntries,
+    settingEntries,
+    configEntries,
+    credentialEntries,
+    pluginEntries
+  }`
+  if (source.split(target).length !== 2) throw new Error('Browser settings search catalog target changed')
+  const filtered = `  return {
+    subpageEntries: subpageEntries.filter(entry => isSettingsSectionVisible(entry.target.view) && isSettingsFieldVisible(entry.target.setting ?? '')).map(presentSettingsSearchEntry),
+    settingEntries: settingEntries.filter(entry => isSettingsSectionVisible(entry.target.view) && isSettingsFieldVisible(entry.target.setting ?? '')).map(presentSettingsSearchEntry),
+    configEntries: configEntries.filter(entry => isSettingsSectionVisible(entry.target.view) && isSettingsFieldVisible(entry.target.field ?? '')).map(presentSettingsSearchEntry),
+    credentialEntries: credentialEntries.map(presentSettingsSearchEntry),
+    pluginEntries
+  }`
+  return `import { isSettingsFieldVisible, isSettingsSectionVisible, presentSettingsSearchEntry } from ${owner}\n` + source.replace(target, filtered)
+}
+
+export function filterBrowserSettingsPalette(source: string, root: string): string {
+  const sectionTarget = '...SECTIONS.map(section => ({'
+  const nonConfigTarget = '...NON_CONFIG_SETTINGS.map(entry => ({'
+  if (source.split(sectionTarget).length !== 3 || source.split(nonConfigTarget).length !== 3) {
+    throw new Error('Browser settings palette targets changed')
+  }
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/policy'))
+  const dialog = '<DialogPrimitive.Content\n        aria-describedby={undefined}'
+  if (source.split(dialog).length !== 2) throw new Error('Browser settings search dialog changed')
+  const start = 'items: [\n          ...SECTIONS.map'
+  const end = `            run: go(settingsTab(entry.tab))
+          }))
+        ]`
+  if (source.split(start).length !== 3 || source.split(end).length !== 3) throw new Error('Browser settings palette grouping changed')
+  const marketplaceGroup = `// Pinned at the top: drills into the Marketplace browser.
+          {
+            items: [`
+  if (source.split(marketplaceGroup).length !== 2) throw new Error('Browser theme marketplace palette boundary changed')
+  let browserSource = source.replace(marketplaceGroup, `// Desktop-only Marketplace search has no browser implementation.
+          {
+            items: window.__HERMES_WEB_BRIDGE__ ? [] : [`)
+  const themePagePlaceholder = 'placeholder: t.settings.appearance.themeDesc,'
+  if (browserSource.split(themePagePlaceholder).length !== 2) throw new Error('Browser theme palette placeholder boundary changed')
+  browserSource = browserSource.replace(themePagePlaceholder, "placeholder: window.__HERMES_WEB_BRIDGE__ ? 'Choose an available theme.' : t.settings.appearance.themeDesc,")
+  const petItems = [
+    `          {\n            icon: PawPrint,\n            id: 'appearance-pets',\n            keywords: ['pet', 'petdex', 'mascot', 'pets', '/pet', 'paw'],\n            label: cc.pets.title,\n            to: 'pets'\n          },\n`,
+    `          {\n            icon: Egg,\n            id: 'appearance-generate-pet',\n            keywords: ['pet', 'generate', 'create', 'make', 'new pet', 'mascot', 'hatch', 'ai'],\n            label: cc.generatePet.title,\n            run: () => openPetGenerate()\n          }\n`
+  ]
+  let paletteSource = browserSource
+  for (const item of petItems) {
+    if (paletteSource.split(item).length !== 2) throw new Error('Browser pet palette item changed')
+    paletteSource = paletteSource.replace(item, '')
+  }
+  paletteSource = paletteSource.replace('right={page === \'pets\' ? <PetInlineToggle /> : undefined}', 'right={undefined}')
+  paletteSource = paletteSource.replace(`{page === 'pets' ? (\n              <PetPalettePage\n                onGenerate={() => {\n                  closeCommandPalette()\n                  openPetGenerate()\n                }}\n                search={search}\n              />\n            ) : page === 'install-theme' ? (`, `{page === 'install-theme' ? (`)
+  if (paletteSource === browserSource) throw new Error('Browser pet palette controls changed')
+  return `import { isSettingsSectionVisible, presentSettingsPalette, settingsPageLabel } from ${owner}\n` + paletteSource
+    .replace(dialog, dialog + "\n        data-browser-command-palette=\"\"")
+    .replaceAll(start, 'items: presentSettingsPalette([\n          ...SECTIONS.map')
+    .replaceAll(end, `            run: go(settingsTab(entry.tab))
+          }))
+        ], (tab, label) => ({ icon: Settings2, id: 'set-' + tab, label, keywords: ['settings'], run: go(settingsTab(tab)) }))`)
+    .replaceAll(sectionTarget, '...SECTIONS.filter(section => isSettingsSectionVisible(section.id)).map(section => ({')
+    .replaceAll(nonConfigTarget, '...NON_CONFIG_SETTINGS.filter(entry => isSettingsSectionVisible(entry.tab)).map(entry => ({')
+    .replaceAll('heading: t.settings.nav.apiKeys,', "heading: settingsPageLabel('keys', t.settings.nav.apiKeys),")
+}
+
+export function removeBrowserPetAvatarTab(source: string): string {
+  const option = "          { id: 'pet', label: b.avatar.tabPet }\n"
+  const render = "      {tab === 'pet' ? <PetTab image={image} onImage={onImage} /> : null}\n"
+  if (source.split(option).length !== 2 || source.split(render).length !== 2) {
+    throw new Error('Browser pet avatar tab boundary changed')
+  }
+  return source.replace(option, '').replace(render, '')
+}
+
+export function removeBrowserPetSlashCommands(source: string): string {
+  const commands = [
+    `  {\n    name: '/pet',\n    description: 'Toggle or adopt a petdex mascot (/pet, /pet list, /pet boba)',\n    surface: action('pet'),\n    argumentMode: 'options'\n  },\n`,
+    `  {\n    name: '/hatch',\n    description: 'Generate a new pet (opens the pet generator)',\n    aliases: ['/generate-pet'],\n    surface: action('hatch')\n  },\n`
+  ]
+  let output = source
+  for (const command of commands) {
+    if (output.split(command).length !== 2) throw new Error('Browser pet slash-command boundary changed')
+    output = output.replace(command, '')
+  }
+  return output
+}
+
 export function respectBrowserOverlayFocusReturn(source: string, root: string): string {
   const target = '    if (!inputDisabled && paneVisible && !floating) {'
   if (source.split(target).length !== 2) throw new Error('Browser composer autofocus owner changed')
   const owner = JSON.stringify(path.join(root, 'src/experience/ui/overlay-focus'))
-  return `import { browserOverlayOwnsReturnedFocus } from ${owner}\n` + source
-    .replace(target, '    if (!inputDisabled && paneVisible && !floating && !browserOverlayOwnsReturnedFocus()) {')
+  return `import { browserOverlayOwnsReturnedFocus, browserShouldSkipAutomaticComposerFocus } from ${owner}\n` + source
+    .replace(target, '    if (!inputDisabled && paneVisible && !floating && !browserOverlayOwnsReturnedFocus() && !browserShouldSkipAutomaticComposerFocus()) {')
 }
 
 export function useBrowserDirectResumeOwner(source: string): string {
@@ -349,6 +588,86 @@ function useBrowserComposerLayoutWidth(source: string): string {
     const width = composer.offsetWidth`)
 }
 
+function replaceBrowserContract(source: string, changes: [string, string][]): string {
+  for (const [before, after] of changes) {
+    if (source.split(before).length !== 2) throw new Error('Browser semantic hook target changed: ' + before)
+    source = source.replace(before, after)
+  }
+  return source
+}
+
+export function useBrowserSectionIdentity(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-sections'))
+  const sessions = source.includes('interface SidebarSessionsSectionProps')
+  const changes: [string, string][] = sessions ? [
+    ['interface SidebarSessionsSectionProps {', 'interface SidebarSessionsSectionProps {\n  browserSectionId: string'],
+    ['export function SidebarSessionsSection({', 'export function SidebarSessionsSection({\n  browserSectionId,'],
+    ['}: SidebarSessionsSectionProps) {', '}: SidebarSessionsSectionProps) {\n  const browserSection = useBrowserSidebarSection(browserSectionId, label)'],
+    ['<SidebarGroup className={rootClassName}>', '<SidebarGroup {...browserSection} className={rootClassName}>']
+  ] : [
+    ['}: SidebarCronJobsSectionProps) {', "}: SidebarCronJobsSectionProps) {\n  const browserSection = useBrowserSidebarSection('cron-jobs', label)"],
+    ['<SidebarGroup className="shrink-0 p-0 pb-1">', '<SidebarGroup {...browserSection} className="shrink-0 p-0 pb-1">']
+  ]
+  return `import { useBrowserSidebarSection } from ${owner}\n` + replaceBrowserContract(source, changes)
+}
+
+export function useBrowserSectionIds(source: string): string {
+  return replaceBrowserContract(source, [
+    ['label={s.results}', 'browserSectionId="sessions" label={s.results}'],
+    ['label={s.pinned}', 'browserSectionId="pinned" label={s.pinned}'],
+    ['label={sessionsLabel}', 'browserSectionId="sessions" label={sessionsLabel}'],
+    ['label={group.label}', 'browserSectionId={`messaging:${group.sourceId}`} label={group.label}']
+  ])
+}
+
+// Suppress only the automatic desktop updater notice at its owner. Explicit
+// update settings/actions and unrelated notifications keep their behavior.
+export function omitBrowserDesktopUpdateNotice(source: string): string {
+  const start = source.indexOf('export function maybeNotifyUpdateAvailable(')
+  const end = source.indexOf('\n/**', start)
+  if (start < 0 || end < 0) throw new Error('Browser update notice owner changed')
+  return source.slice(0, start) + 'export function maybeNotifyUpdateAvailable(_status: DesktopUpdateStatus | null, _target: UpdateTarget = \'client\') {}\n' + source.slice(end)
+}
+
+export function useBrowserTouchHooks(source: string): string {
+  const sendTarget = 'aria-label={showStop ? c.stop : c.send}'
+  const labels = ['c.queueMessage', 'showStop ? c.stop : c.send', 'state.tools.label', 'copy.openModelPicker', 'triggerLabel', 'label', 'title']
+  const targets = labels.map(label => `aria-label={${label}}`).filter(target => source.includes(target))
+  if (!targets.length) throw new Error('Browser composer touch controls changed')
+  return replaceBrowserContract(source, targets.map(target => [target, `${target === sendTarget ? 'data-browser-send-action="" ' : ''}data-browser-composer-action="" ${target}`]))
+}
+
+export function removeBrowserConversationalVoiceEntry(source: string, module: 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'): string {
+  if (module.endsWith('voice-menu.tsx')) {
+    const start = source.indexOf('        <DropdownMenuItem\n', source.indexOf('<DropdownMenuContent'))
+    const end = source.indexOf('        <VoiceEngineRows', start)
+    if (start < 0 || end < 0) throw new Error('Browser conversational voice menu boundary changed')
+    const itemStart = source.indexOf('        <DropdownMenuSeparator />\n', start)
+    if (itemStart < 0 || itemStart > end) throw new Error('Browser conversational voice separator boundary changed')
+    return source.slice(0, start) + source.slice(end)
+  }
+  const start = source.indexOf('export function StartVoiceButton(')
+  if (start < 0) throw new Error('Browser conversational voice button boundary changed')
+  return 'export function StartVoiceButton(_props: { disabled: boolean; label: string; onStart: () => void }) {\n  return null\n}\n'
+}
+
+export function useBrowserCodingActionHooks(source: string): string {
+  return replaceBrowserContract(source, [
+    ['{resolvedRepoPath && (\n              <div ', '{resolvedRepoPath && (\n              <div data-browser-coding-path="" '],
+    ['className="pointer-events-none size-4 shrink-0 text-muted-foreground/50', 'className="browser-copy-path-action pointer-events-none size-4 shrink-0 text-muted-foreground/50'],
+    ['aria-label={s.newBranch}', 'data-browser-coding-action="branch" aria-label={s.newBranch}']
+  ])
+}
+
+export function useBrowserSetupHooks(source: string): string {
+  // These are reviewed component roots, checked by the registry at build time.
+  const pattern = /<div className="fixed inset-0 z-\(--z-setup\)[^"]*">\n(\s*)<div className=/g
+  const matches = [...source.matchAll(pattern)]
+  const expected = source.includes('function DesktopInstallOverlay') ? 3 : 1
+  if (matches.length !== expected) throw new Error('Browser setup surface changed')
+  return source.replace(pattern, (match, indent) => match.replace('<div ', '<div data-browser-overlay="setup" ').replace('\n' + indent + '<div ', '\n' + indent + '<div data-browser-overlay-card="setup" '))
+}
+
 export function useBrowserSectionStyleHooks(source: string): string {
   const hooks = [
     ['<div className="group/section ', '<div data-browser-section-header="" className="group/section '],
@@ -359,6 +678,77 @@ export function useBrowserSectionStyleHooks(source: string): string {
     source = source.replace(before, after)
   }
   return source
+}
+
+export function trackBrowserSettingsSaves(source: string, root: string): string {
+  const reactImport = "import { useEffect, useMemo, useRef, useState } from 'react'"
+  const reactBrowserImport = "import { useEffect, useId, useMemo, useRef, useState } from 'react'"
+  const queue = '  const saveQueueRef = useRef<Promise<void>>(Promise.resolve())'
+  const trackedQueue = `${queue}\n  const browserWorkId = useId()\n  const browserSavePendingRef = useRef(false)\n  const browserSaveFailureRef = useRef<string | null>(null)\n  const browserSaveWaitersRef = useRef(new Set<() => void>())\n  const browserWorkReleaseRef = useRef<(() => void) | null>(null)`
+  const cacheWrite = '          writeConfigCache(snapshot)'
+  const confirmedWrite = `${cacheWrite}\n\n          if (saveVersionRef.current === v) {\n            browserSavePendingRef.current = false\n            browserSaveFailureRef.current = null\n            for (const wake of browserSaveWaitersRef.current) wake()\n            browserSaveWaitersRef.current.clear()\n            browserWorkReleaseRef.current?.()\n            browserWorkReleaseRef.current = null\n          }`
+  const apply = `  const applyConfig = (next: HermesConfigRecord) => {\n    saveVersionRef.current += 1\n    setConfig(next)\n    setSaveVersion(saveVersionRef.current)\n  }`
+  const trackedApply = `  const applyConfig = (next: HermesConfigRecord) => {\n    saveVersionRef.current += 1\n    browserSavePendingRef.current = true\n    browserSaveFailureRef.current = null\n    if (!browserWorkReleaseRef.current) {\n      browserWorkReleaseRef.current = registerPendingBrowserWork({\n        id: \`settings-config:\${browserWorkId}\`,\n        async prepare() {\n          // The renderer's existing autosave is debounced by 550ms. Give its\n          // effect time to enqueue the latest edit before waiting on its queue.\n          await new Promise(resolve => window.setTimeout(resolve, 600))\n          if (browserSaveFailureRef.current) return { ready: false, reason: browserSaveFailureRef.current }\n          if (browserSavePendingRef.current) {\n            await new Promise<void>(resolve => browserSaveWaitersRef.current.add(resolve))\n          }\n          return browserSaveFailureRef.current\n            ? { ready: false, reason: browserSaveFailureRef.current }\n            : browserSavePendingRef.current\n              ? { ready: false, reason: 'A settings change is still being saved. Try the update again.' }\n              : { ready: true }\n        }\n      })\n    }\n    setConfig(next)\n    setSaveVersion(saveVersionRef.current)\n  }`
+  const cleanup = '    return () => window.clearTimeout(t)'
+  const retainedCleanup = `    return () => {\n      // A route close must not cancel the last debounced save. A newer edit\n      // or profile switch changes the version and still cancels this timer.\n      if (saveVersionRef.current !== v) window.clearTimeout(t)\n    }`
+  const failedSave = `          if (saveVersionRef.current === v) {\n            notifyError(err, c.autosaveFailed)\n          }`
+  const reportedFailure = `          if (saveVersionRef.current === v) {\n            browserSaveFailureRef.current = 'A settings change could not be saved. Reopen Settings and save it before updating.'\n            for (const wake of browserSaveWaitersRef.current) wake()\n            browserSaveWaitersRef.current.clear()\n            notifyError(err, c.autosaveFailed)\n          }`
+  let output = source
+  for (const [before, after] of [
+    [reactImport, reactBrowserImport],
+    [queue, trackedQueue],
+    [cacheWrite, confirmedWrite],
+    [cleanup, retainedCleanup],
+    [failedSave, reportedFailure],
+    [apply, trackedApply]
+  ]) {
+    if (output.split(before).length !== 2) throw new Error('Browser settings save lifecycle contract changed')
+    output = output.replace(before, after)
+  }
+  const service = JSON.stringify(path.join(root, 'src/platform/pending-work'))
+  return `import { registerPendingBrowserWork } from ${service}\n${output}`
+}
+
+export function useBrowserSettingsFrame(source: string, root: string): string {
+  const target = `  return (\n    <OverlayView closeLabel={t.settings.closeSettings} edgeBadge={searchPill} onClose={onClose}>\n      <OverlaySplitLayout>\n        <OverlayNav footer={navFooter} groups={navGroups} />\n\n        <OverlayMain className="px-0 pb-0">{activeSettingsContent}</OverlayMain>\n      </OverlaySplitLayout>\n    </OverlayView>\n  )`
+  const replacement = `  return (\n    <BrowserSettingsFrame\n      backLabel={t.common.back}\n      closeLabel={t.settings.closeSettings}\n      footer={navFooter}\n      groups={navGroups}\n      onClose={onClose}\n      search={searchPill}\n      title={t.settings.nav.keysSettings}\n    >\n      {activeSettingsContent}\n    </BrowserSettingsFrame>\n  )`
+  if (source.split(target).length !== 2) throw new Error('Browser settings frame composition contract changed')
+  const frame = JSON.stringify(path.join(root, 'src/experience/settings/settings-frame'))
+  return `import { BrowserSettingsFrame } from ${frame}\n${source.replace(target, replacement)}`
+}
+
+export function useBrowserProjectDisclosure(source: string): string {
+  const changes: [string, string][] = [
+    [
+      '  if (color && !icon) {\n    return (\n      <SidebarRowLeadGlyph>\n        <span aria-hidden="true" className="size-1 rounded-full" style={{ backgroundColor: color }} />\n      </SidebarRowLeadGlyph>\n    )\n  }\n\n',
+      ''
+    ],
+    [
+      "name={icon || (isNoProject ? 'home' : isAuto ? 'repo' : 'folder-library')}",
+      "name={isNoProject ? icon || 'home' : open ? 'folder-opened' : 'folder'}"
+    ],
+    [
+      'export function projectIcon({ color, icon, isAuto, isNoProject }: SidebarProjectTree) {',
+      'export function projectIcon({ color, icon, isNoProject }: SidebarProjectTree, open = false) {'
+    ],
+    [
+      '      {projectIcon(project)}\n    </SidebarRowGrab>',
+      '      <button aria-label={s.projects.toggle(project.label, !open)} className="grid size-full place-items-center bg-transparent" onClick={event => { event.stopPropagation(); toggleOpen() }} type="button">{projectIcon(project, open)}</button>\n    </SidebarRowGrab>'
+    ],
+    [
+      '    <SidebarRowLead>{projectIcon(project)}</SidebarRowLead>',
+      '    <SidebarRowLead><button aria-label={s.projects.toggle(project.label, !open)} className="grid size-full place-items-center bg-transparent" onClick={event => { event.stopPropagation(); toggleOpen() }} type="button">{projectIcon(project, open)}</button></SidebarRowLead>'
+    ],
+    [
+      '      aria-label={\n        project.isAuto\n          ? `${s.projects.enter(project.label)} (${s.projects.autoDiscovered})`\n          : s.projects.enter(project.label)\n      }',
+      '      aria-label={s.projects.toggle(project.label, !open)}'
+    ],
+    [
+      '      onClick={() => onEnter?.(project.id)}\n    >',
+      '      onClick={toggleOpen}\n      onDoubleClick={() => onEnter?.(project.id)}\n    >'
+    ]
+  ]
+  return replaceBrowserContract(source, changes)
 }
 
 export function useBrowserSearchLabel(source: string, root: string): string {
@@ -402,7 +792,40 @@ export function useBrowserSearchLabel(source: string, root: string): string {
 function filterBrowserSessionMenu(source: string): string {
   const target = 'function OptionCheckbox({ checked, onCheck, option }: { checked: boolean; onCheck: () => void; option: Option }) {'
   if (source.split(target).length !== 2) throw new Error('Browser session filter menu target changed')
-  return source.replace(target, target + "\n  if (['card-rows', 'profile-rail', 'all-profiles'].includes(option.id)) return null\n")
+  const replacements: [string, string][] = [
+    [
+      'function OptionGlyph({ option }: { option: Option }) {',
+      `const OPTION_ICONS: Record<string, string> = { 'all-profiles': 'account', archived: 'archive' }
+
+function OptionGlyph({ option }: { option: Option }) {`
+    ],
+    [
+      "  return option.icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={option.icon} size=\"0.8125rem\" /> : null",
+      "  const icon = option.icon || OPTION_ICONS[option.id]\n  return icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={icon} size=\"0.8125rem\" /> : null"
+    ],
+    ['<DropdownMenuSubTrigger hideChevron>\n              {f.grouping}', '<DropdownMenuSubTrigger hideChevron>\n              <Codicon name="list-tree" size="0.8125rem" />\n              {f.grouping}'],
+    ['<DropdownMenuSubTrigger>{f.ordering}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="list-ordered" size="0.8125rem" />{f.ordering}</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger>{f.show}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="eye" size="0.8125rem" />{f.show}</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger>{f.status}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="pulse" size="0.8125rem" />{f.status}</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger>{f.pullRequest}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="git-pull-request" size="0.8125rem" />{f.pullRequest}</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger>{f.profile}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="account" size="0.8125rem" />{f.profile}</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger>{f.project}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="root-folder" size="0.8125rem" />{f.project}</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuItem onSelect={requestProfileCreate}>{t.profiles.newProfile}</DropdownMenuItem>', '<DropdownMenuItem onSelect={requestProfileCreate}><Codicon name="add" size="0.8125rem" />{t.profiles.newProfile}</DropdownMenuItem>'],
+    ['<DropdownMenuItem onSelect={() => void runImportProfileFlow()}>\n                {t.profiles.importProfile}', '<DropdownMenuItem onSelect={() => void runImportProfileFlow()}>\n                <Codicon name="cloud-download" size="0.8125rem" />\n                {t.profiles.importProfile}'],
+    ['<DropdownMenuItem onSelect={resetSidebarView}>{f.resetToDefaults}</DropdownMenuItem>', '<DropdownMenuItem onSelect={resetSidebarView}><Codicon name="refresh" size="0.8125rem" />{f.resetToDefaults}</DropdownMenuItem>'],
+    ['            {foldCollapsed ? f.expandAll : f.collapseAll}', '            <Codicon name={foldCollapsed ? "expand-all" : "collapse-all"} size="0.8125rem" />\n            {foldCollapsed ? f.expandAll : f.collapseAll}'],
+    ['          {t.sidebar.markAllRead}\n', '          <Codicon name="check-all" size="0.8125rem" />\n          {t.sidebar.markAllRead}\n']
+  ]
+  let output = source
+  for (const [before, after] of replacements) {
+    if (output.split(before).length !== 2) throw new Error(`Browser session menu icon contract changed: ${before.slice(0, 48)}`)
+    output = output.replace(before, after)
+  }
+  const hideDesktopOnlyRows = "\n  if (['card-rows', 'profile-rail', 'all-profiles'].includes(option.id)) return null\n"
+  const manualOrdering = "      return ordering === 'manual'"
+  if (output.split(manualOrdering).length !== 2) throw new Error('Browser manual ordering option contract changed')
+  output = output.replace(manualOrdering, '      return true')
+  return output.replace(target, target + hideDesktopOnlyRows)
 }
 
 export function showHiddenBotsInBrowserRoster(source: string): string {
@@ -447,12 +870,23 @@ export function disableBrowserSessionTabs(source: string): string {
   const marker = '    // Browser-focused shell does not register chat tab creation.\n'
   const action = '    $newSessionTabAction.set(openNewSessionTab)'
   const disabledAction = '    $newSessionTabAction.set(null)'
-  const original = source.replace(marker, keybind).replace(disabledAction, action)
+  const newSession = '    onNewSessionInWorkspace: path => startSessionInWorkspace(path, { openTab: true }),'
+  const browserNewSession = '    onNewSessionInWorkspace: path => startSessionInWorkspace(path),'
+  const original = source.replace(marker, keybind).replace(disabledAction, action).replace(browserNewSession, newSession)
   const contract = contracts.find(item => item.module === 'app/contrib/wiring.tsx')!
-  if (createHash('sha256').update(original).digest('hex') !== contract.sourceHash || original.split(keybind).length !== 2 || original.split(action).length !== 2) {
+  if (createHash('sha256').update(original).digest('hex') !== contract.sourceHash || original.split(keybind).length !== 2 || original.split(action).length !== 2 || original.split(newSession).length !== 2) {
     throw new Error('Browser chat tab action contract changed')
   }
-  return source.replace(keybind, marker).replace(action, disabledAction)
+  return source.replace(keybind, marker).replace(action, disabledAction).replace(newSession, browserNewSession)
+}
+
+export function disableBrowserOnboardingTips(source: string): string {
+  const tipImport = "import { TipHost } from '@/components/tips'\n"
+  const tipHost = '<TipHost />'
+  if (source.split(tipImport).length !== 2 || source.split(tipHost).length !== 2) {
+    throw new Error('Browser onboarding tip host changed')
+  }
+  return source.replace(tipImport, '').replace(tipHost, 'null')
 }
 
 export function disableBrowserSessionTileMirrors(source: string): string {
@@ -518,23 +952,29 @@ export function disableBrowserSessionRowTabs(source: string): string {
   if (createHash('sha256').update(source).digest('hex') !== contract.sourceHash || source.split(tabAction).length !== 3 || source.split(windowAction).length !== 2) {
     throw new Error('Browser session row tab gesture contract changed')
   }
+  const rowTarget = '      <SidebarRowShell\n        actions={card ? undefined : actionsNode}\n'
+  if (source.split(rowTarget).length !== 2) throw new Error('Browser session project-drop row target changed')
   return source.replaceAll(tabAction, 'onResume()').replace(windowAction, 'onResume()')
+    .replace(rowTarget, `${rowTarget}        data-web-session-id={session.id}\n        data-web-session-profile={session.profile || 'default'}\n`)
 }
 
 export function disableBrowserSessionOpenActions(source: string): string {
   const tabCondition = "...(surface === 'row' && !alreadyTabbed"
   const windowCondition = '...(canOpenSessionWindow()'
+  const projectTarget = '        >\n          {node.label}\n        </kit.Item>'
   const contract = contracts.find(item => item.module === 'app/chat/sidebar/session-actions-menu.tsx')!
-  if (createHash('sha256').update(source).digest('hex') !== contract.sourceHash || source.split(tabCondition).length !== 2 || source.split(windowCondition).length !== 2) {
+  if (createHash('sha256').update(source).digest('hex') !== contract.sourceHash || source.split(tabCondition).length !== 2 || source.split(windowCondition).length !== 2 || source.split(projectTarget).length !== 2) {
     throw new Error('Browser session open-action contract changed')
   }
   // Browser chat is single-view. Keep the session action menu for rename,
-  // pinning, export and other actions, but remove the desktop tab/window hops.
+  // pinning, export and other actions, but remove tab/window hops. Project
+  // destinations retain their names and gain the same leading folder cue.
   return source.replace(tabCondition, '...(false').replace(windowCondition, '...(false')
+    .replace(projectTarget, '        >\n          <Codicon name="root-folder" size="0.875rem" />\n          {node.label}\n        </kit.Item>')
 }
 
 export function filterBrowserKeybinds(source: string): string {
-  const browserSet = `const BROWSER_UNSUPPORTED_KEYBINDS = new Set([\n  'session.newTab', 'session.newWindow', 'session.next', 'session.prev',\n  'view.showBrowser', 'view.toggleHud', 'view.showTerminal', 'view.newTerminal',\n  'view.nextTerminal', 'view.prevTerminal', 'view.closeTerminal',\n  'view.terminalCopy', 'view.terminalPaste', 'hud.snapToPointer'\n])\n`
+  const browserSet = `const BROWSER_UNSUPPORTED_KEYBINDS = new Set([\n  'session.newTab', 'session.newWindow', 'session.next', 'session.prev',\n  'view.showBrowser', 'view.toggleHud', 'view.showTerminal', 'view.newTerminal',\n  'view.nextTerminal', 'view.prevTerminal', 'view.closeTerminal',\n  'view.terminalCopy', 'view.terminalPaste', 'hud.snapToPointer',\n  'view.findInPage', 'view.findNext', 'view.findPrevious'\n])\n`
   const actionTarget = '  const actionList = allKeybindActions(contributions)'
   const readonlyTarget = '  const [query, setQuery] = useState(\'\')'
   if (source.includes('BROWSER_UNSUPPORTED_KEYBINDS')) return source
@@ -563,17 +1003,19 @@ export function browserPlugin(root: string): Plugin {
     async resolveId(source, importer) {
       const virtual = registry.find(entry => entry.kind === 'virtual-module' && entry.specifier === source)
       if (virtual) return path.join(sourceRoot, virtual.module!)
-      const replacements = registry.filter(entry => entry.kind === 'replacement' && entry.owner.endsWith('/browser-plugin.ts'))
+      const normalizedImporter = importer?.replaceAll('\\', '/').split('?')[0]
+      const replacements = registry.filter(entry => entry.kind === 'replacement' && entry.owner.endsWith('/browser-plugin.ts') &&
+        (!entry.importers || entry.importers.some(module => normalizedImporter?.endsWith('/desktop/src/' + module))))
       if (replacements.some(entry => entry.bypassImporters?.some(suffix => importer?.replaceAll('\\', '/').endsWith(suffix)))) return null
       const stem = source.replace(/\.tsx?$/, '')
       if (!replacements.some(entry => {
         const parts = entry.module!.replace(/\.tsx?$/, '').split('/')
         const names = parts.at(-1) === 'index' ? [parts.at(-2)!, parts.slice(-2).join('/')] : [parts.at(-1)!]
-        return names.some(name => stem === name || stem.endsWith('/' + name))
+        return entry.specifier === source || names.some(name => stem === name || stem.endsWith('/' + name))
       })) return null
       const resolved = await this.resolve(source, importer, { skipSelf: true })
       const id = resolved?.id.replaceAll('\\', '/')
-      const replacement = registry.find(entry => entry.kind === 'replacement' && entry.owner.endsWith('/browser-plugin.ts') && id?.endsWith('/desktop/src/' + entry.module))
+      const replacement = replacements.find(entry => id?.endsWith('/desktop/src/' + entry.module))
       if (replacement) return path.join(root, replacement.replacement!)
       return null
     },
@@ -599,20 +1041,35 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     keepBrowserWorkspaceRoute: source => keepBrowserWorkspaceRoute(source, root),
     respectBrowserOverlayFocusReturn: source => respectBrowserOverlayFocusReturn(source, root),
     useBrowserOverlayFocusOwner: source => useBrowserOverlayFocusOwner(source, root),
+    useBrowserSettingsPresentation: source => useBrowserSettingsPresentation(source, root),
+    useBrowserConfigurationSettings: source => useBrowserConfigurationSettings(source, root),
+    filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
+    hideBrowserAppearanceOnlySettings,
+    hideBrowserLocalProjectDirectory,
+    removeBrowserPetAvatarTab,
+    removeBrowserPetSlashCommands,
+    filterBrowserSettingsSearch: source => filterBrowserSettingsSearch(source, root),
+    filterBrowserSettingsPalette: source => filterBrowserSettingsPalette(source, root),
     useBrowserPinWrites: source => useBrowserPinWrites(source, root),
     useBrowserOpenSessionOwner: source => useBrowserOpenSessionOwner(source, root),
     useBrowserFreshSessionOwner: source => useBrowserFreshSessionOwner(source, root),
     useBrowserDirectResumeOwner: source => useBrowserDirectResumeOwner(source),
+    useBrowserSectionIdentity: source => useBrowserSectionIdentity(source, root),
+    useBrowserTouchHooks, useBrowserCodingActionHooks, useBrowserSectionIds, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
+    removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source, entry.module as 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
+    useBrowserProjectDisclosure,
     exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth, filterBrowserSessionMenu,
-    showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserSessionTileMirrors,
+    showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
     disableBrowserSessionRowTabs, disableBrowserSessionOpenActions, filterBrowserKeybinds,
     useBrowserSessionSelection: source => useBrowserSessionSelection(source, root),
     useBrowserBotSelection: source => useBrowserRosterSelection(source, root, 'bot'),
     useBrowserGroupSelection: source => useBrowserRosterSelection(source, root, 'group'),
     useBrowserCreatedGroupSelection: source => useBrowserRosterSelection(source, root, 'created-group'),
+    trackBrowserSettingsSaves: source => trackBrowserSettingsSaves(source, root),
+    useBrowserSettingsFrame: source => useBrowserSettingsFrame(source, root),
     useBrowserSearchLabel: source => useBrowserSearchLabel(source, root),
     ungroupedStore: source => enableBrowserUngroupedSessions(source, 'store'),
     ungroupedMenu: source => enableBrowserUngroupedSessions(source, 'menu'),
@@ -623,6 +1080,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     if (!handlers[handler]) throw new Error(`Unknown browser compatibility handler: ${handler}`)
     output = handlers[handler](output)
   }
-  if (output === code || digest(output) !== entry.outputHash) throw new Error(`Incomplete browser compatibility transform: ${entry.name}`)
+  if (output === code || digest(output) !== entry.outputHash) {
+    throw new Error(`Incomplete browser compatibility transform: ${entry.name} (expected ${entry.outputHash}, got ${digest(output)})`)
+  }
   return { code: output, map: null }
 }

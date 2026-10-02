@@ -1,4 +1,4 @@
-import { reloadReadinessAfterSaving, type DraftSnapshot } from '../platform/reload-safety'
+import { reloadReadiness, reloadReadinessAfterSaving, type DraftSnapshot } from '../platform/reload-safety'
 import { installUpdateNetworkBarrier } from './update-network'
 
 export type PwaUpdateNotice = {
@@ -66,15 +66,21 @@ export function registerPwa(): void {
       const root = document.getElementById('root')
       if (root) root.inert = true
       clearTimeout(timer); timer = setTimeout(unlock, 15000)
-      const networkReady = network.pause()
       const state = await reloadReadinessAfterSaving()
-      const drained = await networkReady
       // A worker timeout/abort must not leave a late save holding the UI locked.
       if (transaction !== message.transaction) { event.ports[0]?.postMessage({ ready: false }); return }
-      if (state.ready && drained) {
-        snapshot = state.drafts
-      } else { unlock(); setStatus(state.reason || 'Update postponed. Wait for pending requests to finish, then try again.') }
-      event.ports[0]?.postMessage({ ready: state.ready && drained, texts: snapshot?.texts })
+      // Settings owners may need to finish an ordinary gateway save. Keep the
+      // network open until those owners and composer drafts have been flushed.
+      const drained = state.ready && await network.pause()
+      if (transaction !== message.transaction) { event.ports[0]?.postMessage({ ready: false }); return }
+      const verified = drained ? reloadReadiness() : state
+      if (verified.ready && drained) {
+        snapshot = verified.drafts
+      } else {
+        unlock()
+        setStatus(verified.reason || 'Update postponed. Wait for pending requests to finish, then try again.')
+      }
+      event.ports[0]?.postMessage({ ready: verified.ready && drained, texts: snapshot?.texts })
     } else {
       let ready = transaction === message.transaction && !!snapshot
       try {

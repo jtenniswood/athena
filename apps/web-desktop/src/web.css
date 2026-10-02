@@ -8,7 +8,6 @@
 @source "../../desktop/src";
 @source "./";
 @import "../../desktop/src/styles.css";
-.hermes-startup-loading,
 .hermes-startup-recovery {
   box-sizing: border-box;
   min-height: 100vh;

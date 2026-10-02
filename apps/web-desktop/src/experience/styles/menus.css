@@ -39,6 +39,33 @@
   box-sizing: border-box;
 }
 
+.browser-action-label {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: .125rem;
+}
+
+.browser-action-label small {
+  color: var(--web-text-subtle);
+  font-size: .78em;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.browser-action-chevron {
+  margin-left: auto;
+  padding-left: var(--web-space-3);
+  color: var(--web-text-subtle);
+  font-size: 1.2em;
+}
+
+.browser-action-back {
+  gap: var(--web-space-2);
+  margin-bottom: var(--web-space-1);
+}
+
 .browser-action-item:hover,.browser-action-item:focus-visible,.browser-action-item[data-highlighted] {
   outline: none;
   background: var(--web-active);
@@ -150,10 +177,16 @@
 }
 
 .browser-action-menu .browser-action-check {
-  order: 1;
-  margin-left: auto;
-  margin-right: 0;
+  position: absolute;
+  right: var(--web-space-2);
+  width: var(--web-icon-size);
+  margin: 0;
   color: var(--web-text);
+}
+
+.browser-action-menu .browser-action-item:has(> .browser-action-check) {
+  position: relative;
+  padding-right: calc(var(--web-space-2) + var(--web-icon-size) + var(--web-space-2));
 }
 
 .browser-action-menu .browser-action-item[data-destructive] .browser-action-icon {
@@ -195,6 +228,17 @@
 /* Responsive rows follow one density contract. Keep horizontal insets
    owned by each component so icons, checks, and nested actions stay aligned. */
 
+/* Submenu triggers add a flex gap around children. Action icons already carry
+   their own right margin, so remove that extra gap to align submenu labels. */
+:is(.browser-action-menu, .browser-action-sheet)
+:is(
+  [data-slot='dropdown-menu-sub-trigger'],
+  [data-slot='context-menu-sub-trigger'],
+  .browser-action-item[aria-haspopup='menu']
+) {
+  gap: 0 !important;
+}
+
 :is(
   [data-radix-menu-content],
   .browser-action-menu,
@@ -223,6 +267,15 @@
   font-size: var(--web-menu-font);
   font-weight: 400;
   line-height: var(--web-line-compact);
+}
+
+/* Match the attach popover heading to section labels in other context menus. */
+[data-slot='dropdown-menu-content'].w-60:has(> [data-slot='dropdown-menu-label'] + [role='menuitem'])
+  > [data-slot='dropdown-menu-label'] {
+  font-size: var(--web-menu-font);
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 :is(
@@ -265,7 +318,7 @@
 /* Upstream session/action menus use Radix poppers. On phones, present their
    complete action lists as bottom sheets so the menu remains usable by touch
    and retains upstream commands and labels. */
-@media (width < 48rem), (pointer: coarse) and (max-height: 27rem) {
+@media (pointer: coarse) and (width < 48rem), (pointer: coarse) and (max-height: 27rem) {
   /* Keep ancestors mounted for Radix's selection and dismissal handling, but
      show only the active sheet. Submenus are portaled outside their parents. */
   body > [data-radix-popper-content-wrapper]:has(> :is(

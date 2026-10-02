@@ -1,5 +1,5 @@
 {
-  description = "Hermes Web — the Hermes Desktop chat UI as a browser app. Builds ONLY the web UI of hermes-agent; nothing else (no electron, no dashboard, no agent tooling).";
+  description = "Athena for Hermes Agent — a browser chat UI built from the pinned Hermes Desktop renderer.";
 
   # hermes-agent is a plain input (flake = false): nix fetches it into the
   # store, pinned by flake.lock. Update upstream with `nix flake update hermes`.
@@ -23,7 +23,7 @@
         # Our web code only (this repo), filtered to what the build needs.
         webSrc = builtins.path {
           path = ./.;
-          name = "hermes-mobile-web";
+          name = "athena-web";
           filter = path: type:
             let
               p = toString path;
@@ -41,7 +41,7 @@
         # Build tree: our web code + the upstream renderer sources (pinned
         # input) placed at the relative paths our vite config expects
         # (../desktop/src, ../shared/src).
-        src = pkgs.runCommand "hermes-web-src" { } ''
+        src = pkgs.runCommand "athena-src" { } ''
           mkdir -p $out
           cp -r ${webSrc}/. $out/
           # Store paths are read-only; make the copy writable so pnpm can
@@ -59,7 +59,7 @@
       {
         # `nix build .#` → result/ = the built web dist, nothing else.
         packages.default = pkgs.stdenv.mkDerivation {
-          pname = "hermes-web";
+          pname = "athena";
           version = "0.1.1";
 
           inherit src;
@@ -82,7 +82,7 @@
           # here; the build itself is offline). First build fails with the real
           # hash — paste it into pnpmDeps.hash and rebuild.
           pnpmDeps = pkgs.fetchPnpmDeps {
-            pname = "hermes-web";
+            pname = "athena";
             version = "0.1.1";
             # v4: current fetcher for pnpm 11 (26.11+). Output is a pnpm
             # store dir (+ reproducible tarball), consumed via
@@ -109,7 +109,7 @@
         # Serve the pinned static artifact with the same nginx contract as Docker.
         apps.default = {
           type = "app";
-          program = "${pkgs.writeShellScript "hermes-web-serve" ''
+          program = "${pkgs.writeShellScript "athena-serve" ''
             set -eu
             runtime_dir=$(mktemp -d)
             trap 'rm -rf "$runtime_dir"' EXIT
@@ -133,7 +133,7 @@
           packages = [ nodejs pnpm pkgs.git ];
           shellHook = ''
             if node scripts/renderer.mjs; then
-              echo "Hermes Web dev shell — verified renderer from flake.lock."
+              echo "Athena dev shell — verified renderer from flake.lock."
               echo "  pnpm install --frozen-lockfile && pnpm dev"
             else
               echo "Renderer preparation failed. Resolve the reported source mismatch before building."
@@ -141,13 +141,14 @@
           '';
         };
       })) // {
-    # Home-manager module defining the persistent Hermes Web systemd service
+    # Home-manager module defining the persistent Athena systemd service
     # (static hosting and the configured gateway proxy on :4174). Wiring into
     # the main nix-config:
-    #   imports = [ inputs.hermes-mobile.homeManagerModules.hermes-web ];
+    #   imports = [ inputs.athena.homeManagerModules.athena ];
     #   services.hermes-web.enable = true;
     homeManagerModules = {
       default = import ./modules/hermes-web.nix;
+      athena = import ./modules/hermes-web.nix;
       hermes-web = import ./modules/hermes-web.nix;
     };
   };

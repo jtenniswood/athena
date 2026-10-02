@@ -20,7 +20,7 @@ export function showStartupRecovery(error: unknown, revision: string): void {
 
   const stage = stageFor(error)
   const copy = stage === 'configuration'
-    ? ['Hermes could not read its runtime configuration.', 'Check the configured gateway URL and try again.']
+    ? ['Hermes could not read its runtime configuration.', 'Your sign-in may have expired, or the web server configuration is unavailable. Retry to reconnect.']
     : stage === 'renderer'
       ? ['Hermes could not load the browser interface.', 'Reload once to retry the current build.']
       : ['Hermes could not finish starting.', 'Retry the current page. Your saved browser data was not cleared.']
@@ -34,13 +34,20 @@ export function showStartupRecovery(error: unknown, revision: string): void {
   const retry = document.createElement('button')
   retry.type = 'button'
   retry.textContent = 'Retry'
-  retry.onclick = () => window.location.reload()
+  retry.onclick = () => {
+    if (stage !== 'configuration') { window.location.reload(); return }
+    // A cached shell can outlive proxy authentication. Reach the server as a
+    // top-level navigation so its sign-in redirect can complete in the browser.
+    const url = new URL(window.location.href)
+    url.searchParams.set('hermes-reconnect', '1')
+    window.location.assign(url.href)
+  }
   actions.append(retry)
   const copyButton = document.createElement('button')
   copyButton.type = 'button'
   copyButton.textContent = 'Copy diagnostics'
   copyButton.onclick = () => {
-    const diagnostics = `Hermes Web startup failure\nStage: ${stage}\nBuild: ${wrapperRevision}`
+    const diagnostics = `Athena startup failure\nStage: ${stage}\nBuild: ${wrapperRevision}`
     void navigator.clipboard?.writeText(diagnostics)
   }
   actions.append(copyButton)
@@ -63,4 +70,11 @@ export function recoverStartupChunk(error: unknown, revision: string): boolean {
 }
 export function completeStartup(): void {
   try { sessionStorage.removeItem(RETRY_KEY) } catch { /* Optional recovery marker. */ }
+  try {
+    const url = new URL(window.location.href)
+    if (url.searchParams.get('hermes-reconnect') === '1') {
+      url.searchParams.delete('hermes-reconnect')
+      window.history.replaceState(window.history.state, '', url.href)
+    }
+  } catch { /* The reconnect marker is harmless if history is unavailable. */ }
 }

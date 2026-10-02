@@ -1,7 +1,7 @@
 /* Browser-focused shell chrome. The chat, composer, themes and surfaces are upstream. */
 .browser-provider { height:100%; min-height:0; display:block; }
 .browser-shell { height:100%; display:flex; flex-direction:column; color:var(--web-text); background:var(--web-bg); font-family:var(--web-font); overflow:hidden; }
-.browser-chat-toolbar { height:var(--web-toolbar-height); flex-shrink:0; display:grid; grid-template-columns:minmax(2.25rem,1fr) minmax(2.25rem,1fr); align-items:center; gap:var(--web-space-1); padding:0 var(--web-space-3) 0 var(--web-space-1); border-bottom:1px solid var(--web-border); background:var(--web-bg); }
+.browser-chat-toolbar { height:var(--web-toolbar-height); flex-shrink:0; display:grid; grid-template-columns:minmax(2.25rem,1fr) minmax(2.25rem,1fr); align-items:center; gap:var(--web-space-1); padding:0 var(--web-space-3) 0 var(--web-space-1); background:var(--web-bg); }
 .browser-chat-toolbar > .browser-menu { grid-column:1; grid-row:1; }
 .browser-chat-toolbar .browser-actions { grid-column:2; grid-row:1; justify-self:end; margin-left:0; }
 .browser-actions { display:flex; align-items:center; gap:var(--web-space-2); }
@@ -21,25 +21,27 @@
 .browser-navigation-resizer:focus-visible { outline:none; }
 .browser-navigation-tabs { display:flex; flex:1; gap:0; min-width:0; overflow-x:auto; background:var(--web-sidebar); scrollbar-width:none; }
 .browser-navigation-tabs::-webkit-scrollbar { display:none; }
-.browser-navigation-tabs button { position:relative; flex:0 0 auto; min-width:0; max-width:12rem; min-height:var(--web-toolbar-height); border:0; border-radius:0; padding:0 var(--web-space-3); color:var(--web-text-subtle); background:var(--web-sidebar); font-size:var(--web-text-label); font-weight:500; letter-spacing:.025em; text-transform:uppercase; cursor:pointer; }
-.browser-navigation-tabs button + button::before { position:absolute; top:.35rem; bottom:.35rem; left:0; width:1px; background:color-mix(in srgb,var(--web-text) 14%,transparent); content:""; }
+.browser-navigation-tabs button { position:relative; flex:0 0 auto; min-width:0; max-width:12rem; min-height:var(--web-toolbar-height); border:0; border-radius:0; padding:0 var(--web-space-3); color:var(--web-text-subtle); background:var(--web-sidebar); font-size:.625rem; font-weight:500; letter-spacing:.025em; text-transform:uppercase; cursor:pointer; }
+.browser-navigation-tabs button[draggable="true"] { cursor:grab; }
+.browser-navigation-tabs button[data-dragging="true"] { opacity:.5; cursor:grabbing; }
+.browser-navigation-tabs button + button::before { position:absolute; inset-block:.65rem; left:0; width:1px; background:color-mix(in srgb,var(--web-text) 14%,transparent); content:""; }
 .browser-navigation-tabs button:hover { color:var(--web-text); background:var(--web-hover); }
 .browser-navigation-tabs button:focus-visible { color:var(--web-text); background:var(--web-hover); }
 .browser-navigation-tabs button[aria-selected="true"] { color:var(--web-text); background:var(--web-sidebar); box-shadow:inset 0 -2px 0 var(--web-accent); }
 .browser-navigation-body { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; background:var(--web-sidebar); }
 /* Keep the disclosure in the search/navigation flow so expansion reserves space. */
 .browser-navigation-section { width:calc(100% + 1rem); margin:1px -.5rem 0; }
-.browser-navigation-section-trigger { width:100%; height:1.5rem; display:flex; align-items:center; gap:var(--web-space-2); padding:0 var(--web-space-2); border:1px solid transparent; border-radius:var(--web-radius-control); color:var(--web-text-muted); background:transparent; font:inherit; font-size:var(--web-text-label); font-weight:500; text-align:left; cursor:pointer; }
+.browser-navigation-section-trigger { width:100%; height:var(--browser-session-control-height); display:flex; align-items:center; gap:var(--web-space-2); padding:0 var(--web-space-2); border:1px solid transparent; border-radius:var(--web-radius-control); color:var(--web-text-muted); background:transparent; font:inherit; font-size:var(--web-text-label); font-weight:500; text-align:left; cursor:pointer; }
 .browser-navigation-section-trigger > .codicon { width:1rem; flex:0 0 1rem; text-align:center; }
 .browser-navigation-section-trigger:hover,.browser-navigation-section-trigger:focus-visible { color:var(--web-text); background:var(--web-hover); }
 .browser-navigation-section-list { display:flex; flex-direction:column; gap:1px; margin-bottom:var(--web-space-1); }
 .browser-navigation-section-list[hidden] { display:none; }
-.browser-navigation-section-list button { width:100%; height:var(--web-navigation-row); display:flex; align-items:center; gap:var(--web-space-2); padding:0 var(--web-space-2); border:1px solid transparent; border-radius:var(--web-radius-control); color:var(--web-text-muted); background:transparent; font:inherit; font-size:var(--web-text-body); font-weight:500; text-align:left; cursor:pointer; }
+.browser-navigation-section-list button { width:100%; height:var(--browser-session-control-height); display:flex; align-items:center; gap:var(--web-space-2); padding:0 var(--web-space-2); border:1px solid transparent; border-radius:var(--web-radius-control); color:var(--web-text-muted); background:transparent; font:inherit; font-size:var(--web-text-body); font-weight:500; text-align:left; cursor:pointer; }
 .browser-navigation-section-list button > .codicon { color:color-mix(in srgb,currentColor 72%,transparent); }
 .browser-navigation-section-list button:hover,.browser-navigation-section-list button:focus-visible { color:var(--web-text); background:var(--web-hover); }
 .browser-profile-footer { position:relative; display:flex; align-items:center; gap:var(--web-space-1); min-width:0; flex-shrink:0; padding:var(--web-space-2) var(--web-space-3) var(--web-space-3); background:var(--web-sidebar); }
 .browser-profile-footer[hidden] { display:none; }
-.browser-profile-rail { min-width:0; flex:1 1 auto; display:flex; align-items:center; gap:var(--web-space-2); overflow-x:auto; scrollbar-width:none; }
+.browser-profile-rail { min-width:0; flex:1 1 auto; display:flex; align-items:center; gap:var(--web-space-1); overflow-x:auto; scrollbar-width:none; }
 .browser-profile-slot { position:relative; display:flex; align-items:center; flex:0 0 2.5rem; }
 .browser-profile-slot > .browser-profile-drop-indicator { position:absolute; top:50%; left:-.3rem; transform:translateY(-50%); }
 .browser-profile-choice img { pointer-events:none; -webkit-user-drag:none; }
@@ -47,13 +49,14 @@
 .browser-profile-drop-end > .browser-profile-drop-indicator { position:absolute; top:50%; left:0; transform:translateY(-50%); }
 .browser-profile-rail::-webkit-scrollbar { display:none; }
 .browser-profile-drop-indicator { width:.2rem; height:2.25rem; flex:0 0 .2rem; border-radius:999px; background:var(--web-accent); box-shadow:0 0 .45rem color-mix(in srgb,var(--web-accent) 70%,transparent); pointer-events:none; }
-.browser-profile-choice { width:2.5rem; height:2.5rem; flex:0 0 2.5rem; display:inline-flex; align-items:center; justify-content:center; padding:0; border:1px solid transparent; border-radius:var(--web-radius-control); color:var(--web-text-subtle); background:transparent; cursor:pointer; }
+.browser-profile-choice { width:2.5rem; height:2.5rem; flex:0 0 2.5rem; display:inline-flex; align-items:center; justify-content:center; padding:0; border:1px solid transparent; border-radius:.625rem; color:var(--web-text-subtle); background:transparent; cursor:pointer; }
 .browser-profile-choice[draggable="true"] { cursor:grab; }
 .browser-profile-choice[draggable="true"]:active,.browser-profile-choice.is-dragging { cursor:grabbing; opacity:.55; }
 .browser-profile-choice:hover,.browser-profile-choice:focus-visible { background:var(--web-hover); color:var(--web-text); }
 .browser-profile-choice.is-drop-target { background:var(--web-hover); box-shadow:inset 0 0 0 1px var(--web-accent); }
-.browser-profile-choice[aria-pressed="true"] { border-color:var(--web-accent); background:color-mix(in srgb,var(--web-accent) 16%,transparent); color:var(--web-text); }
-.browser-profile-choice > :is(img,span) { width:2.25rem !important; height:2.25rem !important; }
+.browser-profile-choice[aria-pressed="true"] { border-width:2px; border-color:var(--web-accent); background:color-mix(in srgb,var(--web-accent) 16%,transparent); color:var(--web-text); }
+.browser-profile-choice > :is(img,span) { box-sizing:border-box; width:2.25rem !important; height:2.25rem !important; aspect-ratio:1; flex:0 0 auto; }
+.browser-profile-choice > img { object-fit:cover; }
 .browser-profile-all { color:var(--web-text-subtle); }
 .browser-update-panel { flex-shrink:0; margin:var(--web-space-2) var(--web-space-3) 0; padding:var(--web-space-2); border:1px solid var(--web-border); border-radius:var(--web-radius-panel); background:var(--web-bg); color:var(--web-text); box-shadow:0 .25rem .8rem #0002; }
 .browser-update-panel-heading { display:flex; align-items:center; justify-content:space-between; gap:var(--web-space-2); font-size:var(--web-text-caption); }
@@ -64,12 +67,16 @@
 .browser-update-panel-action { width:100%; padding:var(--web-space-1) var(--web-space-2); border:1px solid var(--web-border); border-radius:var(--web-radius-control); color:var(--web-text); background:var(--web-active); font:inherit; font-size:var(--web-text-label); cursor:pointer; }
 .browser-update-panel-action:hover,.browser-update-panel-action:focus-visible { border-color:transparent; background:var(--web-hover); outline:none; }
 .browser-pane { height:100%; min-height:0; background:var(--web-sidebar); }
-.browser-sessions-pane { padding-top:var(--web-space-2); }
+/* Share compact control height while retaining the token's touch target floor. */
+.browser-sessions-pane { --browser-session-control-height:var(--web-control-compact); padding-top:var(--web-space-2); }
+.browser-sessions-pane [data-sidebar="menu-button"] { height:var(--browser-session-control-height); min-height:var(--browser-session-control-height); padding-block:0; }
 .browser-sessions-pane [data-browser-section-hidden] { display:none !important; }
 /* Use one stack gap for Pinned, Sessions, messaging services, and Cron. The
    upstream sections carry different content padding, which otherwise makes
-   the visible gap change from one section to the next. */
-.browser-sessions-pane [data-sessions-mode] { row-gap:var(--web-space-2); padding-top:var(--web-space-2); }
+   the visible gap change from one section to the next. The session scroller
+   reserves a stable scrollbar gutter, so extend its box into the gutter to
+   give rows more room without moving the scrollbar. */
+.browser-sessions-pane [data-sessions-mode] { row-gap:var(--web-space-2); padding-top:var(--web-space-2); width:calc(100% + .5rem); margin-inline-end:-.5rem; }
 .browser-sessions-pane [data-sessions-mode] > [data-sidebar="group"] > [data-browser-section-header] { min-height:1.75rem; padding-block:var(--web-space-1); }
 .browser-sessions-pane [data-sessions-mode] > [data-sidebar="group"] { padding-bottom:0 !important; }
 .browser-sessions-pane [data-sessions-mode] > [data-sidebar="group"] > [data-sidebar="group-content"] { padding-bottom:0 !important; }
@@ -83,7 +90,7 @@
    upstream field intentionally recedes until focused; browser navigation
    treats it as a normal menu item and uses the short "Search" label. */
 .browser-sessions-pane { flex:1 1 auto; height:auto; min-height:0; overflow:auto; }
-.browser-sessions-pane .browser-session-search { width:calc(100% + 1rem); max-width:none; height:var(--web-navigation-row); min-height:var(--web-navigation-row); display:flex; align-items:center; gap:var(--web-space-2); margin-top:0; margin-left:-.5rem; margin-right:-.5rem; padding:var(--web-space-2); border:1px solid transparent; border-radius:var(--web-radius-control); color:var(--web-text-muted); font-size:var(--web-text-body); font-weight:500; line-height:var(--web-line-body); opacity:1 !important; }
+.browser-sessions-pane .browser-session-search { width:calc(100% + 1rem); max-width:none; height:var(--browser-session-control-height); min-height:var(--browser-session-control-height); display:flex; align-items:center; gap:var(--web-space-2); margin-top:0; margin-left:-.5rem; margin-right:-.5rem; padding:0 var(--web-space-2); border:1px solid transparent; border-radius:var(--web-radius-control); color:var(--web-text-muted); font-size:var(--web-text-body); font-weight:500; line-height:var(--web-line-body); opacity:1 !important; }
 .browser-sessions-pane .browser-session-search:focus-within { border-color:transparent; background:var(--web-hover); color:var(--web-text); }
 .browser-sessions-pane .browser-session-search > svg { width:1rem; height:1rem; flex:0 0 1rem; color:color-mix(in srgb,currentColor 72%,transparent); }
 .browser-sessions-pane .browser-session-search > input { height:1.25rem; min-width:0; font:inherit; font-size:inherit; line-height:inherit; color:inherit; }
@@ -97,6 +104,7 @@
 /* Header actions share one square target. Let the filter's grid wrapper grow
    with its button instead of keeping the upstream desktop-only size. */
 .browser-sessions-pane [data-browser-section-header] button[data-size="icon-xs"] { margin:0; }
+.browser-sessions-pane [data-browser-section-header] button[data-size="icon-xs"] .codicon { font-size:var(--web-icon-small) !important; }
 .browser-sessions-pane [data-browser-section-header] button[data-size="icon-xs"]:is(:hover,:focus-visible) { background:var(--web-hover); color:var(--web-text); opacity:1; }
 .browser-sessions-pane [data-browser-section-header] div:has(> button[aria-label="Filters"]) { width:auto; height:auto; flex-shrink:0; }
 /* Center the empty state in its chat viewport without composer-dependent
@@ -111,16 +119,28 @@
 .browser-shell :is([data-slot="aui_intro"],[data-slot="bot_chat_empty"]) .wordmark { display:block; min-width:0; max-width:100%; }
 .browser-shell :is([data-slot="aui_intro"],[data-slot="bot_chat_empty"]) .wordmark > [aria-hidden] { display:none; }
 .browser-shell :is([data-slot="aui_intro"],[data-slot="bot_chat_empty"]) .wordmark > :not([aria-hidden]) { display:block; min-width:0; width:100%; max-width:100%; }
-.browser-shell :is([data-slot="aui_intro"],[data-slot="bot_chat_empty"]) .wordmark > :not([aria-hidden]) > * { inline-size:100%; max-width:100%; font-size:min(11cqi,9rem) !important; }
+.browser-shell :is([data-slot="aui_intro"],[data-slot="bot_chat_empty"]) .wordmark > :not([aria-hidden]) > * { inline-size:100%; max-width:100%; font-size:min(18cqi,20rem) !important; }
 /* Browser-focused sessions keep messaging groups compact: hide any extra
    header marker while keeping the disclosure caret visible. */
 .browser-sessions-pane [data-browser-section-label] > span[aria-hidden="true"] { display:none !important; }
 .browser-sessions-pane [data-browser-section-label] > .codicon[aria-hidden="true"] { display:inline-block !important; opacity:.72 !important; }
+.browser-sessions-pane button[data-slot="row-button"] .truncate { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* Keep these destinations in the Sessions overflow menu so each has one
    browser control while the empty Tools tab stays out of the navigation. */
 .browser-shell [data-sidebar="menu-item"]:has([data-tour="sidebar-nav-skills"]),
 .browser-shell [data-sidebar="menu-item"]:has([data-tour="sidebar-nav-messaging"]),
 .browser-shell [data-sidebar="menu-item"]:has([data-tour="sidebar-nav-artifacts"]) { display:none !important; }
+/* Keep only user input and assistant prose in the transcript when the
+   browser-level conversation preference is switched off. Required inline
+   questions and error recovery remain available. */
+body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assistant-message-root"] > :not([data-slot="aui_assistant-message-content"]),
+body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assistant-message-content"]:not(:has([data-clarify-choices])):not(:has([role="alert"])) > :not(.aui-md),
+body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_system-message-root"]:not(:has([role="alert"])) {
+  display: none !important;
+}
+body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assistant-message-root"]:not(:has(> [data-slot="aui_assistant-message-content"] > .aui-md)):not(:has([data-clarify-choices])):not(:has([role="alert"])) {
+  display: none !important;
+}
 .browser-main { position:relative; flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; outline:none; overflow:hidden; }
 .browser-main[hidden] { display:none; }
 /* Keep the dock at the workspace edge with one small margin. Safe-area values
@@ -129,9 +149,6 @@
 .browser-main [data-slot="composer-dock"]:not([data-popped-out]) { bottom:0 !important; }
 .browser-chat { flex:1; min-height:0; display:flex; flex-direction:column; position:relative; }
 .browser-status { flex-shrink:0; border-top:1px solid var(--web-border); }
-.browser-backend-version { display:flex; flex-shrink:0; padding:var(--web-space-1) var(--web-space-2); color:var(--web-text-subtle); border-top:1px solid var(--web-border); }
-.browser-backend-version:empty { display:none; }
-.browser-backend-version button { min-height:2.75rem; max-width:100%; }
 .browser-statusbar { display:flex; align-items:center; gap:var(--web-space-2); height:2.75rem; min-height:2.75rem; padding:var(--web-space-1) .8rem; background:var(--web-bg); }
 .browser-status-controls { display:flex; flex-wrap:wrap; align-items:center; gap:.3rem; flex:0 0 auto; min-width:0; height:2.25rem; padding:0; background:none; }
 .browser-status-controls > :is(button,a,div) { min-height:2rem; height:2rem; display:inline-flex; align-items:center; gap:var(--web-space-2); padding:var(--web-space-1) var(--web-space-2); border:1px solid var(--web-border); border-radius:var(--web-radius-panel); color:var(--web-text); background:var(--web-bg); font-size:var(--web-text-caption); }
@@ -152,11 +169,17 @@
 .browser-empty { padding:var(--web-space-4); font-size:var(--web-text-body); color:var(--web-text-subtle); }
 .browser-scrim { display:none; }
 @media (width < 48rem), (pointer:coarse) and (max-height:27rem) {
- .browser-chat-toolbar { position:relative; z-index:2; grid-template-columns:max-content minmax(0,1fr); gap:var(--web-space-1); height:auto; min-height:var(--web-touch-target); }
+ .browser-chat-toolbar { position:relative; z-index:2; grid-template-columns:max-content minmax(0,1fr); gap:var(--web-space-1); height:auto; min-height:var(--web-toolbar-height); }
  .browser-chat-toolbar .browser-actions { min-width:0; gap:var(--web-space-1); }
- .browser-navigation { box-sizing:border-box; position:absolute; inset:0; z-index:61; width:100%; padding:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1)) calc(env(safe-area-inset-right,0px) / var(--web-ui-scale,1)) calc(env(safe-area-inset-bottom,0px) / var(--web-ui-scale,1)) calc(env(safe-area-inset-left,0px) / var(--web-ui-scale,1)); transform:translateY(.5rem); opacity:0; visibility:hidden; transition:transform 160ms ease,opacity 160ms ease,visibility 160ms; box-shadow:none; }
+ .browser-navigation { box-sizing:border-box; position:absolute; inset:0; inset-inline-end:auto; z-index:61; width:min(var(--browser-navigation-width,19rem),calc(100% - 3rem)); padding:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1)) calc(env(safe-area-inset-right,0px) / var(--web-ui-scale,1)) calc(env(safe-area-inset-bottom,0px) / var(--web-ui-scale,1)) calc(env(safe-area-inset-left,0px) / var(--web-ui-scale,1)); transform:translateY(.5rem); opacity:0; visibility:hidden; transition:transform 160ms ease,opacity 160ms ease,visibility 160ms; box-shadow:var(--web-shadow-panel); }
  .browser-navigation.is-open { transform:none; opacity:1; visibility:visible; }
  .browser-navigation-back:hover,.browser-navigation-back:focus-visible { background:var(--web-hover); color:var(--web-text); }
+ .browser-navigation-resizer { display:none; }
+ .browser-scrim { display:block; position:absolute; inset:0; z-index:60; padding:0; border:0; background:#0004; cursor:default; }
+}
+@media (pointer: coarse) and (width < 48rem), (pointer: coarse) and (max-height: 27rem) {
+ .browser-navigation { inset-inline-end:0; width:100%; box-shadow:none; }
+ .browser-chat-toolbar { min-height:var(--web-touch-target); }
  .browser-navigation-heading { min-height:var(--web-touch-target); }
  .browser-navigation-tabs button { min-width:var(--web-touch-target); min-height:var(--web-touch-target); font-size:var(--web-text-caption); }
  .browser-navigation .browser-profile-actions-trigger { width:var(--web-touch-target); height:var(--web-touch-target); flex-basis:var(--web-touch-target); }
@@ -164,7 +187,7 @@
  .browser-sessions-pane [data-browser-section-header] { min-height:var(--web-touch-min); align-items:center; }
  .browser-sessions-pane [data-browser-section-label] { box-sizing:border-box; min-width:var(--web-touch-min); align-items:center; }
  .browser-sessions-pane [class*="group/handle"] { box-sizing:border-box; min-width:var(--web-touch-target); min-height:var(--web-touch-target); }
- .browser-sessions-pane [data-row-actions] { gap:var(--web-space-1); }
+ .browser-sessions-pane [data-row-actions] { gap:var(--web-space-1); margin-inline-end:calc(-1 * var(--web-space-2)); }
  .browser-sessions-pane [data-row-actions] button { position:relative; box-sizing:border-box; min-width:var(--web-touch-min); width:var(--web-touch-min); min-height:var(--web-touch-min); height:var(--web-touch-min); flex-shrink:0; color:var(--web-text-subtle) !important; }
  /* Session ages can sit beside the row button. Hide their separator too and
     keep the always-visible context button in flow so it has its own space. */
@@ -172,17 +195,32 @@
  .browser-main :has(> button[aria-label="Branch in new chat"]) { opacity:1 !important; pointer-events:auto !important; }
  .browser-main :is(button[aria-label="Branch in new chat"],button[aria-label="Copy"],button[aria-label="Read aloud"],button[aria-label="Refresh"],button[aria-label="Restore checkpoint"],button[aria-label="Scroll to bottom"]) { box-sizing:border-box; min-width:var(--web-touch-target); min-height:var(--web-touch-target); }
  .browser-profile-choice { width:var(--web-touch-target); height:var(--web-touch-target); flex-basis:var(--web-touch-target); }
+ .browser-profile-choice > :is(img,span) { width:calc(var(--web-touch-target) - 2px) !important; height:calc(var(--web-touch-target) - 2px) !important; }
+ .browser-profile-choice img { width:100% !important; height:100% !important; aspect-ratio:1; object-fit:cover; }
  .browser-profile-slot { flex-basis:var(--web-touch-target); }
  .browser-update-panel-heading button { min-width:var(--web-touch-target); min-height:var(--web-touch-target); }
  .browser-overlay-title button { box-sizing:border-box; min-width:var(--web-touch-target); min-height:var(--web-touch-target); }
- .browser-navigation-resizer { display:none; }
- .browser-scrim { display:none; }
  .browser-statusbar { height:auto; min-height:var(--web-touch-target); padding:var(--web-space-1) var(--web-space-2); gap:var(--web-space-1); }
  .browser-status-controls :is(button,a) { min-height:var(--web-touch-target); height:auto; font-size:var(--web-text-label); padding:.3rem var(--web-space-2); }
+}
+@media (width < 48rem) {
+ .browser-profile-choice { width:calc(var(--web-touch-target) + .5rem); height:calc(var(--web-touch-target) + .5rem); flex-basis:calc(var(--web-touch-target) + .5rem); }
+ .browser-profile-choice > :is(img,span) { width:calc(var(--web-touch-target) + .25rem) !important; height:calc(var(--web-touch-target) + .25rem) !important; }
+ .browser-profile-slot { flex-basis:calc(var(--web-touch-target) + .5rem); }
 }
 @media (prefers-reduced-motion:reduce) { .browser-navigation { transition:none; } }
 .browser-upstream-workspace { position:relative; display:flex; flex:1; min-height:0; min-width:0; }
 .browser-upstream-workspace [data-tree-group] :is(aside,[data-slot="sidebar"]) { border-left-width:0; border-right-width:0; box-shadow:none; }
+/* Keep user prompts pinned to the viewport edge. The upstream clip observer
+   compares screen-pixel rectangles with computed CSS top values, so a zero
+   offset avoids zoom-dependent misses. Its clip inset is also measured in
+   screen pixels and must be converted back to CSS pixels before painting. */
+.browser-shell [data-slot="aui_thread-viewport"] [data-slot="aui_user-message-root"].sticky { top:0; }
+.browser-shell [data-slot="aui_thread-viewport"] [data-sticky-prompt-clip] { clip-path:inset(calc(var(--sticky-prompt-clip) / var(--web-ui-scale,1)) 0 0); }
+@media (width < 48rem) {
+ .browser-shell [data-slot="aui_thread-viewport"] [data-slot="aui_user-message-root"].sticky { position:static !important; }
+ .browser-shell [data-slot="aui_thread-viewport"] [data-sticky-prompt-clip] { clip-path:none; }
+}
 .browser-upstream-workspace [data-tree-group] header[class*="h-(--titlebar-height)"] { display:none; }
 /* Chat title and profile ownership are already represented by the browser
    toolbar. Keep the upstream title header out of the chat surface even when
@@ -205,7 +243,7 @@ html[data-experience="browser"] span:has(> img[src*="nous-girl.jpg"]) { display:
 .browser-action-error { position:fixed; z-index:200; top:1rem; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:var(--web-space-4); max-width:calc(100% - 2rem); padding:var(--web-space-3) var(--web-space-4); border:1px solid var(--web-border); border-radius:var(--web-radius-panel); background:var(--web-surface); color:var(--web-text); box-shadow:var(--web-shadow-panel); }
 .browser-action-error button { flex-shrink:0; padding:var(--web-space-1) var(--web-space-2); border:1px solid var(--web-border); border-radius:var(--web-radius-control); background:transparent; color:inherit; cursor:pointer; }
 
-.browser-navigation-heading { display:flex; align-items:center; flex-shrink:0; border-bottom:1px solid var(--web-border); }
+.browser-navigation-heading { display:flex; align-items:center; flex-shrink:0; }
 .browser-navigation .browser-navigation-back { display:none; }
 
 .browser-bots-heading { display:flex; align-items:center; justify-content:space-between; gap:var(--web-space-2); padding:var(--web-space-2) var(--web-space-2) var(--web-space-1); }
@@ -215,9 +253,6 @@ html[data-experience="browser"] span:has(> img[src*="nous-girl.jpg"]) { display:
 .browser-bots-search { display:flex; min-width:0; align-items:center; gap:var(--web-space-1); padding:0 var(--web-space-2) var(--web-space-1); }
 
 /* Keep the upstream inner scroll box and popover portal intact at browser zoom. */
-[data-browser-bot-dialog] { max-width:min(var(--browser-bot-dialog-width,28rem),calc(100vw / var(--web-ui-scale,1) - 2rem)) !important; max-height:calc(85dvh / var(--web-ui-scale,1)) !important; }
-[data-browser-bot-dialog="section"] { --browser-bot-dialog-width:24rem; }
-[data-browser-bot-dialog="advanced"] { --browser-bot-dialog-width:48rem; min-width:min(26.25rem,calc(100vw / var(--web-ui-scale,1) - 2rem)) !important; min-height:min(22.5rem,calc(85dvh / var(--web-ui-scale,1))) !important; }
 
 .browser-roster-action-row { display: flex; align-items: center; min-width: 0; }
 .browser-roster-action-row > :first-child { flex: 1; min-width: 0; }
@@ -235,7 +270,7 @@ html[data-experience="browser"] span:has(> img[src*="nous-girl.jpg"]) { display:
 .browser-roster-action-row:is(:hover,:has(:focus-visible),:has(> [aria-expanded="true"])) > [data-roster-key] > div:last-child > div:first-child > span:last-child { opacity:0; }
 /* Touch has no rollover: show the action in that same cell, with a full touch
    target. The desktop keyboard can still tab to the transparent trigger. */
-@media (width < 48rem), (hover:none), (pointer:coarse) {
+@media (hover:none), (pointer:coarse) {
   .browser-roster-action-row > [data-roster-key] { min-height:var(--web-touch-target); }
   .browser-roster-action-row > [data-roster-key] > div:last-child { padding-inline-end:var(--web-touch-target); }
   .browser-roster-action-row:has(> [data-roster-key]) > .browser-roster-action-trigger { width:var(--web-touch-target); height:var(--web-touch-target); inset-inline-end:.25rem; opacity:1; pointer-events:auto; }
@@ -244,7 +279,7 @@ html[data-experience="browser"] span:has(> img[src*="nous-girl.jpg"]) { display:
 .browser-bot-section-heading { display: flex; align-items: center; gap: var(--web-space-1); min-width: 0; width: 100%; padding: var(--web-space-1) var(--web-space-2); text-align: left; font-size:var(--web-text-label); font-weight: 600; color: var(--web-text-subtle); }
 .browser-bot-section-heading > span:not(.browser-bot-section-count) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .browser-bot-section-count { margin-left: auto; }
-@media (width < 48rem), (pointer: coarse) and (max-height: 27rem) {
+@media (pointer: coarse) and (width < 48rem), (pointer: coarse) and (max-height: 27rem) {
   .browser-bot-section-heading { min-height: var(--web-touch-target); }
 }
 

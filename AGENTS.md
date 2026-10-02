@@ -1,11 +1,11 @@
-# AGENTS.md — for AI coding agents working in this repo
+# AGENTS.md — for AI coding agents working in Athena
 
 This file is addressed to AI coding agents (e.g. the Hermes agent). It is NOT
 user-facing documentation; keep user-facing content in `README.md`.
 
 ## Project
 
-Hermes Web — the **Hermes Desktop chat UI** as a web app / PWA
+Athena — the **Hermes Agent chat UI** as a web app / PWA
 (`apps/web-desktop`). An **unofficial community wrapper** of
 `NousResearch/hermes-agent` (not affiliated). The renderer sources
 (`apps/desktop`, `apps/shared`) are **not in this repo** — they are fetched from
@@ -26,39 +26,69 @@ the pinned `hermes-agent` at build time.
   (internal); do not add LAN IPs, tailnet hostnames or `/home/ubuntu` paths to
   tracked files.
 - **The VPS never builds nix locally** (house rule) — real builds run on GitHub
-  Action (`nightly-docker-image.yml`). `nix eval` / `nix flake
+  Actions (`release.yml`). `nix eval` / `nix flake
   show` locally is fine.
 
 ## Remotes & push discipline
 
-- `origin` — GitHub (`https://github.com/jtenniswood/hermes-desktop-web-mobile-pwa.git`) — **primary** and the target for all pull requests.
+- `origin` — GitHub (`https://github.com/jtenniswood/athena.git`) — **primary** and the target for all pull requests.
 - The upstream of `main` is `origin/main`.
 
-After every meaningful commit:
+For every user request that changes tracked repository content—including code,
+documentation, configuration, and generated files—finish by opening a pull
+request on `origin` once the change is reviewable. Do not treat the request as
+complete after only editing the working tree. Commit the requested changes, push
+the feature branch, and create the PR. Keep unrelated existing work out of the
+PR. Do not merge or deploy unless explicitly requested.
+
+Before editing, inspect the working tree and preserve pre-existing changes.
+Stage and commit only the requested work. Give each PR a clear title, a short
+summary of the change, and the verification performed. If a push or PR creation
+is blocked by GitHub availability or permissions, leave the work ready for
+review and report the specific blocker; do not claim the task is complete.
+
+After every meaningful commit, push the branch:
 ```bash
 git push origin <branch>
 ```
 
 ## Build & dev
 
-- **Docker (primary image, NIX‑FREE):** `docker build -t hermes-web .`. The build
-  fetches the renderer at `HERMES_RENDERER_REV` (default `main` = always the
-  latest upstream stream; pin with `--build-arg HERMES_RENDERER_REV=<sha|tag>`).
-- **Nix flake (VPS path only):** `nix build .#` / `nix develop`.
-- **Dev loop:** `nix develop` → `pnpm install` → `pnpm --filter web-desktop run dev`
-  (port 5174). Production preview: `pnpm --filter web-desktop run preview` (4174).
-- **Verify:** `pnpm run typecheck`; lint/build are covered by GitHub Actions.
+- **Docker (primary image, NIX-FREE):** `docker build -t athena .` fetches
+  the exact renderer revision in `flake.lock`, typechecks, and builds the UI.
+- **Dev loop:** `pnpm prepare:renderer` → `pnpm install --frozen-lockfile` →
+  `pnpm dev` (port 5174). `nix develop` is an optional development environment;
+  do not run Nix builds on the VPS.
+- **Verify:** For application changes, run `pnpm typecheck` and `pnpm build`
+  when practical, then exercise the affected workflow. For documentation or
+  low-risk changes, use checks appropriate to the change. Report checks that
+  could not be completed.
 
-## Errors / self‑repair via Hermes
+## Development scope
 
-If something breaks — an error, a button that does not react, something that
-fails to start, a chat that hangs — **paste the error / describe the symptom**
-to the **Hermes** agent (on the VPS) and ask for a fix. The agent reviews the
-code and config, **finds the root cause and fixes it**, then **rebuilds and
-reloads the web/docker** — that should be enough.
+This is a personal project in early development. Prefer small, reversible changes
+and a short feedback loop. Do not require a full test suite, staged image
+promotion, release evidence records, or physical-device acceptance for routine
+changes. Existing tests are optional tools; use targeted checks for meaningful
+risks such as draft loss, conversation-selection races, authentication, and PWA
+activation. Do not add tests that merely mirror a styling or low-impact change.
 
-Self‑repair loop:
-1. Receive the problem: “X doesn't work — error: …"
-2. Diagnose (container logs, nginx, code) and fix.
-3. Rebuild image / web + `docker restart` (reload).
-4. Re‑verify via `https://prod-server.emu-nessie.ts.net:8444/` (HTTPS).
+Keep the current framework and upstream chat engine. Add small adapters when a
+feature needs them, consolidate repeated browser interactions incrementally, and
+avoid speculative architecture or a second mutable conversation store. Preserve
+draft, recording, selection, and safe-update behavior while simplifying code.
+
+`docs/releases.md` describes the current build/deploy/rollback process. Earlier
+reset/evolution plans and renderer automation checklists are historical, not
+additional acceptance gates. Keep automated renderer activation parked unless
+explicitly requested. Do not alter repository settings as part of routine work.
+
+## Fixing problems
+
+Diagnose the reported symptom, make the smallest useful fix, and check the
+affected workflow. Images build in GitHub Actions; a push to `main` publishes
+and deploys the image with container-health rollback. Keep feature work on a
+branch and open a PR on `origin`. Do not merge or deploy unless requested.
+
+Use the previous immutable image digest for rollback if a deployed change breaks
+behavior. Keep browser storage, runtime configuration, and data volumes intact.

@@ -1,93 +1,43 @@
-# Hermes Web
+<h1 align="center">
+  <img src="apps/web-desktop/public/athena.svg" alt="Athena A icon" width="128">
+</h1>
 
-Hermes Desktop’s chat UI as a web app and installable PWA, with a Docker image
-for self-hosting. The renderer is fetched from
-[`NousResearch/hermes-agent`](https://github.com/NousResearch/hermes-agent) at
-build time.
+Athena is an unofficial web app and installable PWA for Hermes Agent. It is a
+frontend only; connect it to a running Hermes Gateway.
 
-> This is an unofficial, AI-generated project. It is intended for private
-> networks such as Tailscale and is not hardened for the public internet.
+**Why Athena?** In Greek mythology, Athena sees the whole problem and devises
+the plan; Hermes slips through obstacles, negotiates awkward missions, and
+delivers the crucial message.
 
-## Repository
+> Intended for private networks such as Tailscale. Athena is not hardened for
+> the public internet.
 
-- `apps/web-desktop/` — web app, bridge, styles, and overrides
-- `flake.nix` — Nix development and production build
-- `Dockerfile` — Nix-free frontend image using nginx
-- `apps/web-desktop/.env.example` — local and Docker configuration template
+## Wiki guides
 
-The upstream renderer is supplied by the Nix flake or fetched by Docker. Do
-not add or edit `apps/desktop/` or `apps/shared/`; those directories contain
-upstream renderer sources.
+Browse the [Athena Wiki](https://github.com/jtenniswood/athena/wiki) for setup and help:
 
-## Development
+- [Quick start with Docker](https://github.com/jtenniswood/athena/wiki/Quick-Start)
+- [Run with Docker Compose](https://github.com/jtenniswood/athena/wiki/Run-with-Docker-Compose)
+- [Configure the Hermes Gateway](https://github.com/jtenniswood/athena/wiki/Gateway-Configuration)
+- [Access Athena remotely](https://github.com/jtenniswood/athena/wiki/Remote-Access)
+- [Update Athena](https://github.com/jtenniswood/athena/wiki/Updating-Athena)
+- [Troubleshooting](https://github.com/jtenniswood/athena/wiki/Troubleshooting)
 
-```bash
-corepack enable
-pnpm prepare:renderer
-pnpm install --frozen-lockfile
-pnpm dev
-```
+## Run with Docker
 
-Open <http://localhost:5174/>. Run the focused type check with:
+Athena’s Docker image contains the web app and nginx. It connects to a Hermes
+Gateway that you run separately. Docker Compose is optional; the [Compose wiki
+guide](https://github.com/jtenniswood/athena/wiki/Run-with-Docker-Compose) has
+instructions if you prefer it.
 
-```bash
-pnpm typecheck
-```
+First, copy the environment template and set the gateway address:
 
-For shared design tokens, component choices, and responsive checks, see the
-[web UI styling guide](docs/ui-styles.md).
-
-## Build and deploy
-
-Release builds and Nix dependency verification run in GitHub Actions. Download
-and extract the `web-dist-<commit>` artifact to stage a static deployment:
-
-```bash
-HERMES_WEB_DIST_DIR="$HOME/.hermes/desktop-web" \
-  apps/web-desktop/scripts/deploy.sh /absolute/path/to/extracted-artifact
-```
-
-The script validates build identity, preserves immutable release directories,
-and atomically changes the `current` link. It does not build or restart anything.
-Restart the configured web service separately to activate a staged release.
-The Nix home-manager module serves these artifacts with nginx; `directory` now
-means the extracted artifact directory, not a source checkout.
-
-## Docker self-hosting
-
-The Docker image contains the built web UI and nginx. It does not contain a
-Hermes gateway or model runtime. At startup, nginx reads the gateway settings
-from environment variables and proxies the browser’s REST, login, and
-WebSocket requests to that gateway.
-
-### 1. Build the image
-
-From the repository root:
-
-```bash
-docker build -t hermes-web:local .
-```
-
-The build fetches the renderer revision pinned in `flake.lock`. For a release
-or CI image, pass the wrapper revision and release channel explicitly:
-
-```bash
-docker build \
-  --build-arg HERMES_WRAPPER_REV="$(git rev-parse HEAD)" \
-  --build-arg HERMES_RELEASE_CHANNEL=local \
-  -t hermes-web:local .
-```
-
-### 2. Create an environment file
-
-Keep deployment settings outside the repository. Start with the supplied
-template:
-
-```bash
+```sh
 cp apps/web-desktop/.env.example .env.hermes-web
 ```
 
-For a gateway running on the Docker host, use:
+For a gateway running on the Docker host, set these values in
+`.env.hermes-web`:
 
 ```dotenv
 HERMES_GATEWAY_URL=http://host.docker.internal:9119
@@ -95,288 +45,46 @@ HERMES_GATEWAY_NAME=Local Hermes
 HERMES_HOME=/data/hermes
 ```
 
-For a gateway reachable over Tailscale, replace the URL with its Tailscale IP
-or MagicDNS hostname:
+If your gateway runs elsewhere, use its reachable HTTP(S) address, such as its
+Tailscale IP or MagicDNS hostname. Use the origin only; do not add a path such
+as `/api`.
 
-```dotenv
-HERMES_GATEWAY_URL=http://100.64.0.40:9119
-HERMES_GATEWAY_NAME=Hermes over Tailscale
-HERMES_HOME=/data/hermes
-```
-
-The gateway value must be an HTTP(S) origin only. Do not include credentials,
-a path, query string, or fragment. Examples such as
-`http://host.docker.internal:9119/api` are invalid; the container adds the
-`/api`, `/auth`, and `/login` routes itself.
-
-### 3. Start the container
-
-Mount the host Hermes directory so the web app can serve installed plugins and
-desktop plugins. On Linux, `--add-host` makes `host.docker.internal` resolve
-to the Docker host; it is harmless when the configured gateway is elsewhere.
-
-```bash
-docker run -d \
-  --name hermes-web \
-  --restart unless-stopped \
-  --env-file .env.hermes-web \
-  --add-host host.docker.internal:host-gateway \
-  -p 4174:80 \
-  -v "$HOME/.hermes:/data/hermes" \
-  hermes-web:local
-```
-
-Open <http://localhost:4174/> on the Docker host. From another device, use
-the host’s LAN or Tailscale address, for example
-`http://dev.example.ts.net:4174/`. Keep the device on the same tailnet when
-using a Tailscale address.
-
-For microphone recording and other browser features that require a secure
-context, put the container behind HTTPS or use Tailscale Serve. Plain HTTP is
-supported for normal chat but browsers generally block microphone access.
-
-### 4. Verify and manage the container
-
-Check the container and its startup configuration:
-
-```bash
-docker ps --filter name=hermes-web
-docker logs --tail 100 hermes-web
-curl http://localhost:4174/build-info.json
-curl http://localhost:4174/runtime-config.js
-```
-
-Change the gateway or any other environment setting by editing the env file,
-then recreate the container. A restart is not enough if the environment was
-changed in the `docker run` command itself.
-
-```bash
-docker rm -f hermes-web
-docker run -d \
-  --name hermes-web \
-  --restart unless-stopped \
-  --env-file .env.hermes-web \
-  --add-host host.docker.internal:host-gateway \
-  -p 4174:80 \
-  -v "$HOME/.hermes:/data/hermes" \
-  hermes-web:local
-```
-
-To stop it without removing the container:
-
-```bash
-docker stop hermes-web
-```
-
-### Docker environment settings
-
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `HERMES_GATEWAY_URL` | No (recommended) | HTTP(S) origin of the Hermes gateway. Defaults to `http://127.0.0.1:9119` inside the image, which usually means the container itself. |
-| `HERMES_GATEWAY_NAME` | No | Label shown for the configured gateway. Defaults to `Hermes`. |
-| `HERMES_HOME` | No | Container path for mounted Hermes configuration and plugins. Defaults to `/data/hermes`. |
-| `HERMES_BIND` | No | nginx bind address. Defaults to `0.0.0.0`. Normally leave this unchanged when using Docker port publishing. |
-| `HERMES_PORT` | No | nginx port inside the container. Defaults to `80`; the left side of `-p 4174:80` is the host port. |
-
-`HERMES_WEB_URL` and `WEB_ALLOWED_HOSTS` are development/deployment settings;
-they are not needed by the built nginx container. Docker reads environment
-files as data and does not execute shell commands from them.
-
-Docker, development, and Nix use the exact Hermes revision in `flake.lock`.
-`pnpm prepare:renderer` fetches that revision into an ignored cache and creates
-the source links. It refuses to overwrite existing or modified renderer sources.
-Use `pnpm check:renderer` to verify a checkout.
-
-The application emits `build-info.json` with the wrapper revision, renderer
-revision, dependency-lock hash, timestamp, and release channel. CI supplies the
-wrapper identity to Docker; local image builds can supply `HERMES_WRAPPER_REV`.
-The frontend version is separate from the connected gateway version.
-
-Microphone recording requires HTTPS when opening the app from another device.
-Use an HTTPS reverse proxy (or Tailscale Serve for a private demo); an HTTP LAN
-or tailnet address cannot request microphone permission. Local development on
-`http://localhost` also supports recording. Click the microphone and allow access
-when the browser asks. If access was previously blocked, enable Microphone in
-the browser's site permissions and try again.
-
-Pull requests run strict wrapper and reachable-renderer typechecking, foundation
-tests, gateway regression tests, and a production build. Upstream diagnostics
-are not broadly ignored; the explicit diagnostic baseline is currently empty.
-
-### Gateway configuration details
-
-The browser connects to the configured gateway through nginx, keeping API,
-authentication, and WebSocket traffic same-origin with the web UI. This avoids
-requiring browser CORS configuration on the gateway and keeps gateway cookies
-and WebSocket tickets on the web app’s origin.
-
-Runtime configuration is validated before nginx starts and is excluded from the
-PWA cache. The generated `/runtime-config.js` and legacy `/gateway-config.js`
-endpoints are served with `Cache-Control: no-store`, so changing the gateway
-does not require rebuilding the image. Recreate the container after changing
-the environment file.
-
-For a remote gateway, make sure the Docker host can reach the gateway address
-and that the gateway accepts the host’s forwarded HTTP/WebSocket requests. A
-gateway that is reachable from the host but blocked from Docker’s network will
-still appear unavailable in Hermes Web.
-
-When placing Hermes Web behind Cloudflare or another TLS-terminating proxy,
-enable WebSocket proxying and preserve the original `X-Forwarded-Proto` header.
-The bundled nginx forwards the original `http` or `https` scheme to the gateway
-so OAuth redirects and secure session cookies use the browser-facing scheme.
-
-The nginx image includes Node only for the shared configuration generator at
-startup; nginx handles all requests. The same generator and route contract are
-used by development and the Nix service.
-
-GitHub Actions publishes `linux/amd64` images to GHCR after changes are merged
-to `main` and for version tags.
-
-## Editing the UI
-
-Change only this repository’s files:
-
-- CSS overrides: `apps/web-desktop/src/web-overrides.css`
-- Web bridge behavior: `apps/web-desktop/src/web-bridge/`
-- Component swaps: `apps/web-desktop/src/overrides/` plus an alias in
-  `vite.config.ts`
-- New components and helpers: `apps/web-desktop/src/components/` and
-  `apps/web-desktop/src/lib/`
-
-### Updating the Hermes Desktop renderer
-
-The web app uses the `apps/desktop` and `apps/shared` sources from the exact
-Hermes Agent commit pinned in `flake.lock`. To update that renderer:
-
-1. Start from `origin/main` on a clean `codex/*` branch or a fresh worktree.
-   A fresh checkout avoids stale generated renderer links. Do not edit
-   `apps/desktop/` or `apps/shared/`; `pnpm prepare:renderer` fetches them.
-2. Choose the release from the official
-   [Hermes Agent releases](https://github.com/NousResearch/hermes-agent/releases)
-   page and resolve its tag to the full 40-character commit SHA. Record the
-   current pin with `node scripts/renderer.mjs --revision` and review the
-   comparison from that SHA to the selected SHA at
-   `https://github.com/NousResearch/hermes-agent/compare/<current-sha>...<release-sha>`.
-3. Export the selected SHA and ask Nix for metadata at that exact revision:
-
-   ```bash
-   export RENDERER_REVISION="paste-the-40-character-commit-sha-here"
-   nix flake metadata --json --no-write-lock-file \
-     "github:NousResearch/hermes-agent/$RENDERER_REVISION" \
-     > /tmp/hermes-renderer-metadata.json
-   ```
-
-   Update only `nodes.hermes.locked.rev`, `narHash`, and `lastModified` in
-   `flake.lock` from that metadata. Keep the input declaration and all other
-   lock entries unchanged. Confirm the recorded `rev` equals the selected SHA.
-4. Fetch the matching renderer and install the locked web dependencies:
-
-   ```bash
-   pnpm prepare:renderer
-   pnpm install --frozen-lockfile
-   ```
-
-5. Review the renderer diff and compatibility report. Repair integration issues
-   in Athena-owned adapters, overrides, configuration, or dependencies; add
-   focused regression coverage for confirmed behavior changes. Then run:
-
-   ```bash
-   pnpm check:upstream
-   pnpm typecheck
-   pnpm test:foundation
-   pnpm build
-   pnpm check:renderer
-   pnpm check:compatibility-registry
-   ```
-
-6. Open a PR that records the release, tag, commit, upstream comparison, fixes,
-   and checks performed. Include browser or gateway verification when available
-   and state any checks that could not be run. Do not merge or deploy as part of
-   the update work.
-
-For the automated proposal workflow, its manual dispatch behavior, or blocked
-update repairs, follow the [upstream update guide](docs/upstream-updates.md).
-
-## Browser integration boundaries
-
-Browser services live in `apps/web-desktop/src/platform/`. Only the
-`src/upstream/` adapter imports renderer internals. The public browser bridge
-keeps the desktop API shape while composing transport, files, clipboard,
-notifications, and display services. Native terminal and git APIs remain absent.
-
-The renderer transforms have named, reviewed source/output fingerprints. A
-change to a targeted upstream module stops the compatibility build until the
-transform is reviewed; the updater must never regenerate these fixtures itself.
-This deliberately favors a delayed upstream update over silently changed chat
-routing. `pnpm test:foundation` checks the transforms, import boundary, and
-shared TypeScript/Vite alias mappings.
-
-### Browser state and application updates
-
-Credentials are stored under `hermes-web.connection.v2.<gateway identity>`.
-Only an explicitly matching active legacy connection can migrate a token;
-ambiguous records remain untouched and require sign-in. Theme, zoom, desktop
-layout and upstream text-draft keys remain unchanged. When storage is blocked,
-sign-in remains in memory and the connection screen explains the limitation.
-
-The app checks for updates when you return to its tab or reconnect, and every
-minute while visible and online. A waiting service worker shows **Update when
-safe**. It flushes upstream text drafts and checks all open app tabs before
-activation. Active responses, file
-selection/uploads, recording, unsent attachments, unsaved text, conflicting
-cross-tab drafts and unresponsive older tabs postpone the update. Finish that
-work or close older tabs, then retry. This does not add offline chat: cached
-application assets still need the configured gateway for chat and sign-in.
-Runtime configuration, authentication, API responses and plugin files are not
-part of the application precache.
-
-If an HTTPS hostname shows an older UI than the direct HTTP address, its
-browser may still be running a cached app shell. Use **Update when safe**, or
-close all tabs and installed app windows for that hostname and reopen it. A
-fresh private window can confirm whether the difference is browser-local.
-For an older client that cannot update, unregister that hostname's service
-worker and remove its Cache Storage entries in browser developer tools, then
-close its tabs and reopen it. Save any unfinished work first; leave Local
-Storage and cookies intact to preserve saved drafts, settings, and sign-in.
-
-nginx prevents HTTP caching of the app shell, service-worker scripts, and build
-metadata while keeping content-hashed assets cacheable. This does not forcibly
-replace an already active service worker. Cloudflare Access callback paths and
-`/build-info.json` bypass the service worker's navigation fallback. If using
-custom Cloudflare cache rules, keep these mutable and authentication routes
-out of any Cache Everything rule.
-
-Run browser checks against a built image:
+Start Athena with the published image:
 
 ```sh
-pnpm exec playwright install chromium webkit
-HERMES_TEST_IMAGE=hermes-web pnpm exec playwright test
+docker run -d \
+  --name athena \
+  --restart unless-stopped \
+  --env-file .env.hermes-web \
+  --add-host host.docker.internal:host-gateway \
+  -p 4174:80 \
+  -v "$HOME/.hermes:/data/hermes:ro" \
+  ghcr.io/jtenniswood/athena:latest
 ```
 
-The tests use a local synthetic backend without model requests. They cover
-browser recovery, credential migration and the all-tab update protocol through
-nginx. CI retains screenshots and failure traces. Full chat/Bot parity and a
-real-gateway smoke test are additional rollout gates.
+Open <http://localhost:4174/>. The mounted Hermes directory lets Athena serve
+installed `plugins/` and `desktop-plugins/`; remove the `-v` line if you do
+not use filesystem plugins. On Linux, `--add-host` lets the container reach a
+gateway running on the Docker host.
 
-### Renderer release automation
+To stop Athena:
 
-See [release setup and rollback](docs/releases.md) for the repository-scoped
-GitHub App, required checks, separate enablement switches, image promotion and
-rollback by digest. Scheduled renderer proposals use the exact upstream commit and
-can change only renderer lock metadata. `release.yml` is the single publisher;
-a release publishes an image without restarting the production deployment.
+```sh
+docker stop athena
+```
 
-The [automatic upstream update runbook](docs/upstream-updates.md) describes setup
-auditing, automatic branch refresh, compatibility reports, and repairing blocked
-updates. Run `node scripts/check-update-setup.mjs` to inspect readiness without
-changing repository settings, or `pnpm check:upstream` to report local source
-contract changes before a full build.
+Use HTTPS or Tailscale Serve when opening Athena from another device, especially
+for microphone access.
 
-### Browser-focused preview
+## Acknowledgment
 
-The preview build uses the browser-focused shell backed by the upstream chat
-engine. See the [preview guide](docs/browser-preview.md) for the isolated
-Compose stack and exact PR images. The browser-focused shell is the only web
-entry point in stable and preview builds; preview images add only the synthetic
-gateway and review fixtures.
+Athena is an original project based on the work of
+[hermes-desktop-web-mobile-pwa](https://github.com/mdg-qc/hermes-desktop-web-mobile-pwa),
+with extensive improvements for web and mobile.
+
+## License
+
+Athena is licensed under the [MIT License](LICENSE). The renderer fetched from
+[`NousResearch/hermes-agent`](https://github.com/NousResearch/hermes-agent)
+retains its own license and copyright notices. Third-party dependencies remain
+under their respective licenses.

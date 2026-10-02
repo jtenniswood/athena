@@ -75,6 +75,16 @@ export async function mintWsTicket(origin: string | null): Promise<string> {
   })
 
   if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+
+    // Treat a missing cookie as an authentication failure instead of a generic
+    // socket startup error. The renderer recognizes this wording and presents
+    // its remote sign-in recovery flow, including when a stale session probe
+    // previously reported the gateway as connected.
+    if (res.status === 401 || detail.toLowerCase().includes('no_cookie')) {
+      throw new Error(`Remote gateway sign-in required (${res.status}): session cookie is missing or expired`)
+    }
+
     throw new Error(`${res.status}: failed to mint websocket ticket`)
   }
 
@@ -213,6 +223,7 @@ export async function apiFetch<T>(request: HermesApiRequest): Promise<T> {
 
   const token = resolveToken()
   const headers: Record<string, string> = {}
+  const retryableConfigWrite = method === 'PUT' && path.split('?')[0] === '/api/config'
 
   if (body !== undefined) {headers['Content-Type'] = 'application/json'}
 
@@ -220,13 +231,24 @@ export async function apiFetch<T>(request: HermesApiRequest): Promise<T> {
 
   const finish = method === 'GET' ? () => {} : beginOperation()
   try {
-  const res = await fetch(withGatewayRoute(url, activeUpstreamOrigin()), {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-    credentials: 'same-origin',
-    signal: AbortSignal.timeout(timeoutMs ?? DEFAULT_API_TIMEOUT_MS)
-  })
+  let res: Response
+  for (let attempt = 0; ; attempt += 1) {
+    res = await fetch(withGatewayRoute(url, activeUpstreamOrigin()), {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      credentials: 'same-origin',
+      signal: AbortSignal.timeout(timeoutMs ?? DEFAULT_API_TIMEOUT_MS)
+    })
+
+    // A sleeping or restarting gateway can briefly return a proxy error while
+    // serving a safe read or a config autosave. Config PUTs are sparse deep
+    // merges, so repeating the same patch is safe if the first response was
+    // lost between the gateway and browser.
+    if ((method !== 'GET' && !retryableConfigWrite) || attempt > 0 || ![502, 503, 504].includes(res.status)) break
+    await res.body?.cancel()
+    await new Promise(resolve => setTimeout(resolve, 300))
+  }
 
   const text = await res.text()
 

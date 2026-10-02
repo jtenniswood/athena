@@ -10,6 +10,11 @@ function label(value: string) {
   return text ? text[0].toUpperCase() + text.slice(1) : text
 }
 
+/** Read the active renderer profile without exposing its store to browser UI. */
+export function useBrowserActiveProfile(): string {
+  return useStore($activeGatewayProfile)
+}
+
 /** Restore the tab's profile without changing its persisted all-profiles scope. */
 export function restoreBrowserProfile(): () => void {
   let saved: string | null = null

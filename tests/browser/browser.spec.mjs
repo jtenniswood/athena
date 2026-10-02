@@ -1,8 +1,11 @@
 import { test, expect } from '@playwright/test'
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { createPreviewGateway } from '../../scripts/preview/gateway.mjs'
 import { getBrowserTarget } from './test-target.mjs'
 import { installBrowserErrorCollector } from './error-collector.mjs'
+import { viewportChecks } from './viewport-checks.mjs'
+import { narrowDesktopChecks } from './narrow-desktop-checks.mjs'
 
 // This suite exercises the browser shell only. The old desktop/browser
 // selector was removed, so every test must start through the same production
@@ -68,6 +71,11 @@ const open = async (page, session = 'preview-week') => {
   }
   await expect(page.getByText('Help me make a thoughtful plan.', { exact: true }).first()).toBeVisible({ timeout: 30000 })
 }
+
+viewportChecks(test, open)
+narrowDesktopChecks(test, open)
+
+const touchTest = test.extend({ hasTouch: true })
 
 test.describe('browser microphone', () => {
   test('records once permission is granted and releases the mic after transcription', async ({ page }) => {
@@ -192,7 +200,7 @@ test('empty chat stays centered as the available panel space changes', async ({ 
   }
 })
 
-test('phone navigation and action sheets keep touch targets usable across UI scale', async ({ page }) => {
+touchTest('phone navigation and action sheets keep touch targets usable across UI scale', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await open(page)
   const expectTouchTarget = async (name, control, minSize = 44) => {
@@ -277,7 +285,7 @@ test('phone navigation and action sheets keep touch targets usable across UI sca
   }
 })
 
-test('phone navigation and contextual sheets stay tappable at 320px and 200% UI scale', async ({ page }) => {
+touchTest('phone navigation and contextual sheets stay tappable at 320px and 200% UI scale', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 })
   await open(page)
   await page.evaluate(percent => window.hermesDesktop.zoom.setPercent(percent), 200)
@@ -315,7 +323,6 @@ test('phone navigation and contextual sheets stay tappable at 320px and 200% UI 
 })
 
 for (const mode of [
-  { name: 'narrow mouse', viewport: { width: 390, height: 844 }, touch: false },
   { name: 'phone touch', viewport: { width: 390, height: 844 }, touch: true },
   { name: 'landscape touch', viewport: { width: 844, height: 390 }, touch: true }
 ]) {
@@ -382,7 +389,7 @@ test('desktop submenus still open on hover beside their parent menu', async ({ p
   await page.keyboard.press('Escape')
 })
 
-test('phone long code and tables scroll inside the response at 320px', async ({ page }) => {
+touchTest('phone long code and tables scroll inside the response at 320px', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 })
   await page.route(/\/api\/sessions\/preview-week\/messages/, async route => {
     const response = await route.fetch()
@@ -502,26 +509,27 @@ test('short touch landscape uses phone surfaces while a taller touch tablet keep
 })
 
 for (const width of [390, 1440]) {
-  test(`backend version opens the backend updater at ${width}px`, async ({ page }) => {
+  test.extend({ hasTouch: width === 390 })(`settings menu opens the backend updater at ${width}px`, async ({ page }) => {
     await page.route(/\/api\/hermes\/update\/check(?:\?|$)/, route => route.fulfill({ json: {
       current_version: 'synthetic-preview-v1', behind: 0, update_available: false, can_apply: true, commits: []
     } }))
     await page.setViewportSize({ width, height: 960 })
     await open(page)
-    if (width === 390) {
-      await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
-      await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
-    }
-    const version = page.locator('.browser-backend-version').getByRole('button', { name: /backend vsynthetic-preview-v1/i })
+    await expect(page.locator('.browser-navigation')).not.toContainText('backend vsynthetic-preview-v1')
+    const settings = page.getByRole('button', { name: 'Open settings menu', exact: true })
+    await settings.click()
+    const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
+    const version = surface.getByRole(width === 390 ? 'button' : 'menuitem', { name: /backend vsynthetic-preview-v1/i })
     await expect(version).toBeVisible()
     const check = page.waitForRequest(request => request.url().includes('/api/hermes/update/check?force=true'))
     await version.click()
     await check
     const updater = page.getByRole('dialog').filter({ hasText: 'The backend is running the latest version.' })
     await expect(updater).toBeVisible()
+    await expect(surface).toBeHidden()
     await page.keyboard.press('Escape')
     await expect(updater).toBeHidden()
-    await expect(version).toBeFocused()
+    await expect(settings).toBeFocused()
   })
 
   test(`composer stays at the bottom while idle, running, and reconnecting at ${width}px`, async ({ page }) => {
@@ -696,6 +704,34 @@ test('settings and command center use one upstream overlay and preserve the chat
   await expect(page.getByRole('dialog', { name: 'Gateway', exact: true })).toBeVisible()
 })
 
+test('settings fills the viewport and uses compact list and detail navigation', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await open(page)
+  const chat = editor(page)
+  await chat.fill('Keep this draft while changing settings layout')
+  await page.getByRole('button', { name: 'Open settings menu', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Settings', exact: true }).click()
+
+  const surface = page.getByRole('dialog', { name: 'Settings', exact: true })
+  await expect(surface).toBeVisible()
+  await expect(surface.getByRole('button', { name: /search/i })).toBeVisible()
+  const bounds = await surface.boundingBox()
+  expect(Math.abs(bounds.x)).toBeLessThanOrEqual(1)
+  expect(Math.abs(bounds.y)).toBeLessThanOrEqual(1)
+  expect(Math.abs(bounds.width - 390)).toBeLessThanOrEqual(1)
+  expect(bounds.height).toBeGreaterThanOrEqual(843)
+  await expect(surface.locator('.browser-settings-content')).toBeHidden()
+
+  await surface.locator('.browser-settings-navigation').getByRole('button', { name: 'Appearance', exact: true }).click()
+  await expect(surface.getByRole('heading', { name: 'Appearance', exact: true })).toBeVisible()
+  await expect(surface.locator('.browser-settings-content')).toBeVisible()
+  await surface.getByRole('button', { name: 'Back', exact: true }).click()
+  await expect(surface.locator('.browser-settings-navigation')).toBeVisible()
+  await expect(surface.locator('.browser-settings-content')).toBeHidden()
+  await surface.getByRole('button', { name: 'Close settings', exact: true }).click()
+  await expect(chat).toHaveText('Keep this draft while changing settings layout')
+})
+
 test('approval mode keeps the selected profile mode and toolbar icon synchronized', async ({ page }) => {
   await open(page)
   const control = page.locator('.browser-approval-control button')
@@ -727,7 +763,7 @@ test('browser settings omit desktop-only keybinds', async ({ page }) => {
   }
 })
 
-test('browser workspace panels open and close without losing a draft', async ({ page }) => {
+touchTest('browser workspace panels open and close without losing a draft', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await open(page)
   await page.evaluate(() => window.hermesDesktop.zoom.setPercent(50))
@@ -761,9 +797,11 @@ for (const width of [390, 1440]) {
     const main = page.locator('.browser-main')
     const originalChatWidth = width === 1440 ? (await main.boundingBox()).width : null
     if (width === 390) {
-      await expect(main).toBeHidden()
-      await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
       await expect(main).toBeVisible()
+      await expect(main).toHaveAttribute('inert', '')
+      expect(originalWidth).toBeLessThan(width)
+      await page.getByRole('button', { name: 'Close navigation', exact: true }).click()
+      await expect(main).not.toHaveAttribute('inert')
     } else {
       await toggle.click()
     }
@@ -868,6 +906,69 @@ for (const width of [390, 1440]) {
     await expect(editor(page)).toHaveText('Draft retained through section disclosure')
   })
 }
+
+const openSectionNavigation = async page => {
+  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
+}
+
+touchTest('Cron jobs can be hidden before any jobs exist and restored later', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 960 })
+  let jobs = []
+  await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => route.fulfill({ json: jobs }))
+  await open(page)
+  await openSectionNavigation(page)
+  await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+  const sheet = page.getByRole('dialog', { name: 'Navigation tabs' })
+  const cron = sheet.getByRole('checkbox', { name: 'Cron jobs' })
+  await expect(cron).toBeVisible()
+  await expect(cron).toHaveAttribute('aria-checked', 'true')
+  await cron.click()
+  await expect(cron).toHaveAttribute('aria-checked', 'false')
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('hermes-web.browser.hidden-sections') || '{}').hidden ?? [])).toContain('cron-jobs')
+
+  jobs = [{ id: 'preview-hidden-job', name: 'Hidden verification job', prompt: 'Check navigation', enabled: true }]
+  await page.reload()
+  await openSectionNavigation(page)
+  const cronSection = page.locator('.browser-sessions-pane [data-browser-section-label]').filter({ hasText: /^Cron jobs$/ }).locator('xpath=ancestor::*[@data-sidebar="group"][1]')
+  await expect(cronSection).toHaveAttribute('data-browser-section-hidden', '')
+  await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+  const restored = page.getByRole('dialog', { name: 'Navigation tabs' }).getByRole('checkbox', { name: 'Cron jobs' })
+  await restored.click()
+  await expect(cronSection).toBeVisible()
+})
+
+touchTest('section menu includes collapsed session, messaging, and Cron sections', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 960 })
+  await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => route.fulfill({ json: [{ id: 'preview-menu-job', name: 'Menu verification job', prompt: 'Check navigation', enabled: true }] }))
+  await page.route(/\/api\/profiles\/sessions\/sidebar(?:\?|$)/, async route => {
+    const response = await route.fetch()
+    const data = await response.json()
+    data.messaging = {
+      ...data.messaging,
+      sessions: [{ ...data.recents.sessions[0], id: 'preview-menu-discord', title: 'Discord conversation', source: 'discord' }],
+      total: 1
+    }
+    await route.fulfill({ response, json: data })
+  })
+  await open(page)
+  await openSectionNavigation(page)
+  const pane = page.locator('.browser-sessions-pane')
+  for (const name of ['Sessions', 'Discord', 'Cron jobs']) {
+    const label = pane.locator('[data-browser-section-header]').getByRole('button', { name, exact: true })
+    await expect(label).toBeVisible()
+    const content = label.locator('xpath=ancestor::*[@data-sidebar="group"][1]').locator(':scope > [data-sidebar="group-content"]')
+    if (await content.count()) await label.click()
+    await expect(content).toHaveCount(0)
+  }
+  await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+  const sheet = page.getByRole('dialog', { name: 'Navigation tabs' })
+  const sections = sheet.getByRole('group', { name: 'Sections' })
+  await expect(sections.getByRole('checkbox', { name: 'Sessions', exact: true })).toHaveCount(0)
+  for (const name of ['Discord', 'Cron jobs']) await expect(sections.getByRole('checkbox', { name, exact: true })).toBeVisible()
+  await sections.getByRole('checkbox', { name: 'Discord', exact: true }).click()
+  await expect(pane.locator('[data-browser-section-header]').filter({ hasText: 'Discord' }).locator('xpath=ancestor::*[@data-sidebar="group"][1]')).toHaveAttribute('data-browser-section-hidden', '')
+})
 
 test('None grouping shows all sessions without subheaders and survives reload', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
@@ -1002,7 +1103,7 @@ for (const width of [390, 1440]) {
 
 for (const width of [390, 1440]) {
   for (const scale of [100, 150]) {
-    test(`settings actions retain drafts and transfer modal focus at ${width}px and ${scale}%`, async ({ page }, testInfo) => {
+    test.extend({ hasTouch: width === 390 })(`settings actions retain drafts and transfer modal focus at ${width}px and ${scale}%`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 960 })
       await open(page)
       await page.evaluate(value => window.hermesDesktop.zoom.setPercent(value), scale)
@@ -1056,6 +1157,213 @@ for (const width of [390, 1440]) {
   }
 }
 
+for (const width of [390, 1440]) {
+  test.extend({ hasTouch: width === 390 })(`settings groups and renamed search preserve destinations at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await open(page)
+    await editor(page).fill('Keep my draft while finding renamed settings')
+    const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+    const role = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
+    await trigger.click()
+    await page.getByRole(role, { name: 'Settings and workspace', exact: true })
+      .getByRole(role === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+    await expect(page.locator('.browser-settings-group-heading')).toHaveText([
+      'Preferences', 'Assistant', 'Tools', 'Service', 'Maintenance'
+    ])
+    await expect(page.locator('.browser-settings-category-button:not(.is-child) > span:not(.codicon)')).toHaveText([
+      'Appearance', 'Notifications', 'Keyboard Shortcuts', 'Models', 'AI Connections', 'Chat', 'Voice',
+      'Memory', 'Workspace', 'Browser Automation', 'Permissions', 'Saved Logins',
+      'Credentials', 'Server Connection', 'Billing', 'Archived Chats', 'Configuration', 'Advanced'
+    ])
+    await page.screenshot({ path: testInfo.outputPath('settings-groups.png') })
+    for (const [query, result, view, title] of [
+      ['Gateway', 'Server Connection', 'gateway', 'Server Connection'],
+      ['Backup & reset', 'Configuration', 'config:browser-configuration', 'Configuration'],
+      ['Providers', 'AI Connections — Accounts', 'providers', 'AI Connections'],
+      ['Server credentials', 'Credentials — Server Credentials', 'keys', 'Credentials']
+    ]) {
+      await page.locator('.browser-settings-search > button').click()
+      const input = page.locator('input[role="combobox"]')
+      await expect(input).toBeVisible()
+      await input.fill(query)
+      const palette = page.locator('[data-browser-command-palette]')
+      const bounds = await palette.boundingBox()
+      expect(bounds.x).toBeGreaterThanOrEqual(0)
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width)
+      if (query === 'Gateway') await page.screenshot({ path: testInfo.outputPath('settings-search.png') })
+      const option = page.getByRole('option', { name: result, exact: true })
+      if (width === 390) await option.tap()
+      else {
+        await page.mouse.move(10, 10)
+        await option.click()
+      }
+      await expect(input).toHaveCount(0)
+      await expect(page.getByRole('main', { name: title, exact: true })).toBeVisible()
+      await expect(page.locator('.browser-settings-heading h1')).toHaveText(width < 896 ? title : 'Settings')
+      expect(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('tab')).toBe(view)
+      if (view === 'keys') {
+        await expect(page.getByRole('button', { name: 'Server Credentials', exact: true })).toHaveAttribute('aria-current', 'page')
+      }
+      if (width < 896) {
+        await expect(page.locator('.browser-settings-search')).toHaveCount(0)
+        await page.getByRole('button', { name: 'Back', exact: true }).click()
+      }
+    }
+    await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+    await expect(editor(page)).toHaveText('Keep my draft while finding renamed settings')
+  })
+}
+
+for (const width of [390, 820, 1440]) {
+  test(`settings full-screen modal scales across compact and wide viewports at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await open(page)
+    await editor(page).fill('Keep the chat draft behind full-screen settings')
+    const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+    await trigger.click()
+    const menuRole = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
+    const menu = page.getByRole(menuRole, { name: 'Settings and workspace', exact: true })
+    await menu.getByRole(menuRole === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+
+    const surface = page.getByRole('dialog', { name: 'Settings', exact: true })
+    const frame = page.locator('[data-browser-settings-frame]')
+    await expect(surface).toBeVisible()
+    await expect(frame).toBeVisible()
+    if (width < 896) {
+      const closeBounds = await page.getByRole('button', { name: 'Close settings', exact: true }).boundingBox()
+      expect(closeBounds.width).toBeGreaterThanOrEqual(44)
+      expect(closeBounds.height).toBeGreaterThanOrEqual(44)
+    }
+    const bounds = await page.locator('[data-overlay-surface]').boundingBox()
+    expect(bounds.x).toBeCloseTo(0, 0)
+    expect(bounds.y).toBeCloseTo(0, 0)
+    expect(bounds.width).toBeCloseTo(width, 0)
+    expect(bounds.height).toBeCloseTo(900, 0)
+
+    if (width < 896) {
+      await expect(page.getByRole('navigation', { name: 'Settings categories' })).toBeVisible()
+      await page.getByRole('button', { name: 'Appearance', exact: true }).click()
+      await expect(page.locator('.browser-settings-mobile-title')).toHaveText('Appearance')
+      await expect(page.locator('.browser-settings-mobile-title')).toBeFocused()
+      await page.getByRole('button', { name: 'Back', exact: true }).click()
+      await expect(page.getByRole('navigation', { name: 'Settings categories' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Appearance', exact: true })).toBeFocused()
+      await page.getByRole('button', { name: 'AI Connections', exact: true }).click()
+      const providerCategories = page.getByRole('navigation', { name: 'AI Connections categories' })
+      await providerCategories.getByRole('button', { name: 'API keys', exact: true }).click()
+      await expect(providerCategories.getByRole('button', { name: 'API keys', exact: true })).toHaveAttribute('aria-current', 'page')
+    } else {
+      await expect(page.getByRole('navigation', { name: 'Settings categories' })).toBeVisible()
+      await expect(page.locator('.browser-settings-detail')).toBeVisible()
+    }
+
+    await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+    await expect(surface).toHaveCount(0)
+    await expect(trigger).toBeFocused()
+    await expect(editor(page)).toHaveText('Keep the chat draft behind full-screen settings')
+  })
+}
+
+for (const width of [390, 1440]) {
+  test(`model and chat settings load with a warm configuration cache at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.route(/\/api\/config(?:\?|$)/, route => route.fulfill({ json: {
+      model: { default: 'preview-model', provider: 'custom' }, display: { show_reasoning: true }
+    } }))
+    await page.route(/\/api\/config\/schema(?:\?|$)/, route => route.fulfill({ json: {
+      fields: { 'display.show_reasoning': { type: 'boolean', description: 'Show reasoning in chat' } }
+    } }))
+    await open(page)
+    await editor(page).fill('Preserve this draft while settings load')
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+      await trigger.click()
+      const role = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
+      await page.getByRole(role, { name: 'Settings and workspace', exact: true })
+        .getByRole(role === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+      if (width < 896) await page.getByRole('button', { name: 'Models', exact: true }).click()
+      await expect(page.locator('.browser-settings-detail').getByText('Auxiliary models', { exact: true })).toBeVisible()
+      await expect(page.locator('[data-slot="model-settings-skeleton"]')).toHaveCount(0)
+      if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
+      await page.getByRole('button', { name: 'Chat', exact: true }).click()
+      const reasoning = page.locator('[id="setting-field-display.show_reasoning"]').getByRole('switch')
+      await expect(reasoning).toBeVisible()
+      await expect(reasoning).toBeChecked()
+      await page.screenshot({ path: testInfo.outputPath(`chat-settings-${attempt}.png`) })
+      await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+      await expect(editor(page)).toHaveText('Preserve this draft while settings load')
+    }
+  })
+}
+
+for (const width of [390, 1440]) {
+  test(`configuration page retains import export and reset behavior at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    let config = { model: { default: 'preview-model', provider: 'custom' }, display: { show_reasoning: true } }
+    const writes = []
+    await page.route(/\/api\/config(?:\?|$)/, async route => {
+      const request = route.request()
+      if (request.method() === 'PUT') {
+        const body = request.postDataJSON()
+        writes.push({ body, profile: new URL(request.url()).searchParams.get('profile') })
+        config = { ...config, ...body.config }
+        await route.fulfill({ json: { ok: true } })
+      } else await route.fulfill({ json: config })
+    })
+    await open(page)
+    await editor(page).fill('Keep this draft while managing configuration')
+    const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+    await trigger.click()
+    const menuRole = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
+    await page.getByRole(menuRole, { name: 'Settings and workspace', exact: true })
+      .getByRole(menuRole === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Export config', exact: true })).toHaveCount(0)
+    if (width < 896) await page.getByRole('button', { name: 'Models', exact: true }).click()
+    await page.getByRole('main', { name: 'Models', exact: true }).getByRole('button', { name: 'research', exact: true }).click()
+    if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await page.getByRole('button', { name: 'Configuration', exact: true }).click()
+    await expect(page).toHaveURL(/tab=config%3Abrowser-configuration/)
+    const management = page.getByRole('region', { name: 'Configuration management' })
+    await expect(management).toBeVisible()
+    await expect(page.getByRole('main', { name: 'Configuration', exact: true }).getByText('Applies to', { exact: true })).toHaveCount(0)
+    await expect(management.getByText('Applies to profile: research', { exact: true })).toBeVisible()
+
+    const exportRequest = page.waitForRequest(request => request.method() === 'GET' && /\/api\/config\?/.test(request.url()) && new URL(request.url()).searchParams.get('profile') === 'research')
+    const downloadPromise = page.waitForEvent('download')
+    await management.getByRole('button', { name: 'Export config', exact: true }).click()
+    const download = await downloadPromise
+    await exportRequest
+    await download.saveAs(testInfo.outputPath('configuration.json'))
+    expect(JSON.parse(readFileSync(testInfo.outputPath('configuration.json'), 'utf8'))).toEqual(config)
+
+    const importFile = async content => {
+      const chooser = page.waitForEvent('filechooser')
+      await management.getByRole('button', { name: 'Import config', exact: true }).click()
+      await (await chooser).setFiles({ name: 'configuration.json', mimeType: 'application/json', buffer: Buffer.from(content) })
+    }
+    await importFile('{invalid json')
+    await expect(page.getByText('Invalid config JSON', { exact: true })).toBeVisible()
+    expect(writes).toHaveLength(0)
+    await importFile(JSON.stringify({ ...config, display: { show_reasoning: false } }))
+    await expect.poll(() => writes.length).toBe(1)
+    expect(writes[0]).toEqual({ body: { config: { display: { show_reasoning: false } } }, profile: 'research' })
+
+    const reset = management.getByRole('button', { name: 'Reset to defaults', exact: true })
+    await reset.click()
+    const confirmation = page.getByRole('dialog', { name: 'Reset all settings to Hermes defaults? — research', exact: true })
+    await expect(confirmation).toBeVisible()
+    await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click()
+    expect(writes).toHaveLength(1)
+    await reset.click()
+    await confirmation.getByRole('button', { name: 'Reset to defaults', exact: true }).click()
+    await expect.poll(() => writes.length).toBe(2)
+    expect(writes[1].profile).toBe('research')
+    await page.screenshot({ path: testInfo.outputPath('configuration-page.png') })
+    await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+    await expect(editor(page)).toHaveText('Keep this draft while managing configuration')
+  })
+}
+
 test('desktop panel actions follow upstream visibility when reopening settings', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
   await open(page)
@@ -1091,7 +1399,7 @@ test('settings menu consolidates workspace and gateway controls', async ({ page 
 })
 
 for (const width of [390, 1440]) {
-  test(`gateway opens as a modal from the settings menu at ${width}px`, async ({ page }, testInfo) => {
+  test.extend({ hasTouch: width === 390 })(`gateway opens as a modal from the settings menu at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 960 })
     await page.emulateMedia({ colorScheme: 'dark' })
     await open(page)
@@ -1127,7 +1435,7 @@ for (const width of [390, 1440]) {
 
 for (const width of [390, 1440]) {
   for (const scale of [100, 150]) {
-    test(`navigation tab actions preserve selection and drafts at ${width}px and ${scale}%`, async ({ page }) => {
+    test.extend({ hasTouch: width === 390 })(`navigation tab actions preserve selection and drafts at ${width}px and ${scale}%`, async ({ page }) => {
       await page.setViewportSize({ width, height: 960 })
       await open(page)
       await page.evaluate(value => window.hermesDesktop.zoom.setPercent(value), scale)
@@ -1232,7 +1540,63 @@ test('profile context menus stay beside their originating profile', async ({ pag
   expect(origin).not.toBeNull()
   expect(position).not.toBeNull()
   expect(Math.abs(position.x - origin.x)).toBeLessThan(120)
-  expect(Math.abs(position.y - origin.y)).toBeLessThan(140)
+  // Collision handling can place a taller menu above the bottom avatar rail.
+  expect(Math.min(Math.abs(position.y - origin.y), Math.abs(position.y + position.height - origin.y))).toBeLessThan(40)
+})
+
+test('Sessions avatar editing preserves the conversation and targets the clicked profile', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
+  const writes = []
+  page.on('websocket', socket => socket.on('framesent', ({ payload }) => {
+    try {
+      const frame = JSON.parse(String(payload))
+      if (frame.method === 'profiles.configure') writes.push(frame.params)
+    } catch { /* Ignore non-JSON transport frames. */ }
+  }))
+  await open(page)
+  await editor(page).fill('Keep this draft while editing another profile')
+  const originalUrl = page.url()
+  const allProfiles = page.getByRole('button', { name: 'All profiles', exact: true })
+  const originalScope = await allProfiles.getAttribute('aria-pressed')
+  // Edit from Sessions before ever opening the Bots tab.
+  const writer = page.locator('[data-profile-key="writer"]')
+  await writer.click({ button: 'right' })
+  const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
+  await menu.getByRole('menuitem', { name: 'Edit profile', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Edit profile', exact: true })
+  await expect(dialog).toContainText('(writer).')
+  await expect(menu).toBeHidden()
+  await expect.poll(() => dialog.evaluate(node => node.contains(document.activeElement))).toBe(true)
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(writer).toBeFocused()
+  await expect(editor(page)).toHaveText('Keep this draft while editing another profile')
+  expect(page.url()).toBe(originalUrl)
+  await expect(allProfiles).toHaveAttribute('aria-pressed', originalScope)
+  expect(writes).toEqual([])
+
+  await writer.click({ button: 'right' })
+  await menu.getByRole('menuitem', { name: 'Edit profile', exact: true }).click()
+  await expect(dialog).toContainText('(writer).')
+  const title = dialog.getByRole('textbox').first()
+  const originalTitle = await title.inputValue()
+  await title.fill('Writer from Sessions')
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  expect(writes.at(-1)?.name).toBe('writer')
+  expect(writes.at(-1)?.ui_meta?.['hermes-bots']?.title).toBe('Writer from Sessions')
+  await expect(editor(page)).toHaveText('Keep this draft while editing another profile')
+  expect(page.url()).toBe(originalUrl)
+  await expect(allProfiles).toHaveAttribute('aria-pressed', originalScope)
+
+  await writer.click({ button: 'right' })
+  await menu.getByRole('menuitem', { name: 'Edit profile', exact: true }).click()
+  await expect(title).toHaveValue('Writer from Sessions')
+  await title.fill(originalTitle)
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(dialog).toBeHidden()
+
+  await allProfiles.click({ button: 'right' })
+  await expect(menu.getByRole('menuitem', { name: 'Edit profile', exact: true })).toHaveCount(0)
 })
 
 test('profiles can reorder and hide the default Hermes profile', async ({ page }) => {
@@ -1352,7 +1716,7 @@ for (const width of [1440]) {
 
 for (const width of [390, 1440]) {
   for (const scale of [100, 150]) {
-    test(`profile actions preserve drafts and focus at ${width}px and ${scale}%`, async ({ page }, testInfo) => {
+    test.extend({ hasTouch: width === 390 })(`profile actions preserve drafts and focus at ${width}px and ${scale}%`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 960 })
       await open(page)
       await page.evaluate(percent => window.hermesDesktop.zoom.setPercent(percent), scale)
@@ -1453,7 +1817,7 @@ test('full-page browser routes open as modals and return to the chat', async ({ 
   await expect(editor(page)).toBeVisible()
 })
 
-test('phone tool surfaces fit a short 320px viewport and close back to chat', async ({ page }) => {
+touchTest('phone tool surfaces fit a short 320px viewport and close back to chat', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 480 })
   await open(page)
   await openNavigation(page)
@@ -1873,7 +2237,7 @@ for (const scenario of [
       }))
       expect(controls).toHaveLength(4)
       for (const control of controls) {
-        expect(control.width).toBeCloseTo(Math.max(36 * scale / 100, compact || hasTouch ? 44 : 0), 0)
+        expect(control.width).toBeCloseTo(Math.max(36 * scale / 100, hasTouch ? 44 : 0), 0)
         expect(control.height).toBeCloseTo(control.width, 0)
         expect(control.icon).toBeCloseTo(16 * scale / 100, 0)
         expect(control.centered).toBe(true)
@@ -1883,7 +2247,7 @@ for (const scenario of [
       await settings.focus()
       await expect(settings).toHaveCSS('outline-style', 'solid')
       await page.keyboard.press('Enter')
-      const actions = page.getByRole(compact ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
+      const actions = page.getByRole(compact && hasTouch ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
       await expect(actions).toBeVisible()
       const appearance = await actions.evaluate(el => {
         const style = getComputedStyle(el)
@@ -1892,12 +2256,12 @@ for (const scenario of [
       })
       expect(appearance.background).not.toBe('rgba(0, 0, 0, 0)')
       expect(appearance.width).toBeGreaterThan(0)
-      expect(appearance.rowHeight).toBeCloseTo(compact || hasTouch ? 44 : 24 * scale / 100, 0)
+      expect(appearance.rowHeight).toBeCloseTo(hasTouch ? 44 : 24 * scale / 100, 0)
       const bounds = await actions.boundingBox()
       expect(bounds.x).toBeGreaterThanOrEqual(-1)
       expect(bounds.x + bounds.width).toBeLessThanOrEqual(width + 1)
       expect(bounds.y + bounds.height).toBeLessThanOrEqual(height + 1)
-      if (compact) {
+      if (compact && hasTouch) {
         expect(bounds.width).toBeCloseTo(width, 0)
         expect(bounds.y + bounds.height).toBeCloseTo(height, 0)
         const last = actions.getByRole('button', { name: 'Agents', exact: true })
@@ -1917,7 +2281,7 @@ for (const scenario of [
       const ordering = filters.getByRole('menuitem', { name: 'Ordering', exact: true })
       await expect(ordering).toHaveCSS('font-family', appearance.font)
       expect((await ordering.boundingBox()).height).toBeCloseTo(appearance.rowHeight, 0)
-      if (compact) await ordering.click()
+      if (compact && hasTouch) await ordering.click()
       else await ordering.hover()
       const submenu = page.locator('[data-slot="dropdown-menu-sub-content"]:visible')
       await expect(submenu).toBeVisible()
@@ -1936,3 +2300,70 @@ for (const scenario of [
     }
   })
 }
+
+for (const width of [390, 1440]) {
+  test.describe(`stable sidebar at ${width}px`, () => {
+    test.use({ hasTouch: width === 390 })
+    test(`sidebar visibility uses stable identity through markup changes and reload at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 960 })
+      await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => route.fulfill({ json: [{ id: 'stable-section-job', name: 'Test job', prompt: 'Check sections', enabled: true }] }))
+      await open(page)
+      if (width === 390) {
+        await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+        await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
+      }
+      const section = page.locator('[data-browser-section-id="cron-jobs"]')
+      const header = section.locator('[data-browser-section-label]')
+      const content = section.locator('[data-sidebar="group-content"]')
+      await expect(section).toBeVisible()
+      if (await content.isVisible()) await header.click()
+      await expect(content).toHaveCount(0)
+      // A presentation-only change must not create another persisted identity or
+      // remove a collapsed section from the available actions.
+      await header.evaluate(node => { node.textContent = 'Renamed schedule' })
+      await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+      const action = page.getByRole(width === 390 ? 'checkbox' : 'menuitemcheckbox', { name: 'Cron jobs', exact: true })
+      await expect(action).toBeChecked()
+      await action.click()
+      await expect(action).not.toBeChecked()
+      await expect(section).toBeHidden()
+      expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes-web.browser.hidden-sections')))).toEqual({ version: 2, hidden: ['cron-jobs'] })
+      await page.reload()
+      await expect(editor(page)).toBeVisible({ timeout: 30000 })
+      if (width === 390) {
+        await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+        await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
+      }
+      await expect(section).toBeHidden()
+      await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+      await expect(action).not.toBeChecked()
+      await action.click()
+      await expect(section).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(header).toHaveText('Cron jobs')
+      await header.click()
+      await expect(content).toBeVisible()
+    })
+  })
+}
+
+test.describe('semantic mobile controls', () => {
+  test.use({ hasTouch: true })
+  test('browser touch hooks survive control label and icon changes', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await open(page)
+    const controls = page.locator('[data-browser-composer-action]:visible, .browser-copy-path-action:visible, [data-browser-coding-action]:visible')
+    expect(await controls.count()).toBeGreaterThanOrEqual(5)
+    for (const control of await controls.all()) {
+      await control.evaluate(node => {
+        node.setAttribute('aria-label', 'Translated action')
+        node.querySelectorAll('.codicon,svg').forEach(icon => icon.remove())
+      })
+      const box = await control.boundingBox()
+      expect(box.width).toBeGreaterThanOrEqual(44)
+      expect(box.height).toBeGreaterThanOrEqual(44)
+      await expect(control).toHaveCSS('pointer-events', 'auto')
+    }
+    await expect(page.locator('[data-browser-coding-path]')).toHaveCSS('opacity', '1')
+  })
+})

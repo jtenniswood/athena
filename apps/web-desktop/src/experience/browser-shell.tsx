@@ -1,7 +1,7 @@
 import { BrowserToolModal } from './tool-modal'
 import { BrowserModal } from './ui/modal'
 import { BrowserToolbarButton } from './ui/toolbar-button'
-import { useMobileSubmenus } from './ui/use-mobile-submenus'
+import { useRendererMenuCompatibility } from '../upstream/use-renderer-menu-compatibility'
 import { BrowserNavigationTabs, BrowserNavigationResizer, useBrowserNavigation } from './navigation'
 import { BrowserProfileNavigation } from './profile-navigation'
 import { BrowserGatewayPanel, useBrowserGatewayStatus } from '../upstream/browser-gateway-panel'
@@ -11,11 +11,35 @@ import { useLocation, useNavigate } from 'react-router'
 import { BrowserSidebarNavigation } from './sidebar-extras'
 import { BrowserSessionsPane } from './sidebar-sections'
 import { SettingsMenu } from './settings-menu'
+import { installFollowupBehavior } from './followup-preferences'
+import { installTranscriptPreferences } from './transcript-preferences'
 import { Codicon, ContribWiring, WiredPane, SidebarProvider, ContribRender, ContribBoundary, useContributions, navigateToWorkspacePage, SessionTileCloseConfirm, BrowserWorkspace, SessionActionsMenu } from '../upstream/browser-api'
 import { useBrowserConversation } from '../upstream/conversation'
 import { useBrowserSessionActions } from '../upstream/conversation-actions'
+import { browserDropProjectId, moveBrowserSessionToProject, reportBrowserProjectMoveFailure } from '../upstream/project-actions'
 import { currentPwaUpdate, subscribePwaUpdate, type PwaUpdateNotice } from '../pwa/register'
-import { ApprovalToolbarTarget, BackendVersionTarget } from '../upstream/browser-api'
+import { BackendVersionListener, type StatusbarItem } from '../upstream/browser-api'
+import { installConversationSubmitScroll } from './ui/submit-scroll'
+
+interface SessionProjectDrag {
+  pointerId: number
+  sessionId: string
+  profile: string
+  startX: number
+  startY: number
+  active: boolean
+  target: HTMLElement | null
+  targetProjectId?: string
+}
+
+interface SessionReorderDrag {
+  pointerId: number
+  sourceId: string
+  startX: number
+  startY: number
+  active: boolean
+  target: HTMLElement | null
+}
 
 export function BrowserShell() {
   return <SidebarProvider className="browser-provider" style={{ '--sidebar-width': '100%' } as CSSProperties}>
@@ -23,9 +47,128 @@ export function BrowserShell() {
   </SidebarProvider>
 }
 function BrowserLayout() {
-  useMobileSubmenus()
-  const [approvalTarget, setApprovalTarget] = useState<HTMLSpanElement | null>(null)
-  const [versionTarget, setVersionTarget] = useState<HTMLDivElement | null>(null)
+  useRendererMenuCompatibility()
+  useEffect(() => installConversationSubmitScroll(), [])
+  useEffect(() => installFollowupBehavior(), [])
+  useEffect(() => installTranscriptPreferences(), [])
+  const sessionProjectDrag = useRef<SessionProjectDrag | null>(null)
+  const sessionReorderDrag = useRef<SessionReorderDrag | null>(null)
+  useEffect(() => {
+    const clearTarget = (drag: SessionProjectDrag) => {
+      drag.target?.removeAttribute('data-session-drop-active')
+      drag.target = null
+    }
+    const clearReorderTarget = (drag: SessionReorderDrag) => {
+      drag.target?.removeAttribute('data-session-order-drop')
+      drag.target = null
+    }
+    const finish = (event: PointerEvent, commit: boolean) => {
+      const reorder = sessionReorderDrag.current
+      if (reorder?.pointerId === event.pointerId) {
+        clearReorderTarget(reorder)
+        sessionReorderDrag.current = null
+      }
+      const drag = sessionProjectDrag.current
+      if (!drag || drag.pointerId !== event.pointerId) return
+      sessionProjectDrag.current = null
+      clearTarget(drag)
+      if (!commit || !drag.active || !drag.targetProjectId) return
+      void moveBrowserSessionToProject(drag.sessionId, drag.targetProjectId, drag.profile)
+        .catch(reportBrowserProjectMoveFailure)
+    }
+    const onPointerMove = (event: PointerEvent) => {
+      const reorder = sessionReorderDrag.current
+      if (reorder?.pointerId === event.pointerId) {
+        if (!reorder.active && Math.hypot(event.clientX - reorder.startX, event.clientY - reorder.startY) >= 6) {
+          reorder.active = true
+        }
+        if (reorder.active) {
+          const element = document.elementFromPoint(event.clientX, event.clientY)
+          const candidate = element instanceof Element ? element.closest<HTMLElement>('[data-web-session-id]') : null
+          if (!candidate || candidate.dataset.webSessionId === reorder.sourceId) {
+            clearReorderTarget(reorder)
+          } else if (candidate !== reorder.target) {
+            clearReorderTarget(reorder)
+            const rect = candidate.getBoundingClientRect()
+            candidate.dataset.sessionOrderDrop = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+            reorder.target = candidate
+          } else {
+            const rect = candidate.getBoundingClientRect()
+            candidate.dataset.sessionOrderDrop = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+          }
+        }
+      }
+
+      const drag = sessionProjectDrag.current
+      if (!drag || drag.pointerId !== event.pointerId) return
+      if (!drag.active && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return
+      drag.active = true
+      event.preventDefault()
+      const element = document.elementFromPoint(event.clientX, event.clientY)
+      const candidate = element instanceof Element ? element.closest<HTMLElement>('[data-sessions-project]') : null
+      const projectId = candidate?.dataset.sessionsProject
+      const nextTargetProjectId = browserDropProjectId(projectId)
+      const nextTarget = nextTargetProjectId ? candidate : null
+      if (nextTarget === drag.target) return
+      clearTarget(drag)
+      drag.target = nextTarget
+      if (nextTarget) nextTarget.setAttribute('data-session-drop-active', '')
+      drag.targetProjectId = nextTarget ? nextTargetProjectId! : undefined
+    }
+    const onPointerUp = (event: PointerEvent) => finish(event, true)
+    const onPointerCancel = (event: PointerEvent) => finish(event, false)
+    window.addEventListener('pointermove', onPointerMove, { passive: false })
+    window.addEventListener('pointerup', onPointerUp)
+    window.addEventListener('pointercancel', onPointerCancel)
+    return () => {
+      const drag = sessionProjectDrag.current
+      if (drag) clearTarget(drag)
+      const reorder = sessionReorderDrag.current
+      if (reorder) clearReorderTarget(reorder)
+      sessionProjectDrag.current = null
+      sessionReorderDrag.current = null
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
+      window.removeEventListener('pointercancel', onPointerCancel)
+    }
+  }, [])
+  const preventSessionPaneDrag = (event: React.PointerEvent<HTMLElement>) => {
+    const target = event.target
+    if (!(target instanceof Element)) return
+    const reorderHandle = target.closest('[data-reorder-handle]')
+    if (reorderHandle && event.button === 0) {
+      const row = reorderHandle.closest<HTMLElement>('[data-web-session-id]')
+      if (row) {
+        sessionReorderDrag.current = {
+          pointerId: event.pointerId,
+          sourceId: row.dataset.webSessionId!,
+          startX: event.clientX,
+          startY: event.clientY,
+          active: false,
+          target: null
+        }
+      }
+      return
+    }
+    const row = target.closest<HTMLElement>('[data-web-session-id]')
+    if (!row || target.closest('[data-reorder-handle], [data-row-actions]')) return
+
+    // Sidebar session drags can reorder sessions or move them into a project.
+    // Stop the desktop pane-drop gesture, which is unsupported in this shell.
+    event.stopPropagation()
+    if (event.button !== 0) return
+    sessionProjectDrag.current = {
+      pointerId: event.pointerId,
+      sessionId: row.dataset.webSessionId!,
+      profile: row.dataset.webSessionProfile || 'default',
+      startX: event.clientX,
+      startY: event.clientY,
+      active: false,
+      target: null,
+      targetProjectId: undefined
+    }
+  }
+  const [backendVersion, setBackendVersion] = useState<StatusbarItem | null>(null)
   const navigate = useNavigate(), location = useLocation()
   const conversation = useBrowserConversation()
   const selected = conversation.sessionId
@@ -41,40 +184,6 @@ function BrowserLayout() {
   const [updateNotice, setUpdateNotice] = useState<PwaUpdateNotice | null>(() => currentPwaUpdate())
   const [updateDismissed, setUpdateDismissed] = useState(false)
   const bots = panes.find(pane => pane.id === 'hermes-bots:pane')
-  useEffect(() => {
-    let triggerPointerId: number | null = null
-    let suppressOpeningClick = false
-    let resetTimer = 0
-    const onPointerDown = (event: PointerEvent) => {
-      triggerPointerId = event.target instanceof Element && event.target.closest('button[aria-haspopup="menu"]') ? event.pointerId : null
-      suppressOpeningClick = false
-      window.clearTimeout(resetTimer)
-    }
-    const onPointerUp = (event: PointerEvent) => {
-      if (event.pointerId !== triggerPointerId) return
-      triggerPointerId = null
-      suppressOpeningClick = Boolean(document.querySelector('[data-slot="dropdown-menu-content"][data-state="open"], [data-slot="context-menu-content"][data-state="open"]'))
-      if (suppressOpeningClick) resetTimer = window.setTimeout(() => { suppressOpeningClick = false }, 0)
-    }
-    const onPointerCancel = () => { triggerPointerId = null; suppressOpeningClick = false }
-    const onClick = (event: MouseEvent) => {
-      if (!suppressOpeningClick || !(event.target instanceof Element) || !event.target.closest('[data-slot="dropdown-menu-content"] [role^="menuitem"], [data-slot="context-menu-content"] [role^="menuitem"]')) return
-      suppressOpeningClick = false
-      event.preventDefault()
-      event.stopImmediatePropagation()
-    }
-    document.addEventListener('pointerdown', onPointerDown, true)
-    document.addEventListener('pointerup', onPointerUp, true)
-    document.addEventListener('pointercancel', onPointerCancel, true)
-    document.addEventListener('click', onClick, true)
-    return () => {
-      window.clearTimeout(resetTimer)
-      document.removeEventListener('pointerdown', onPointerDown, true)
-      document.removeEventListener('pointerup', onPointerUp, true)
-      document.removeEventListener('pointercancel', onPointerCancel, true)
-      document.removeEventListener('click', onClick, true)
-    }
-  }, [])
   useEffect(() => subscribePwaUpdate(notice => {
     setUpdateNotice(notice)
     if (notice) setUpdateDismissed(false)
@@ -85,10 +194,11 @@ function BrowserLayout() {
     navigation.closeDrawer()
   }
   const panelPanes = panes.filter(pane => !['workspace', 'sessions', 'hermes-bots:pane', 'terminal'].includes(pane.id))
-  return <ApprovalToolbarTarget value={approvalTarget}><BackendVersionTarget value={versionTarget}><div className="browser-shell" data-browser-shell="" data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined}>
+  return <BackendVersionListener value={setBackendVersion}><div className="browser-shell" data-browser-shell="" data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined}>
     <BrowserActionError />
     <div className="browser-workspace">
-      <aside id="browser-navigation" ref={navigation.drawer} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={navigation.compact && navigation.drawerOpen ? 'dialog' : undefined} aria-modal={navigation.compact && navigation.drawerOpen ? true : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
+      {navigation.compact && !navigation.mobile && navigation.drawerOpen && <button type="button" className="browser-scrim" aria-label="Dismiss navigation" tabIndex={-1} onClick={navigation.dismissDrawer} />}
+      <aside id="browser-navigation" ref={navigation.drawer} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={navigation.compact && navigation.drawerOpen ? 'dialog' : undefined} aria-modal={navigation.compact && navigation.drawerOpen ? true : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
         <BrowserNavigationTabs navigation={navigation} />
         <div className="browser-navigation-body" role="tabpanel" aria-label={tab}>
           <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}><BrowserSidebarNavigation onNavigate={openRoute}><WiredPane part="sidebar" /></BrowserSidebarNavigation></BrowserSessionsPane>
@@ -100,10 +210,9 @@ function BrowserLayout() {
           <button type="button" className="browser-update-panel-action" onClick={updateNotice.update}>Update when safe</button>
         </div>}
         <BrowserProfileNavigation hidden={tab !== 'sessions'} />
-        <div className="browser-backend-version" ref={setVersionTarget} />
       </aside>
       <BrowserNavigationResizer navigation={navigation} />
-      <main className="browser-main" ref={main} hidden={navigation.compact && navigation.drawerOpen} tabIndex={-1} aria-label="Conversation and workspace">
+      <main className="browser-main" ref={main} hidden={navigation.mobile && navigation.drawerOpen} inert={navigation.compact && !navigation.mobile && navigation.drawerOpen} tabIndex={-1} aria-label="Conversation and workspace">
         <div className="browser-chat-toolbar" aria-label="Chat toolbar">
           <BrowserToolbarButton tooltip={navigation.open ? 'Hide sidebar' : 'Show sidebar'} className="browser-menu" ref={menu} aria-label={navigation.open ? 'Hide navigation' : 'Open navigation'} aria-expanded={navigation.open} aria-controls="browser-navigation" onClick={navigation.toggle}>
             <Codicon name="layout-sidebar-left" />
@@ -112,8 +221,7 @@ function BrowserLayout() {
             {selected && <SessionActionsMenu align="end" onArchive={sessionActions.archive} onDelete={sessionActions.delete} onPin={sessionActions.togglePin} onToggleUnread={sessionActions.toggleUnread} pinned={sessionActions.pinned} unread={sessionActions.unread} profile={sessionActions.profile} sessionId={selected} title={chatTitle}>
               <BrowserToolbarButton tooltip="Chat actions" type="button" className="browser-chat-actions" aria-label="Chat actions"><Codicon name="kebab-vertical" /></BrowserToolbarButton>
             </SessionActionsMenu>}
-            <span className="browser-approval-control" ref={setApprovalTarget} />
-            <SettingsMenu triggerRef={settingsTrigger} onOpenGateway={() => { navigation.closeDrawer(); setGatewayDialogOpen(true) }} onOpenPanel={() => main.current?.focus()} onOpenRoute={openRoute} panelPanes={panelPanes} />
+            <SettingsMenu triggerRef={settingsTrigger} backendVersion={backendVersion} onOpenGateway={() => { navigation.closeDrawer(); setGatewayDialogOpen(true) }} onOpenPanel={() => main.current?.focus()} onOpenRoute={openRoute} panelPanes={panelPanes} />
           </div>
         </div>
         <BrowserWorkspace />
@@ -124,5 +232,5 @@ function BrowserLayout() {
       </BrowserModal>
       <BrowserToolModal />
     </div>
-  </div></BackendVersionTarget></ApprovalToolbarTarget>
+  </div></BackendVersionListener>
 }

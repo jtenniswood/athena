@@ -206,7 +206,7 @@
     ],
     "removal": "Remove when upstream recovery offers configured-gateway actions without native backend/log assumptions.",
     "sourceHash": "43d0c90ed67d36fd54bf61df9f1182539d0754db045b968c25d9e4a793350078",
-    "outputHash": "2ea2f51f9ab1608bb0c09344dcb4221c9c597ed2ae7f5231819ab347d55f6b12",
+    "outputHash": "4df0d7a2ff4f86bd69e0a1c247ac7524f43038697d444db4ac3c745a94c4bdd1",
     "handler": "browser-gateway-recovery",
     "sourceRoot": "renderer"
   },
@@ -256,7 +256,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
-    "reason": "Hide desktop profile/card controls and expose None grouping.",
+    "reason": "Hide desktop profile/card controls, expose None grouping, and add leading icons to filter menu actions.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -272,7 +272,7 @@
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
     "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
-    "outputHash": "189466d4887773f7fab5037f70d32e4217170ee05ec95d0749dd90a013859247"
+    "outputHash": "8dea3e425734a69081b926deecdb2de1bb8e36d56a2e1c514d17a79897acf4b2"
   },
   {
     "name": "hidden-bot-roster",
@@ -351,25 +351,30 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "search and disclosure form one navigation list"
+      },
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
       }
     ],
     "removal": "A browser-owned navigation surface consumes public session models and actions.",
     "handlers": [
       "useBrowserSearchLabel",
       "ungroupedSidebar",
-      "removeBrowserNewSessionShortcut"
+      "removeBrowserNewSessionShortcut",
+      "useBrowserSectionIds"
     ],
     "sourceHash": "0532c4c32d7cd1525c65a8f62b0ac248016c24648e4256ad812836e9b1a6cc7f",
     "sourceRoot": "renderer",
     "inputHash": "0532c4c32d7cd1525c65a8f62b0ac248016c24648e4256ad812836e9b1a6cc7f",
-    "outputHash": "ead5ae98f42973ddfcc9b9a0f22cf84df1c150073c2dbccc6deb69932c837488"
+    "outputHash": "0cbf991d2b921af9b32e0e431af9c5fac4133cc265d300c59f4d0467a251c30d"
   },
   {
     "name": "single-conversation-wiring",
     "kind": "browser-transform",
     "order": 20,
     "module": "app/contrib/wiring.tsx",
-    "reason": "Keep browser session selection behind an owner-preserving command and disable chat tab creation.",
+    "reason": "Keep browser session selection owner-preserving, route New session into the visible draft, disable chat tab creation, and suppress desktop onboarding tips in the web app.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -392,13 +397,14 @@
     "removal": "Upstream wiring accepts a single-conversation capability.",
     "handlers": [
       "disableBrowserSessionTabs",
+      "disableBrowserOnboardingTips",
       "useBrowserSessionSelection",
       "useBrowserDirectResumeOwner"
     ],
     "sourceHash": "244e5e9bb4a0a36b634f6942b5c7d88a2b27c43b1716120b3c417b63d2ebd473",
     "sourceRoot": "renderer",
     "inputHash": "244e5e9bb4a0a36b634f6942b5c7d88a2b27c43b1716120b3c417b63d2ebd473",
-    "outputHash": "83f1aad0eda6b4aea2aba4d76e28ac55a315054ede8457adf7cdf5e7ff53963d"
+    "outputHash": "a19be9018350a01323d3fc2f9a278da2f49f78a228874162f2c0b43c6a43f2c2"
   },
   {
     "name": "single-conversation-controller",
@@ -442,14 +448,14 @@
     "sourceHash": "bb566acc612ef7f852f23d97c5526fd8b6db01a57c2017062c521ca052e06d75",
     "sourceRoot": "renderer",
     "inputHash": "bb566acc612ef7f852f23d97c5526fd8b6db01a57c2017062c521ca052e06d75",
-    "outputHash": "6730f4a9f04b02627c77e246a2f5e2217a01dac49f26cf61f7aedbf43bb646bc"
+    "outputHash": "96567290d7bac8d8313960523c60adca7a5e6eb166d677c25b6a6e3f9978066a"
   },
   {
     "name": "single-conversation-menus",
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/session-actions-menu.tsx",
-    "reason": "Remove tab/window actions while retaining session mutations.",
+    "reason": "Remove tab/window actions, retain session mutations, and add leading icons to project destinations.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -464,7 +470,7 @@
     "sourceHash": "235143c976b1d6b777dd2f13ad1f1ddadd6d0a3ff2b5bb83034d8fc9b630dc71",
     "sourceRoot": "renderer",
     "inputHash": "235143c976b1d6b777dd2f13ad1f1ddadd6d0a3ff2b5bb83034d8fc9b630dc71",
-    "outputHash": "35284ef964e4a55db080169c5255b6b377a3e61c3f32052e4d627cafcded82db"
+    "outputHash": "32bdc2d791c9ca731bdfd0e22c1e60ca307c73002d485cdb56cf0838fefa0f6c"
   },
   {
     "name": "canonical-bot-row-actions",
@@ -499,7 +505,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/settings/keybind-settings.tsx",
-    "reason": "Hide shortcuts for unavailable desktop tabs, windows, terminals, and HUD.",
+    "reason": "Hide shortcuts for unavailable desktop tabs, windows, terminals, HUD, and the desktop search bar.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -514,7 +520,7 @@
     "sourceHash": "08f645b35256124b6defb6be913c70a2b845bfd1682765087369c486ced96332",
     "sourceRoot": "renderer",
     "inputHash": "08f645b35256124b6defb6be913c70a2b845bfd1682765087369c486ced96332",
-    "outputHash": "26751f1b84eff53a91d5f49cd9114903a1273aef7a1cbd9c8e7a4b8066afffa4"
+    "outputHash": "a36807bdb8c0b9ee1678671ab8809b0a1178fda534039cfa11768718fd7c647b"
   },
   {
     "name": "statusbar-item-export",
@@ -640,6 +646,10 @@
       {
         "file": "tests/browser/safety.spec.mjs",
         "scenario": "nginx serves the built app and uncached identity; API stays available for recovery"
+      },
+      {
+        "file": "tests/browser/gateway-setup.spec.mjs",
+        "scenario": "remote gateway sign-in stays reachable with the keyboard"
       }
     ],
     "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",
@@ -1568,7 +1578,7 @@
     "after": [
       "browser-flush-all-composers"
     ],
-    "reason": "Keep automatic composer visibility changes from stealing an overlay return target while preserving explicit focus requests.",
+    "reason": "Keep mobile chat selection from opening the on-screen keyboard and prevent automatic focus from stealing an overlay return target.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -1576,11 +1586,11 @@
         "scenario": "settings actions retain drafts and transfer modal focus"
       }
     ],
-    "removal": "Remove when upstream automatic composer focus respects focus restored by closing browser overlays.",
+    "removal": "Remove when upstream avoids automatic composer focus on mobile and respects focus restored by closing browser overlays.",
     "sourceRoot": "renderer",
     "sourceHash": "08453158cd8bbbc2f54ba135a64d375c20a5ad31f653ff3c41747ac14cf51bfd",
     "inputHash": "4ee5ce5a4d0925b860f17a5c933d8d59848d582d2496fd6b427d3f498336c637",
-    "outputHash": "27f724eb0aee1128639a7a7429a01ecfe96c6b4716af0e36f0557566e6371f60"
+    "outputHash": "ade8a428386fedfb75ee9c1eeb09f8bafd6d298a55b7184574f4c8fe52806885"
   },
   {
     "name": "browser-workspace-route-lifetime",
@@ -1689,9 +1699,6 @@
     "handlers": [
       "useBrowserSectionActionSurface"
     ],
-    "after": [
-      "browser-section-dialog-return-focus"
-    ],
     "reason": "Use owned section headings and the same rename, reorder, and delete actions on desktop and touch.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
@@ -1784,44 +1791,62 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/sessions-section.tsx",
-    "reason": "Expose explicit browser styling hooks for navigation section headers and labels without changing upstream section behavior.",
+    "reason": "Register sidebar sections through React with model-owned identities and explicit styling hooks, preserving visibility when labels or disclosure state change.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "section headers preserve disclosure and browser styling"
+      },
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "sidebar visibility uses stable identity through markup changes and reload"
       }
     ],
     "removal": "Remove when a public upstream section API provides stable browser styling hooks or browser components own these headings.",
     "handlers": [
-      "useBrowserSectionStyleHooks"
+      "useBrowserSectionStyleHooks",
+      "useBrowserSectionIdentity"
     ],
     "sourceRoot": "renderer",
     "sourceHash": "154f937b73d8e30125c2f8a6507960163efc71c7d8a5b53a7ff9bd6ac1ca69b9",
     "inputHash": "154f937b73d8e30125c2f8a6507960163efc71c7d8a5b53a7ff9bd6ac1ca69b9",
-    "outputHash": "7f9eee06def087e8893497da0fb243f5e72b7171db1fd8eb17a9cb25dce3aee0"
+    "outputHash": "8fe8d3baa5d3f466d9eb727134239af27d82d474773d5680736b3aec24abee68"
   },
   {
     "name": "browser-cron-jobs-section-styling",
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/cron-jobs-section.tsx",
-    "reason": "Expose explicit browser styling hooks for navigation section headers and labels without changing upstream section behavior.",
+    "reason": "Register sidebar sections through React with model-owned identities and explicit styling hooks, preserving visibility when labels or disclosure state change.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "section headers preserve disclosure and browser styling"
+      },
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "sidebar visibility uses stable identity through markup changes and reload"
       }
     ],
     "removal": "Remove when a public upstream section API provides stable browser styling hooks or browser components own these headings.",
     "handlers": [
-      "useBrowserSectionStyleHooks"
+      "useBrowserSectionStyleHooks",
+      "useBrowserSectionIdentity"
     ],
     "sourceRoot": "renderer",
     "sourceHash": "4bc9506cf81d1e2b96e82ea8439a8cf98dd83ecbacddad43143dc84af3957c8c",
     "inputHash": "4bc9506cf81d1e2b96e82ea8439a8cf98dd83ecbacddad43143dc84af3957c8c",
-    "outputHash": "fd947332b5e65627ee87043be5e9c69a4125f6ee3b57dee00917d5b18ff592ce"
+    "outputHash": "2ebb520869976c57e774c167ff6e5ae439d9fdcf6da15e3dbe93672d2242eeb0"
   },
   {
     "name": "browser-draft-persistence-alias",
@@ -1842,5 +1867,540 @@
     "replacement": "./src/platform/draft-persistence.ts",
     "aliasGroup": "renderer",
     "fingerprintPolicy": "The wrapper-owned adapter is verified through the locked renderer transform and real-image draft journeys."
+  },
+  {
+    "name": "browser-semantic-updates",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/updates.ts",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "omitBrowserDesktopUpdateNotice"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "c62b87d2c7d485930c99cf99b90014adf64a49d097cd58f2ae0402459594c15a",
+    "inputHash": "c62b87d2c7d485930c99cf99b90014adf64a49d097cd58f2ae0402459594c15a",
+    "outputHash": "e9d083a2b46566593c77f95db2dfdba7c519235a275faebdef42a7bcefbed665"
+  },
+  {
+    "name": "browser-semantic-desktop-install-overlay",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/desktop-install-overlay.tsx",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "useBrowserSetupHooks"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "07b6b22802d6ce8f53e3f77a3c6fa906af03e961f901ed5aac44b6f0a7f0ac16",
+    "inputHash": "07b6b22802d6ce8f53e3f77a3c6fa906af03e961f901ed5aac44b6f0a7f0ac16",
+    "outputHash": "621b858db8d863af3cad6440d15eed8b535b7138dae54b3fbe4f5c2e6d33d670"
+  },
+  {
+    "name": "browser-semantic-first-run-remote-form",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/first-run-remote-form.tsx",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "useBrowserSetupHooks"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "d3457d48ab347944f9e52cb1556db99089c4c4f98ccbea804e376b97196d4307",
+    "inputHash": "d3457d48ab347944f9e52cb1556db99089c4c4f98ccbea804e376b97196d4307",
+    "outputHash": "2b3ad60ad163348a4a784b9f01fd67d9388a5573f8c150298401a29b45edba38"
+  },
+  {
+    "name": "browser-semantic-controls",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/controls.tsx",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser touch hooks survive control label and icon changes"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "useBrowserTouchHooks"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "035a1e8b4d9f4b8416664e3b93f8f160484d885fd09d912821a7f80ecbc4fe33",
+    "inputHash": "035a1e8b4d9f4b8416664e3b93f8f160484d885fd09d912821a7f80ecbc4fe33",
+    "outputHash": "2b769fb73b676294147b595b43458e344e9af03b2cc6171459cd14fed9bae982"
+  },
+  {
+    "name": "browser-semantic-context-menu",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/context-menu.tsx",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser touch hooks survive control label and icon changes"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "useBrowserTouchHooks"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "40b48dccb1bc2d9580cfaa949fdf65790b01ee8f05c7f7b1ab349c05b2efd4b5",
+    "inputHash": "40b48dccb1bc2d9580cfaa949fdf65790b01ee8f05c7f7b1ab349c05b2efd4b5",
+    "outputHash": "225b04dec35f3f9bfe341f4f9e7bed6e4e66a840e96881309e037a4f5c1ce99c"
+  },
+  {
+    "name": "browser-semantic-model-pill",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/model-pill.tsx",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser touch hooks survive control label and icon changes"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "useBrowserTouchHooks"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "3d639423fe1f440027b57a2416bc994c0ab6408cbef715ece02498d1939e8293",
+    "inputHash": "3d639423fe1f440027b57a2416bc994c0ab6408cbef715ece02498d1939e8293",
+    "outputHash": "303a8b35407433d84ed869f16c8ec9e823cd53e6d81e112e7bf000c0fa5dec0b"
+  },
+  {
+    "name": "browser-semantic-voice-menu",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/voice-menu.tsx",
+    "reason": "Remove the full voice-conversation entry while preserving dictation and other voice controls.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser touch hooks survive control label and icon changes"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "removeBrowserConversationalVoiceEntry"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "392cff54e8ea488091c1ec952742b1119e8bcafbd6276756682085312853ef45",
+    "inputHash": "392cff54e8ea488091c1ec952742b1119e8bcafbd6276756682085312853ef45",
+    "outputHash": "b42c0593c9b2020ece4dbb857c9847360188883c8b9cc05e580edc3b0fad7784"
+  },
+  {
+    "name": "browser-semantic-start-voice-button",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/start-voice-button.tsx",
+    "reason": "Remove the standalone full voice-conversation entry from the browser composer.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser touch hooks survive control label and icon changes"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "removeBrowserConversationalVoiceEntry"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "8cb1d7ae40a0ee2477e194d4fc9e9bcb5b59801e316345d329eb822f8b3477d1",
+    "inputHash": "8cb1d7ae40a0ee2477e194d4fc9e9bcb5b59801e316345d329eb822f8b3477d1",
+    "outputHash": "d522a97a6a96c6771a03b82918d3fde5d7861076e41fb45f6c4b1f6667f17846"
+  },
+  {
+    "name": "browser-semantic-coding-row",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/status-stack/coding-row.tsx",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser touch hooks survive control label and icon changes"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "useBrowserCodingActionHooks"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "3c94bb8ba4c359a0dc249ec4b13169b34b535503f15a1b27d71d5e1a0b74100a",
+    "inputHash": "3c94bb8ba4c359a0dc249ec4b13169b34b535503f15a1b27d71d5e1a0b74100a",
+    "outputHash": "28d95460846d6a0701ea82e7271e6b7995827e0ab035ecb91854cd58cd299665"
+  },
+  {
+    "name": "browser-dialog-boundary",
+    "kind": "replacement",
+    "order": 20,
+    "module": "components/ui/dialog.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "a5d25bb93c9d49920494f70f340855f31831a7b90132e3b7f0d6b28510279a31",
+    "replacement": "src/upstream/browser-dialog.tsx",
+    "importers": [
+      "plugins/hermes-bots/create-dialog.tsx",
+      "plugins/hermes-bots/edit-profile-dialog.tsx",
+      "plugins/hermes-bots/user-sections-ui.tsx",
+      "components/ui/confirm-dialog.tsx"
+    ],
+    "reason": "Adapt dialog open state and content props for browser focus restoration and scaled viewport bounds, retaining upstream forms, commands, and primitives.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/compatibility-registry.test.mjs",
+        "scenario": "Vite resolves SDK and direct dialog imports through the scoped browser adapters"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Bots shared actions preserve filters, focus, and drafts"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "rejected Bot duplication and deletion leave the roster and draft intact"
+      }
+    ],
+    "removal": "Remove when upstream controlled dialogs restore their opening control and constrain resizable content to the scaled browser viewport."
+  },
+  {
+    "name": "browser-dialog-sdk-boundary",
+    "kind": "replacement",
+    "order": 20,
+    "module": "sdk/index.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "6a7cc93172bc7c99c7bd6436fc6b65ab201c5f7ed5a0f337402a9c22e7e888a3",
+    "replacement": "src/upstream/browser-dialog-sdk.ts",
+    "importers": [
+      "plugins/hermes-bots/create-dialog.tsx",
+      "plugins/hermes-bots/edit-profile-dialog.tsx",
+      "plugins/hermes-bots/user-sections-ui.tsx"
+    ],
+    "reason": "Expose the browser dialog adapter through the SDK for registered Bot and section forms while retaining upstream SDK commands and controls.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/compatibility-registry.test.mjs",
+        "scenario": "Vite resolves SDK and direct dialog imports through the scoped browser adapters"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Bots shared actions preserve filters, focus, and drafts"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "rejected Bot duplication and deletion leave the roster and draft intact"
+      }
+    ],
+    "removal": "Remove when upstream controlled dialogs restore their opening control and constrain resizable content to the scaled browser viewport.",
+    "specifier": "@hermes/plugin-sdk"
+  },
+  {
+    "name": "browser-settings-fullscreen-frame",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/index.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
+    "inputHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
+    "outputHash": "ecdc54b9b18e325dcff6c16c97bf53a7d4d17074ed09c2ddfd96db945d94c945",
+    "handlers": [
+      "useBrowserSettingsPresentation"
+    ],
+    "reason": "Keep the responsive settings layout, configuration management page, and visibility policy in the wrapper while upstream owns settings content and persistence.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings full-screen modal scales across compact and wide viewports"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "configuration page retains import export and reset behavior"
+      }
+    ],
+    "removal": "Remove when upstream SettingsView provides an equivalent responsive browser presentation seam while retaining upstream settings pages and actions."
+  },
+  {
+    "name": "browser-settings-field-policy",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/config-settings.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
+    "inputHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
+    "outputHash": "4be5fe5a7ea3db30d0b0b52f0d9a6795c0fc2c1964d664ebfedad0c8069438c0",
+    "handlers": [
+      "filterBrowserSettingsFields",
+      "useBrowserConfigurationSettings"
+    ],
+    "reason": "Hide unsupported device controls and apply wrapper-owned visibility rules while retaining upstream settings storage and forms.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "settings customization hides known sections and fields while inheriting new ids"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "configuration page retains import export and reset behavior"
+      }
+    ],
+    "removal": "Remove when upstream settings supports wrapper-owned visibility rules for config fields."
+  },
+  {
+    "name": "browser-settings-search-policy",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/use-settings-search.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "f3ec3f7424088ab68e1e51ce8cd2cdf0f9ad5e9bf88a310d2a3d826813539707",
+    "inputHash": "f3ec3f7424088ab68e1e51ce8cd2cdf0f9ad5e9bf88a310d2a3d826813539707",
+    "outputHash": "dc1b81c9641510e21cf8ba4a2a94bf8a32bc90927933b1d0aa164026f163ee93",
+    "handlers": [
+      "filterBrowserSettingsSearch"
+    ],
+    "reason": "Keep grouped settings labels, legacy search aliases, and visibility policy in the wrapper while upstream owns forms and persistence.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "settings policy stays aligned across page fields, deep search, and palette links"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings groups and renamed search preserve destinations"
+      }
+    ],
+    "removal": "Remove when upstream settings search applies wrapper visibility policy to section and field results."
+  },
+  {
+    "name": "browser-settings-palette-policy",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/command-palette/index.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "70b806b3e52fdbe97101070b97da60610564425d15aba9c0566172950b25fe34",
+    "inputHash": "70b806b3e52fdbe97101070b97da60610564425d15aba9c0566172950b25fe34",
+    "outputHash": "42097a1586c2e5c9814d1d775c32213544df4890db8b95b97230978f20826684",
+    "handlers": [
+      "filterBrowserSettingsPalette"
+    ],
+    "reason": "Keep settings search policy and remove the unavailable Marketplace theme installer from the browser palette.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "settings policy stays aligned across page fields, deep search, and palette links"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings groups and renamed search preserve destinations"
+      }
+    ],
+    "removal": "Remove when upstream settings navigation entries in the command palette support wrapper visibility policy."
+  },
+  {
+    "name": "browser-appearance-capabilities",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/appearance-settings.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
+    "inputHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
+    "outputHash": "718ec6b217a56a500f9109bc7b92cf82d585b8fd3d972ef5057190c7fbd80830",
+    "handlers": [
+      "hideBrowserAppearanceOnlySettings"
+    ],
+    "reason": "Hide window-only appearance controls, desktop-only layout preferences, and unused terminal font and theme marketplace controls while retaining installed browser themes.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+      }
+    ],
+    "removal": "Remove once upstream exposes browser capability flags for terminal surfaces and theme marketplace support."
+  },
+  {
+    "name": "browser-archived-directory-capability",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/sessions-settings.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "5f74935a4109a6b88abfd29568f6574b9c3a11618c420077aeb6ed430304967f",
+    "inputHash": "5f74935a4109a6b88abfd29568f6574b9c3a11618c420077aeb6ed430304967f",
+    "outputHash": "27d153c187f40caa5182bc623f6e627dc93e76f8a83c014a76d62bddb715424b",
+    "handlers": [
+      "hideBrowserLocalProjectDirectory"
+    ],
+    "reason": "Hide the desktop-local project directory picker while keeping remote working-directory settings.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+      }
+    ],
+    "removal": "Remove once this control has a browser implementation for selecting a server-side project directory."
+  },
+  {
+    "name": "browser-project-group-disclosure",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/projects/overview-row.tsx",
+    "reason": "Use open and closed folder glyphs and make the project group icon, title, and disclosure control toggle its preview.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "section headers preserve disclosure and browser styling"
+      }
+    ],
+    "removal": "Remove when upstream project group rows expose a browser-friendly disclosure control across the group header.",
+    "sourceRoot": "renderer",
+    "sourceHash": "92edd8bcf89840cc6a1c4371da15b5f4687f9e1b891ad9705dba4ca93db9c7b2",
+    "inputHash": "92edd8bcf89840cc6a1c4371da15b5f4687f9e1b891ad9705dba4ca93db9c7b2",
+    "outputHash": "723526b92c35355eb2bf5e37452f55e70d58918b71bbcaae339e261e0e425d88",
+    "handlers": [
+      "useBrowserProjectDisclosure"
+    ]
+  },
+  {
+    "name": "browser-settings-pending-saves",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/config-settings.tsx",
+    "reason": "Keep the latest debounced settings save alive across page exit and make it part of safe PWA activation.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/pending-work.test.mjs",
+        "scenario": "pending work waits for each owner before reporting readiness"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings actions retain drafts and transfer modal focus"
+      }
+    ],
+    "removal": "Remove when settings exposes an equivalent supported save completion and browser update readiness contract.",
+    "sourceRoot": "renderer",
+    "sourceHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
+    "inputHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
+    "outputHash": "042548ff7f86c08b0baa156f88e19fe6813d9720eb26ce08cb1dc30d247f5887",
+    "handlers": [
+      "trackBrowserSettingsSaves"
+    ]
+  },
+  {
+    "name": "browser-remove-pet-avatar-tab",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "plugins/hermes-bots/avatar-picker.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "63d7493682d9e4d94375745a40c999438a7340d90b3fd1ceba2c984b40cfe2db",
+    "inputHash": "63d7493682d9e4d94375745a40c999438a7340d90b3fd1ceba2c984b40cfe2db",
+    "outputHash": "d64c352e059fb1195527853ab2b26488bad90c32646f7bb737804f97fc18f77c",
+    "handlers": [
+      "removeBrowserPetAvatarTab"
+    ],
+    "reason": "Remove the pet avatar option from browser bot profile editing.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+      }
+    ],
+    "removal": "Remove when Hermes no longer includes the desktop pet avatar tab or exposes browser capability flags for avatar choices."
+  },
+  {
+    "name": "browser-remove-pet-slash-commands",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "lib/desktop-slash-commands.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "f57f322047094fb4428ea94bfc6d47ae345db0cbfacc622e13c921d448a07be1",
+    "inputHash": "f57f322047094fb4428ea94bfc6d47ae345db0cbfacc622e13c921d448a07be1",
+    "outputHash": "20d68e2ed5d75213a3e7cd4fa54c20afb64d6f023e8f149a7e1cae9f59976562",
+    "handlers": [
+      "removeBrowserPetSlashCommands"
+    ],
+    "reason": "Remove pet management and generation slash-command suggestions from the browser app.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+      }
+    ],
+    "removal": "Remove when Hermes no longer exposes desktop-only pet slash commands or provides browser capability filtering."
   }
 ]

@@ -1,0 +1,11 @@
+services:
+  athena:
+    image: ghcr.io/jtenniswood/athena:latest
+    restart: unless-stopped
+    ports:
+      - "4174:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      HERMES_GATEWAY_URL: ${HERMES_GATEWAY_URL:-http://host.docker.internal:9119}
+      HERMES_GATEWAY_NAME: ${HERMES_GATEWAY_NAME:-Local Hermes}

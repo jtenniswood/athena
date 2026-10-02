@@ -1,20 +1,22 @@
 import { useEffect, useRef, useState, type DragEvent as ReactDragEvent } from 'react'
 import { BrowserActionSurface, type BrowserActionAnchor } from './ui/action-surface'
 import { BrowserToolbarButton } from './ui/toolbar-button'
-import { useCompactBrowser } from './ui/use-compact-browser'
+import { useMobileBrowser } from './ui/use-compact-browser'
 import { BotFace, avatarColor, Codicon, Tip } from '../upstream/browser-api'
 import { useBrowserProfiles } from '../upstream/profiles'
+import { BrowserProfileEditor } from '../upstream/profile-editor'
 import { readHideAllProfilesButton, readHiddenProfiles, writeBrowserPreference } from './browser-preferences'
 
 export function BrowserProfileNavigation({ hidden = false }: { hidden?: boolean }) {
   const model = useBrowserProfiles()
-  const compact = useCompactBrowser()
+  const compact = useMobileBrowser()
   const actionsTrigger = useRef<HTMLButtonElement>(null), draggedProfile = useRef<string | null>(null)
   const [draggingProfile, setDraggingProfile] = useState<string | null>(null)
   const [dropTargetProfile, setDropTargetProfile] = useState<{ key: string; after: boolean } | null>(null)
   const [hiddenProfiles, setHiddenProfiles] = useState<string[]>(readHiddenProfiles)
   const [hideAllProfilesButton, setHideAllProfilesButton] = useState(readHideAllProfilesButton)
   const [profileContextMenuPosition, setProfileContextMenuPosition] = useState<(BrowserActionAnchor & { profile: string | null }) | null>(null)
+  const [editingProfile, setEditingProfile] = useState<string | null>(null)
   const visibleProfileAvatars = model.items.filter(item => !hiddenProfiles.includes(item.key))
   const visibleFallback = model.fallback && !hiddenProfiles.includes(model.fallback.key) ? model.fallback : null
   useEffect(() => { if (hidden) setProfileContextMenuPosition(null) }, [hidden])
@@ -107,12 +109,23 @@ export function BrowserProfileNavigation({ hidden = false }: { hidden?: boolean 
       onClose={() => setProfileContextMenuPosition(null)}
       groups={[
         {
+          key: 'edit',
+          actions: profileContextMenuPosition?.profile ? [{
+            key: 'edit-profile',
+            label: 'Edit profile',
+            icon: <Codicon name="edit" size="1rem" />,
+            afterClose: true,
+            run: () => setEditingProfile(profileContextMenuPosition.profile)
+          }] : []
+        },
+        {
           key: 'profiles',
           label: 'Profiles',
           actions: [
             {
               key: 'all-profiles',
               label: 'All Profiles',
+              icon: <Codicon name="organization" size="1rem" />,
               checked: !hideAllProfilesButton,
               keepOpen: true,
               run: () => setHideAllProfilesButton(value => !value)
@@ -120,6 +133,7 @@ export function BrowserProfileNavigation({ hidden = false }: { hidden?: boolean 
             ...profileItems.map(item => ({
               key: `profile-${item.key}`,
               label: item.label,
+              icon: <Codicon name="account" size="1rem" />,
               checked: !hiddenProfiles.includes(item.key),
               keepOpen: true,
               run: () => toggleProfile(item.key)
@@ -128,5 +142,6 @@ export function BrowserProfileNavigation({ hidden = false }: { hidden?: boolean 
         }
       ]}
     />
+    <BrowserProfileEditor profile={editingProfile} onClose={() => setEditingProfile(null)} />
   </>
 }
