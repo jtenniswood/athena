@@ -7,11 +7,17 @@ not required for routine changes.
 
 ## Build and deploy
 
-`release.yml` publishes a native `linux/amd64` image on pushes to `main`, version
-tags, and manual dispatch. Docker verifies the pinned renderer, runs typechecking,
-and builds the frontend. Every successful publication updates `latest` and
-`sha-<revision>`; main builds also update `main`, and version tags publish their
-version. The renderer revision comes from `flake.lock`.
+`release.yml` publishes a native `linux/amd64` image on version tags and manual
+dispatch. Merges to `main` do not start a build or deployment. Docker verifies
+the pinned renderer, runs typechecking, and builds the frontend. Every successful
+publication updates `latest` and `sha-<revision>`; runs on `main` also update
+`main`, and version tags publish their version. The renderer revision comes from
+`flake.lock`.
+
+Manual dispatches on `main` deploy that run's exact image digest through Docker
+Compose. The deployment waits for the nginx health check and restores the previous
+image if it fails. Version-tag builds do not deploy. The health check proves that
+nginx responds; manually try the changed feature to check its behavior.
 
 ### Versioned image release
 
@@ -23,13 +29,8 @@ workflow and publishes `ghcr.io/jtenniswood/athena:1.4.0`, along with the
 prefix in the image registry.
 
 The skill requires `main` to match `origin/main` and refuses an existing
-version tag. Version-tag builds do not deploy production; only a successful
-push to `main` triggers the production deployment job.
-
-A push to `main` also deploys that run's exact image digest through Docker Compose.
-The deployment waits for the nginx health check and restores the previous image
-if it fails. Version tags and manual builds do not deploy. The health check proves
-that nginx responds; manually try the changed feature to check its behavior.
+version tag. Version-tag builds do not deploy production; manual dispatches on
+`main` deploy the selected image through the production deployment job.
 
 ## Deployment setup
 
