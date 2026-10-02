@@ -407,3 +407,9 @@ engine. See the [preview guide](docs/browser-preview.md) for the isolated
 Compose stack and exact PR images. The browser-focused shell is the only web
 entry point in stable and preview builds; preview images add only the synthetic
 gateway and review fixtures.
+
+### Acknowledgment
+
+Athena is an original project based on the work of
+[hermes-desktop-web-mobile-pwa](https://github.com/mdg-qc/hermes-desktop-web-mobile-pwa),
+with extensive improvements for web and mobile.
