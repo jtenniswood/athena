@@ -19,6 +19,7 @@ function harness() {
   const calls = [], errors = []
   let group = 'Team', failure = false, occupied = false, generation = 0
   const dependencies = {
+    blurBrowserComposerForMobileSelection() {},
     bumpBotOpenGeneration: () => { calls.push(['cancel']); return ++generation },
     getBotOpenGeneration: () => generation,
     $groupChatWorkspace: { set: value => { group = value } },

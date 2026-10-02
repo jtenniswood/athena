@@ -13,6 +13,7 @@ function selectionHarness() {
   let fail = false, generation = 0
   let group = 'Team'
   const dependencies = {
+    blurBrowserComposerForMobileSelection() {},
     $groupChatWorkspace: { set: value => { group = value } },
     requestSessionResume: (id, owner) => calls.push(['resume', id, owner]),
     forgetSessionOwnerHintsForSession: id => calls.push(['forget', id]),
