@@ -47,7 +47,7 @@ export function showStartupRecovery(error: unknown, revision: string): void {
   copyButton.type = 'button'
   copyButton.textContent = 'Copy diagnostics'
   copyButton.onclick = () => {
-    const diagnostics = `Hermes Web startup failure\nStage: ${stage}\nBuild: ${wrapperRevision}`
+    const diagnostics = `Athena startup failure\nStage: ${stage}\nBuild: ${wrapperRevision}`
     void navigator.clipboard?.writeText(diagnostics)
   }
   actions.append(copyButton)

@@ -1600,7 +1600,7 @@
     "after": [
       "browser-flush-all-composers"
     ],
-    "reason": "Keep automatic composer visibility changes from stealing an overlay return target while preserving explicit focus requests.",
+    "reason": "Keep mobile chat selection from opening the on-screen keyboard and prevent automatic focus from stealing an overlay return target.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -1608,11 +1608,11 @@
         "scenario": "settings actions retain drafts and transfer modal focus"
       }
     ],
-    "removal": "Remove when upstream automatic composer focus respects focus restored by closing browser overlays.",
+    "removal": "Remove when upstream avoids automatic composer focus on mobile and respects focus restored by closing browser overlays.",
     "sourceRoot": "renderer",
     "sourceHash": "c55ffcbde9c0557e0718ae9c8e5601053a33e9254162c54ddd49ac6300eda80a",
     "inputHash": "b64efb692d3d22a4971f36a5ad76d49acdd368bf7a8079b8286c6925d14fd560",
-    "outputHash": "f33ac2ffc38955e3dd2fed2964b83604956ef6a3626582b9587aae853ccabf42"
+    "outputHash": "a02296da6eae32338320ce9cda276126a0d10f1b68869998b18f0be28a35cd61"
   },
   {
     "name": "browser-workspace-route-lifetime",
@@ -1863,7 +1863,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "61d99e91f129a01708775866a651e88e439b0271b97600d9fcc65fb9fde6507c",
     "inputHash": "61d99e91f129a01708775866a651e88e439b0271b97600d9fcc65fb9fde6507c",
-    "outputHash": "a105b7c7474ade4e1a42b026d70ca7ee48a77b428bcc6da7a9a18859918442a2"
+    "outputHash": "b032336a06b7079e3eddee4c6bf191e821d6287cf22f6e1c21dc16a622695212"
   },
   {
     "name": "browser-semantic-context-menu",

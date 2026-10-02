@@ -1,4 +1,4 @@
-# nginx.conf template for Hermes Web (frontend-only Docker image).
+# nginx.conf template for Athena (frontend-only Docker image).
 # ${HERMES_GATEWAY_URL} and ${HERMES_HOME} are substituted by
 # docker-entrypoint.sh (envsubst) at container start; every other $var is nginx's own.
 

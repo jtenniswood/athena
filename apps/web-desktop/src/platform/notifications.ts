@@ -33,8 +33,8 @@ export async function webNotify(payload: HermesNotification): Promise<boolean> {
   const title = payload.title ?? 'Hermes'
   const options: NotificationOptions = {
     body: payload.body,
-    icon: '/hermes.png',
-    badge: '/hermes.png',
+    icon: '/athena.png',
+    badge: '/athena.png',
     silent: payload.silent,
     data: { url: window.location.href }
   }
@@ -67,4 +67,3 @@ export async function webNotify(payload: HermesNotification): Promise<boolean> {
     return false
   }
 }
-

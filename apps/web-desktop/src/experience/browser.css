@@ -55,7 +55,8 @@
 .browser-profile-choice:hover,.browser-profile-choice:focus-visible { background:var(--web-hover); color:var(--web-text); }
 .browser-profile-choice.is-drop-target { background:var(--web-hover); box-shadow:inset 0 0 0 1px var(--web-accent); }
 .browser-profile-choice[aria-pressed="true"] { border-width:2px; border-color:var(--web-accent); background:color-mix(in srgb,var(--web-accent) 16%,transparent); color:var(--web-text); }
-.browser-profile-choice > :is(img,span) { width:2.25rem !important; height:2.25rem !important; }
+.browser-profile-choice > :is(img,span) { box-sizing:border-box; width:2.25rem !important; height:2.25rem !important; aspect-ratio:1; flex:0 0 auto; }
+.browser-profile-choice > img { object-fit:cover; }
 .browser-profile-all { color:var(--web-text-subtle); }
 .browser-update-panel { flex-shrink:0; margin:var(--web-space-2) var(--web-space-3) 0; padding:var(--web-space-2); border:1px solid var(--web-border); border-radius:var(--web-radius-panel); background:var(--web-bg); color:var(--web-text); box-shadow:0 .25rem .8rem #0002; }
 .browser-update-panel-heading { display:flex; align-items:center; justify-content:space-between; gap:var(--web-space-2); font-size:var(--web-text-caption); }
@@ -118,7 +119,7 @@
 .browser-shell :is([data-slot="aui_intro"],[data-slot="bot_chat_empty"]) .wordmark { display:block; min-width:0; max-width:100%; }
 .browser-shell :is([data-slot="aui_intro"],[data-slot="bot_chat_empty"]) .wordmark > [aria-hidden] { display:none; }
 .browser-shell :is([data-slot="aui_intro"],[data-slot="bot_chat_empty"]) .wordmark > :not([aria-hidden]) { display:block; min-width:0; width:100%; max-width:100%; }
-.browser-shell :is([data-slot="aui_intro"],[data-slot="bot_chat_empty"]) .wordmark > :not([aria-hidden]) > * { inline-size:100%; max-width:100%; font-size:min(11cqi,9rem) !important; }
+.browser-shell :is([data-slot="aui_intro"],[data-slot="bot_chat_empty"]) .wordmark > :not([aria-hidden]) > * { inline-size:100%; max-width:100%; font-size:min(18cqi,20rem) !important; }
 /* Browser-focused sessions keep messaging groups compact: hide any extra
    header marker while keeping the disclosure caret visible. */
 .browser-sessions-pane [data-browser-section-label] > span[aria-hidden="true"] { display:none !important; }
@@ -129,6 +130,17 @@
 .browser-shell [data-sidebar="menu-item"]:has([data-tour="sidebar-nav-skills"]),
 .browser-shell [data-sidebar="menu-item"]:has([data-tour="sidebar-nav-messaging"]),
 .browser-shell [data-sidebar="menu-item"]:has([data-tour="sidebar-nav-artifacts"]) { display:none !important; }
+/* Keep only user input and assistant prose in the transcript when the
+   browser-level conversation preference is switched off. Required inline
+   questions and error recovery remain available. */
+body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assistant-message-root"] > :not([data-slot="aui_assistant-message-content"]),
+body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assistant-message-content"]:not(:has([data-clarify-choices])):not(:has([role="alert"])) > :not(.aui-md),
+body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_system-message-root"]:not(:has([role="alert"])) {
+  display: none !important;
+}
+body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assistant-message-root"]:not(:has(> [data-slot="aui_assistant-message-content"] > .aui-md)):not(:has([data-clarify-choices])):not(:has([role="alert"])) {
+  display: none !important;
+}
 .browser-main { position:relative; flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; outline:none; overflow:hidden; }
 .browser-main[hidden] { display:none; }
 /* Keep the dock at the workspace edge with one small margin. Safe-area values
@@ -184,11 +196,17 @@
  .browser-main :is(button[aria-label="Branch in new chat"],button[aria-label="Copy"],button[aria-label="Read aloud"],button[aria-label="Refresh"],button[aria-label="Restore checkpoint"],button[aria-label="Scroll to bottom"]) { box-sizing:border-box; min-width:var(--web-touch-target); min-height:var(--web-touch-target); }
  .browser-profile-choice { width:var(--web-touch-target); height:var(--web-touch-target); flex-basis:var(--web-touch-target); }
  .browser-profile-choice > :is(img,span) { width:calc(var(--web-touch-target) - 2px) !important; height:calc(var(--web-touch-target) - 2px) !important; }
+ .browser-profile-choice img { width:100% !important; height:100% !important; aspect-ratio:1; object-fit:cover; }
  .browser-profile-slot { flex-basis:var(--web-touch-target); }
  .browser-update-panel-heading button { min-width:var(--web-touch-target); min-height:var(--web-touch-target); }
  .browser-overlay-title button { box-sizing:border-box; min-width:var(--web-touch-target); min-height:var(--web-touch-target); }
  .browser-statusbar { height:auto; min-height:var(--web-touch-target); padding:var(--web-space-1) var(--web-space-2); gap:var(--web-space-1); }
  .browser-status-controls :is(button,a) { min-height:var(--web-touch-target); height:auto; font-size:var(--web-text-label); padding:.3rem var(--web-space-2); }
+}
+@media (width < 48rem) {
+ .browser-profile-choice { width:calc(var(--web-touch-target) + .5rem); height:calc(var(--web-touch-target) + .5rem); flex-basis:calc(var(--web-touch-target) + .5rem); }
+ .browser-profile-choice > :is(img,span) { width:calc(var(--web-touch-target) + .25rem) !important; height:calc(var(--web-touch-target) + .25rem) !important; }
+ .browser-profile-slot { flex-basis:calc(var(--web-touch-target) + .5rem); }
 }
 @media (prefers-reduced-motion:reduce) { .browser-navigation { transition:none; } }
 .browser-upstream-workspace { position:relative; display:flex; flex:1; min-height:0; min-width:0; }
@@ -199,6 +217,10 @@
    screen pixels and must be converted back to CSS pixels before painting. */
 .browser-shell [data-slot="aui_thread-viewport"] [data-slot="aui_user-message-root"].sticky { top:0; }
 .browser-shell [data-slot="aui_thread-viewport"] [data-sticky-prompt-clip] { clip-path:inset(calc(var(--sticky-prompt-clip) / var(--web-ui-scale,1)) 0 0); }
+@media (width < 48rem) {
+ .browser-shell [data-slot="aui_thread-viewport"] [data-slot="aui_user-message-root"].sticky { position:static !important; }
+ .browser-shell [data-slot="aui_thread-viewport"] [data-sticky-prompt-clip] { clip-path:none; }
+}
 .browser-upstream-workspace [data-tree-group] header[class*="h-(--titlebar-height)"] { display:none; }
 /* Chat title and profile ownership are already represented by the browser
    toolbar. Keep the upstream title header out of the chat surface even when

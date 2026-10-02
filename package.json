@@ -1,8 +1,8 @@
 {
-  "name": "hermes-mobile",
+  "name": "athena",
   "private": true,
   "version": "0.1.1",
-  "description": "Hermes Desktop \u2014 Web & Mobile (PWA) version. Official Hermes chat UI as a browser/PWA app; nix-free Docker build.",
+  "description": "Athena for Hermes Agent — web and mobile chat UI (PWA) with a nix-free Docker build.",
   "scripts": {
     "dev": "pnpm --filter web-desktop run dev",
     "build": "pnpm --filter web-desktop run build",

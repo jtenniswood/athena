@@ -1,11 +1,11 @@
-# AGENTS.md — for AI coding agents working in this repo
+# AGENTS.md — for AI coding agents working in Athena
 
 This file is addressed to AI coding agents (e.g. the Hermes agent). It is NOT
 user-facing documentation; keep user-facing content in `README.md`.
 
 ## Project
 
-Hermes Web — the **Hermes Desktop chat UI** as a web app / PWA
+Athena — the **Hermes Agent chat UI** as a web app / PWA
 (`apps/web-desktop`). An **unofficial community wrapper** of
 `NousResearch/hermes-agent` (not affiliated). The renderer sources
 (`apps/desktop`, `apps/shared`) are **not in this repo** — they are fetched from
@@ -31,23 +31,38 @@ the pinned `hermes-agent` at build time.
 
 ## Remotes & push discipline
 
-- `origin` — GitHub (`https://github.com/jtenniswood/hermes-desktop-web-mobile-pwa.git`) — **primary** and the target for all pull requests.
+- `origin` — GitHub (`https://github.com/jtenniswood/athena.git`) — **primary** and the target for all pull requests.
 - The upstream of `main` is `origin/main`.
 
-After every meaningful commit:
+For every user request that changes tracked repository content—including code,
+documentation, configuration, and generated files—finish by opening a pull
+request on `origin` once the change is reviewable. Do not treat the request as
+complete after only editing the working tree. Commit the requested changes, push
+the feature branch, and create the PR. Keep unrelated existing work out of the
+PR. Do not merge or deploy unless explicitly requested.
+
+Before editing, inspect the working tree and preserve pre-existing changes.
+Stage and commit only the requested work. Give each PR a clear title, a short
+summary of the change, and the verification performed. If a push or PR creation
+is blocked by GitHub availability or permissions, leave the work ready for
+review and report the specific blocker; do not claim the task is complete.
+
+After every meaningful commit, push the branch:
 ```bash
 git push origin <branch>
 ```
 
 ## Build & dev
 
-- **Docker (primary image, NIX-FREE):** `docker build -t hermes-web .` fetches
+- **Docker (primary image, NIX-FREE):** `docker build -t athena .` fetches
   the exact renderer revision in `flake.lock`, typechecks, and builds the UI.
 - **Dev loop:** `pnpm prepare:renderer` → `pnpm install --frozen-lockfile` →
   `pnpm dev` (port 5174). `nix develop` is an optional development environment;
   do not run Nix builds on the VPS.
-- **Verify:** `pnpm typecheck` and `pnpm build`, then manually exercise the
-  affected workflow. Report checks that could not be completed.
+- **Verify:** For application changes, run `pnpm typecheck` and `pnpm build`
+  when practical, then exercise the affected workflow. For documentation or
+  low-risk changes, use checks appropriate to the change. Report checks that
+  could not be completed.
 
 ## Development scope
 

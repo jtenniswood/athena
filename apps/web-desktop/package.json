@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.1",
   "type": "module",
-  "description": "Hermes Desktop renderer as a plain Vite web app (additive workspace; nothing upstream is modified)",
+  "description": "Athena for Hermes Agent as a plain Vite web app, built from the pinned Hermes Desktop renderer.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -99,5 +99,6 @@
     "use-stick-to-bottom": "1.1.6",
     "vfile": "6.0.3",
     "web-haptics": "0.0.6"
-  }
+  },
+  "license": "MIT"
 }
