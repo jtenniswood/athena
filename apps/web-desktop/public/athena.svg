@@ -11,7 +11,7 @@
     </linearGradient>
   </defs>
   <rect width="512" height="512" fill="url(#background)" />
-  <g transform="translate(256 256) scale(0.74 1.34) translate(-256 -256)">
+  <g transform="translate(240 240) scale(0.74 1.34) translate(-256 -256)">
     <text x="273" y="253" fill="url(#letter)" font-family="'Times New Roman', Georgia, serif" font-size="366" font-weight="600" font-style="italic" text-anchor="middle" dominant-baseline="central">A</text>
   </g>
 </svg>
