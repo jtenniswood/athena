@@ -426,7 +426,7 @@
     "sourceHash": "816669c25c0fab0f2388768eb142bbce5e1435d0b9d62326170f0f4b1adc4e8d",
     "sourceRoot": "renderer",
     "inputHash": "816669c25c0fab0f2388768eb142bbce5e1435d0b9d62326170f0f4b1adc4e8d",
-    "outputHash": "c4d5e81c84158d532bcafbec4ea22a3907e5fa8c868e23120811c11fda0d8388"
+    "outputHash": "0b65b86111323b587d283881c7a8ac89ead178a43d182e4c2bf671ee7c80decb"
   },
   {
     "name": "single-conversation-controller",
