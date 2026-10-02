@@ -1,7 +1,7 @@
 # Run Athena with Docker Compose
 
 Docker Compose is optional. For the direct Docker setup, see the main
-[README](https://github.com/jtenniswood/athena#docker-self-hosting).
+[README](https://github.com/jtenniswood/athena#run-with-docker).
 
 Athena serves the web app and proxies requests to a Hermes Gateway that you
 run separately. The Compose service does not start a gateway or model runtime.
