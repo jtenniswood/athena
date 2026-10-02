@@ -247,6 +247,49 @@
   cursor: pointer;
 }
 .browser-transcript-setting-toggle input { width: 1rem; height: 1rem; accent-color: var(--accent); }
+.browser-followup-setting {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--web-border-subtle);
+  border-radius: 0.75rem;
+}
+
+.browser-followup-setting h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.browser-followup-setting p {
+  margin: 0.35rem 0 0.85rem;
+  color: var(--web-text-muted);
+}
+
+.browser-followup-options {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.browser-followup-options button {
+  min-height: 2.75rem;
+  min-width: 5rem;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--web-border);
+  border-radius: 999px;
+  color: var(--web-text-muted);
+  background: var(--web-bg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.browser-followup-options button:hover { background: var(--web-hover); color: var(--web-text); }
+.browser-followup-options button:focus-visible { outline: var(--web-focus-ring); outline-offset: 2px; }
+
+.browser-followup-options button.is-selected {
+  border-color: var(--web-accent);
+  background: var(--web-active);
+  color: var(--web-text);
+}
 
 /* The palette portals outside the frame, so account for browser UI scaling. */
 body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: min(34rem, calc(100vw / var(--web-ui-scale, 1) - 2rem)); }
