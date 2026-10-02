@@ -32,6 +32,25 @@ The skill requires `main` to match `origin/main` and refuses an existing
 version tag. Version-tag builds do not deploy production; manual dispatches on
 `main` deploy the selected image through the production deployment job.
 
+### Ad hoc development image
+
+To build a test image without moving a release tag or deploying it, open
+**Actions → Build development image → Run workflow** and select the branch to
+build. The workflow publishes `ghcr.io/jtenniswood/athena:dev-latest` and the
+immutable `dev-sha-<revision>` tag. Each completed run updates `dev-latest`;
+version releases alone update `latest`.
+
+On the host, pull the latest ad hoc build with:
+
+```sh
+docker pull ghcr.io/jtenniswood/athena:dev-latest
+```
+
+Configure your test system to use `ghcr.io/jtenniswood/athena:dev-latest` as its
+image reference. The development workflow only builds and publishes the image;
+it does not trigger a deployment. For a private GHCR package, sign in on the
+host before pulling.
+
 ## Deployment setup
 
 Configure these repository Actions secrets:
