@@ -30,6 +30,7 @@ test('browser omits generic activity toasts while preserving unread tracking and
     markSessionUnreadFinished: id => unread.push(id),
     $selectedBot: { get: () => null },
     rosterWatermarks: new Map(),
+    lastToastedPreview: new Map(),
     botSelectionKey: bot => bot.name,
     botActivitySession: bot => bot.activity,
     botCanonicalSessionId: bot => bot.id,
@@ -144,6 +145,23 @@ test('browser microphone capture distinguishes insecure origins and lets getUser
   await assert.rejects(handle.start(), /browser settings/)
   context.navigator.mediaDevices.getUserMedia = async () => { throw new DOMException('Missing', 'NotFoundError') }
   await assert.rejects(handle.start(), /No microphone/)
+})
+
+test('latest renderer keeps None grouping integrated and handles layout-less tooltip boundaries upstream', () => {
+  const layoutFile = path.join(root, '../desktop/src/store/layout.ts')
+  const layout = readFileSync(layoutFile, 'utf8')
+  const layoutOutput = browserPlugin(root).transform(layout, layoutFile)?.code
+  assert.match(layoutOutput, /SIDEBAR_GROUPING_ORDER = \['none', 'date', 'project', 'status', 'profile'\]/)
+  assert.match(layoutOutput, /SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'none'/)
+
+  const filterFile = path.join(root, '../desktop/src/app/chat/sidebar/filter-menu.tsx')
+  const filter = browserPlugin(root).transform(readFileSync(filterFile, 'utf8'), filterFile)?.code
+  assert.match(filter, /none: \{ icon: 'list-unordered', label: 'None' \}/)
+
+  const tooltip = readFileSync(path.join(root, '../desktop/src/components/ui/tooltip.tsx'), 'utf8')
+  assert.match(tooltip, /while \(candidate && !hasLayout\(candidate\)\)/)
+  assert.match(tooltip, /setPane\(candidate\)/)
+  assert.doesNotMatch(readFileSync(path.join(root, 'src/upstream/compatibility-registry.json'), 'utf8'), /tooltip-boundary/)
 })
 
 test('browser shell contracts reject missing or changed upstream modules', t => {

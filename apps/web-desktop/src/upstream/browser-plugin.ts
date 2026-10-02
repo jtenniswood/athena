@@ -286,37 +286,24 @@ export function removeBrowserNewSessionShortcut(source: string): string {
 }
 
 export function removeBrowserNewBotChatAction(source: string): string {
-  const imports = [
-    "  saveSelectedRosterBot\n",
-    "  newBotChat,\n",
-    "import { botRosterMeta, botWorkspaceOwnerKey, setBotsWorkspaceOwner } from './routing'\n"
-  ]
-  const action = `        <ContextMenuItem
-          onSelect={() => {
-            saveSelectedRosterBot(bot)
-            setBotsWorkspaceOwner(botWorkspaceOwnerKey(bot), bot)
-            newBotChat(bot)
-          }}
-        >
-          {b.bot.newChatWith}
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-`
-  const hasAction = source.includes(action)
-  const hasPartialAction = source.includes('b.bot.newChatWith') || imports.some(target => source.includes(target))
-  if (!hasAction && !hasPartialAction) return source
-  if (!hasAction || source.split(action).length !== 2 || imports.some(target => source.split(target).length !== 2)) {
+  if (!source.includes('b.bot.newChatWith')) return source
+  const invocation = 'newBotChat(bot)'
+  const start = source.lastIndexOf('<ContextMenuItem', source.indexOf(invocation))
+  const close = source.indexOf('</ContextMenuItem>', source.indexOf(invocation))
+  const end = close < 0 ? -1 : close + '</ContextMenuItem>'.length
+  const action = start < 0 || end < 0 ? '' : source.slice(start, end)
+  const imports = ["  saveSelectedRosterBot\n", "  newBotChat,\n"]
+  if (!action || source.indexOf(invocation) !== source.lastIndexOf(invocation) || imports.some(target => source.split(target).length !== 2)) {
     throw new Error('Browser new-bot-chat action target changed')
   }
   let output = source.replace(action, '')
-  output = output.replace(imports[0], '').replace(imports[1], '').replace(imports[2], "import { botRosterMeta } from './routing'\n")
+  output = output.replace(imports[0], '').replace(imports[1], '')
+  output = output.replace("import { botRosterMeta, botWorkspaceOwnerKey, setBotsWorkspaceOwner } from './routing'", "import { botRosterMeta } from './routing'")
   return output
 }
 
 export function removeBrowserOpenBotChatAction(source: string): string {
-  const action = `        <ContextMenuItem onSelect={() => void openRosterBot(bot)}>{b.bot.openBotChat}</ContextMenuItem>
-        <ContextMenuSeparator />
-`
+  const action = '<ContextMenuItem onSelect={() => void openRosterBot(bot)}>{b.bot.openBotChat}</ContextMenuItem>'
   if (!source.includes('b.bot.openBotChat')) return source
   if (source.split(action).length !== 2) throw new Error('Browser open-bot-chat action target changed')
   return source.replace(action, '')
@@ -330,19 +317,6 @@ export function browserActivityNotificationsPlugin(root: string): Plugin {
       return applyBrowserTransform(code, id, root, 40)
     }
   }
-}
-
-export function fixBrowserTooltipBoundary(source: string): string {
-  const target = "    setPane(boundary === 'pane' ? (anchor?.current?.closest('[data-tree-group]') ?? null) : null)"
-  if (source.split(target).length !== 2) throw new Error('Browser tooltip boundary target changed')
-  return source.replace(
-    target,
-    `    // Browser composer portals can inherit a hidden desktop pane. A zero-size
-    // collision boundary collapses the tooltip width; use the viewport instead.
-    const candidate = boundary === 'pane' ? (anchor?.current?.closest('[data-tree-group]') ?? null) : null
-    const bounds = candidate?.getBoundingClientRect()
-    setPane(bounds && bounds.width > 0 && bounds.height > 0 ? candidate : null)`
-  )
 }
 
 export function useBrowserMicrophoneCapture(source: string): string {
@@ -399,8 +373,9 @@ export function useBrowserSearchLabel(source: string, root: string): string {
   // Give the browser visibility preference a stable, label-independent target.
   const pinnedTarget = 'rootClassName="shrink-0 p-0 pb-1"'
   if (source.split(pinnedTarget).length !== 2) throw new Error('Browser pinned section target changed')
-  const pinnedSection = '{!trimmedQuery && (\n              <SidebarSessionsSection\n                activeSessionId={activeSidebarSessionId}\n                contentClassName="flex flex-col gap-px rounded-lg pb-2 pt-1"'
-  if (source.split(pinnedSection).length !== 2) throw new Error('Browser pinned section visibility target changed')
+  const pinnedSection = '{!trimmedQuery && ('
+  const pinnedSectionStart = source.lastIndexOf(pinnedSection, source.indexOf(pinnedTarget))
+  if (pinnedSectionStart < 0 || !source.slice(pinnedSectionStart, source.indexOf(pinnedTarget)).includes('<SidebarSessionsSection')) throw new Error('Browser pinned section visibility target changed')
   const hooks: [string, string][] = [
     ['<div className="shrink-0 px-2 pb-1 pt-1">', '<div className="browser-session-search-section shrink-0 px-2 pb-1 pt-1">'],
     ['<SearchField', '<SearchField containerClassName="browser-session-search"'],
@@ -411,10 +386,13 @@ export function useBrowserSearchLabel(source: string, root: string): string {
     if (source.split(before).length !== 2) throw new Error('Browser sidebar styling target changed')
     source = source.replace(before, after)
   }
+  // Use resolved pins, including backend pins, rather than DOM rows: a
+  // collapsed populated section must still keep its heading visible.
+  const currentPinnedTarget = source.indexOf(pinnedTarget)
+  const currentPinnedStart = source.lastIndexOf(pinnedSection, currentPinnedTarget)
+  if (currentPinnedStart < 0) throw new Error('Browser pinned section visibility target changed')
+  source = source.slice(0, currentPinnedStart) + source.slice(currentPinnedStart).replace(pinnedSection, '{!trimmedQuery && pinnedSessions.length > 0 && (')
   return (`import { BrowserSidebarExtras } from ${extras}\n` + source)
-    // Use resolved pins, including backend pins, rather than DOM rows: a
-    // collapsed populated section must still keep its heading visible.
-    .replace(pinnedSection, pinnedSection.replace('!trimmedQuery', '!trimmedQuery && pinnedSessions.length > 0'))
     .replace(pinnedTarget, 'rootClassName="browser-pinned-section shrink-0 p-0 pb-1"')
     .replace(slotTarget, slotTarget + '\n            <BrowserSidebarExtras />')
     .replace(ariaTarget, "aria-label={'Search'}")
@@ -446,14 +424,14 @@ export function showHiddenBotsInBrowserRoster(source: string): string {
 export function enableBrowserUngroupedSessions(source: string, surface: 'store' | 'menu' | 'sidebar'): string {
   const replacements: Record<typeof surface, [string, string][]> = {
     store: [
-      ["export type SidebarGrouping = 'date' | 'profile' | 'project' | 'status'", "export type SidebarGrouping = 'none' | 'date' | 'profile' | 'project' | 'status'"],
+      ["export const SIDEBAR_GROUPING_ORDER = ['date', 'project', 'status', 'profile'] as const", "export const SIDEBAR_GROUPING_ORDER = ['none', 'date', 'project', 'status', 'profile'] as const"],
       ["SIDEBAR_GROUPING_STORAGE_KEY,\n  'date',", "SIDEBAR_GROUPING_STORAGE_KEY,\n  'none',"],
       ["oneOf(['date', 'status'], 'date')", "oneOf(['none', 'date', 'status'], 'none')"],
       ["SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY,\n  'date',", "SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY,\n  'none',"],
       ["oneOf(['date', 'profile', 'status'], 'date')", "oneOf(['none', 'date', 'profile', 'status'], 'none')"],
       ["const SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'date'", "const SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'none'"]
     ],
-    menu: [["const GROUPINGS: Option<SidebarGrouping>[] = [", "const GROUPINGS: Option<SidebarGrouping>[] = [\n  { icon: 'list-unordered', id: 'none', label: 'None' },"]],
+    menu: [["  const GROUPING_OPTIONS: Record<SidebarGrouping, Omit<Option<SidebarGrouping>, 'id'>> = {", "  const GROUPING_OPTIONS: Record<SidebarGrouping, Omit<Option<SidebarGrouping>, 'id'>> = {\n    none: { icon: 'list-unordered', label: 'None' },"]],
     sidebar: [["grouping={showArchived || rankedGlobally ? 'none'", "grouping={grouping === 'none' || showArchived || rankedGlobally ? 'none'"]]
   }
   let output = source
@@ -556,16 +534,14 @@ export function disableBrowserSessionOpenActions(source: string): string {
 }
 
 export function filterBrowserKeybinds(source: string): string {
-  const importMarker = "import { SettingsContent } from './primitives'\n"
-  const browserSet = `${importMarker}\nconst BROWSER_UNSUPPORTED_KEYBINDS = new Set([\n  'session.newTab', 'session.newWindow', 'session.next', 'session.prev',\n  'view.showBrowser', 'view.toggleHud', 'view.showTerminal', 'view.newTerminal',\n  'view.nextTerminal', 'view.prevTerminal', 'view.closeTerminal',\n  'view.terminalCopy', 'view.terminalPaste', 'hud.snapToPointer'\n])\n`
+  const browserSet = `const BROWSER_UNSUPPORTED_KEYBINDS = new Set([\n  'session.newTab', 'session.newWindow', 'session.next', 'session.prev',\n  'view.showBrowser', 'view.toggleHud', 'view.showTerminal', 'view.newTerminal',\n  'view.nextTerminal', 'view.prevTerminal', 'view.closeTerminal',\n  'view.terminalCopy', 'view.terminalPaste', 'hud.snapToPointer'\n])\n`
   const actionTarget = '  const actionList = allKeybindActions(contributions)'
   const readonlyTarget = '  const [query, setQuery] = useState(\'\')'
   if (source.includes('BROWSER_UNSUPPORTED_KEYBINDS')) return source
-  if (source.split(actionTarget).length !== 2 || source.split(readonlyTarget).length !== 2 || source.split(importMarker).length !== 2) {
+  if (source.split(actionTarget).length !== 2 || source.split(readonlyTarget).length !== 2) {
     throw new Error('Browser keybind contract changed')
   }
-  const output = source.replace(importMarker, browserSet)
-    .replace(actionTarget, '  const actionList = allKeybindActions(contributions).filter(action => !BROWSER_UNSUPPORTED_KEYBINDS.has(action.id))')
+  const output = source.replace(actionTarget, `${browserSet}\n${actionTarget.replace('allKeybindActions(contributions)', 'allKeybindActions(contributions).filter(action => !BROWSER_UNSUPPORTED_KEYBINDS.has(action.id))')}`)
     .replace(readonlyTarget, "  const browserReadonly = KEYBIND_READONLY.filter(shortcut => !BROWSER_UNSUPPORTED_KEYBINDS.has(shortcut.id))\n" + readonlyTarget)
     .replaceAll('return KEYBIND_READONLY.filter', 'return browserReadonly.filter')
     .replaceAll('const readonly = KEYBIND_READONLY.filter', 'const readonly = browserReadonly.filter')
@@ -629,7 +605,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserDirectResumeOwner: source => useBrowserDirectResumeOwner(source),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut,
-    removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction, fixBrowserTooltipBoundary,
+    removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth, filterBrowserSessionMenu,
     showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserSessionTileMirrors,
     disableBrowserSessionRowTabs, disableBrowserSessionOpenActions, filterBrowserKeybinds,
