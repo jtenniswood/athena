@@ -119,7 +119,7 @@
 .browser-shell :is([data-slot="aui_intro"],[data-slot="bot_chat_empty"]) .wordmark { display:block; min-width:0; max-width:100%; }
 .browser-shell :is([data-slot="aui_intro"],[data-slot="bot_chat_empty"]) .wordmark > [aria-hidden] { display:none; }
 .browser-shell :is([data-slot="aui_intro"],[data-slot="bot_chat_empty"]) .wordmark > :not([aria-hidden]) { display:block; min-width:0; width:100%; max-width:100%; }
-.browser-shell :is([data-slot="aui_intro"],[data-slot="bot_chat_empty"]) .wordmark > :not([aria-hidden]) > * { inline-size:100%; max-width:100%; font-size:min(11cqi,9rem) !important; }
+.browser-shell :is([data-slot="aui_intro"],[data-slot="bot_chat_empty"]) .wordmark > :not([aria-hidden]) > * { inline-size:100%; max-width:100%; font-size:min(18cqi,20rem) !important; }
 /* Browser-focused sessions keep messaging groups compact: hide any extra
    header marker while keeping the disclosure caret visible. */
 .browser-sessions-pane [data-browser-section-label] > span[aria-hidden="true"] { display:none !important; }
