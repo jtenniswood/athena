@@ -40,6 +40,11 @@ function registration(network = { pause: async () => true, resume() {} }) {
     vm.runInContext(ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText, context)
     return context.exports
   }
+  context.require = name => {
+    if (name === './pending-work') return { flushPendingBrowserWork: async () => ({ ready: true }) }
+    if (name === './update-network') return { installUpdateNetworkBarrier: () => network }
+    return context.exports
+  }
   const safety = load('platform/reload-safety.ts')
   context.require = name => name === './update-network'
     ? { installUpdateNetworkBarrier: () => network } : safety
@@ -71,6 +76,11 @@ function registration(network = { pause: async () => true, resume() {} }) {
       return reply
     }
   }
+}
+
+async function waitFor(callback) {
+  for (let attempt = 0; attempt < 10 && !callback(); attempt++) await new Promise(setImmediate)
+  assert.equal(callback(), true)
 }
 
 test('visible apps discover waiting updates on return, reconnect, and a timer without activating them', async () => {
@@ -175,6 +185,7 @@ test('an aborted or expired asynchronous flush cannot relock the page or acknowl
     app.saveWith(() => new Promise(resolve => { finish = resolve }))
     const flushing = app.ask('HERMES_FLUSH_UPDATE')
     assert.equal(app.root.inert, true)
+    await waitFor(() => typeof finish === 'function')
     await abort(app)
     assert.equal(app.root.inert, false)
     finish()
@@ -189,6 +200,7 @@ test('an abort during the final persistence check prevents controller-change rel
   let finish
   app.saveWith(() => new Promise(resolve => { finish = resolve }))
   const changed = app.controllerChange()
+  await waitFor(() => typeof finish === 'function')
   await app.ask('HERMES_ABORT_UPDATE')
   finish()
   await changed
@@ -210,6 +222,7 @@ test('an abort while requests drain prevents a late readiness reply from freezin
   let finish, resumed = 0
   const app = registration({ pause: () => new Promise(resolve => { finish = resolve }), resume: () => { resumed++ } })
   const flushing = app.ask('HERMES_FLUSH_UPDATE')
+  await waitFor(() => typeof finish === 'function')
   await app.ask('HERMES_ABORT_UPDATE')
   finish(true)
   assert.equal((await flushing).ready, false)
