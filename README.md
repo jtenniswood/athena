@@ -244,8 +244,59 @@ Change only this repository’s files:
 - New components and helpers: `apps/web-desktop/src/components/` and
   `apps/web-desktop/src/lib/`
 
-After updating the upstream renderer with `nix flake update hermes`, verify
-that any configured aliases still match its module paths.
+### Updating the Hermes Desktop renderer
+
+The web app uses the `apps/desktop` and `apps/shared` sources from the exact
+Hermes Agent commit pinned in `flake.lock`. To update that renderer:
+
+1. Start from `origin/main` on a clean `codex/*` branch or a fresh worktree.
+   A fresh checkout avoids stale generated renderer links. Do not edit
+   `apps/desktop/` or `apps/shared/`; `pnpm prepare:renderer` fetches them.
+2. Choose the release from the official
+   [Hermes Agent releases](https://github.com/NousResearch/hermes-agent/releases)
+   page and resolve its tag to the full 40-character commit SHA. Record the
+   current pin with `node scripts/renderer.mjs --revision` and review the
+   comparison from that SHA to the selected SHA at
+   `https://github.com/NousResearch/hermes-agent/compare/<current-sha>...<release-sha>`.
+3. Export the selected SHA and ask Nix for metadata at that exact revision:
+
+   ```bash
+   export RENDERER_REVISION="paste-the-40-character-commit-sha-here"
+   nix flake metadata --json --no-write-lock-file \
+     "github:NousResearch/hermes-agent/$RENDERER_REVISION" \
+     > /tmp/hermes-renderer-metadata.json
+   ```
+
+   Update only `nodes.hermes.locked.rev`, `narHash`, and `lastModified` in
+   `flake.lock` from that metadata. Keep the input declaration and all other
+   lock entries unchanged. Confirm the recorded `rev` equals the selected SHA.
+4. Fetch the matching renderer and install the locked web dependencies:
+
+   ```bash
+   pnpm prepare:renderer
+   pnpm install --frozen-lockfile
+   ```
+
+5. Review the renderer diff and compatibility report. Repair integration issues
+   in Athena-owned adapters, overrides, configuration, or dependencies; add
+   focused regression coverage for confirmed behavior changes. Then run:
+
+   ```bash
+   pnpm check:upstream
+   pnpm typecheck
+   pnpm test:foundation
+   pnpm build
+   pnpm check:renderer
+   pnpm check:compatibility-registry
+   ```
+
+6. Open a PR that records the release, tag, commit, upstream comparison, fixes,
+   and checks performed. Include browser or gateway verification when available
+   and state any checks that could not be run. Do not merge or deploy as part of
+   the update work.
+
+For the automated proposal workflow, its manual dispatch behavior, or blocked
+update repairs, follow the [upstream update guide](docs/upstream-updates.md).
 
 ## Browser integration boundaries
 
