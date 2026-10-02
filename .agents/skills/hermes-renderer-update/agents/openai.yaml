@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hermes Renderer Update"
+  short_description: "Prepare a tested Hermes renderer update PR"
+  default_prompt: "Use $hermes-renderer-update to prepare a PR for the latest Hermes release, repair integrations, and run verification."
