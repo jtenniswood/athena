@@ -14,26 +14,52 @@ delivers the crucial message.
 
 ## Run with Docker
 
-The [Compose example](compose.example.yml) runs the published image
-`ghcr.io/jtenniswood/athena:latest`. Its default gateway address is
-`http://host.docker.internal:9119`; set `HERMES_GATEWAY_URL` to your gateway
-address if it runs elsewhere.
+Athena’s Docker image contains the web app and nginx. It connects to a Hermes
+Gateway that you run separately. Docker Compose is optional; the [Compose wiki
+guide](https://github.com/jtenniswood/athena/wiki/Run-with-Docker-Compose) has
+instructions if you prefer it.
+
+First, copy the environment template and set the gateway address:
 
 ```sh
-docker compose -f compose.example.yml up -d
+cp apps/web-desktop/.env.example .env.hermes-web
 ```
 
-Open <http://localhost:4174/>. To stop Athena, run:
+For a gateway running on the Docker host, set these values in
+`.env.hermes-web`:
 
-```sh
-docker compose -f compose.example.yml down
+```dotenv
+HERMES_GATEWAY_URL=http://host.docker.internal:9119
+HERMES_GATEWAY_NAME=Local Hermes
+HERMES_HOME=/data/hermes
 ```
 
-To update to the latest published image:
+If your gateway runs elsewhere, use its reachable HTTP(S) address, such as its
+Tailscale IP or MagicDNS hostname. Use the origin only; do not add a path such
+as `/api`.
+
+Start Athena with the published image:
 
 ```sh
-docker compose -f compose.example.yml pull
-docker compose -f compose.example.yml up -d
+docker run -d \
+  --name athena \
+  --restart unless-stopped \
+  --env-file .env.hermes-web \
+  --add-host host.docker.internal:host-gateway \
+  -p 4174:80 \
+  -v "$HOME/.hermes:/data/hermes:ro" \
+  ghcr.io/jtenniswood/athena:latest
+```
+
+Open <http://localhost:4174/>. The mounted Hermes directory lets Athena serve
+installed `plugins/` and `desktop-plugins/`; remove the `-v` line if you do
+not use filesystem plugins. On Linux, `--add-host` lets the container reach a
+gateway running on the Docker host.
+
+To stop Athena:
+
+```sh
+docker stop athena
 ```
 
 Use HTTPS or Tailscale Serve when opening Athena from another device, especially
