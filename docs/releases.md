@@ -13,6 +13,19 @@ and builds the frontend. Every successful publication updates `latest` and
 `sha-<revision>`; main builds also update `main`, and version tags publish their
 version. The renderer revision comes from `flake.lock`.
 
+### Versioned image release
+
+Use the `athena-release` project skill with a stable `MAJOR.MINOR.PATCH`
+version, such as `1.4.0`. It creates and pushes the annotated Git tag
+`v1.4.0` from the current, clean `main` commit. That tag starts the release
+workflow and publishes `ghcr.io/jtenniswood/athena:1.4.0`, along with the
+`latest` and `sha-<commit>` tags. The version tag is written without the `v`
+prefix in the image registry.
+
+The skill requires `main` to match `origin/main` and refuses an existing
+version tag. Version-tag builds do not deploy production; only a successful
+push to `main` triggers the production deployment job.
+
 A push to `main` also deploys that run's exact image digest through Docker Compose.
 The deployment waits for the nginx health check and restores the previous image
 if it fails. Version tags and manual builds do not deploy. The health check proves

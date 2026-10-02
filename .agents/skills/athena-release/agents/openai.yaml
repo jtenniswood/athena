@@ -1,0 +1,3 @@
+interface:
+  display_name: "Athena Release"
+  short_description: "Publish a versioned Athena Docker image"
