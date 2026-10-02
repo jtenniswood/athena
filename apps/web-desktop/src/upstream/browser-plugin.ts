@@ -875,7 +875,7 @@ export function disableBrowserOnboardingTips(source: string): string {
   if (source.split(tipImport).length !== 2 || source.split(tipHost).length !== 2) {
     throw new Error('Browser onboarding tip host changed')
   }
-  return source.replace(tipImport, '').replace(tipHost, '{null}')
+  return source.replace(tipImport, '').replace(tipHost, 'null')
 }
 
 export function disableBrowserSessionTileMirrors(source: string): string {
