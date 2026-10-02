@@ -396,7 +396,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/contrib/wiring.tsx",
-    "reason": "Keep browser session selection owner-preserving, route New session into the visible draft, and disable chat tab creation.",
+    "reason": "Keep browser session selection owner-preserving, route New session into the visible draft, disable chat tab creation, and suppress desktop onboarding tips in the web app.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -419,13 +419,14 @@
     "removal": "Upstream wiring accepts a single-conversation capability.",
     "handlers": [
       "disableBrowserSessionTabs",
+      "disableBrowserOnboardingTips",
       "useBrowserSessionSelection",
       "useBrowserDirectResumeOwner"
     ],
     "sourceHash": "816669c25c0fab0f2388768eb142bbce5e1435d0b9d62326170f0f4b1adc4e8d",
     "sourceRoot": "renderer",
     "inputHash": "816669c25c0fab0f2388768eb142bbce5e1435d0b9d62326170f0f4b1adc4e8d",
-    "outputHash": "5a056db153a0c99a62fa3ba9c34b2499273009523f82fe52a0232210eb0c5e7f"
+    "outputHash": "c4d5e81c84158d532bcafbec4ea22a3907e5fa8c868e23120811c11fda0d8388"
   },
   {
     "name": "single-conversation-controller",
