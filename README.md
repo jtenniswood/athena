@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="docs/athena-wordmark.svg" alt="Athena — Hermes Agent for web and mobile" width="420">
+  <img src="apps/web-desktop/public/hermes.svg" alt="Athena web app icon" width="128">
 </h1>
 
 Athena is an unofficial web app and installable PWA for Hermes Agent. It is a
