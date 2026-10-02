@@ -179,6 +179,7 @@ body > [data-slot='fan-menu'] {
   row-gap: var(--composer-row-gap) !important;
 }
 
+[data-slot='composer-root']:not([data-popped-out]) [data-slot='composer-fade'] > div.grid.w-full:has([data-slot='composer-rich-input']) > [style*='grid-area: menu'],
 [data-slot='composer-root']:not([data-popped-out]) [data-slot='composer-fade'] > div.grid.w-full:has([data-slot='composer-rich-input']) > [class*='grid-area:menu'] {
   align-self: center;
   translate: none !important;

@@ -5,8 +5,8 @@ user-facing documentation; keep user-facing content in `README.md`.
 
 ## Project
 
-Athena — the **Hermes Agent chat UI** as a web app / PWA
-(`apps/web-desktop`). An **unofficial community wrapper** of
+Athena — the **Hermes Desktop chat UI** as a web app / PWA
+(`apps/web-desktop`). An **unofficial community wrapper** for
 `NousResearch/hermes-agent` (not affiliated). The renderer sources
 (`apps/desktop`, `apps/shared`) are **not in this repo** — they are fetched from
 the pinned `hermes-agent` at build time.
@@ -54,7 +54,7 @@ git push origin <branch>
 
 ## Build & dev
 
-- **Docker (primary image, NIX-FREE):** `docker build -t athena .` fetches
+- **Docker (primary image, NIX-FREE):** `docker build -t hermes-web .` fetches
   the exact renderer revision in `flake.lock`, typechecks, and builds the UI.
 - **Dev loop:** `pnpm prepare:renderer` → `pnpm install --frozen-lockfile` →
   `pnpm dev` (port 5174). `nix develop` is an optional development environment;
