@@ -34,13 +34,12 @@ the pinned `hermes-agent` at build time.
 - `origin` — GitHub (`https://github.com/jtenniswood/athena.git`) — **primary** and the target for all pull requests.
 - The upstream of `main` is `origin/main`.
 
-For every user-requested code change, finish by opening a pull request on
-`origin` once the change is reviewable. This includes small fixes and generated
-code; do not treat a request for implementation as complete after only editing
-the working tree. Commit the requested changes, push the feature branch, and
-create the PR. Keep unrelated existing work out of the PR. Do not merge or
-deploy unless explicitly requested. If the user asks for code without a PR,
-follow that specific instruction for that request.
+For every user request that changes tracked repository content—including code,
+documentation, configuration, and generated files—finish by opening a pull
+request on `origin` once the change is reviewable. Do not treat the request as
+complete after only editing the working tree. Commit the requested changes, push
+the feature branch, and create the PR. Keep unrelated existing work out of the
+PR. Do not merge or deploy unless explicitly requested.
 
 Before editing, inspect the working tree and preserve pre-existing changes.
 Stage and commit only the requested work. Give each PR a clear title, a short

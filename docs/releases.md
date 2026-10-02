@@ -19,6 +19,19 @@ Compose. The deployment waits for the nginx health check and restores the previo
 image if it fails. Version-tag builds do not deploy. The health check proves that
 nginx responds; manually try the changed feature to check its behavior.
 
+### Versioned image release
+
+Use the `athena-release` project skill with a stable `MAJOR.MINOR.PATCH`
+version, such as `1.4.0`. It creates and pushes the annotated Git tag
+`v1.4.0` from the current, clean `main` commit. That tag starts the release
+workflow and publishes `ghcr.io/jtenniswood/athena:1.4.0`, along with the
+`latest` and `sha-<commit>` tags. The version tag is written without the `v`
+prefix in the image registry.
+
+The skill requires `main` to match `origin/main` and refuses an existing
+version tag. Version-tag builds do not deploy production; manual dispatches on
+`main` deploy the selected image through the production deployment job.
+
 ## Deployment setup
 
 Configure these repository Actions secrets:
