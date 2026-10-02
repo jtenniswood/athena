@@ -5,6 +5,10 @@
 Athena is an unofficial web app and installable PWA for Hermes Agent. It is a
 frontend only; connect it to a running Hermes Gateway.
 
+**Why Athena?** In Greek mythology, Athena sees the whole problem and devises
+the plan; Hermes slips through obstacles, negotiates awkward missions, and
+delivers the crucial message.
+
 > Intended for private networks such as Tailscale. Athena is not hardened for
 > the public internet.
 
