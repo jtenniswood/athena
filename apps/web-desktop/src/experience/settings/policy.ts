@@ -11,6 +11,7 @@ import {
   settingsPolicy,
   settingsScopeDescription,
   settingsFieldIsVisible,
+  isEverydaySettingsField,
   validateSettingsCatalog
 } from './catalog'
 
@@ -30,6 +31,7 @@ export {
   settingsScopeDescription,
   settingsCapability,
   settingsFieldIsVisible,
+  isEverydaySettingsField,
   validateSettingsCatalog
 } from './catalog'
 export type {

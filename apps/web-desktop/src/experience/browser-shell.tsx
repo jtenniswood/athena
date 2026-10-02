@@ -10,6 +10,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { BrowserSidebarNavigation } from './sidebar-extras'
 import { BrowserSessionsPane } from './sidebar-sections'
+import { BrowserBotsFallback } from './browser-bots-fallback'
 import { SettingsMenu } from './settings-menu'
 import { installFollowupBehavior } from './followup-preferences'
 import { installTranscriptPreferences } from './transcript-preferences'
@@ -202,7 +203,7 @@ function BrowserLayout() {
         <BrowserNavigationTabs navigation={navigation} />
         <div className="browser-navigation-body" role="tabpanel" aria-label={tab}>
           <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}><BrowserSidebarNavigation onNavigate={openRoute}><WiredPane part="sidebar" /></BrowserSidebarNavigation></BrowserSessionsPane>
-          <div hidden={tab !== 'bots'} className="browser-pane">{surface(bots) || <p className="browser-empty">Loading Bots…</p>}</div>
+          <div hidden={tab !== 'bots'} className="browser-pane">{surface(bots) || <BrowserBotsFallback />}</div>
         </div>
         {updateNotice && !updateDismissed && <div className="browser-update-panel" role="status" aria-label="Application update">
           <div className="browser-update-panel-heading"><strong>Update available</strong><button type="button" aria-label="Dismiss update" onClick={() => setUpdateDismissed(true)}>×</button></div>
