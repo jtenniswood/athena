@@ -1,4 +1,4 @@
-# AGENTS.md — for AI coding agents working in this repo
+# AGENTS.md — for AI coding agents working in Athena
 
 This file is addressed to AI coding agents (e.g. the Hermes agent). It is NOT
 user-facing documentation; keep user-facing content in `README.md`.
