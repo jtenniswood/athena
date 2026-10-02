@@ -143,6 +143,29 @@
 .browser-settings-frame :is(button, input, select, textarea) { scroll-margin-block: var(--web-space-4); }
 .browser-settings-frame :is(button, input, select, textarea):focus-visible { outline: var(--web-focus-ring); outline-offset: -2px; }
 
+.browser-advanced-settings {
+  margin-top: var(--web-space-4);
+  border-top: 1px solid var(--web-border-subtle);
+}
+.browser-advanced-settings > summary {
+  display: flex;
+  min-height: var(--web-touch-min);
+  align-items: center;
+  gap: var(--web-space-2);
+  color: var(--web-text-muted);
+  font-weight: 500;
+  cursor: pointer;
+  list-style-position: inside;
+}
+.browser-advanced-settings > summary:hover { color: var(--web-text); }
+.browser-advanced-settings > summary:focus-visible { outline: var(--web-focus-ring); outline-offset: 2px; }
+.browser-advanced-settings > summary > span {
+  color: var(--web-text-subtle);
+  font-size: var(--web-text-caption);
+  font-weight: 400;
+}
+.browser-advanced-settings[open] > summary { margin-bottom: var(--web-space-2); }
+
 .browser-gateway-settings { display: grid; gap: var(--web-space-6); padding: var(--web-space-4); }
 .browser-gateway-settings-intro { display: grid; gap: var(--web-space-2); }
 .browser-gateway-settings-intro h2 { margin: 0; font-size: var(--web-text-heading); font-weight: 600; }

@@ -290,6 +290,40 @@ export function filterBrowserSettingsFields(source: string, root: string): strin
   const target = "  const visibleFields = activeSectionId === 'voice' ? fields.filter(([key]) => voiceFieldVisible(key, config)) : fields"
   if (source.split(target).length !== 2) throw new Error('Browser settings field visibility target changed')
   let output = source.replace(target, target + '.filter(([key]) => isSettingsFieldVisible(key))')
+  const fieldList = `${target}.filter(([key]) => isSettingsFieldVisible(key))`
+  output = output.replace(fieldList, `${fieldList}
+  const everydayFields = visibleFields.filter(([key]) => isEverydaySettingsField(activeSectionId, key))
+  const advancedFields = visibleFields.filter(([key]) => !isEverydaySettingsField(activeSectionId, key))`)
+  const loadingBoundary = '  if (!config || !schema) {'
+  if (output.split(loadingBoundary).length !== 2) throw new Error('Browser settings loading boundary changed')
+  output = output.replace(loadingBoundary, `  const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false)
+
+  useEffect(() => {
+    if (targetField && fields.some(([key]) => key === targetField && isSettingsFieldVisible(key) && !isEverydaySettingsField(activeSectionId, key))) {
+      setAdvancedSettingsOpen(true)
+    }
+  }, [activeSectionId, fields, targetField])
+
+${loadingBoundary}`)
+  const mapStart = '          {visibleFields.map(([key, field]) => (\n'
+  const mapEnd = '\n          ))}'
+  const mapStartIndex = output.indexOf(mapStart)
+  const mapEndIndex = output.indexOf(mapEnd, mapStartIndex)
+  if (mapStartIndex < 0 || mapEndIndex < 0 || output.indexOf(mapStart, mapStartIndex + mapStart.length) >= 0) {
+    throw new Error('Browser settings field rendering boundary changed')
+  }
+  const fieldRenderer = output.slice(mapStartIndex + mapStart.length, mapEndIndex)
+  const everydayMap = `          {everydayFields.map(([key, field]) => (\n${fieldRenderer}\n          ))}`
+  const advancedMap = `          {advancedFields.map(([key, field]) => (\n${fieldRenderer}\n          ))}`
+  const advancedDisclosure = `{advancedFields.length > 0 && (
+          <details className="browser-advanced-settings" onToggle={event => setAdvancedSettingsOpen(event.currentTarget.open)} open={advancedSettingsOpen}>
+            <summary>Advanced settings <span aria-hidden="true">{advancedFields.length}</span></summary>
+            <div className="grid gap-1">
+${advancedMap}
+            </div>
+          </details>
+        )}`
+  output = output.slice(0, mapStartIndex) + everydayMap + '\n' + advancedDisclosure + output.slice(mapEndIndex + mapEnd.length)
   const browserOnlyControls: [string, string][] = [
     ["activeSectionId === 'advanced' && (", "activeSectionId === 'advanced' && !window.__HERMES_WEB_BRIDGE__ && ("],
     ["activeSectionId === 'chat' ? <AttachmentSizeSetting /> : null", "activeSectionId === 'chat' && !window.__HERMES_WEB_BRIDGE__ ? <AttachmentSizeSetting /> : null"]
@@ -298,7 +332,7 @@ export function filterBrowserSettingsFields(source: string, root: string): strin
     if (output.split(before).length !== 2) throw new Error('Browser device-only configuration boundary changed')
     output = output.replace(before, after)
   }
-  return `import { isSettingsFieldVisible } from ${owner}\n` + output
+  return `import { isEverydaySettingsField, isSettingsFieldVisible } from ${owner}\n` + output
 }
 
 export function filterBrowserSettingsSearch(source: string, root: string): string {
