@@ -868,6 +868,15 @@ export function disableBrowserSessionTabs(source: string): string {
   return source.replace(keybind, marker).replace(action, disabledAction).replace(newSession, browserNewSession)
 }
 
+export function disableBrowserOnboardingTips(source: string): string {
+  const tipImport = "import { TipHost } from '@/components/tips'\n"
+  const tipHost = '<TipHost />'
+  if (source.split(tipImport).length !== 2 || source.split(tipHost).length !== 2) {
+    throw new Error('Browser onboarding tip host changed')
+  }
+  return source.replace(tipImport, '').replace(tipHost, '{null}')
+}
+
 export function disableBrowserSessionTileMirrors(source: string): string {
   const target = 'if (!isBrowserWindow() && !isHudWindow()) {'
   const replacement = 'if (false) {'
@@ -1041,7 +1050,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction, fixBrowserTooltipBoundary,
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth, filterBrowserSessionMenu,
-    showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserSessionTileMirrors,
+    showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
     disableBrowserSessionRowTabs, disableBrowserSessionOpenActions, filterBrowserKeybinds,
     useBrowserSessionSelection: source => useBrowserSessionSelection(source, root),
     useBrowserBotSelection: source => useBrowserRosterSelection(source, root, 'bot'),
