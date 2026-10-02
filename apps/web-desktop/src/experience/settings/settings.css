@@ -132,7 +132,7 @@
 .browser-settings-category-chevron { display: none !important; }
 
 .browser-settings-detail { display: flex; min-width: 0; min-height: 0; flex-direction: column; overflow: hidden; padding: var(--web-space-6) clamp(1rem, 3vw, 3rem) var(--web-sheet-padding-bottom); }
-.browser-settings-detail > * { box-sizing: border-box; width: min(100%, 54rem); max-width: 54rem; margin-inline: auto; }
+.browser-settings-detail > * { box-sizing: border-box; width: min(100%, 54rem); max-width: 54rem; margin-inline: 0; }
 .browser-settings-content-slot { display: flex; min-height: 0; flex: 1; flex-direction: column; }
 .browser-settings-content-slot[hidden] { display: none; }
 .browser-settings-page-notice { max-width: 54rem; margin: 0 auto var(--web-space-3); color: var(--web-text-muted); font-size: var(--web-text-caption); }
