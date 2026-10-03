@@ -137,6 +137,11 @@ body > [data-slot='fan-menu'] {
 
 [id='setting-field-appearance.backdrop'],
 [id='setting-field-appearance.intro-splash'],
+[id='setting-field-appearance.resume-last-session'],
+[id='setting-field-appearance.tips'],
+[id='setting-field-appearance.tours'],
+[id='setting-field-appearance.chat-font'],
+[id='setting-field-appearance.composer-popout'],
 [id='setting-field-appearance.theme'] {
   display: none !important;
 }
