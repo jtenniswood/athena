@@ -1,36 +1,8 @@
-.browser-settings-theme-link {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  margin: 0 0 0.75rem;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid var(--web-border);
-  border-radius: var(--web-radius-control);
-  color: var(--web-text);
-  background: var(--web-bg);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.browser-settings-theme-link:hover { background: var(--web-hover); }
-.browser-settings-theme-link:focus-visible,
 .browser-color-themes button:focus-visible { outline: var(--web-focus-ring); outline-offset: 2px; }
 .browser-color-themes { display: grid; gap: 1rem; }
 .browser-color-themes-heading { display: flex; align-items: center; gap: 0.75rem; }
 .browser-color-themes-heading h2 { margin: 0; font-size: 1.1rem; font-weight: 600; }
 .browser-color-themes-heading p { margin: 0.2rem 0 0; color: var(--web-text-muted); font-size: 0.85rem; }
-.browser-color-themes-back {
-  display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
-  place-items: center;
-  border: 1px solid var(--web-border);
-  border-radius: 50%;
-  color: var(--web-text);
-  background: var(--web-bg);
-  cursor: pointer;
-}
 .browser-color-themes-mode { display: flex; gap: 0.35rem; }
 .browser-color-themes-mode button {
   padding: 0.4rem 0.75rem;

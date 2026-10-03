@@ -1,16 +1,10 @@
 import { getBaseColors, useTheme } from '@/themes/context'
-import { Codicon } from '../../upstream/browser-api'
 
-type Props = { onBack: () => void }
-
-export function BrowserColorThemesPage({ onBack }: Props) {
+export function BrowserColorThemesPage() {
   const { availableThemes, mode, resolvedMode, setMode, setTheme, themeName } = useTheme()
 
   return <section className="browser-color-themes" aria-label="Colour themes">
     <header className="browser-color-themes-heading">
-      <button aria-label="Back to Appearance" className="browser-color-themes-back" onClick={onBack} type="button">
-        <Codicon name="arrow-left" />
-      </button>
       <div>
         <h2>Colour themes</h2>
         <p>Choose a theme for Athena.</p>
