@@ -78,13 +78,13 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
     pages: [
       { id: 'config:workspace', title: 'Workspace', aliases: ['Workspace & files'], scope: 'connected-server' },
       {
-        id: 'config:browser', title: 'Browser Automation', scope: 'connected-server',
+        id: 'config:browser', title: 'Browser Automation', scope: 'connected-server', visibility: 'hidden',
         capability: 'server.real-browser-profile',
         scopeDescription: 'Browser automation runs on the connected Hermes server. “Use My Real Browser Profile” uses that server’s supported Chromium profile, not the browser viewing this page. Private URLs and local network access refer to networks visible from that server.'
       },
       { id: 'config:safety', title: 'Permissions', aliases: ['Permissions & safety'], scope: 'connected-server' },
       {
-        id: 'vault', title: 'Saved Logins', aliases: ['Passwords & Logins'], scope: 'connected-server',
+        id: 'vault', title: 'Saved Logins', aliases: ['Passwords & Logins'], scope: 'connected-server', visibility: 'hidden',
         scopeDescription: 'Saved logins are stored and used by the connected Hermes server for browser automation.'
       },
       {
@@ -123,6 +123,14 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
 
 /** Local visibility choices never delete upstream configuration values. */
 export const settingsFields: readonly SettingsFieldDefinition[] = [
+  { id: 'appearance.backdrop', visibility: 'hidden', reason: 'Hidden from browser settings.' },
+  { id: 'appearance.intro-splash', visibility: 'hidden', reason: 'Hidden from browser settings.' },
+  { id: 'appearance.resume-last-session', visibility: 'hidden', reason: 'Hidden from browser settings.' },
+  { id: 'appearance.tips', visibility: 'hidden', reason: 'Hidden from browser settings.' },
+  { id: 'appearance.tours', visibility: 'hidden', reason: 'Hidden from browser settings.' },
+  { id: 'appearance.chat-font', visibility: 'hidden', reason: 'Hidden from browser settings.' },
+  { id: 'appearance.composer-popout', visibility: 'hidden', reason: 'Hidden from browser settings.' },
+  { id: 'appearance.theme', visibility: 'hidden', reason: 'Theme selection is provided by the browser Colour themes page.' },
   { id: 'appearance.app-actions', visibility: 'hidden', supportState: 'unsupported', reason: 'The web toolbar owns its fixed action layout.' },
   { id: 'appearance.translucency', visibility: 'hidden', supportState: 'unsupported', reason: 'Window translucency requires native window support.' },
   { id: 'terminal.font_family', visibility: 'hidden', supportState: 'unsupported', reason: 'This browser interface has no native terminal pane.' },
@@ -132,7 +140,20 @@ export const settingsFields: readonly SettingsFieldDefinition[] = [
 ]
 
 export const hiddenPageDefinitions: readonly SettingsPageDefinition[] = [
-  { id: 'about', title: 'About', visibility: 'hidden' }
+  { id: 'about', title: 'About', visibility: 'hidden' },
+  { id: 'pets', title: 'Pets', visibility: 'hidden' },
+  { id: 'hud', title: 'HUD', visibility: 'hidden' },
+  { id: 'screen-capture', title: 'Screen Capture', visibility: 'hidden' },
+  { id: 'appearance:pet', title: 'Appearance pet settings', visibility: 'hidden' },
+  { id: 'keybinds:shortcuts', title: 'Keyboard shortcuts section', visibility: 'hidden' },
+  { id: 'keybinds:hud-gesture', title: 'HUD gesture', visibility: 'hidden' },
+  { id: 'keybinds:screen-capture', title: 'Screen capture settings', visibility: 'hidden' },
+  { id: 'model:fallbacks', title: 'Fallback models', visibility: 'hidden' },
+  { id: 'gateway:connection', title: 'Gateway connection', visibility: 'hidden' },
+  { id: 'gateway:devices', title: 'Gateway devices', visibility: 'hidden' },
+  { id: 'gateway:managed-updates', title: 'Gateway managed updates', visibility: 'hidden' },
+  { id: 'sessions:archived', title: 'Archived chats', visibility: 'hidden' },
+  { id: 'sessions:default-directory', title: 'Default project folder', visibility: 'hidden' }
 ]
 export const hiddenSettingsPages = hiddenPageDefinitions.map(page => page.id)
 
@@ -180,6 +201,7 @@ export function settingsFieldIsVisible(id: string): boolean {
 /** Keep the everyday configuration surface small; new upstream fields default to advanced. */
 const everydaySettingsFields: Readonly<Record<string, readonly string[]>> = {
   chat: ['display.personality', 'timezone', 'display.show_reasoning'],
+  model: ['fallback_providers', 'fallback_models', 'models.fallback', 'model.fallback'],
   memory: ['memory.memory_enabled', 'memory.user_profile_enabled'],
   safety: ['approvals.mode'],
   voice: ['voice.voice_chat_mode', 'stt.enabled', 'voice.auto_tts'],

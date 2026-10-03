@@ -520,7 +520,7 @@
     "sourceHash": "08f645b35256124b6defb6be913c70a2b845bfd1682765087369c486ced96332",
     "sourceRoot": "renderer",
     "inputHash": "08f645b35256124b6defb6be913c70a2b845bfd1682765087369c486ced96332",
-    "outputHash": "a36807bdb8c0b9ee1678671ab8809b0a1178fda534039cfa11768718fd7c647b"
+    "outputHash": "24531d72ba580c7ed44b2526da1c018423fca0887605d364b9cac6079ef0eb63"
   },
   {
     "name": "statusbar-item-export",
@@ -2170,7 +2170,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
     "inputHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
-    "outputHash": "ecdc54b9b18e325dcff6c16c97bf53a7d4d17074ed09c2ddfd96db945d94c945",
+    "outputHash": "3f3d12c7d55ed87aa8d80f9f082874ba37dda088238330bbab8a5d28c14d84bb",
     "handlers": [
       "useBrowserSettingsPresentation"
     ],
@@ -2187,33 +2187,6 @@
       }
     ],
     "removal": "Remove when upstream SettingsView provides an equivalent responsive browser presentation seam while retaining upstream settings pages and actions."
-  },
-  {
-    "name": "browser-settings-field-policy",
-    "kind": "browser-transform",
-    "order": 20,
-    "module": "app/settings/config-settings.tsx",
-    "sourceRoot": "renderer",
-    "sourceHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
-    "inputHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
-    "outputHash": "ade2eae150e2a3c309bbd14259088c68c8f3900c4a6976d5b1077692ffbbe9d5",
-    "handlers": [
-      "filterBrowserSettingsFields",
-      "useBrowserConfigurationSettings"
-    ],
-    "reason": "Hide unsupported device controls and apply wrapper-owned visibility rules while retaining upstream settings storage and forms.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
-    "tests": [
-      {
-        "file": "scripts/browser.test.mjs",
-        "scenario": "settings customization hides known sections and fields while inheriting new ids"
-      },
-      {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "configuration page retains import export and reset behavior"
-      }
-    ],
-    "removal": "Remove when upstream settings supports wrapper-owned visibility rules for config fields."
   },
   {
     "name": "browser-settings-search-policy",
@@ -2275,11 +2248,11 @@
     "sourceRoot": "renderer",
     "sourceHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
     "inputHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
-    "outputHash": "718ec6b217a56a500f9109bc7b92cf82d585b8fd3d972ef5057190c7fbd80830",
+    "outputHash": "26cad1762b7a627ed3673ec0127e212554165d5943884c8aef226e9f938a7da7",
     "handlers": [
       "hideBrowserAppearanceOnlySettings"
     ],
-    "reason": "Hide window-only appearance controls, desktop-only layout preferences, and unused terminal font and theme marketplace controls while retaining installed browser themes.",
+    "reason": "Hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls while retaining installed browser themes.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -2338,7 +2311,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/settings/config-settings.tsx",
-    "reason": "Keep the latest debounced settings save alive across page exit and make it part of safe PWA activation.",
+    "reason": "Keep pending settings saves alive across page exit and update activation while applying wrapper-owned field visibility and progressively disclosing advanced configuration options.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -2350,13 +2323,15 @@
         "scenario": "settings actions retain drafts and transfer modal focus"
       }
     ],
-    "removal": "Remove when settings exposes an equivalent supported save completion and browser update readiness contract.",
+    "removal": "Remove when upstream settings provides equivalent browser save lifecycle, visibility policy, and advanced-field presentation contracts.",
     "sourceRoot": "renderer",
     "sourceHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
     "inputHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
-    "outputHash": "042548ff7f86c08b0baa156f88e19fe6813d9720eb26ce08cb1dc30d247f5887",
+    "outputHash": "80f62d063f475017172100db04e11997b9faa1b27712656c2d50f60ba572731a",
     "handlers": [
-      "trackBrowserSettingsSaves"
+      "trackBrowserSettingsSaves",
+      "filterBrowserSettingsFields",
+      "useBrowserConfigurationSettings"
     ]
   },
   {
