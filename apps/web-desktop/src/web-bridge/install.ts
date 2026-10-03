@@ -9,6 +9,24 @@
  */
 import { createWebBridge } from './bridge'
 
+const BROWSER_APPEARANCE_DEFAULTS = {
+  interfaceMode: ['hermes.desktop.interfaceMode.v1', 'simple'],
+  sessionListDensity: ['hermes.desktop.sessionListDensity', 'compact']
+} as const
+
+function applyBrowserAppearanceDefaults(): void {
+  try {
+    for (const [key, value] of Object.values(BROWSER_APPEARANCE_DEFAULTS)) {
+      if (window.localStorage.getItem(key) === null) {
+        window.localStorage.setItem(key, value)
+      }
+    }
+  } catch {
+    // Persistent renderer stores fall back to their own defaults when storage
+    // is unavailable; do not block browser startup for a convenience default.
+  }
+}
+
 export function installWebBridge(): void {
   if (typeof window === 'undefined') return
 
@@ -34,6 +52,7 @@ export function installWebBridge(): void {
   }
 
   if (!window.hermesDesktop) {
+    applyBrowserAppearanceDefaults()
     window.hermesDesktop = createWebBridge()
   }
 }
