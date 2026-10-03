@@ -168,6 +168,11 @@ export function settingsPageId(id: string): string {
   return id.split('&')[0]
 }
 
+export function isDesktopStartupSettingsPage(idOrLabel: string): boolean {
+  const normalized = idOrLabel.toLowerCase().replace(/[^a-z0-9]+/g, ' ')
+  return normalized.includes('desktop') && normalized.includes('startup')
+}
+
 export function settingsPageDefinition(id: string): SettingsPageDefinition | undefined {
   return pagesById.get(settingsPageId(id))
 }
@@ -191,7 +196,8 @@ export function settingsCapability(id: string): SettingsCapability | undefined {
 export function settingsPageIsVisible(id: string): boolean {
   const page = settingsPageId(id)
   const canonical = page.startsWith('config:') ? page.slice('config:'.length) : page
-  return settingsPageDefinition(page)?.visibility !== 'hidden'
+  return !isDesktopStartupSettingsPage(page)
+    && settingsPageDefinition(page)?.visibility !== 'hidden'
     && !hiddenSettingsPages.includes(page)
     && !hiddenSettingsPages.includes(canonical)
 }
