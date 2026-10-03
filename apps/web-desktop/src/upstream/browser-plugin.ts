@@ -398,6 +398,33 @@ ${advancedMap}
   return `import { isEverydaySettingsField, isSettingsFieldVisible } from ${owner}\n` + output
 }
 
+export function useBrowserProfileScopeTabs(source: string): string {
+  const replacements: [string, string][] = [
+    [
+      "<div className={cn('grid gap-2', className)}>",
+      "<div className={cn('grid gap-2', className)} data-browser-profile-scope=\"\">"
+    ],
+    [
+      '<div className="flex flex-wrap gap-1.5">',
+      '<div className="flex flex-wrap gap-1.5" data-browser-profile-tabs="" role="group" aria-label={scope.appliesTo}>'
+    ],
+    [
+      "      className={cn(\n        'rounded-full border px-3 py-1 text-[length:var(--conversation-caption-font-size)] transition',",
+      "      className={cn(\n        'browser-settings-profile-tab rounded-none border-0 border-b-2 border-transparent px-3 py-2 text-[length:var(--conversation-caption-font-size)] transition',"
+    ],
+    [
+      '      onClick={onSelect}\n      type="button"',
+      '      aria-pressed={active}\n      onClick={onSelect}\n      type="button"'
+    ]
+  ]
+  let output = source
+  for (const [before, after] of replacements) {
+    if (output.split(before).length !== 2) throw new Error('Browser profile scope tab boundary changed')
+    output = output.replace(before, after)
+  }
+  return output
+}
+
 export function filterBrowserSettingsSearch(source: string, root: string): string {
   const owner = JSON.stringify(path.join(root, 'src/experience/settings/policy'))
   const target = `  return {
@@ -1112,6 +1139,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserSettingsPresentation: source => useBrowserSettingsPresentation(source, root),
     useBrowserConfigurationSettings: source => useBrowserConfigurationSettings(source, root),
     filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
+    useBrowserProfileScopeTabs,
     hideBrowserAppearanceOnlySettings,
     hideBrowserLocalProjectDirectory,
     removeBrowserPetAvatarTab,

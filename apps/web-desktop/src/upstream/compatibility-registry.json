@@ -2241,6 +2241,28 @@
     "removal": "Remove when upstream settings navigation entries in the command palette support wrapper visibility policy."
   },
   {
+    "name": "browser-settings-profile-scope-tabs",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/profile-scope.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "63e3a77dfbd90f1ca0bb83be019dd29f7b8f74b945a290671154e00de3df9e2b",
+    "inputHash": "63e3a77dfbd90f1ca0bb83be019dd29f7b8f74b945a290671154e00de3df9e2b",
+    "outputHash": "22680f6a1e43cc9bc57acd291dd9456c7e2f35b0582004c5297eb029f32b89c0",
+    "handlers": [
+      "useBrowserProfileScopeTabs"
+    ],
+    "reason": "Present the shared settings profile selector as a browser tab strip while preserving its scope selection behavior.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "apps/desktop/src/app/settings/profile-scope.test.tsx",
+        "scenario": "selecting another profile sets the shared override"
+      }
+    ],
+    "removal": "Remove when upstream exposes a browser-specific settings scope control."
+  },
+  {
     "name": "browser-appearance-capabilities",
     "kind": "browser-transform",
     "order": 20,
