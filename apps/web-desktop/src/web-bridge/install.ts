@@ -13,9 +13,14 @@ const BROWSER_APPEARANCE_DEFAULTS = {
   interfaceMode: ['hermes.desktop.interfaceMode.v1', 'simple'],
   sessionListDensity: ['hermes.desktop.sessionListDensity', 'compact']
 } as const
+const BROWSER_TEXT_DIRECTION_STORAGE_KEY = 'hermes.desktop.textDirection'
 
 function applyBrowserAppearanceDefaults(): void {
   try {
+    // Auto is the renderer's no-key default. Remove an earlier forced choice
+    // before its text-direction store initializes.
+    window.localStorage.removeItem(BROWSER_TEXT_DIRECTION_STORAGE_KEY)
+
     for (const [key, value] of Object.values(BROWSER_APPEARANCE_DEFAULTS)) {
       if (window.localStorage.getItem(key) === null) {
         window.localStorage.setItem(key, value)

@@ -152,7 +152,9 @@ body > [data-slot='fan-menu'] {
 [id*='interface-mode'],
 [id*='interfaceMode'],
 [id*='session-density'],
-[id*='sessionDensity'] {
+[id*='sessionDensity'],
+[id*='text-direction'],
+[id*='textDirection'] {
   display: none !important;
 }
 
