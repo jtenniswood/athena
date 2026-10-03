@@ -136,7 +136,10 @@ export const settingsFields: readonly SettingsFieldDefinition[] = [
   { id: 'terminal.font_family', visibility: 'hidden', supportState: 'unsupported', reason: 'This browser interface has no native terminal pane.' },
   { id: 'updates.non_interactive_local_changes', visibility: 'hidden', supportState: 'unknown', reason: 'This host update control is not exposed as a browser preference.' },
   { id: 'voice.client_direct', visibility: 'hidden', supportState: 'unknown', reason: 'Direct provider voice has not been verified for this browser-to-Hermes connection.' },
-  { id: 'voice.record_key', visibility: 'hidden', supportState: 'unsupported', reason: 'The terminal voice shortcut is separate from browser keyboard shortcuts.' }
+  { id: 'voice.record_key', visibility: 'hidden', supportState: 'unsupported', reason: 'The terminal voice shortcut is separate from browser keyboard shortcuts.' },
+  { id: 'voice.voice_chat_mode', visibility: 'hidden', reason: 'Voice conversation is not available in this browser interface.' },
+  { id: 'voice.gpt_live.voice', visibility: 'hidden', reason: 'Voice conversation is not available in this browser interface.' },
+  { id: 'voice.gpt_live.instructions', visibility: 'hidden', reason: 'Voice conversation is not available in this browser interface.' }
 ]
 
 export const hiddenPageDefinitions: readonly SettingsPageDefinition[] = [
@@ -204,7 +207,7 @@ const everydaySettingsFields: Readonly<Record<string, readonly string[]>> = {
   model: ['fallback_providers', 'fallback_models', 'models.fallback', 'model.fallback'],
   memory: ['memory.memory_enabled', 'memory.user_profile_enabled'],
   safety: ['approvals.mode'],
-  voice: ['voice.voice_chat_mode', 'stt.enabled', 'voice.auto_tts'],
+  voice: ['stt.enabled', 'voice.auto_tts'],
   workspace: ['terminal.cwd', 'desktop.repo_scan_enabled']
 }
 
