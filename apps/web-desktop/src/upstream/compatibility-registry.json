@@ -2325,9 +2325,9 @@
     ],
     "removal": "Remove when upstream settings provides equivalent browser save lifecycle, visibility policy, and advanced-field presentation contracts.",
     "sourceRoot": "renderer",
-    "sourceHash": "fe13a173ae63e7f475526cb1e7e30ac272c2871b30a66d045de88536f40e09d1",
-    "inputHash": "fe13a173ae63e7f475526cb1e7e30ac272c2871b30a66d045de88536f40e09d1",
-    "outputHash": "6d100fcd1074ed790581d1c3faf7cd4122d25a1550d1e66807894c8475d76ec9",
+    "sourceHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
+    "inputHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
+    "outputHash": "80f62d063f475017172100db04e11997b9faa1b27712656c2d50f60ba572731a",
     "handlers": [
       "trackBrowserSettingsSaves",
       "filterBrowserSettingsFields",
