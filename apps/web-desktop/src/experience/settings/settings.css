@@ -1,3 +1,67 @@
+.browser-settings-unsupported { display: none !important; }
+.browser-settings-theme-link {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--web-border);
+  border-radius: var(--web-radius-control);
+  color: var(--web-text);
+  background: var(--web-bg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.browser-settings-theme-link:hover { background: var(--web-hover); }
+.browser-settings-theme-link:focus-visible,
+.browser-color-themes button:focus-visible { outline: var(--web-focus-ring); outline-offset: 2px; }
+.browser-color-themes { display: grid; gap: 1rem; }
+.browser-color-themes-heading { display: flex; align-items: center; gap: 0.75rem; }
+.browser-color-themes-heading h2 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+.browser-color-themes-heading p { margin: 0.2rem 0 0; color: var(--web-text-muted); font-size: 0.85rem; }
+.browser-color-themes-back {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid var(--web-border);
+  border-radius: 50%;
+  color: var(--web-text);
+  background: var(--web-bg);
+  cursor: pointer;
+}
+.browser-color-themes-mode { display: flex; gap: 0.35rem; }
+.browser-color-themes-mode button {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--web-border);
+  border-radius: 999px;
+  color: var(--web-text-muted);
+  background: var(--web-bg);
+  cursor: pointer;
+}
+.browser-color-themes-mode button.is-active { border-color: var(--web-accent); color: var(--web-text); background: var(--web-active); }
+.browser-color-themes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); gap: 0.75rem; }
+.browser-color-theme-card {
+  display: grid;
+  min-width: 0;
+  gap: 0.4rem;
+  padding: 0.65rem;
+  border: 1px solid var(--web-border);
+  border-radius: var(--web-radius-control);
+  color: var(--web-text);
+  background: var(--web-bg);
+  text-align: left;
+  cursor: pointer;
+}
+.browser-color-theme-card:hover { background: var(--web-hover); }
+.browser-color-theme-card.is-active { border-color: var(--web-accent); box-shadow: 0 0 0 1px var(--web-accent); }
+.browser-color-theme-preview { display: flex; height: 4.5rem; align-items: center; gap: 0.5rem; padding: 0.75rem; border: 1px solid; border-radius: 0.5rem; }
+.browser-color-theme-preview i { display: block; width: 1.2rem; height: 1.2rem; border-radius: 50%; }
+.browser-color-theme-name { font-weight: 600; }
+.browser-color-theme-description { color: var(--web-text-muted); font-size: 0.8rem; }
+
 [data-overlay-surface]:has([data-browser-settings-frame]) {
   box-sizing: border-box;
   top: calc(var(--web-viewport-top, 0px) / var(--web-ui-scale, 1));
@@ -142,6 +206,19 @@
 .browser-settings-home p { color: var(--web-text-muted); }
 .browser-settings-frame :is(button, input, select, textarea) { scroll-margin-block: var(--web-space-4); }
 .browser-settings-frame :is(button, input, select, textarea):focus-visible { outline: var(--web-focus-ring); outline-offset: -2px; }
+.browser-settings-frame select {
+  min-height: 2.5rem;
+  padding: var(--web-space-2) var(--web-space-3);
+  border: 1px solid var(--web-border-subtle);
+  border-radius: var(--web-radius-control);
+  color: var(--web-text);
+  background-color: var(--web-surface);
+  color-scheme: dark;
+}
+.browser-settings-frame select option {
+  color: var(--web-text);
+  background: var(--web-surface);
+}
 
 /* Keep settings controls aligned with their labels across every settings page. */
 .browser-settings-frame [class*="@2xl:justify-self-end"] { justify-self: start; }
