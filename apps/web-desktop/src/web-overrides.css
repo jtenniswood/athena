@@ -509,3 +509,8 @@ body > [data-slot='fan-menu'] {
   .browser-settings-nav-item { min-height: 2.9rem; }
   .browser-settings-nav-item.is-nested { margin-left: 0.75rem; }
 }
+[id="setting-field-appearance.hide-thread-timeline"],
+[id="setting-field-appearance.reactions"],
+[id="setting-field-appearance.vibe-hearts"] {
+  display: none !important;
+}
