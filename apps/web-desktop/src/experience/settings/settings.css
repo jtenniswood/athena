@@ -208,6 +208,7 @@
 .browser-settings-content-slot > section.min-h-0.overflow-hidden > .h-full.min-h-0.overflow-y-auto { overscroll-behavior: contain; padding-inline: var(--web-space-1); }
 .browser-settings-home h2 { font-size: var(--web-text-heading); font-weight: 600; }
 .browser-settings-home p { color: var(--web-text-muted); }
+.browser-theme-mode-row > div > div > div:first-child { justify-content: flex-start; }
 .browser-settings-frame :is(button, input, select, textarea) { scroll-margin-block: var(--web-space-4); }
 .browser-settings-frame :is(button, input, select, textarea):focus-visible { outline: var(--web-focus-ring); outline-offset: -2px; }
 .browser-settings-frame select {
