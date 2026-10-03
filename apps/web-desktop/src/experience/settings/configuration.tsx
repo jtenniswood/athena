@@ -31,7 +31,6 @@ export function BrowserConfigurationPage({ commands, scopeProfile }: { commands:
   const showAuxiliaryTranscriptContent = useShowAuxiliaryTranscriptContent()
   return <section className="browser-settings-page browser-configuration-page" aria-label="Configuration management">
     <h2 className="browser-settings-page-title">{settingsPageLabel('config:browser-configuration', 'Configuration')}</h2>
-    <p className="browser-settings-page-description">Manage the connected Hermes server’s configuration for this profile. This export is a configuration file, not a full server backup.</p>
     <p className="browser-settings-page-notice" role="note">Applies to profile: <strong>{scopeProfile || 'Active profile'}</strong></p>
     <section className="browser-followup-setting" aria-labelledby="browser-followup-setting-title">
       <h3 id="browser-followup-setting-title">Follow-up behavior</h3>
