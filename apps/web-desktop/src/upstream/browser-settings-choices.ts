@@ -1,37 +1,22 @@
 import type { Plugin } from 'vite'
 
-function jsxElementEnd(source: string, start: number): number {
-  let braces = 0
-  let quote = ''
-  for (let index = start; index < source.length; index += 1) {
-    const char = source[index]
-    if (quote) {
-      if (char === '\\') index += 1
-      else if (char === quote) quote = ''
-      continue
-    }
-    if (char === '"' || char === "'" || char === '`') { quote = char; continue }
-    if (char === '{') braces += 1
-    else if (char === '}') braces -= 1
-    else if (char === '>' && braces === 0) return index + 1
-  }
-  throw new Error('Browser appearance setting JSX boundary changed')
-}
-
-function hideElement(source: string, tag: string, marker: string): string {
+function hideBrowserSetting(source: string, marker: string): string {
   const markerPosition = source.indexOf(marker)
-  const start = tag === 'ResumeLastSessionSetting' ? markerPosition : source.lastIndexOf(`<${tag}`, markerPosition)
-  if (markerPosition < 0 || start < 0) throw new Error(`Browser appearance setting boundary changed: ${tag}`)
-  const end = jsxElementEnd(source, start)
-  return source.slice(0, start) + `{!window.__HERMES_WEB_BRIDGE__ && (${source.slice(start, end)})}` + source.slice(end)
+  const conditionStart = source.lastIndexOf('{show(', markerPosition)
+  const conditionEnd = conditionStart < 0 ? -1 : source.indexOf('&&', conditionStart)
+  if (markerPosition < 0 || conditionStart < 0 || conditionEnd < 0 || conditionEnd >= markerPosition) {
+    throw new Error(`Browser appearance setting boundary changed: ${marker}`)
+  }
+  const guardEnd = conditionEnd + '&&'.length
+  return source.slice(0, guardEnd) + ' !window.__HERMES_WEB_BRIDGE__ &&' + source.slice(guardEnd)
 }
 
 function transformAppearance(source: string): string {
   source = source.replace('<ChatFontSetting />', '{window.__HERMES_WEB_BRIDGE__ ? null : <ChatFontSetting />}')
-  source = hideElement(source, 'ToggleRow', 'checked={composerPopoutGesturesEnabled}')
-  source = hideElement(source, 'ResumeLastSessionSetting', '<ResumeLastSessionSetting')
-  source = hideElement(source, 'ToggleRow', 'label={a.tipsTitle}')
-  source = hideElement(source, 'ToggleRow', 'label={a.toursTitle}')
+  source = hideBrowserSetting(source, 'checked={composerPopoutGesturesEnabled}')
+  source = hideBrowserSetting(source, '<ResumeLastSessionSetting')
+  source = hideBrowserSetting(source, 'label={a.tipsTitle}')
+  source = hideBrowserSetting(source, 'label={a.toursTitle}')
   return source
 }
 
