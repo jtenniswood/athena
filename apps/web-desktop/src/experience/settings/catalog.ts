@@ -130,7 +130,7 @@ export const settingsFields: readonly SettingsFieldDefinition[] = [
   { id: 'appearance.tours', visibility: 'hidden', reason: 'Hidden from browser settings.' },
   { id: 'appearance.chat-font', visibility: 'hidden', reason: 'Hidden from browser settings.' },
   { id: 'appearance.composer-popout', visibility: 'hidden', reason: 'Hidden from browser settings.' },
-  { id: 'appearance.theme', visibility: 'hidden', reason: 'Themes are available from the Colour themes subpage.' },
+  { id: 'appearance.theme', visibility: 'hidden', reason: 'Theme selection is provided by the browser Colour themes page.' },
   { id: 'appearance.app-actions', visibility: 'hidden', supportState: 'unsupported', reason: 'The web toolbar owns its fixed action layout.' },
   { id: 'appearance.translucency', visibility: 'hidden', supportState: 'unsupported', reason: 'Window translucency requires native window support.' },
   { id: 'terminal.font_family', visibility: 'hidden', supportState: 'unsupported', reason: 'This browser interface has no native terminal pane.' },

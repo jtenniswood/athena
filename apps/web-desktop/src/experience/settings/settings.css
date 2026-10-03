@@ -1,36 +1,20 @@
-.browser-settings-theme-link {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  margin: 0 0 0.75rem;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid var(--web-border);
-  border-radius: var(--web-radius-control);
-  color: var(--web-text);
-  background: var(--web-bg);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.browser-settings-theme-link:hover { background: var(--web-hover); }
-.browser-settings-theme-link:focus-visible,
-.browser-color-themes button:focus-visible { outline: var(--web-focus-ring); outline-offset: 2px; }
-.browser-color-themes { display: grid; gap: 1rem; }
-.browser-color-themes-heading { display: flex; align-items: center; gap: 0.75rem; }
-.browser-color-themes-heading h2 { margin: 0; font-size: 1.1rem; font-weight: 600; }
-.browser-color-themes-heading p { margin: 0.2rem 0 0; color: var(--web-text-muted); font-size: 0.85rem; }
-.browser-color-themes-back {
+.browser-settings-page,
+.browser-gateway-settings {
   display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
-  place-items: center;
-  border: 1px solid var(--web-border);
-  border-radius: 50%;
-  color: var(--web-text);
-  background: var(--web-bg);
-  cursor: pointer;
+  align-content: start;
+  gap: var(--web-space-6);
+  padding-inline: var(--web-space-1);
+  padding-block-start: var(--web-space-2);
 }
+.browser-settings-page-header,
+.browser-gateway-settings-intro { display: grid; gap: var(--web-space-1); }
+.browser-settings-page-title,
+.browser-gateway-settings-intro h2 { margin: 0; font-size: var(--web-text-body); font-weight: 500; line-height: var(--web-line-body); }
+.browser-settings-page-description,
+.browser-gateway-settings-intro p { margin: 0; color: var(--web-text-muted); font-size: var(--web-text-caption); line-height: var(--web-line-body); }
+.browser-configuration-page { padding-inline: 0; }
+.browser-color-themes button:focus-visible { outline: var(--web-focus-ring); outline-offset: 2px; }
+.browser-color-themes-heading { display: flex; align-items: center; gap: 0.75rem; }
 .browser-color-themes-mode { display: flex; gap: 0.35rem; }
 .browser-color-themes-mode button {
   padding: 0.4rem 0.75rem;
@@ -210,18 +194,34 @@
 .browser-theme-mode-row > div > div > div:first-child { justify-content: flex-start; }
 .browser-settings-frame :is(button, input, select, textarea) { scroll-margin-block: var(--web-space-4); }
 .browser-settings-frame :is(button, input, select, textarea):focus-visible { outline: var(--web-focus-ring); outline-offset: -2px; }
+.browser-settings-frame :is(input:not([type='checkbox'], [type='radio'], [type='range']), textarea, select, [data-slot='select-trigger']) {
+  border-color: color-mix(in srgb, var(--web-text) 35%, var(--web-surface)) !important;
+  background-color: var(--web-surface) !important;
+  color: var(--web-text) !important;
+}
 .browser-settings-frame select {
   min-height: 2.5rem;
   padding: var(--web-space-2) var(--web-space-3);
-  border: 1px solid var(--web-border-subtle);
   border-radius: var(--web-radius-control);
-  color: var(--web-text);
-  background-color: var(--web-surface);
   color-scheme: dark;
+}
+.browser-settings-frame :is(input:not([type='checkbox'], [type='radio'], [type='range']), textarea, select, [data-slot='select-trigger']):hover {
+  border-color: color-mix(in srgb, var(--web-text) 55%, var(--web-surface)) !important;
 }
 .browser-settings-frame select option {
   color: var(--web-text);
   background: var(--web-surface);
+}
+body:has([data-browser-settings-frame]) [data-slot='select-content'] {
+  border: 1px solid color-mix(in srgb, var(--web-text) 35%, var(--web-surface)) !important;
+  background: var(--web-surface) !important;
+  color: var(--web-text) !important;
+  box-shadow: var(--web-shadow-panel) !important;
+}
+body:has([data-browser-settings-frame]) [data-slot='select-item'] { color: var(--web-text) !important; }
+body:has([data-browser-settings-frame]) [data-slot='select-item'][data-highlighted] {
+  background: var(--web-active) !important;
+  color: var(--web-text) !important;
 }
 
 /* Keep settings controls aligned with their labels across every settings page. */
@@ -251,10 +251,6 @@
 }
 .browser-advanced-settings[open] > summary { margin-bottom: var(--web-space-2); }
 
-.browser-gateway-settings { display: grid; gap: var(--web-space-6); padding: var(--web-space-4); }
-.browser-gateway-settings-intro { display: grid; gap: var(--web-space-2); }
-.browser-gateway-settings-intro h2 { margin: 0; font-size: var(--web-text-heading); font-weight: 600; }
-.browser-gateway-settings-intro p { margin: 0; }
 .browser-gateway-settings-name { color: var(--web-text); font-size: var(--web-text-body); font-weight: 500; }
 .browser-gateway-settings-description { color: var(--web-text-muted); font-size: var(--web-text-caption); }
 .browser-gateway-settings-field { display: grid; width: min(100%, 28rem); gap: var(--web-space-2); font-size: var(--web-text-body); }
@@ -314,8 +310,7 @@
   .browser-settings-category-button { height: auto; padding-block: var(--web-space-2); }
 }
 
-.browser-configuration-page h2 { margin: 0 0 var(--web-space-2); font-size: var(--web-text-heading); font-weight: 600; }
-.browser-configuration-page > p { margin: 0 0 var(--web-space-6); color: var(--web-text-muted); }
+.browser-configuration-page > .browser-settings-page-notice { max-width: none; margin: 0; }
 .browser-configuration-actions { display: flex; flex-direction: column; }
 .browser-configuration-action {
   display: flex;
@@ -336,7 +331,7 @@
 .browser-configuration-action > span { min-width: 0; }
 .browser-configuration-action-label { display: block; font-weight: 500; }
 .browser-configuration-action-description { display: block; margin-top: var(--web-space-1); color: var(--web-text-muted); line-height: var(--web-line-body); }
-.browser-configuration-action:last-child { margin-top: var(--web-space-6); border: 1px solid var(--web-border-subtle); }
+.browser-configuration-action:last-child { border: 1px solid var(--web-border-subtle); }
 .browser-configuration-action:last-child :is(svg, .browser-configuration-action-label) { color: var(--web-danger); }
 
 /* The palette portals outside the frame, so account for browser UI scaling. */
@@ -350,22 +345,30 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
 @media (pointer: coarse) {
   body:has([data-browser-settings-frame]) [data-browser-command-palette] [data-slot="command-list"] { pointer-events: auto; }
 }
-.browser-followup-setting {
-  margin: 1.5rem 0;
+.browser-followup-setting,
+.browser-transcript-setting {
+  display: grid;
+  gap: var(--web-space-2);
+  margin: 0;
   padding: 1rem;
   border: 1px solid var(--web-border-subtle);
-  border-radius: 0.75rem;
+  border-radius: var(--web-radius-control);
 }
 
-.browser-followup-setting h3 {
+.browser-followup-setting h3,
+.browser-transcript-setting h3 {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: var(--web-text-body);
+  font-weight: 500;
+  line-height: var(--web-line-body);
 }
 
-.browser-followup-setting p {
-  margin: 0.35rem 0 0.85rem;
+.browser-followup-setting p,
+.browser-transcript-setting p {
+  margin: 0;
   color: var(--web-text-muted);
+  font-size: var(--web-text-caption);
+  line-height: var(--web-line-body);
 }
 
 .browser-followup-options {
@@ -402,3 +405,7 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
   cursor: pointer;
 }
 .browser-transcript-setting-toggle input { width: 1rem; height: 1rem; accent-color: var(--web-accent); }
+
+.browser-settings-content-slot nav[aria-label="breadcrumb" i] {
+  display: none;
+}

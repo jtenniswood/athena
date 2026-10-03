@@ -59,7 +59,6 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const compact = useCompactSettings()
   const location = useLocation()
   const [compactPresentation, setCompactPresentation] = useState<CompactPresentation>({ mode: 'automatic' })
-  const [showColorThemes, setShowColorThemes] = useState(false)
   const params = new URLSearchParams(location.search)
   const hasDirectTarget = params.has('tab') || params.has('field') || params.has('setting')
   const opensDefaultSettingsTab = !hasDirectTarget && activeView === 'config:appearance'
@@ -69,12 +68,12 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const pageNotice = settingsScopeDescription(activeView)
   const activeVisible = Boolean(activeGroup)
   const pageVisible = isSettingsSectionVisible(activeView)
-  const activeChildren = orderSettingsSections(activeGroup?.children ?? []).map(child => ({ ...child, label: settingsPageLabel(child.id, child.label) }))
+  const activeChildren = orderSettingsSections(activeGroup?.children ?? [])
+    .filter(child => !(activeGroup?.id === 'config:appearance' && child.id.endsWith(':pet')))
+    .map(child => ({ ...child, label: settingsPageLabel(child.id, child.label) }))
   const directTargetOpensDetail = (hasDirectTarget || opensDefaultSettingsTab)
     && (compactPresentation.mode === 'automatic' || (compactPresentation.mode === 'menu' && compactPresentation.locationKey !== location.key))
   const showDetail = activeVisible && (!compact || compactPresentation.mode === 'detail' || directTargetOpensDetail)
-
-  useLayoutEffect(() => setShowColorThemes(false), [activeView])
 
   useLayoutEffect(() => {
     if (!compact || !moveFocus.current) return
@@ -161,16 +160,8 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
           </div>}
           <div className="browser-settings-content-slot" hidden={!showDetail} inert={!showDetail}>
             {pageVisible && pageNotice && <p className="browser-settings-page-notice" role="note">{pageNotice}</p>}
-            {pageVisible && activeView === 'config:appearance' && !showColorThemes && <button
-              className="browser-settings-theme-link"
-              onClick={() => setShowColorThemes(true)}
-              type="button"
-            >
-              <span>Colour themes</span>
-              <Codicon name="chevron-right" />
-            </button>}
-            {pageVisible && activeView === 'config:appearance' && showColorThemes
-              ? <BrowserColorThemesPage onBack={() => setShowColorThemes(false)} /> : children}
+            {pageVisible && activeView === 'config:appearance' && activeChildren.some(child => child.active && child.id === 'config:appearance:theme')
+              ? <BrowserColorThemesPage /> : children}
           </div>
         </main>
       </div>
