@@ -2109,7 +2109,7 @@
     "tests": [
       {
         "file": "scripts/compatibility-registry.test.mjs",
-        "scenario": "Vite resolves SDK and direct dialog imports through the scoped browser adapters"
+        "scenario": "browser resolver maps SDK and direct dialog imports through the scoped adapters"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2144,7 +2144,7 @@
     "tests": [
       {
         "file": "scripts/compatibility-registry.test.mjs",
-        "scenario": "Vite resolves SDK and direct dialog imports through the scoped browser adapters"
+        "scenario": "browser resolver maps SDK and direct dialog imports through the scoped adapters"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
