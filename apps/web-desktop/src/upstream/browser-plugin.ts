@@ -319,6 +319,17 @@ export function hideBrowserAppearanceOnlySettings(source: string): string {
     if (start < 0) throw new Error(`Browser appearance setting boundary changed: ${title}`)
     output = `${output.slice(0, start)}{show('window-layout') && !window.__HERMES_WEB_BRIDGE__ && (${output.slice(start + visibility.length)}`
   }
+  for (const title of ['tipsTitle', 'toursTitle']) {
+    const marker = `label={a.${title}}`
+    const markerPosition = output.indexOf(marker)
+    const conditionStart = output.lastIndexOf('{show(', markerPosition)
+    const conditionEnd = conditionStart < 0 ? -1 : output.indexOf('&&', conditionStart)
+    if (markerPosition < 0 || conditionStart < 0 || conditionEnd < 0 || conditionEnd >= markerPosition) {
+      throw new Error(`Browser appearance setting boundary changed: ${title}`)
+    }
+    const guardEnd = conditionEnd + '&&'.length
+    output = output.slice(0, guardEnd) + ' !window.__HERMES_WEB_BRIDGE__ &&' + output.slice(guardEnd)
+  }
   return output
 }
 

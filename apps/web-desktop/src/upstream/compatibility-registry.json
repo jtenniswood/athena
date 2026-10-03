@@ -2248,11 +2248,11 @@
     "sourceRoot": "renderer",
     "sourceHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
     "inputHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
-    "outputHash": "f13e494991d930a97ed6269d69d584d0920f21b24d8b1f4e2c94063d5e0453f0",
+    "outputHash": "26cad1762b7a627ed3673ec0127e212554165d5943884c8aef226e9f938a7da7",
     "handlers": [
       "hideBrowserAppearanceOnlySettings"
     ],
-    "reason": "Hide window-only appearance controls, desktop-only layout preferences, and unused terminal font and theme marketplace controls while retaining installed browser themes.",
+    "reason": "Hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls while retaining installed browser themes.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
