@@ -2246,9 +2246,9 @@
     "order": 20,
     "module": "app/settings/profile-scope.tsx",
     "sourceRoot": "renderer",
-    "sourceHash": "63e3a77dfbd90f1ca0bb83be019dd29f7b8f74b945a290671154e00de3df9e2b",
-    "inputHash": "63e3a77dfbd90f1ca0bb83be019dd29f7b8f74b945a290671154e00de3df9e2b",
-    "outputHash": "22680f6a1e43cc9bc57acd291dd9456c7e2f35b0582004c5297eb029f32b89c0",
+    "sourceHash": "a4e3cffa5216b823f5c583919bc5fe3c719201d3362ba457c25e1e0240fee222",
+    "inputHash": "a4e3cffa5216b823f5c583919bc5fe3c719201d3362ba457c25e1e0240fee222",
+    "outputHash": "8d1fb09c61d72c965e58cdc04898cb440fd43c7971b64de5ef1e0ff2ab8bffbb",
     "handlers": [
       "useBrowserProfileScopeTabs"
     ],
