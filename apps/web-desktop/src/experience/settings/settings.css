@@ -185,15 +185,34 @@
 .browser-settings-frame select {
   min-height: 2.5rem;
   padding: var(--web-space-2) var(--web-space-3);
-  border: 1px solid var(--web-border-subtle);
+  border: 1px solid color-mix(in srgb, var(--web-text) 35%, var(--web-surface));
   border-radius: var(--web-radius-control);
   color: var(--web-text);
   background-color: var(--web-surface);
   color-scheme: dark;
 }
+.browser-settings-frame [data-slot='select-trigger'] {
+  border-color: color-mix(in srgb, var(--web-text) 35%, var(--web-surface)) !important;
+  background-color: var(--web-surface) !important;
+  color: var(--web-text) !important;
+}
+.browser-settings-frame :is(select, [data-slot='select-trigger']):hover {
+  border-color: color-mix(in srgb, var(--web-text) 55%, var(--web-surface)) !important;
+}
 .browser-settings-frame select option {
   color: var(--web-text);
   background: var(--web-surface);
+}
+body:has([data-browser-settings-frame]) [data-slot='select-content'] {
+  border: 1px solid color-mix(in srgb, var(--web-text) 35%, var(--web-surface)) !important;
+  background: var(--web-surface) !important;
+  color: var(--web-text) !important;
+  box-shadow: var(--web-shadow-panel) !important;
+}
+body:has([data-browser-settings-frame]) [data-slot='select-item'] { color: var(--web-text) !important; }
+body:has([data-browser-settings-frame]) [data-slot='select-item'][data-highlighted] {
+  background: var(--web-active) !important;
+  color: var(--web-text) !important;
 }
 
 /* Keep settings controls aligned with their labels across every settings page. */
