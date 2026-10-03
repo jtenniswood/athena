@@ -2109,7 +2109,7 @@
     "tests": [
       {
         "file": "scripts/compatibility-registry.test.mjs",
-        "scenario": "Vite resolves SDK and direct dialog imports through the scoped browser adapters"
+        "scenario": "browser resolver maps SDK and direct dialog imports through the scoped adapters"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2144,7 +2144,7 @@
     "tests": [
       {
         "file": "scripts/compatibility-registry.test.mjs",
-        "scenario": "Vite resolves SDK and direct dialog imports through the scoped browser adapters"
+        "scenario": "browser resolver maps SDK and direct dialog imports through the scoped adapters"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2241,6 +2241,28 @@
     "removal": "Remove when upstream settings navigation entries in the command palette support wrapper visibility policy."
   },
   {
+    "name": "browser-settings-profile-scope-tabs",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/profile-scope.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "a4e3cffa5216b823f5c583919bc5fe3c719201d3362ba457c25e1e0240fee222",
+    "inputHash": "a4e3cffa5216b823f5c583919bc5fe3c719201d3362ba457c25e1e0240fee222",
+    "outputHash": "8d1fb09c61d72c965e58cdc04898cb440fd43c7971b64de5ef1e0ff2ab8bffbb",
+    "handlers": [
+      "useBrowserProfileScopeTabs"
+    ],
+    "reason": "Present the shared settings profile selector as a browser tab strip while preserving its scope selection behavior.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "apps/desktop/src/app/settings/profile-scope.test.tsx",
+        "scenario": "selecting another profile sets the shared override"
+      }
+    ],
+    "removal": "Remove when upstream exposes a browser-specific settings scope control."
+  },
+  {
     "name": "browser-appearance-capabilities",
     "kind": "browser-transform",
     "order": 20,
@@ -2248,11 +2270,11 @@
     "sourceRoot": "renderer",
     "sourceHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
     "inputHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
-    "outputHash": "26cad1762b7a627ed3673ec0127e212554165d5943884c8aef226e9f938a7da7",
+    "outputHash": "8b4c9d60cb8a865561575712ee033e16a683321ff8bd8dae4f0163009bf5818e",
     "handlers": [
       "hideBrowserAppearanceOnlySettings"
     ],
-    "reason": "Hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls while retaining installed browser themes.",
+    "reason": "Combine General, Typography, and Window & layout into one browser page; hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls while retaining installed browser themes.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -2311,7 +2333,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/settings/config-settings.tsx",
-    "reason": "Keep pending settings saves alive across page exit and update activation while applying wrapper-owned field visibility and progressively disclosing advanced configuration options.",
+    "reason": "Keep pending settings saves alive across page exit and update activation while showing all supported configuration fields by default and applying wrapper-owned visibility policy.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -2323,11 +2345,11 @@
         "scenario": "settings actions retain drafts and transfer modal focus"
       }
     ],
-    "removal": "Remove when upstream settings provides equivalent browser save lifecycle, visibility policy, and advanced-field presentation contracts.",
+    "removal": "Remove when upstream settings provides equivalent browser save lifecycle and browser-aware field visibility defaults.",
     "sourceRoot": "renderer",
     "sourceHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
     "inputHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
-    "outputHash": "80f62d063f475017172100db04e11997b9faa1b27712656c2d50f60ba572731a",
+    "outputHash": "4a98dce54342d95c22610987c03fb0461f6547c6df22eda3227603d8bf0a1605",
     "handlers": [
       "trackBrowserSettingsSaves",
       "filterBrowserSettingsFields",

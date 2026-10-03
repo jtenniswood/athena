@@ -292,6 +292,15 @@ export function useBrowserConfigurationSettings(source: string, root: string): s
 
 export function hideBrowserAppearanceOnlySettings(source: string): string {
   const replacements: [string, string][] = [
+    [
+      "  const show = (id: AppearanceSubpageId) => subpage === undefined || subpage === id",
+      `  const show = (id: AppearanceSubpageId) => {
+    const combinedBrowserAppearance = window.__HERMES_WEB_BRIDGE__ && ['general', 'typography', 'window-layout'].includes(subpage ?? '')
+    return combinedBrowserAppearance
+      ? ['general', 'typography', 'window-layout'].includes(id)
+      : subpage === undefined || subpage === id
+  }`
+    ],
     ['                <TerminalFontSetting />', '                {!window.__HERMES_WEB_BRIDGE__ && <TerminalFontSetting />}'],
     ["{show('pet') && (", "{show('pet') && !window.__HERMES_WEB_BRIDGE__ && ("],
     ["{show('window-layout') && TRANSLUCENCY_SUPPORTED && (", "{show('window-layout') && TRANSLUCENCY_SUPPORTED && !window.__HERMES_WEB_BRIDGE__ && ("],
@@ -344,21 +353,6 @@ export function filterBrowserSettingsFields(source: string, root: string): strin
   const target = "  const visibleFields = activeSectionId === 'voice' ? fields.filter(([key]) => voiceFieldVisible(key, config)) : fields"
   if (source.split(target).length !== 2) throw new Error('Browser settings field visibility target changed')
   let output = source.replace(target, target + '.filter(([key]) => isSettingsFieldVisible(key))')
-  const fieldList = `${target}.filter(([key]) => isSettingsFieldVisible(key))`
-  output = output.replace(fieldList, `${fieldList}
-  const everydayFields = visibleFields.filter(([key]) => isEverydaySettingsField(activeSectionId, key))
-  const advancedFields = visibleFields.filter(([key]) => !isEverydaySettingsField(activeSectionId, key))`)
-  const loadingBoundary = '  if (!config || !schema) {'
-  if (output.split(loadingBoundary).length !== 2) throw new Error('Browser settings loading boundary changed')
-  output = output.replace(loadingBoundary, `  const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false)
-
-  useEffect(() => {
-    if (targetField && fields.some(([key]) => key === targetField && isSettingsFieldVisible(key) && !isEverydaySettingsField(activeSectionId, key))) {
-      setAdvancedSettingsOpen(true)
-    }
-  }, [activeSectionId, fields, targetField])
-
-${loadingBoundary}`)
   const mapStart = '          {visibleFields.map(([key, field]) => (\n'
   const mapEnd = '\n          ))}'
   const mapStartIndex = output.indexOf(mapStart)
@@ -366,18 +360,6 @@ ${loadingBoundary}`)
   if (mapStartIndex < 0 || mapEndIndex < 0 || output.indexOf(mapStart, mapStartIndex + mapStart.length) >= 0) {
     throw new Error('Browser settings field rendering boundary changed')
   }
-  const fieldRenderer = output.slice(mapStartIndex + mapStart.length, mapEndIndex)
-  const everydayMap = `          {everydayFields.map(([key, field]) => (\n${fieldRenderer}\n          ))}`
-  const advancedMap = `          {advancedFields.map(([key, field]) => (\n${fieldRenderer}\n          ))}`
-  const advancedDisclosure = `{advancedFields.length > 0 && (
-          <details className="browser-advanced-settings" onToggle={event => setAdvancedSettingsOpen(event.currentTarget.open)} open={advancedSettingsOpen}>
-            <summary>Advanced settings <span aria-hidden="true">{advancedFields.length}</span></summary>
-            <div className="grid gap-1">
-${advancedMap}
-            </div>
-          </details>
-        )}`
-  output = output.slice(0, mapStartIndex) + everydayMap + '\n' + advancedDisclosure + output.slice(mapEndIndex + mapEnd.length)
   const browserOnlyControls: [string, string][] = [
     ["const showDesktopSettings = activeSectionId === 'advanced'", "const showDesktopSettings = !window.__HERMES_WEB_BRIDGE__ && activeSectionId === 'advanced'"],
     ["const showAttachments = activeSectionId === 'chat'", "const showAttachments = !window.__HERMES_WEB_BRIDGE__ && activeSectionId === 'chat'"]
@@ -386,7 +368,34 @@ ${advancedMap}
     if (output.split(before).length !== 2) throw new Error('Browser device-only configuration boundary changed')
     output = output.replace(before, after)
   }
-  return `import { isEverydaySettingsField, isSettingsFieldVisible } from ${owner}\n` + output
+  return `import { isSettingsFieldVisible } from ${owner}\n` + output
+}
+
+export function useBrowserProfileScopeTabs(source: string): string {
+  const replacements: [string, string][] = [
+    [
+      "<div className={cn('grid gap-2', className)}>",
+      "<div className={cn('grid gap-2', className)} data-browser-profile-scope=\"\">"
+    ],
+    [
+      '<div className="flex flex-wrap gap-1.5">',
+      '<div className="flex flex-wrap gap-1.5" data-browser-profile-tabs="" role="group" aria-label={scope.appliesTo}>'
+    ],
+    [
+      "      className={cn(\n        'rounded-full border px-3 py-1 text-[length:var(--conversation-caption-font-size)] transition',",
+      "      className={cn(\n        'browser-settings-profile-tab rounded-none border-0 border-b-2 border-transparent px-3 py-2 text-[length:var(--conversation-caption-font-size)] transition',"
+    ],
+    [
+      '      onClick={onSelect}\n      type="button"',
+      '      aria-pressed={active}\n      onClick={onSelect}\n      type="button"'
+    ]
+  ]
+  let output = source
+  for (const [before, after] of replacements) {
+    if (output.split(before).length !== 2) throw new Error('Browser profile scope tab boundary changed')
+    output = output.replace(before, after)
+  }
+  return output
 }
 
 export function filterBrowserSettingsSearch(source: string, root: string): string {
@@ -1103,6 +1112,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserSettingsPresentation: source => useBrowserSettingsPresentation(source, root),
     useBrowserConfigurationSettings: source => useBrowserConfigurationSettings(source, root),
     filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
+    useBrowserProfileScopeTabs,
     hideBrowserAppearanceOnlySettings,
     hideBrowserLocalProjectDirectory,
     removeBrowserPetAvatarTab,
