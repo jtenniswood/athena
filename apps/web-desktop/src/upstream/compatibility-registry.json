@@ -520,7 +520,7 @@
     "sourceHash": "08f645b35256124b6defb6be913c70a2b845bfd1682765087369c486ced96332",
     "sourceRoot": "renderer",
     "inputHash": "08f645b35256124b6defb6be913c70a2b845bfd1682765087369c486ced96332",
-    "outputHash": "a36807bdb8c0b9ee1678671ab8809b0a1178fda534039cfa11768718fd7c647b"
+    "outputHash": "24531d72ba580c7ed44b2526da1c018423fca0887605d364b9cac6079ef0eb63"
   },
   {
     "name": "statusbar-item-export",
@@ -2170,7 +2170,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
     "inputHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
-    "outputHash": "ecdc54b9b18e325dcff6c16c97bf53a7d4d17074ed09c2ddfd96db945d94c945",
+    "outputHash": "3f3d12c7d55ed87aa8d80f9f082874ba37dda088238330bbab8a5d28c14d84bb",
     "handlers": [
       "useBrowserSettingsPresentation"
     ],
@@ -2248,7 +2248,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
     "inputHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
-    "outputHash": "718ec6b217a56a500f9109bc7b92cf82d585b8fd3d972ef5057190c7fbd80830",
+    "outputHash": "f13e494991d930a97ed6269d69d584d0920f21b24d8b1f4e2c94063d5e0453f0",
     "handlers": [
       "hideBrowserAppearanceOnlySettings"
     ],
