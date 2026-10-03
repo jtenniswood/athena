@@ -155,6 +155,10 @@ body > [data-slot='fan-menu'] {
 /* The web composer owns these touch controls; the upstream desktop titlebar
    cluster is not mounted in the browser shell. Keep the add/tool pair compact
    and give their glyphs a little more separation. */
+[data-slot='composer-root']:not([data-popped-out]) {
+  background: var(--ui-chat-surface-background) !important;
+}
+
 [data-slot='composer-root'] button:has(> .codicon-add) {
   margin-inline-end: 0.25rem;
 }
