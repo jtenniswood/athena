@@ -143,6 +143,10 @@
 .browser-settings-frame :is(button, input, select, textarea) { scroll-margin-block: var(--web-space-4); }
 .browser-settings-frame :is(button, input, select, textarea):focus-visible { outline: var(--web-focus-ring); outline-offset: -2px; }
 
+/* Keep settings controls aligned with their labels across every settings page. */
+.browser-settings-frame [class*="@2xl:justify-self-end"] { justify-self: start; }
+.browser-settings-frame .flex.flex-col.items-end { align-items: flex-start; }
+
 .browser-advanced-settings {
   margin-top: var(--web-space-4);
   border-top: 1px solid var(--web-border-subtle);
