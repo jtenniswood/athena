@@ -3,11 +3,11 @@ import { getBaseColors, useTheme } from '@/themes/context'
 export function BrowserColorThemesPage() {
   const { availableThemes, mode, resolvedMode, setMode, setTheme, themeName } = useTheme()
 
-  return <section className="browser-color-themes" aria-label="Colour themes">
-    <header className="browser-color-themes-heading">
+  return <section className="browser-settings-page browser-color-themes" aria-label="Colour themes">
+    <header className="browser-settings-page-header browser-color-themes-heading">
       <div>
-        <h2>Colour themes</h2>
-        <p>Choose a theme for Athena.</p>
+        <h2 className="browser-settings-page-title">Colour themes</h2>
+        <p className="browser-settings-page-description">Choose a theme for Athena.</p>
       </div>
     </header>
     <div className="browser-color-themes-mode" aria-label="Theme mode">
