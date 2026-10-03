@@ -2333,7 +2333,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/settings/config-settings.tsx",
-    "reason": "Keep pending settings saves alive across page exit and update activation while applying wrapper-owned field visibility and progressively disclosing advanced configuration options.",
+    "reason": "Keep pending settings saves alive across page exit and update activation while showing all supported configuration fields by default and applying wrapper-owned visibility policy.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -2345,11 +2345,11 @@
         "scenario": "settings actions retain drafts and transfer modal focus"
       }
     ],
-    "removal": "Remove when upstream settings provides equivalent browser save lifecycle, visibility policy, and advanced-field presentation contracts.",
+    "removal": "Remove when upstream settings provides equivalent browser save lifecycle and browser-aware field visibility defaults.",
     "sourceRoot": "renderer",
     "sourceHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
     "inputHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
-    "outputHash": "80f62d063f475017172100db04e11997b9faa1b27712656c2d50f60ba572731a",
+    "outputHash": "4a98dce54342d95c22610987c03fb0461f6547c6df22eda3227603d8bf0a1605",
     "handlers": [
       "trackBrowserSettingsSaves",
       "filterBrowserSettingsFields",

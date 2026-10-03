@@ -207,26 +207,6 @@ export function settingsFieldIsVisible(id: string): boolean {
   return !(settingsPolicy.fields.hidden as readonly string[]).includes(id)
 }
 
-/** Keep the everyday configuration surface small; new upstream fields default to advanced. */
-const everydaySettingsFields: Readonly<Record<string, readonly string[]>> = {
-  chat: ['display.personality', 'timezone', 'display.show_reasoning'],
-  model: ['fallback_providers', 'fallback_models', 'models.fallback', 'model.fallback'],
-  memory: ['memory.memory_enabled', 'memory.user_profile_enabled'],
-  safety: ['approvals.mode'],
-  voice: ['stt.enabled', 'voice.auto_tts'],
-  advanced: [
-    'agent.max_turns',
-    'delegation.max_iterations',
-    'delegation.max_concurrent_children',
-    'delegation.child_timeout_seconds'
-  ],
-  workspace: ['terminal.cwd', 'desktop.repo_scan_enabled']
-}
-
-export function isEverydaySettingsField(sectionId: string, fieldId: string): boolean {
-  return everydaySettingsFields[sectionId]?.includes(fieldId) ?? false
-}
-
 /** Validate authored entries while leaving unknown upstream pages to fallback. */
 export function validateSettingsCatalog(): string[] {
   const errors: string[] = []
