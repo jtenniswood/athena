@@ -2189,33 +2189,6 @@
     "removal": "Remove when upstream SettingsView provides an equivalent responsive browser presentation seam while retaining upstream settings pages and actions."
   },
   {
-    "name": "browser-settings-field-policy",
-    "kind": "browser-transform",
-    "order": 20,
-    "module": "app/settings/config-settings.tsx",
-    "sourceRoot": "renderer",
-    "sourceHash": "fe13a173ae63e7f475526cb1e7e30ac272c2871b30a66d045de88536f40e09d1",
-    "inputHash": "fe13a173ae63e7f475526cb1e7e30ac272c2871b30a66d045de88536f40e09d1",
-    "outputHash": "797287d8fdce3c24b2d2ab8f87fa22f4bdee371ad23449b28cab8ce26c576bec",
-    "handlers": [
-      "filterBrowserSettingsFields",
-      "useBrowserConfigurationSettings"
-    ],
-    "reason": "Hide unsupported device controls and apply wrapper-owned visibility rules while retaining upstream settings storage and forms.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
-    "tests": [
-      {
-        "file": "scripts/browser.test.mjs",
-        "scenario": "settings customization hides known sections and fields while inheriting new ids"
-      },
-      {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "configuration page retains import export and reset behavior"
-      }
-    ],
-    "removal": "Remove when upstream settings supports wrapper-owned visibility rules for config fields."
-  },
-  {
     "name": "browser-settings-search-policy",
     "kind": "browser-transform",
     "order": 20,
