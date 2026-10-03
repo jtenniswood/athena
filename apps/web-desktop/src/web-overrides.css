@@ -154,7 +154,9 @@ body > [data-slot='fan-menu'] {
 [id*='session-density'],
 [id*='sessionDensity'],
 [id*='text-direction'],
-[id*='textDirection'] {
+[id*='textDirection'],
+[id*='tool-view'],
+[id*='toolView'] {
   display: none !important;
 }
 

@@ -13,13 +13,18 @@ const BROWSER_APPEARANCE_DEFAULTS = {
   interfaceMode: ['hermes.desktop.interfaceMode.v1', 'simple'],
   sessionListDensity: ['hermes.desktop.sessionListDensity', 'compact']
 } as const
-const BROWSER_TEXT_DIRECTION_STORAGE_KEY = 'hermes.desktop.textDirection'
+const BROWSER_FORCED_PREFERENCE_KEYS = [
+  'hermes.desktop.textDirection',
+  'hermes.desktop.toolView.technical'
+] as const
 
 function applyBrowserAppearanceDefaults(): void {
   try {
-    // Auto is the renderer's no-key default. Remove an earlier forced choice
-    // before its text-direction store initializes.
-    window.localStorage.removeItem(BROWSER_TEXT_DIRECTION_STORAGE_KEY)
+    // Auto direction and Product tool summaries are the renderer's no-key
+    // defaults. Clear earlier overrides before those stores initialize.
+    for (const key of BROWSER_FORCED_PREFERENCE_KEYS) {
+      window.localStorage.removeItem(key)
+    }
 
     for (const [key, value] of Object.values(BROWSER_APPEARANCE_DEFAULTS)) {
       if (window.localStorage.getItem(key) === null) {
