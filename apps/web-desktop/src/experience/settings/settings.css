@@ -107,6 +107,10 @@
 }
 
 .browser-settings-frame {
+  /* Match the chat window's 14px body text while keeping settings styles local. */
+  --web-text-label: .75rem;
+  --web-text-caption: .8125rem;
+  --web-text-body: .875rem;
   box-sizing: border-box;
   display: flex;
   width: 100%;
