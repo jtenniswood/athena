@@ -214,6 +214,12 @@ const everydaySettingsFields: Readonly<Record<string, readonly string[]>> = {
   memory: ['memory.memory_enabled', 'memory.user_profile_enabled'],
   safety: ['approvals.mode'],
   voice: ['stt.enabled', 'voice.auto_tts'],
+  advanced: [
+    'agent.max_turns',
+    'delegation.max_iterations',
+    'delegation.max_concurrent_children',
+    'delegation.child_timeout_seconds'
+  ],
   workspace: ['terminal.cwd', 'desktop.repo_scan_enabled']
 }
 
