@@ -99,6 +99,46 @@ export function useBrowserFreshSessionOwner(source: string, root: string): strin
     .replace(end, end.replace('    },', '    }),'))
 }
 
+export function useBrowserRosterDialogFocus(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/ui/dialog-focus'))
+  const targets = [
+    ['export function GroupDialog({ bot, onClose }: GroupDialogProps) {', 'true', '      <DialogContent className="max-w-sm">', '      <DialogContent className="max-w-sm" data-browser-bot-dialog="section" onCloseAutoFocus={browserReturnFocus}>'],
+    ['export function EditProfileDialog({ bot, open, onClose }: EditProfileDialogProps) {', 'open', '      <DialogContent\n', '      <DialogContent\n        data-browser-bot-dialog={advanced ? \'advanced\' : \'section\'}\n        onCloseAutoFocus={browserReturnFocus}\n'],
+    ['}: ConfirmDialogProps) {', 'open', '      <DialogContent\n', '      <DialogContent\n        data-browser-bot-dialog="confirm"\n        onCloseAutoFocus={browserReturnFocus}\n']
+  ]
+  const target = targets.find(([start]) => source.includes(start))
+  if (!target) throw new Error('Browser roster dialog boundary changed')
+  const [start, open, before, after] = target
+  if (source.split(start).length !== 2 || source.split(before).length !== 2) throw new Error('Browser roster dialog focus target changed')
+  source = source.replace(start, start + `\n  const browserReturnFocus = useBrowserDialogReturnFocus(${open})`).replace(before, after)
+  return source.includes('import { useBrowserDialogReturnFocus }') ? source : `import { useBrowserDialogReturnFocus } from ${owner}\n` + source
+}
+
+export function useBrowserBotDialogFocus(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/ui/dialog-focus'))
+  const changes = [
+    ['export function CreateAgentDialog({ open, onClose, roster }: CreateAgentDialogProps) {', 'export function CreateAgentDialog({ open, onClose, roster }: CreateAgentDialogProps) {\n  const browserReturnFocus = useBrowserDialogReturnFocus(open)'],
+    ['export function CreateGroupChatDialog({ open, roster, onClose, onCreated }: CreateGroupChatDialogProps) {', 'export function CreateGroupChatDialog({ open, roster, onClose, onCreated }: CreateGroupChatDialogProps) {\n  const browserReturnFocus = useBrowserDialogReturnFocus(open)'],
+    ['      <DialogContent\n', '      <DialogContent\n        data-browser-bot-dialog={advanced ? \'advanced\' : \'create\'}\n        onCloseAutoFocus={browserReturnFocus}\n'],
+    ['      <DialogContent className="max-w-md">', '      <DialogContent className="max-w-md" data-browser-bot-dialog="group" onCloseAutoFocus={browserReturnFocus}>']
+  ]
+  for (const [before, after] of changes) {
+    if (source.split(before).length !== 2) throw new Error('Browser Bot dialog focus boundary changed')
+    source = source.replace(before, after)
+  }
+  return `import { useBrowserDialogReturnFocus } from ${owner}\n` + source
+}
+
+export function useBrowserSectionDialogFocus(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/ui/dialog-focus'))
+  const start = 'export function SectionNameDialog({ initialName, mode, onOpenChange, onSubmit, open }: SectionNameDialogProps) {'
+  const content = '      <DialogContent className="max-w-sm">'
+  if (source.split(start).length !== 2 || source.split(content).length !== 2) throw new Error('Browser section dialog focus boundary changed')
+  return `import { useBrowserDialogReturnFocus } from ${owner}\n` + source
+    .replace(start, start + '\n  const browserReturnFocus = useBrowserDialogReturnFocus(open)')
+    .replace(content, '      <DialogContent className="max-w-sm" data-browser-bot-dialog="section" onCloseAutoFocus={browserReturnFocus}>')
+}
+
 export function useBrowserRosterActionSurfaces(source: string, root: string): string {
   const owner = JSON.stringify(path.join(root, 'src/experience/browser-roster-actions'))
   const start = '  return (\n    <ContextMenu>'
@@ -142,30 +182,13 @@ export function useBrowserOverlayFocusOwner(source: string, root: string): strin
     .replace(element, '    <div\n      ref={browserOverlayRef}\n      tabIndex={-1}\n      className={cn(')
 }
 
-export function respectBrowserProfileSwitches(source: string): string {
-  const initial = '  const first = useRef(true)'
-  const guard = `    if (first.current) {
-      first.current = false
-
-      return
-    }`
-  if (source.split(initial).length !== 2 || source.split(guard).length !== 2) throw new Error('Browser profile switch lifecycle changed')
-  return source
-    .replace(initial, '  const previousProfile = useRef(profile)')
-    .replace(guard, `    if (previousProfile.current === profile) return
-    previousProfile.current = profile`)
-}
-
 export function useBrowserSettingsPresentation(source: string, root: string): string {
   const importTarget = "import { OverlayMain, OverlayNav, type OverlayNavGroup, OverlaySplitLayout } from '../overlays/overlay-split-layout'"
   const overlayImport = "import { OverlayView } from '../overlays/overlay-view'"
-  const layoutTarget = `      <OverlaySplitLayout>
-        <OverlayNav footer={navFooter} groups={navGroups} />
-
-        <OverlayMain className="px-0 pb-0">{activeSettingsContent}</OverlayMain>
-      </OverlaySplitLayout>`
   const overlayTarget = '<OverlayView closeLabel={t.settings.closeSettings} edgeBadge={searchPill} onClose={onClose}>'
-  if (source.split(importTarget).length !== 2 || source.split(overlayImport).length !== 2 || source.split(layoutTarget).length !== 2 || source.split(overlayTarget).length !== 2) {
+  const layoutStart = source.indexOf('      <OverlaySplitLayout>')
+  const layoutEnd = source.indexOf('      </OverlaySplitLayout>', layoutStart)
+  if (source.split(importTarget).length !== 2 || source.split(overlayImport).length !== 2 || layoutStart < 0 || layoutEnd < 0 || source.split(overlayTarget).length !== 2) {
     throw new Error('Browser settings presentation boundary changed')
   }
   const controlReplacements: [string, string][] = [
@@ -174,7 +197,7 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
   ]
   controlReplacements.push(
     ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  'config:browser-configuration',"],
-    ["      {\n        active: activeView === 'about',", "      {\n        active: activeView === 'config:browser-configuration',\n        gapBefore: true,\n        icon: Settings2,\n        id: 'config:browser-configuration',\n        label: 'Configuration',\n        onSelect: () => setActiveView('config:browser-configuration')\n      },\n      {\n        active: activeView === 'about',"],
+    ["          {\n            active: activeView === 'about',", "          {\n            active: activeView === 'config:browser-configuration',\n            gapBefore: true,\n            icon: Settings2,\n            id: 'config:browser-configuration',\n            label: 'Configuration',\n            onSelect: () => setActiveView('config:browser-configuration')\n          },\n          {\n            active: activeView === 'about',"],
     ['        importInputRef={importInputRef}', '        importInputRef={importInputRef}\n        configurationCommands={configurationCommands}\n        configurationScopeProfile={scopeProfile}'],
     ['getHermesConfigRecord()', 'getHermesConfigRecord(scopeProfile)'],
     ['saveHermesConfig(await getHermesConfigDefaults())', 'saveHermesConfig(await getHermesConfigDefaults(), scopeProfile)'],
@@ -212,11 +235,20 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
       }
     }
   }`
+  const layoutTarget = source.slice(layoutStart, layoutEnd + '      </OverlaySplitLayout>'.length)
+  const layoutReplacement = `      <SettingsBreadcrumbContext.Provider value>
+        {activeGroup && <SettingsSubpageHeader child={activeChild} group={activeGroup} />}
+        {needsSubpageRedirect ? (
+          <Navigate replace to={{ hash, pathname, search: '?' + subpageSearch }} />
+        ) : (
+          activeSettingsContent
+        )}
+      </SettingsBreadcrumbContext.Provider>`
   let output = source
     .replace(importTarget, '')
     .replace(overlayImport, '')
     .replace(overlayTarget, '<BrowserSettingsPresentation activeView={activeView} backLabel={t.common.back} closeLabel={t.settings.closeSettings} groups={navGroups} onClose={onClose} search={searchPill} title={t.commandCenter.settings}>')
-    .replace(layoutTarget, '      {activeSettingsContent}')
+    .replace(layoutTarget, layoutReplacement)
     .replace('</OverlayView>', '</BrowserSettingsPresentation>')
   const transformedNavStart = output.indexOf(navFooterStart)
   const transformedNavEnd = output.indexOf(activeContentStart, transformedNavStart)
@@ -251,9 +283,9 @@ export function useBrowserConfigurationSettings(source: string, root: string): s
 
 export function hideBrowserAppearanceOnlySettings(source: string): string {
   const replacements: [string, string][] = [
-    ['          <TerminalFontSetting />', '          {!window.__HERMES_WEB_BRIDGE__ && <TerminalFontSetting />}'],
-    ['      <div className="mt-6">\n        <PetSettings />\n      </div>', '      {!window.__HERMES_WEB_BRIDGE__ && (\n        <div className="mt-6">\n          <PetSettings />\n        </div>\n      )}'],
-    ['          {TRANSLUCENCY_SUPPORTED && (', '          {TRANSLUCENCY_SUPPORTED && !window.__HERMES_WEB_BRIDGE__ && ('],
+    ['                <TerminalFontSetting />', '                {!window.__HERMES_WEB_BRIDGE__ && <TerminalFontSetting />}'],
+    ["{show('pet') && (", "{show('pet') && !window.__HERMES_WEB_BRIDGE__ && ("],
+    ["{show('window-layout') && TRANSLUCENCY_SUPPORTED && (", "{show('window-layout') && TRANSLUCENCY_SUPPORTED && !window.__HERMES_WEB_BRIDGE__ && ("],
     [
       '                  <MarketplaceThemeResults installs={installs} onInstalled={name => setTheme(name)} query={query} />',
       '                  {!window.__HERMES_WEB_BRIDGE__ && <MarketplaceThemeResults installs={installs} onInstalled={name => setTheme(name)} query={query} />}'
@@ -270,19 +302,18 @@ export function hideBrowserAppearanceOnlySettings(source: string): string {
     const marker = `title={a.${title}}`
     if (output.split(marker).length !== 2) throw new Error(`Browser appearance setting boundary changed: ${title}`)
     const titleIndex = output.indexOf(marker)
-    const start = output.lastIndexOf('          <ListRow', titleIndex)
-    const end = output.indexOf('          />', titleIndex)
-    if (start < 0 || end < 0) throw new Error(`Browser appearance setting boundary changed: ${title}`)
-    const close = end + '          />'.length
-    output = `${output.slice(0, start)}{!window.__HERMES_WEB_BRIDGE__ && (\n${output.slice(start, end)}          />\n          )}${output.slice(close)}`
+    const visibility = "{show('window-layout') && ("
+    const start = output.lastIndexOf(visibility, titleIndex)
+    if (start < 0) throw new Error(`Browser appearance setting boundary changed: ${title}`)
+    output = `${output.slice(0, start)}{show('window-layout') && !window.__HERMES_WEB_BRIDGE__ && (${output.slice(start + visibility.length)}`
   }
   return output
 }
 
 export function hideBrowserLocalProjectDirectory(source: string): string {
-  const target = '<DefaultProjectDirSetting />'
+  const target = 'function DefaultProjectDirSetting() {'
   if (source.split(target).length !== 2) throw new Error('Browser archived-chat directory boundary changed')
-  return source.replace(target, '{!window.__HERMES_WEB_BRIDGE__ && <DefaultProjectDirSetting />}')
+  return source.replace(target, `${target}\n  if (window.__HERMES_WEB_BRIDGE__) return null`)
 }
 
 export function filterBrowserSettingsFields(source: string, root: string): string {
@@ -325,8 +356,8 @@ ${advancedMap}
         )}`
   output = output.slice(0, mapStartIndex) + everydayMap + '\n' + advancedDisclosure + output.slice(mapEndIndex + mapEnd.length)
   const browserOnlyControls: [string, string][] = [
-    ["activeSectionId === 'advanced' && (", "activeSectionId === 'advanced' && !window.__HERMES_WEB_BRIDGE__ && ("],
-    ["activeSectionId === 'chat' ? <AttachmentSizeSetting /> : null", "activeSectionId === 'chat' && !window.__HERMES_WEB_BRIDGE__ ? <AttachmentSizeSetting /> : null"]
+    ["const showDesktopSettings = activeSectionId === 'advanced'", "const showDesktopSettings = !window.__HERMES_WEB_BRIDGE__ && activeSectionId === 'advanced'"],
+    ["const showAttachments = activeSectionId === 'chat'", "const showAttachments = !window.__HERMES_WEB_BRIDGE__ && activeSectionId === 'chat'"]
   ]
   for (const [before, after] of browserOnlyControls) {
     if (output.split(before).length !== 2) throw new Error('Browser device-only configuration boundary changed')
@@ -338,14 +369,16 @@ ${advancedMap}
 export function filterBrowserSettingsSearch(source: string, root: string): string {
   const owner = JSON.stringify(path.join(root, 'src/experience/settings/policy'))
   const target = `  return {
-    appearanceEntries,
+    subpageEntries,
+    settingEntries,
     configEntries,
     credentialEntries,
     pluginEntries
   }`
   if (source.split(target).length !== 2) throw new Error('Browser settings search catalog target changed')
   const filtered = `  return {
-    appearanceEntries: appearanceEntries.filter(entry => isSettingsFieldVisible(entry.target.setting ?? '')).map(presentSettingsSearchEntry),
+    subpageEntries: subpageEntries.filter(entry => isSettingsSectionVisible(entry.target.view) && isSettingsFieldVisible(entry.target.setting ?? '')).map(presentSettingsSearchEntry),
+    settingEntries: settingEntries.filter(entry => isSettingsSectionVisible(entry.target.view) && isSettingsFieldVisible(entry.target.setting ?? '')).map(presentSettingsSearchEntry),
     configEntries: configEntries.filter(entry => isSettingsSectionVisible(entry.target.view) && isSettingsFieldVisible(entry.target.field ?? '')).map(presentSettingsSearchEntry),
     credentialEntries: credentialEntries.map(presentSettingsSearchEntry),
     pluginEntries
@@ -526,37 +559,24 @@ export function removeBrowserNewSessionShortcut(source: string): string {
 }
 
 export function removeBrowserNewBotChatAction(source: string): string {
-  const imports = [
-    "  saveSelectedRosterBot\n",
-    "  newBotChat,\n",
-    "import { botRosterMeta, botWorkspaceOwnerKey, setBotsWorkspaceOwner } from './routing'\n"
-  ]
-  const action = `        <ContextMenuItem
-          onSelect={() => {
-            saveSelectedRosterBot(bot)
-            setBotsWorkspaceOwner(botWorkspaceOwnerKey(bot), bot)
-            newBotChat(bot)
-          }}
-        >
-          {b.bot.newChatWith}
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-`
-  const hasAction = source.includes(action)
-  const hasPartialAction = source.includes('b.bot.newChatWith') || imports.some(target => source.includes(target))
-  if (!hasAction && !hasPartialAction) return source
-  if (!hasAction || source.split(action).length !== 2 || imports.some(target => source.split(target).length !== 2)) {
+  if (!source.includes('b.bot.newChatWith')) return source
+  const invocation = 'newBotChat(bot)'
+  const start = source.lastIndexOf('<ContextMenuItem', source.indexOf(invocation))
+  const close = source.indexOf('</ContextMenuItem>', source.indexOf(invocation))
+  const end = close < 0 ? -1 : close + '</ContextMenuItem>'.length
+  const action = start < 0 || end < 0 ? '' : source.slice(start, end)
+  const imports = ["  saveSelectedRosterBot\n", "  newBotChat,\n"]
+  if (!action || source.indexOf(invocation) !== source.lastIndexOf(invocation) || imports.some(target => source.split(target).length !== 2)) {
     throw new Error('Browser new-bot-chat action target changed')
   }
   let output = source.replace(action, '')
-  output = output.replace(imports[0], '').replace(imports[1], '').replace(imports[2], "import { botRosterMeta } from './routing'\n")
+  output = output.replace(imports[0], '').replace(imports[1], '')
+  output = output.replace("import { botRosterMeta, botWorkspaceOwnerKey, setBotsWorkspaceOwner } from './routing'", "import { botRosterMeta } from './routing'")
   return output
 }
 
 export function removeBrowserOpenBotChatAction(source: string): string {
-  const action = `        <ContextMenuItem onSelect={() => void openRosterBot(bot)}>{b.bot.openBotChat}</ContextMenuItem>
-        <ContextMenuSeparator />
-`
+  const action = '<ContextMenuItem onSelect={() => void openRosterBot(bot)}>{b.bot.openBotChat}</ContextMenuItem>'
   if (!source.includes('b.bot.openBotChat')) return source
   if (source.split(action).length !== 2) throw new Error('Browser open-bot-chat action target changed')
   return source.replace(action, '')
@@ -570,19 +590,6 @@ export function browserActivityNotificationsPlugin(root: string): Plugin {
       return applyBrowserTransform(code, id, root, 40)
     }
   }
-}
-
-export function fixBrowserTooltipBoundary(source: string): string {
-  const target = "    setPane(boundary === 'pane' ? (anchor?.current?.closest('[data-tree-group]') ?? null) : null)"
-  if (source.split(target).length !== 2) throw new Error('Browser tooltip boundary target changed')
-  return source.replace(
-    target,
-    `    // Browser composer portals can inherit a hidden desktop pane. A zero-size
-    // collision boundary collapses the tooltip width; use the viewport instead.
-    const candidate = boundary === 'pane' ? (anchor?.current?.closest('[data-tree-group]') ?? null) : null
-    const bounds = candidate?.getBoundingClientRect()
-    setPane(bounds && bounds.width > 0 && bounds.height > 0 ? candidate : null)`
-  )
 }
 
 export function useBrowserMicrophoneCapture(source: string): string {
@@ -790,8 +797,9 @@ export function useBrowserSearchLabel(source: string, root: string): string {
   // Give the browser visibility preference a stable, label-independent target.
   const pinnedTarget = 'rootClassName="shrink-0 p-0 pb-1"'
   if (source.split(pinnedTarget).length !== 2) throw new Error('Browser pinned section target changed')
-  const pinnedSection = '{!trimmedQuery && (\n              <SidebarSessionsSection\n                activeSessionId={activeSidebarSessionId}\n                contentClassName="flex flex-col gap-px rounded-lg pb-2 pt-1"'
-  if (source.split(pinnedSection).length !== 2) throw new Error('Browser pinned section visibility target changed')
+  const pinnedSection = '{!trimmedQuery && ('
+  const pinnedSectionStart = source.lastIndexOf(pinnedSection, source.indexOf(pinnedTarget))
+  if (pinnedSectionStart < 0 || !source.slice(pinnedSectionStart, source.indexOf(pinnedTarget)).includes('<SidebarSessionsSection')) throw new Error('Browser pinned section visibility target changed')
   const hooks: [string, string][] = [
     ['<div className="shrink-0 px-2 pb-1 pt-1">', '<div className="browser-session-search-section shrink-0 px-2 pb-1 pt-1">'],
     ['<SearchField', '<SearchField containerClassName="browser-session-search"'],
@@ -802,10 +810,13 @@ export function useBrowserSearchLabel(source: string, root: string): string {
     if (source.split(before).length !== 2) throw new Error('Browser sidebar styling target changed')
     source = source.replace(before, after)
   }
+  // Use resolved pins, including backend pins, rather than DOM rows: a
+  // collapsed populated section must still keep its heading visible.
+  const currentPinnedTarget = source.indexOf(pinnedTarget)
+  const currentPinnedStart = source.lastIndexOf(pinnedSection, currentPinnedTarget)
+  if (currentPinnedStart < 0) throw new Error('Browser pinned section visibility target changed')
+  source = source.slice(0, currentPinnedStart) + source.slice(currentPinnedStart).replace(pinnedSection, '{!trimmedQuery && pinnedSessions.length > 0 && (')
   return (`import { BrowserSidebarExtras } from ${extras}\n` + source)
-    // Use resolved pins, including backend pins, rather than DOM rows: a
-    // collapsed populated section must still keep its heading visible.
-    .replace(pinnedSection, pinnedSection.replace('!trimmedQuery', '!trimmedQuery && pinnedSessions.length > 0'))
     .replace(pinnedTarget, 'rootClassName="browser-pinned-section shrink-0 p-0 pb-1"')
     .replace(slotTarget, slotTarget + '\n            <BrowserSidebarExtras />')
     .replace(ariaTarget, "aria-label={'Search'}")
@@ -826,18 +837,18 @@ function OptionGlyph({ option }: { option: Option }) {`
       "  return option.icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={option.icon} size=\"0.8125rem\" /> : null",
       "  const icon = option.icon || OPTION_ICONS[option.id]\n  return icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={icon} size=\"0.8125rem\" /> : null"
     ],
-    ['<DropdownMenuSubTrigger hideChevron>\n              Grouping', '<DropdownMenuSubTrigger hideChevron>\n              <Codicon name="list-tree" size="0.8125rem" />\n              Grouping'],
-    ['<DropdownMenuSubTrigger>Ordering</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="list-ordered" size="0.8125rem" />Ordering</DropdownMenuSubTrigger>'],
-    ['<DropdownMenuSubTrigger>Show</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="eye" size="0.8125rem" />Show</DropdownMenuSubTrigger>'],
-    ['<DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="pulse" size="0.8125rem" />Status</DropdownMenuSubTrigger>'],
-    ['<DropdownMenuSubTrigger>Pull request</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="git-pull-request" size="0.8125rem" />Pull request</DropdownMenuSubTrigger>'],
-    ['<DropdownMenuSubTrigger>Profile</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="account" size="0.8125rem" />Profile</DropdownMenuSubTrigger>'],
-    ['<DropdownMenuSubTrigger>Project</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="root-folder" size="0.8125rem" />Project</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger hideChevron>\n              {f.grouping}', '<DropdownMenuSubTrigger hideChevron>\n              <Codicon name="list-tree" size="0.8125rem" />\n              {f.grouping}'],
+    ['<DropdownMenuSubTrigger>{f.ordering}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="list-ordered" size="0.8125rem" />{f.ordering}</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger>{f.show}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="eye" size="0.8125rem" />{f.show}</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger>{f.status}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="pulse" size="0.8125rem" />{f.status}</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger>{f.pullRequest}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="git-pull-request" size="0.8125rem" />{f.pullRequest}</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger>{f.profile}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="account" size="0.8125rem" />{f.profile}</DropdownMenuSubTrigger>'],
+    ['<DropdownMenuSubTrigger>{f.project}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="root-folder" size="0.8125rem" />{f.project}</DropdownMenuSubTrigger>'],
     ['<DropdownMenuItem onSelect={requestProfileCreate}>{t.profiles.newProfile}</DropdownMenuItem>', '<DropdownMenuItem onSelect={requestProfileCreate}><Codicon name="add" size="0.8125rem" />{t.profiles.newProfile}</DropdownMenuItem>'],
     ['<DropdownMenuItem onSelect={() => void runImportProfileFlow()}>\n                {t.profiles.importProfile}', '<DropdownMenuItem onSelect={() => void runImportProfileFlow()}>\n                <Codicon name="cloud-download" size="0.8125rem" />\n                {t.profiles.importProfile}'],
-    ['<DropdownMenuItem onSelect={resetSidebarView}>Reset to defaults</DropdownMenuItem>', '<DropdownMenuItem onSelect={resetSidebarView}><Codicon name="refresh" size="0.8125rem" />Reset to defaults</DropdownMenuItem>'],
-    ["            {foldCollapsed ? 'Expand all' : 'Collapse all'}", "            <Codicon name={foldCollapsed ? 'expand-all' : 'collapse-all'} size=\"0.8125rem\" />\n            {foldCollapsed ? 'Expand all' : 'Collapse all'}"],
-    ['          Mark all as read\n', '          <Codicon name="check-all" size="0.8125rem" />\n          Mark all as read\n']
+    ['<DropdownMenuItem onSelect={resetSidebarView}>{f.resetToDefaults}</DropdownMenuItem>', '<DropdownMenuItem onSelect={resetSidebarView}><Codicon name="refresh" size="0.8125rem" />{f.resetToDefaults}</DropdownMenuItem>'],
+    ['            {foldCollapsed ? f.expandAll : f.collapseAll}', '            <Codicon name={foldCollapsed ? "expand-all" : "collapse-all"} size="0.8125rem" />\n            {foldCollapsed ? f.expandAll : f.collapseAll}'],
+    ['          {t.sidebar.markAllRead}\n', '          <Codicon name="check-all" size="0.8125rem" />\n          {t.sidebar.markAllRead}\n']
   ]
   let output = source
   for (const [before, after] of replacements) {
@@ -870,14 +881,14 @@ export function showHiddenBotsInBrowserRoster(source: string): string {
 export function enableBrowserUngroupedSessions(source: string, surface: 'store' | 'menu' | 'sidebar'): string {
   const replacements: Record<typeof surface, [string, string][]> = {
     store: [
-      ["export type SidebarGrouping = 'date' | 'profile' | 'project' | 'status'", "export type SidebarGrouping = 'none' | 'date' | 'profile' | 'project' | 'status'"],
+      ["export const SIDEBAR_GROUPING_ORDER = ['date', 'project', 'status', 'profile'] as const", "export const SIDEBAR_GROUPING_ORDER = ['none', 'date', 'project', 'status', 'profile'] as const"],
       ["SIDEBAR_GROUPING_STORAGE_KEY,\n  'date',", "SIDEBAR_GROUPING_STORAGE_KEY,\n  'none',"],
       ["oneOf(['date', 'status'], 'date')", "oneOf(['none', 'date', 'status'], 'none')"],
       ["SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY,\n  'date',", "SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY,\n  'none',"],
       ["oneOf(['date', 'profile', 'status'], 'date')", "oneOf(['none', 'date', 'profile', 'status'], 'none')"],
       ["const SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'date'", "const SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'none'"]
     ],
-    menu: [["const GROUPINGS: Option<SidebarGrouping>[] = [", "const GROUPINGS: Option<SidebarGrouping>[] = [\n  { icon: 'list-unordered', id: 'none', label: 'None' },"]],
+    menu: [["  const GROUPING_OPTIONS: Record<SidebarGrouping, Omit<Option<SidebarGrouping>, 'id'>> = {", "  const GROUPING_OPTIONS: Record<SidebarGrouping, Omit<Option<SidebarGrouping>, 'id'>> = {\n    none: { icon: 'list-unordered', label: 'None' },"]],
     sidebar: [["grouping={showArchived || rankedGlobally ? 'none'", "grouping={grouping === 'none' || showArchived || rankedGlobally ? 'none'"]]
   }
   let output = source
@@ -997,16 +1008,14 @@ export function disableBrowserSessionOpenActions(source: string): string {
 }
 
 export function filterBrowserKeybinds(source: string): string {
-  const importMarker = "import { SettingsContent } from './primitives'\n"
-  const browserSet = `${importMarker}\nconst BROWSER_UNSUPPORTED_KEYBINDS = new Set([\n  'session.newTab', 'session.newWindow', 'session.next', 'session.prev',\n  'view.showBrowser', 'view.toggleHud', 'view.showTerminal', 'view.newTerminal',\n  'view.nextTerminal', 'view.prevTerminal', 'view.closeTerminal',\n  'view.terminalCopy', 'view.terminalPaste', 'hud.snapToPointer',\n  'view.findInPage', 'view.findNext', 'view.findPrevious'\n])\n`
+  const browserSet = `const BROWSER_UNSUPPORTED_KEYBINDS = new Set([\n  'session.newTab', 'session.newWindow', 'session.next', 'session.prev',\n  'view.showBrowser', 'view.toggleHud', 'view.showTerminal', 'view.newTerminal',\n  'view.nextTerminal', 'view.prevTerminal', 'view.closeTerminal',\n  'view.terminalCopy', 'view.terminalPaste', 'hud.snapToPointer',\n  'view.findInPage', 'view.findNext', 'view.findPrevious'\n])\n`
   const actionTarget = '  const actionList = allKeybindActions(contributions)'
   const readonlyTarget = '  const [query, setQuery] = useState(\'\')'
   if (source.includes('BROWSER_UNSUPPORTED_KEYBINDS')) return source
-  if (source.split(actionTarget).length !== 2 || source.split(readonlyTarget).length !== 2 || source.split(importMarker).length !== 2) {
+  if (source.split(actionTarget).length !== 2 || source.split(readonlyTarget).length !== 2) {
     throw new Error('Browser keybind contract changed')
   }
-  const output = source.replace(importMarker, browserSet)
-    .replace(actionTarget, '  const actionList = allKeybindActions(contributions).filter(action => !BROWSER_UNSUPPORTED_KEYBINDS.has(action.id))')
+  const output = source.replace(actionTarget, `${browserSet}\n${actionTarget.replace('allKeybindActions(contributions)', 'allKeybindActions(contributions).filter(action => !BROWSER_UNSUPPORTED_KEYBINDS.has(action.id))')}`)
     .replace(readonlyTarget, "  const browserReadonly = KEYBIND_READONLY.filter(shortcut => !BROWSER_UNSUPPORTED_KEYBINDS.has(shortcut.id))\n" + readonlyTarget)
     .replaceAll('return KEYBIND_READONLY.filter', 'return browserReadonly.filter')
     .replaceAll('const readonly = KEYBIND_READONLY.filter', 'const readonly = browserReadonly.filter')
@@ -1058,12 +1067,14 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
   if (digest(code) === entry.outputHash) return { code, map: null }
   if (digest(code) !== entry.inputHash) throw new Error(`Browser compatibility changed: ${entry.name} (${entry.module}). Review this registry entry.`)
   const handlers: Record<string, (source: string) => string> = {
+    useBrowserRosterDialogFocus: source => useBrowserRosterDialogFocus(source, root),
     useBrowserRosterActionSurfaces: source => useBrowserRosterActionSurfaces(source, root),
     useBrowserSectionActionSurface: source => useBrowserSectionActionSurface(source, root),
+    useBrowserBotDialogFocus: source => useBrowserBotDialogFocus(source, root),
+    useBrowserSectionDialogFocus: source => useBrowserSectionDialogFocus(source, root),
     keepBrowserWorkspaceRoute: source => keepBrowserWorkspaceRoute(source, root),
     respectBrowserOverlayFocusReturn: source => respectBrowserOverlayFocusReturn(source, root),
     useBrowserOverlayFocusOwner: source => useBrowserOverlayFocusOwner(source, root),
-    respectBrowserProfileSwitches,
     useBrowserSettingsPresentation: source => useBrowserSettingsPresentation(source, root),
     useBrowserConfigurationSettings: source => useBrowserConfigurationSettings(source, root),
     filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
@@ -1083,7 +1094,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     useBrowserProjectDisclosure,
     exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut,
-    removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction, fixBrowserTooltipBoundary,
+    removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth, filterBrowserSessionMenu,
     showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
     disableBrowserSessionRowTabs, disableBrowserSessionOpenActions, filterBrowserKeybinds,

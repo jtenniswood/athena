@@ -29,9 +29,7 @@ function load(file, globals = {}, moduleCache = new Map()) {
 }
 const { browserPlugin, scopeBrowserStorage } = load('src/upstream/browser-plugin.ts')
 test('profile switch hook ignores repeated mount effects but handles real profile changes', () => {
-  const { respectBrowserProfileSwitches } = load('src/upstream/browser-plugin.ts')
-  const original = readFileSync(path.join(root, '../desktop/src/app/hooks/use-on-profile-switch.ts'), 'utf8')
-  const source = respectBrowserProfileSwitches(original)
+  const source = readFileSync(path.join(root, '../desktop/src/app/hooks/use-on-profile-switch.ts'), 'utf8')
   let profile = 'default', reference, effect
   const calls = []
   const context = vm.createContext({ exports: {}, require: name => {
@@ -137,7 +135,8 @@ test('settings policy stays aligned across page fields, deep search, and palette
   const adaptedConfig = useBrowserConfigurationSettings(config, root)
   assert.match(adaptedConfig, /BrowserConfigurationPage commands=\{configurationCommands\} scopeProfile=\{configurationScopeProfile\}/)
   assert.match(adaptedConfig, /activeSectionId === 'browser-configuration' \? configurationScopeProfile : requestScopeProfile/)
-  assert.match(filterBrowserSettingsSearch(search, root), /appearanceEntries: appearanceEntries\.filter/)
+  assert.match(filterBrowserSettingsSearch(search, root), /subpageEntries: subpageEntries\.filter/)
+  assert.match(filterBrowserSettingsSearch(search, root), /settingEntries: settingEntries\.filter/)
   assert.match(filterBrowserSettingsSearch(search, root), /isSettingsSectionVisible\(entry\.target\.view\)/)
   assert.match(filterBrowserSettingsPalette(palette, root), /SECTIONS\.filter\(section => isSettingsSectionVisible/)
   assert.match(filterBrowserSettingsPalette(palette, root), /NON_CONFIG_SETTINGS\.filter\(entry => isSettingsSectionVisible/)
@@ -158,6 +157,7 @@ test('browser omits generic activity toasts while preserving unread tracking and
     markSessionUnreadFinished: id => unread.push(id),
     $selectedBot: { get: () => null },
     rosterWatermarks: new Map(),
+    lastToastedPreview: new Map(),
     botSelectionKey: bot => bot.name,
     botActivitySession: bot => bot.activity,
     botCanonicalSessionId: bot => bot.id,
@@ -272,6 +272,23 @@ test('browser microphone capture distinguishes insecure origins and lets getUser
   await assert.rejects(handle.start(), /browser settings/)
   context.navigator.mediaDevices.getUserMedia = async () => { throw new DOMException('Missing', 'NotFoundError') }
   await assert.rejects(handle.start(), /No microphone/)
+})
+
+test('latest renderer keeps None grouping integrated and handles layout-less tooltip boundaries upstream', () => {
+  const layoutFile = path.join(root, '../desktop/src/store/layout.ts')
+  const layout = readFileSync(layoutFile, 'utf8')
+  const layoutOutput = browserPlugin(root).transform(layout, layoutFile)?.code
+  assert.match(layoutOutput, /SIDEBAR_GROUPING_ORDER = \['none', 'date', 'project', 'status', 'profile'\]/)
+  assert.match(layoutOutput, /SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'none'/)
+
+  const filterFile = path.join(root, '../desktop/src/app/chat/sidebar/filter-menu.tsx')
+  const filter = browserPlugin(root).transform(readFileSync(filterFile, 'utf8'), filterFile)?.code
+  assert.match(filter, /none: \{ icon: 'list-unordered', label: 'None' \}/)
+
+  const tooltip = readFileSync(path.join(root, '../desktop/src/components/ui/tooltip.tsx'), 'utf8')
+  assert.match(tooltip, /while \(candidate && !hasLayout\(candidate\)\)/)
+  assert.match(tooltip, /setPane\(candidate\)/)
+  assert.doesNotMatch(readFileSync(path.join(root, 'src/upstream/compatibility-registry.json'), 'utf8'), /tooltip-boundary/)
 })
 
 test('browser shell contracts reject missing or changed upstream modules', t => {
@@ -439,6 +456,6 @@ test('entry recovery has an independent static fallback', () => {
   assert.match(index, /location\.reload\(\)/)
   const source = readFileSync(path.join(root, 'src/platform/startup-recovery.ts'), 'utf8')
   assert.match(source, /showStartupRecovery/)
-  assert.match(source, /stage === 'configuration' \? 'Sign in' : 'Retry'/)
-  assert.doesNotMatch(source, /Build \$\{|Copy diagnostics/)
+  assert.match(source, /Copy diagnostics/)
+  assert.match(source, /Stage: \$\{stage\}/)
 })

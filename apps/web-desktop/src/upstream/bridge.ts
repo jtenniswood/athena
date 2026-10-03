@@ -13,6 +13,7 @@ import {
 } from '../web-bridge/gateways'
 
 import { buildInfo } from '../build-info'
+import { createBrowserDefaultProfileRoute } from '../platform/default-profile-route'
 import { createWebZoomBridge } from '../platform/display'
 import { clipboardImageAsFile, readClipboard, writeClipboard } from '../platform/clipboard'
 import { isUnderPluginRoot, isWebFileHandle, registerWebFile, webFileAsDataUrl, ensureFileInput, pickWithInput, acceptsFor } from '../platform/files'
@@ -43,6 +44,18 @@ type WebBridge = Omit<Window['hermesDesktop'], 'terminal' | 'git'> & { agentPlug
 
 export function createWebBridge(): Window['hermesDesktop'] {
   window.__HERMES_WEB_BRIDGE__ = true
+
+  const defaultProfileRoute = createBrowserDefaultProfileRoute(
+    () => window.localStorage,
+    WEB_CONNECTION_ID,
+    {
+      subscribe: listener => {
+        const onStorage = (event: StorageEvent) => listener(event.key, event.newValue)
+        window.addEventListener('storage', onStorage)
+        return () => window.removeEventListener('storage', onStorage)
+      }
+    }
+  )
 
   const connectionListeners = new Set<() => void>()
   const bridge: WebBridge = {
@@ -103,6 +116,12 @@ export function createWebBridge(): Window['hermesDesktop'] {
     },
     // No external terminal in a browser — resume-in-terminal is unavailable.
     openSessionInTerminal: async () => ({ ok: false, error: 'terminal is unavailable in the web app' }),
+    windowControls: {
+      custom: false,
+      minimize: noop,
+      toggleMaximize: noop,
+      close: noop
+    },
     // v2 connection registry is desktop-main-process state; the web app rides
     // the gateway connection it was served from, so the registry is read-only
     // empty (mutation attempts fail cleanly instead of pretending to persist).
@@ -245,6 +264,9 @@ export function createWebBridge(): Window['hermesDesktop'] {
       return { ok: true, connected: false }
     },
     profile: {
+      getDefault: defaultProfileRoute.getDefault,
+      setDefault: defaultProfileRoute.setDefault,
+      onDefaultChanged: defaultProfileRoute.onDefaultChanged,
       get: async () => ({ profile: null }),
       // Web has no persistent "next-launch" profile; echo the current (null) one.
       remember: async name => ({ profile: name }),

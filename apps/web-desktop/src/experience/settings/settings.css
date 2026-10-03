@@ -253,23 +253,18 @@
 .browser-configuration-action-description { display: block; margin-top: var(--web-space-1); color: var(--web-text-muted); line-height: var(--web-line-body); }
 .browser-configuration-action:last-child { margin-top: var(--web-space-6); border: 1px solid var(--web-border-subtle); }
 .browser-configuration-action:last-child :is(svg, .browser-configuration-action-label) { color: var(--web-danger); }
-.browser-transcript-setting {
-  margin: 1.5rem 0;
-  padding: 1rem;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
+
+/* The palette portals outside the frame, so account for browser UI scaling. */
+body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: min(34rem, calc(100vw / var(--web-ui-scale, 1) - 2rem)); }
+@media (max-width: 55.999rem), (pointer: coarse) and (max-height: 27rem) {
+  body:has([data-browser-settings-frame]) [data-browser-command-palette] [data-slot="command-input"] { font-size: max(1rem, calc(16px / var(--web-ui-scale, 1))); }
+  body:has([data-browser-settings-frame]) [data-browser-command-palette] [data-slot="command-item"] { min-height: var(--web-touch-min); }
 }
-.browser-transcript-setting h3 { margin: 0; font-size: 1rem; font-weight: 600; }
-.browser-transcript-setting p { margin: 0.35rem 0 0.85rem; color: var(--muted-foreground); }
-.browser-transcript-setting-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.65rem;
-  min-height: 2.75rem;
-  color: var(--foreground);
-  cursor: pointer;
+
+/* Touch search results cannot depend on the upstream mouse-movement guard. */
+@media (pointer: coarse) {
+  body:has([data-browser-settings-frame]) [data-browser-command-palette] [data-slot="command-list"] { pointer-events: auto; }
 }
-.browser-transcript-setting-toggle input { width: 1rem; height: 1rem; accent-color: var(--accent); }
 .browser-followup-setting {
   margin: 1.5rem 0;
   padding: 1rem;
@@ -313,49 +308,12 @@
   background: var(--web-active);
   color: var(--web-text);
 }
-
-/* The palette portals outside the frame, so account for browser UI scaling. */
-body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: min(34rem, calc(100vw / var(--web-ui-scale, 1) - 2rem)); }
-@media (max-width: 55.999rem), (pointer: coarse) and (max-height: 27rem) {
-  body:has([data-browser-settings-frame]) [data-browser-command-palette] [data-slot="command-input"] { font-size: max(1rem, calc(16px / var(--web-ui-scale, 1))); }
-  body:has([data-browser-settings-frame]) [data-browser-command-palette] [data-slot="command-item"] { min-height: var(--web-touch-min); }
+.browser-transcript-setting-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.75rem;
+  color: var(--web-text);
+  cursor: pointer;
 }
-
-/* Touch search results cannot depend on the upstream mouse-movement guard. */
-@media (pointer: coarse) {
-  body:has([data-browser-settings-frame]) [data-browser-command-palette] [data-slot="command-list"] { pointer-events: auto; }
-}
-.browser-followup-setting {
-  margin: 1.5rem 0;
-  padding: 1rem;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-}
-
-.browser-followup-setting h3 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.browser-followup-setting p {
-  margin: 0.35rem 0 0.85rem;
-  color: var(--muted-foreground);
-}
-
-.browser-followup-options {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.browser-followup-options button {
-  min-width: 5rem;
-  padding: 0.4rem 0.85rem;
-  border-radius: 999px;
-  color: var(--muted-foreground);
-}
-
-.browser-followup-options button.is-selected {
-  background: var(--accent);
-  color: var(--foreground);
-}
+.browser-transcript-setting-toggle input { width: 1rem; height: 1rem; accent-color: var(--web-accent); }

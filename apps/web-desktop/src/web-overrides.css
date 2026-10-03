@@ -129,6 +129,16 @@ body > [data-slot='fan-menu'] {
   zoom: calc(1 / var(--web-ui-scale, 1));
 }
 
+/* The browser UI does not use the desktop renderer's decorative chat image.
+   Keep the appearance control out of the web settings as well. */
+[data-chat-surface] > div:has(> img[src*='filler-bg0.jpg']) {
+  display: none !important;
+}
+
+[id='setting-field-appearance.backdrop'] {
+  display: none !important;
+}
+
 /* Keep the Sessions/Bots workspace tabs prominent while giving their labels
    a little more room in the narrow sidebar. */
 [data-zone-tabstrip]:has([data-tree-tab='sessions']) [data-tree-tab] {
@@ -169,6 +179,7 @@ body > [data-slot='fan-menu'] {
   row-gap: var(--composer-row-gap) !important;
 }
 
+[data-slot='composer-root']:not([data-popped-out]) [data-slot='composer-fade'] > div.grid.w-full:has([data-slot='composer-rich-input']) > [style*='grid-area: menu'],
 [data-slot='composer-root']:not([data-popped-out]) [data-slot='composer-fade'] > div.grid.w-full:has([data-slot='composer-rich-input']) > [class*='grid-area:menu'] {
   align-self: center;
   translate: none !important;
