@@ -135,7 +135,9 @@ body > [data-slot='fan-menu'] {
   display: none !important;
 }
 
-[id='setting-field-appearance.backdrop'] {
+[id='setting-field-appearance.backdrop'],
+[id='setting-field-appearance.intro-splash'],
+[id='setting-field-appearance.theme'] {
   display: none !important;
 }
 

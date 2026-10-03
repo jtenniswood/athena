@@ -1,6 +1,7 @@
 import { compatibilityRegistryPlugin } from '../../scripts/compatibility-registry.mjs'
 import { dependencyCompatibilityPlugin } from './src/upstream/dependency-compatibility'
 import { browserPlugin, browserActivityNotificationsPlugin } from './src/upstream/browser-plugin'
+import { browserSettingsChoicesPlugin } from './src/upstream/browser-settings-choices'
 import { athenaBranding } from './src/upstream/athena-branding'
 import { rendererOverrides } from './src/upstream/overrides'
 import { runtimeConfiguration, runtimeScripts, matchesGatewayRoute, type HostingConfiguration } from '../../scripts/runtime-config.mjs'
@@ -256,6 +257,7 @@ export default defineConfig(({ command, mode }) => {
     athenaBranding(),
     rendererOverrides(__dirname),
     browserPlugin(__dirname),
+    browserSettingsChoicesPlugin(),
     hermesDynamicProxy(),
     react(),
     tailwindcss(),

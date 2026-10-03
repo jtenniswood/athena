@@ -3,6 +3,7 @@ import { useLocation } from 'react-router'
 import { Codicon, OverlayView } from '../../upstream/browser-api'
 import { groupSettingsSections, isSettingsSectionVisible, orderSettingsSections, settingsPageLabel, settingsScopeDescription } from './policy'
 import { BrowserToolbarButton } from '../ui/toolbar-button'
+import { BrowserColorThemesPage } from './themes-page'
 import './settings.css'
 
 type SettingsNavItem = {
@@ -58,6 +59,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const compact = useCompactSettings()
   const location = useLocation()
   const [compactPresentation, setCompactPresentation] = useState<CompactPresentation>({ mode: 'automatic' })
+  const [showColorThemes, setShowColorThemes] = useState(false)
   const params = new URLSearchParams(location.search)
   const hasDirectTarget = params.has('tab') || params.has('field') || params.has('setting')
   const opensDefaultSettingsTab = !hasDirectTarget && activeView === 'config:appearance'
@@ -71,6 +73,8 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const directTargetOpensDetail = (hasDirectTarget || opensDefaultSettingsTab)
     && (compactPresentation.mode === 'automatic' || (compactPresentation.mode === 'menu' && compactPresentation.locationKey !== location.key))
   const showDetail = activeVisible && (!compact || compactPresentation.mode === 'detail' || directTargetOpensDetail)
+
+  useLayoutEffect(() => setShowColorThemes(false), [activeView])
 
   useLayoutEffect(() => {
     if (!compact || !moveFocus.current) return
@@ -157,7 +161,15 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
           </div>}
           <div className="browser-settings-content-slot" hidden={!showDetail} inert={!showDetail}>
             {pageVisible && pageNotice && <p className="browser-settings-page-notice" role="note">{pageNotice}</p>}
-            {pageVisible && children}
+            {pageVisible && activeView === 'config:appearance' && !showColorThemes && <button
+              className="browser-settings-theme-link"
+              onClick={() => setShowColorThemes(true)}
+              type="button"
+            >
+              <span>Colour themes</span>
+              <Codicon name="chevron-right" />
+            </button>}
+            {pageVisible && showColorThemes ? <BrowserColorThemesPage onBack={() => setShowColorThemes(false)} /> : children}
           </div>
         </main>
       </div>
