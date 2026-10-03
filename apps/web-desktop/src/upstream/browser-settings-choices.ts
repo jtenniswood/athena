@@ -30,13 +30,8 @@ function transformAppearance(source: string): string {
   source = source.replace('<ChatFontSetting />', '{window.__HERMES_WEB_BRIDGE__ ? null : <ChatFontSetting />}')
   source = hideElement(source, 'ToggleRow', 'checked={composerPopoutGesturesEnabled}')
   source = hideElement(source, 'ResumeLastSessionSetting', '<ResumeLastSessionSetting')
-  for (const title of ['tipsTitle', 'toursTitle']) {
-    const marker = `title={a.${title}}`
-    const point = source.indexOf(marker)
-    const start = source.lastIndexOf('<ListRow', point)
-    if (point < 0 || start < 0) throw new Error(`Browser appearance setting boundary changed: ${title}`)
-    source = source.slice(0, start + '<ListRow'.length) + ' className="browser-settings-unsupported"' + source.slice(start + '<ListRow'.length)
-  }
+  source = hideElement(source, 'ToggleRow', 'label={a.tipsTitle}')
+  source = hideElement(source, 'ToggleRow', 'label={a.toursTitle}')
   return source
 }
 
