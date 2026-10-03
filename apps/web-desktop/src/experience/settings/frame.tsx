@@ -169,7 +169,8 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
               <span>Colour themes</span>
               <Codicon name="chevron-right" />
             </button>}
-            {pageVisible && showColorThemes ? <BrowserColorThemesPage onBack={() => setShowColorThemes(false)} /> : children}
+            {pageVisible && activeView === 'config:appearance' && showColorThemes
+              ? <BrowserColorThemesPage onBack={() => setShowColorThemes(false)} /> : children}
           </div>
         </main>
       </div>
