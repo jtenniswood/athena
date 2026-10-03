@@ -194,6 +194,16 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
   const controlReplacements: [string, string][] = [
     ['      type="button"\n    >\n      <Search className="size-3" />', '      aria-label={t.settings.search.pill}\n      type="button"\n    >\n      <Search className="size-3" />'],
     ["useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:model' as SettingsViewId)", "useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:appearance' as SettingsViewId)"],
+    [
+      '  const subpage = resolveSettingsSubpage(activeView, params)',
+      "  const subpage = ['gateway', 'keybinds', 'sessions'].includes(activeView) ? undefined : resolveSettingsSubpage(activeView, params)"
+    ],
+    [
+      '      const destination = page ?? settingsSubpages(view)[0]?.id',
+      "      const destination = page ?? (['gateway', 'keybinds', 'sessions'].includes(view) ? undefined : settingsSubpages(view)[0]?.id)"
+    ],
+    ["import { SettingsSubpageHeader } from './subpage-navigation'\n", ''],
+    ["  const activeGroup = navGroups.find(group => group.active)\n  const activeChild = activeGroup?.children?.find(child => child.active)\n", ''],
   ]
   controlReplacements.push(
     ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  'config:browser-configuration',"],
@@ -236,8 +246,7 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
     }
   }`
   const layoutTarget = source.slice(layoutStart, layoutEnd + '      </OverlaySplitLayout>'.length)
-  const layoutReplacement = `      <SettingsBreadcrumbContext.Provider value>
-        {activeGroup && <SettingsSubpageHeader child={activeChild} group={activeGroup} />}
+  const layoutReplacement = `      <SettingsBreadcrumbContext.Provider value={false}>
         {needsSubpageRedirect ? (
           <Navigate replace to={{ hash, pathname, search: '?' + subpageSearch }} />
         ) : (
@@ -291,7 +300,10 @@ export function hideBrowserAppearanceOnlySettings(source: string): string {
       '                  {!window.__HERMES_WEB_BRIDGE__ && <MarketplaceThemeResults installs={installs} onInstalled={name => setTheme(name)} query={query} />}'
     ],
     ['placeholder={a.themeSearchPlaceholder}', 'placeholder="Search available themes"'],
-    ['description={a.themeDesc}', 'description="Choose from themes available in this web app."']
+    ['description={a.themeDesc}', 'description="Choose from themes available in this web app."'],
+    ["          {show('theme') && (\n            <ListRow", "          {show('theme') && (\n            <>\n              <SectionHeading icon={Palette} title=\"Colour theme\" />\n              <ListRow"],
+    ['              id={settingElementId(ids.theme)}', '              className="browser-theme-mode-row"\n              id={settingElementId(ids.theme)}'],
+    ['              wide\n            />\n          )}\n\n          {show(\'typography\')', '              wide\n              />\n            </>\n          )}\n\n          {show(\'typography\')']
   ]
   let output = source
   for (const [before, after] of replacements) {
@@ -1012,13 +1024,15 @@ export function filterBrowserKeybinds(source: string): string {
   const actionTarget = '  const actionList = allKeybindActions(contributions)'
   const readonlyTarget = '  const [query, setQuery] = useState(\'\')'
   if (source.includes('BROWSER_UNSUPPORTED_KEYBINDS')) return source
-  if (source.split(actionTarget).length !== 2 || source.split(readonlyTarget).length !== 2) {
+  const screenshotTarget = 'return <ShortcutSettings includeScreenshot={subpage === undefined} />'
+  if (source.split(actionTarget).length !== 2 || source.split(readonlyTarget).length !== 2 || source.split(screenshotTarget).length !== 2) {
     throw new Error('Browser keybind contract changed')
   }
   const output = source.replace(actionTarget, `${browserSet}\n${actionTarget.replace('allKeybindActions(contributions)', 'allKeybindActions(contributions).filter(action => !BROWSER_UNSUPPORTED_KEYBINDS.has(action.id))')}`)
     .replace(readonlyTarget, "  const browserReadonly = KEYBIND_READONLY.filter(shortcut => !BROWSER_UNSUPPORTED_KEYBINDS.has(shortcut.id))\n" + readonlyTarget)
     .replaceAll('return KEYBIND_READONLY.filter', 'return browserReadonly.filter')
     .replaceAll('const readonly = KEYBIND_READONLY.filter', 'const readonly = browserReadonly.filter')
+    .replace(screenshotTarget, 'return <ShortcutSettings includeScreenshot={false} />')
   if (!output.includes('BROWSER_UNSUPPORTED_KEYBINDS') || output.includes('return KEYBIND_READONLY.filter')) throw new Error('Browser keybind transform was partially modified')
   return output
 }
