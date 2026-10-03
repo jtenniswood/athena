@@ -292,6 +292,15 @@ export function useBrowserConfigurationSettings(source: string, root: string): s
 
 export function hideBrowserAppearanceOnlySettings(source: string): string {
   const replacements: [string, string][] = [
+    [
+      "  const show = (id: AppearanceSubpageId) => subpage === undefined || subpage === id",
+      `  const show = (id: AppearanceSubpageId) => {
+    const combinedBrowserAppearance = window.__HERMES_WEB_BRIDGE__ && ['general', 'typography', 'window-layout'].includes(subpage ?? '')
+    return combinedBrowserAppearance
+      ? ['general', 'typography', 'window-layout'].includes(id)
+      : subpage === undefined || subpage === id
+  }`
+    ],
     ['                <TerminalFontSetting />', '                {!window.__HERMES_WEB_BRIDGE__ && <TerminalFontSetting />}'],
     ["{show('pet') && (", "{show('pet') && !window.__HERMES_WEB_BRIDGE__ && ("],
     ["{show('window-layout') && TRANSLUCENCY_SUPPORTED && (", "{show('window-layout') && TRANSLUCENCY_SUPPORTED && !window.__HERMES_WEB_BRIDGE__ && ("],

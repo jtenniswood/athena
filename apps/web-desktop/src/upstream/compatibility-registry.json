@@ -2248,11 +2248,11 @@
     "sourceRoot": "renderer",
     "sourceHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
     "inputHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
-    "outputHash": "26cad1762b7a627ed3673ec0127e212554165d5943884c8aef226e9f938a7da7",
+    "outputHash": "8b4c9d60cb8a865561575712ee033e16a683321ff8bd8dae4f0163009bf5818e",
     "handlers": [
       "hideBrowserAppearanceOnlySettings"
     ],
-    "reason": "Hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls while retaining installed browser themes.",
+    "reason": "Combine General, Typography, and Window & layout into one browser page; hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls while retaining installed browser themes.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {

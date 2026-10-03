@@ -69,6 +69,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const activeVisible = Boolean(activeGroup)
   const pageVisible = isSettingsSectionVisible(activeView)
   const activeChildren = orderSettingsSections(activeGroup?.children ?? [])
+    .filter(child => !(activeGroup?.id === 'config:appearance' && ['config:appearance:typography', 'config:appearance:window-layout'].includes(child.id)))
     .filter(child => !(activeGroup?.id === 'config:appearance' && child.id.endsWith(':pet')))
     .map(child => ({ ...child, label: settingsPageLabel(child.id, child.label) }))
   const directTargetOpensDetail = (hasDirectTarget || opensDefaultSettingsTab)
