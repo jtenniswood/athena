@@ -402,3 +402,7 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
   cursor: pointer;
 }
 .browser-transcript-setting-toggle input { width: 1rem; height: 1rem; accent-color: var(--web-accent); }
+
+.browser-settings-content-slot nav[aria-label="breadcrumb" i] {
+  display: none;
+}
