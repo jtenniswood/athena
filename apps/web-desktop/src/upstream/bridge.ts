@@ -59,6 +59,11 @@ export function createWebBridge(): Window['hermesDesktop'] {
 
   const connectionListeners = new Set<() => void>()
   const bridge: WebBridge = {
+    // The browser has no native translucent window backing. Reporting this
+    // explicitly also prevents the renderer's platform fallback from enabling
+    // its glass-only transparent page surfaces on macOS and Windows browsers.
+    glassSupported: false,
+    translucencySupported: false,
     zoom: createWebZoomBridge(),
     getConnection: async profile => connection(profile),
     getConnectionFor: async ({ connectionId, profile }) => connectionForProfile(connectionId, profile),

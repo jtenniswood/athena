@@ -7,11 +7,11 @@ import {
   settingsPageAliases,
   settingsPageId,
   settingsPageIsVisible,
+  isDesktopStartupSettingsPage,
   settingsPageLabel,
   settingsPolicy,
   settingsScopeDescription,
   settingsFieldIsVisible,
-  isEverydaySettingsField,
   validateSettingsCatalog
 } from './catalog'
 
@@ -26,12 +26,12 @@ export {
   settingsPageDefinition,
   settingsPageId,
   settingsPageIsVisible,
+  isDesktopStartupSettingsPage,
   settingsPageLabel,
   settingsPolicy,
   settingsScopeDescription,
   settingsCapability,
   settingsFieldIsVisible,
-  isEverydaySettingsField,
   validateSettingsCatalog
 } from './catalog'
 export type {
@@ -50,7 +50,8 @@ export function isSettingsSectionVisible(id: string): boolean {
 export function orderSettingsSections<T extends { id: string }>(sections: readonly T[]): T[] {
   const order = settingsPolicy.sections.order
   return sections
-    .filter(section => isSettingsSectionVisible(section.id))
+    .filter(section => isSettingsSectionVisible(section.id)
+      && !isDesktopStartupSettingsPage(`${section.id} ${'label' in section ? String(section.label) : ''}`))
     .map((section, index) => ({ section, index }))
     .sort((a, b) => {
       const aRank = order.indexOf(settingsPageId(a.section.id))

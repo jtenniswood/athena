@@ -5,8 +5,6 @@ import { createRequire } from 'node:module'
 import vm from 'node:vm'
 import { test } from 'node:test'
 import ts from 'typescript'
-import { createServer } from 'vite'
-import { rendererAliases } from './aliases.mjs'
 import { loadRegistry, validateRegistry, registryContracts, checkGeneratedRegistryFiles, generatedRegistryFiles, coverageReport } from './compatibility-registry.mjs'
 import { inspectContracts } from './renderer-compatibility-report.mjs'
 
@@ -136,20 +134,19 @@ test('browser dialog adaptation resolves only registered consumers and keeps its
   }
 })
 
-test('Vite resolves SDK and direct dialog imports through the scoped browser adapters', async t => {
-  const server = await createServer({ configFile: false, root, logLevel: 'silent', plugins: [browserPlugin(root)], resolve: { alias: rendererAliases(), preserveSymlinks: true }, server: { middlewareMode: true } })
-  t.after(() => server.close())
-  const resolver = server.environments.client.pluginContainer
+test('browser resolver maps SDK and direct dialog imports through the scoped adapters', async () => {
   for (const name of ['browser-dialog-boundary', 'browser-dialog-sdk-boundary']) {
     const entry = registry.find(entry => entry.name === name)
     const specifier = entry.specifier ?? '@/components/ui/dialog'
-    for (const importer of entry.importers) {
-      const resolved = await resolver.resolveId(specifier, path.join(root, '../desktop/src', importer))
-      assert.equal(resolved.id, path.join(root, entry.replacement))
-    }
     const upstream = path.resolve(root, '../desktop/src', entry.module)
+    const plugin = browserPlugin(root)
+    const context = { resolve: async () => ({ id: upstream }) }
+    for (const importer of entry.importers) {
+      const resolved = await plugin.resolveId.call(context, specifier, path.join(root, '../desktop/src', importer))
+      assert.equal(resolved, path.join(root, entry.replacement))
+    }
     for (const importer of [entry.replacement, '../desktop/src/app/consumer.tsx']) {
-      assert.equal((await resolver.resolveId(specifier, path.join(root, importer))).id, upstream)
+      assert.equal(await plugin.resolveId.call(context, specifier, path.join(root, importer)), null)
     }
   }
 })

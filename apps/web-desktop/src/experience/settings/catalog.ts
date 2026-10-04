@@ -136,7 +136,10 @@ export const settingsFields: readonly SettingsFieldDefinition[] = [
   { id: 'terminal.font_family', visibility: 'hidden', supportState: 'unsupported', reason: 'This browser interface has no native terminal pane.' },
   { id: 'updates.non_interactive_local_changes', visibility: 'hidden', supportState: 'unknown', reason: 'This host update control is not exposed as a browser preference.' },
   { id: 'voice.client_direct', visibility: 'hidden', supportState: 'unknown', reason: 'Direct provider voice has not been verified for this browser-to-Hermes connection.' },
-  { id: 'voice.record_key', visibility: 'hidden', supportState: 'unsupported', reason: 'The terminal voice shortcut is separate from browser keyboard shortcuts.' }
+  { id: 'voice.record_key', visibility: 'hidden', supportState: 'unsupported', reason: 'The terminal voice shortcut is separate from browser keyboard shortcuts.' },
+  { id: 'voice.voice_chat_mode', visibility: 'hidden', reason: 'Voice conversation is not available in this browser interface.' },
+  { id: 'voice.gpt_live.voice', visibility: 'hidden', reason: 'Voice conversation is not available in this browser interface.' },
+  { id: 'voice.gpt_live.instructions', visibility: 'hidden', reason: 'Voice conversation is not available in this browser interface.' }
 ]
 
 export const hiddenPageDefinitions: readonly SettingsPageDefinition[] = [
@@ -165,6 +168,11 @@ export function settingsPageId(id: string): string {
   return id.split('&')[0]
 }
 
+export function isDesktopStartupSettingsPage(idOrLabel: string): boolean {
+  const normalized = idOrLabel.toLowerCase().replace(/[^a-z0-9]+/g, ' ')
+  return normalized.includes('desktop') && normalized.includes('startup')
+}
+
 export function settingsPageDefinition(id: string): SettingsPageDefinition | undefined {
   return pagesById.get(settingsPageId(id))
 }
@@ -188,7 +196,8 @@ export function settingsCapability(id: string): SettingsCapability | undefined {
 export function settingsPageIsVisible(id: string): boolean {
   const page = settingsPageId(id)
   const canonical = page.startsWith('config:') ? page.slice('config:'.length) : page
-  return settingsPageDefinition(page)?.visibility !== 'hidden'
+  return !isDesktopStartupSettingsPage(page)
+    && settingsPageDefinition(page)?.visibility !== 'hidden'
     && !hiddenSettingsPages.includes(page)
     && !hiddenSettingsPages.includes(canonical)
 }
@@ -196,20 +205,6 @@ export function settingsPageIsVisible(id: string): boolean {
 export function settingsFieldIsVisible(id: string): boolean {
   if (settingsFields.find(field => field.id === id)?.visibility === 'hidden') return false
   return !(settingsPolicy.fields.hidden as readonly string[]).includes(id)
-}
-
-/** Keep the everyday configuration surface small; new upstream fields default to advanced. */
-const everydaySettingsFields: Readonly<Record<string, readonly string[]>> = {
-  chat: ['display.personality', 'timezone', 'display.show_reasoning'],
-  model: ['fallback_providers', 'fallback_models', 'models.fallback', 'model.fallback'],
-  memory: ['memory.memory_enabled', 'memory.user_profile_enabled'],
-  safety: ['approvals.mode'],
-  voice: ['voice.voice_chat_mode', 'stt.enabled', 'voice.auto_tts'],
-  workspace: ['terminal.cwd', 'desktop.repo_scan_enabled']
-}
-
-export function isEverydaySettingsField(sectionId: string, fieldId: string): boolean {
-  return everydaySettingsFields[sectionId]?.includes(fieldId) ?? false
 }
 
 /** Validate authored entries while leaving unknown upstream pages to fallback. */

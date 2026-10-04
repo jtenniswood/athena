@@ -146,6 +146,20 @@ body > [data-slot='fan-menu'] {
   display: none !important;
 }
 
+/* Keep the browser's interface and session density defaults consistent.
+   Their controls are useful in the native desktop window, but this wrapper
+   presents one fixed chat-first layout. */
+[id*='interface-mode'],
+[id*='interfaceMode'],
+[id*='session-density'],
+[id*='sessionDensity'],
+[id*='text-direction'],
+[id*='textDirection'],
+[id*='tool-view'],
+[id*='toolView'] {
+  display: none !important;
+}
+
 /* Keep the Sessions/Bots workspace tabs prominent while giving their labels
    a little more room in the narrow sidebar. */
 [data-zone-tabstrip]:has([data-tree-tab='sessions']) [data-tree-tab] {
