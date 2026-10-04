@@ -11,15 +11,18 @@ the image.
 
 ## Choose the source revision
 
-- Build the branch or ref the user names. If they do not name one, use the
-  current branch only when it is clearly the intended target; otherwise ask
-  which branch to build.
+- Always build `main`, even when the user invokes the skill from another
+  branch or names a different ref. Switch the local checkout to `main` before
+  proceeding, and dispatch the workflow with `--ref main`.
+- Preserve local work. If the working tree has changes that prevent switching
+  to `main`, stop and report that the user must save or commit those changes;
+  never stash, discard, commit, or push them as part of this skill.
 - Builds use the revision pushed to GitHub. Never commit or push as part of this
   skill. If the user expects local uncommitted changes to be included, explain
   that they must first be committed and pushed.
-- Confirm the selected branch exists on `origin` and that the dev workflow is
-  available in the repository's default branch. If either check fails, stop and
-  report what is missing.
+- Confirm `main` exists on `origin` and that the dev workflow is available in
+  the repository's default branch. If either check fails, stop and report what
+  is missing.
 
 ## Dispatch and monitor
 
@@ -28,10 +31,10 @@ The repository is `jtenniswood/athena`; the workflow is
 dispatching this workflow and publishing its image to GHCR. Do not dispatch for
 questions about the workflow or hypothetical build requests.
 
-Use GitHub CLI to dispatch the workflow for the selected branch:
+Use GitHub CLI to dispatch the workflow for `main`:
 
 ```sh
-gh workflow run dev-image.yml --repo jtenniswood/athena --ref BRANCH
+gh workflow run dev-image.yml --repo jtenniswood/athena --ref main
 ```
 
 Before dispatch, record the IDs of recent `workflow_dispatch` runs for this
