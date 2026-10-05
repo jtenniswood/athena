@@ -12,14 +12,13 @@ the image.
 ## Choose the source revision
 
 - Always build `main`, even when the user invokes the skill from another
-  branch or names a different ref. Switch the local checkout to `main` before
-  proceeding, and dispatch the workflow with `--ref main`.
-- Preserve local work. If the working tree has changes that prevent switching
-  to `main`, stop and report that the user must save or commit those changes;
-  never stash, discard, commit, or push them as part of this skill.
-- Builds use the revision pushed to GitHub. Never commit or push as part of this
-  skill. If the user expects local uncommitted changes to be included, explain
-  that they must first be committed and pushed.
+  branch or names a different ref. Dispatch with `--ref main`; GitHub builds
+  the code already merged and pushed to `main`. The local checkout and its
+  working tree do not affect the build, so do not switch branches or alter
+  local changes.
+- Never commit or push as part of this skill. If the user expects local
+  uncommitted changes to be included, explain that they must first be committed,
+  pushed, and merged to `main`.
 - Confirm `main` exists on `origin` and that the dev workflow is available in
   the repository's default branch. If either check fails, stop and report what
   is missing.
