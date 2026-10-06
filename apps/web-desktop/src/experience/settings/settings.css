@@ -357,9 +357,6 @@ body:has([data-browser-settings-frame]) [data-slot='select-item'][data-highlight
   .browser-settings-frame :is(input:not([type='checkbox'], [type='radio']), textarea, select) { font-size: max(1rem, calc(16px / var(--web-ui-scale, 1))); }
   .browser-gateway-settings-field > :is(select, input),
   .browser-gateway-settings-actions > button { min-height: max(2.5rem, var(--web-touch-min)); }
-  .browser-settings-subnavigation { display: flex; gap: var(--web-space-1); flex-shrink: 0; overflow-x: auto; padding-bottom: var(--web-space-3); }
-  .browser-settings-subnavigation button { flex-shrink: 0; padding-inline: var(--web-space-3); border: 0; border-radius: var(--web-radius-control); background: transparent; color: var(--web-text-muted); font: inherit; }
-  .browser-settings-subnavigation button[aria-current='page'] { background: var(--web-active); color: var(--web-text); }
 }
 
 /* Match chat navigation's touch density without enlarging mouse layouts. */
