@@ -61,7 +61,6 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const [compactPresentation, setCompactPresentation] = useState<CompactPresentation>({ mode: 'automatic' })
   const params = new URLSearchParams(location.search)
   const hasDirectTarget = params.has('tab') || params.has('field') || params.has('setting')
-  const opensDefaultSettingsTab = !hasDirectTarget && activeView === 'config:appearance'
   const navigationGroups = groupSettingsSections(groups)
   const visibleGroups = navigationGroups.flatMap(group => group.items)
   const activeGroup = visibleGroups.find(group => group.active)
@@ -75,7 +74,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   // A single child adds a redundant stop in navigation; show its content from
   // the parent destination instead.
   const activeChildren = orderedActiveChildren.length > 1 ? orderedActiveChildren : []
-  const directTargetOpensDetail = (hasDirectTarget || opensDefaultSettingsTab)
+  const directTargetOpensDetail = hasDirectTarget
     && (compactPresentation.mode === 'automatic' || (compactPresentation.mode === 'menu' && compactPresentation.locationKey !== location.key))
   const showDetail = activeVisible && (!compact || compactPresentation.mode === 'detail' || directTargetOpensDetail)
 
@@ -135,7 +134,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
                   <span>{group.label}</span>
                   <Codicon name="chevron-right" className="browser-settings-category-chevron" />
                 </button>
-                {!compact && group.active && activeChildren.map(child => {
+                {group.active && activeChildren.map(child => {
                   const ChildIcon = child.icon
                   return <button
                     type="button"
@@ -155,9 +154,6 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
           </div>
         </nav>
         <main className="browser-settings-detail" aria-label={activeGroup?.label ?? title}>
-          {compact && showDetail && activeChildren.length > 0 && <nav className="browser-settings-subnavigation" aria-label={`${activeGroup?.label} categories`}>
-            {activeChildren.map(child => <button key={child.id} type="button" aria-current={child.active ? 'page' : undefined} onClick={() => selectCategory(child)}>{child.label}</button>)}
-          </nav>}
           {!showDetail && <div className="browser-settings-home">
             <h2>{title}</h2>
             <p>{activeVisible ? 'Choose a category to view and change its options.' : 'This settings category is hidden. Choose another category or close settings.'}</p>
