@@ -161,7 +161,7 @@ test('sign-out leaves unsent attachments in chat without ending the session', as
   expect(logouts).toBe(0)
 })
 
-test('signed-out users see sign-in before any chat connection; server labels are plain text', async ({ page, context }) => {
+test('signed-out users see sign-in before any chat connection; provider labels are plain text', async ({ page, context }) => {
   await hermesAuth(context, { providers: [{ ...oidc, display_name: '<img src=x onerror=alert(1)>' }] })
   let sockets = 0
   page.on('websocket', () => sockets++)
@@ -297,6 +297,59 @@ test('sign-in completed in another tab connects when Athena regains focus', asyn
   await context.addCookies([{ name: 'athena_test_session', value: 'authenticated', url: origin, httpOnly: true }])
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
+})
+
+test('a pending focus session check keeps Sign in usable', async ({ page, context }) => {
+  await hermesAuth(context)
+  await page.addInitScript(() => {
+    const matchMedia = window.matchMedia.bind(window)
+    window.matchMedia = query => query === '(display-mode: standalone)' ? { ...matchMedia(query), matches: true } : matchMedia(query)
+  })
+  await page.goto(`${origin}/#/preview-week`)
+  const signIn = page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' })
+  await expect(signIn).toBeEnabled()
+  let releaseProbe, observedProbe
+  const held = new Promise(resolve => { releaseProbe = resolve })
+  const requested = new Promise(resolve => { observedProbe = resolve })
+  let first = true
+  await context.route('**/api/auth/me', async route => {
+    if (first) { first = false; observedProbe(); await held }
+    await route.fallback()
+  })
+  try {
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+    await requested
+    await expect(signIn).toBeEnabled({ timeout: 1000 })
+    const loginRequested = page.waitForRequest(request => new URL(request.url()).pathname === '/auth/login')
+    const clicking = signIn.click()
+    await loginRequested
+    releaseProbe()
+    await clicking
+    await expect(editor(page)).toBeVisible({ timeout: 30000 })
+  } finally { releaseProbe() }
+})
+
+test('queried password login bypasses an older installed app-shell worker', async ({ page, context }) => {
+  await hermesAuth(context, { providers: [{ name: 'basic', display_name: 'Password', supports_password: true }] })
+  await page.addInitScript(() => {
+    const matchMedia = window.matchMedia.bind(window)
+    window.matchMedia = query => query === '(display-mode: standalone)' ? { ...matchMedia(query), matches: true } : matchMedia(query)
+  })
+  // Model the legacy navigation fallback's pathname + query matcher. A
+  // request reaching the server must carry its already-supported bypass.
+  await context.route('**/login?*', async route => {
+    const url = new URL(route.request().url())
+    if (url.searchParams.get('hermes-reconnect') !== '1') {
+      await route.fulfill({ contentType: 'text/html', body: '<h1>Cached Athena shell</h1>' })
+    } else {
+      await route.fulfill({ contentType: 'text/html', body: '<h1>Hermes password login</h1>' })
+    }
+  })
+  await page.goto(`${origin}/?source=bookmark#/preview-week`)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Hermes password login' })).toBeVisible()
+  expect(new URL(page.url()).searchParams.get('next')).toBe('/?source=bookmark#/preview-week')
+  expect(await page.evaluate(() => Boolean(window.hermesDesktop))).toBe(false)
 })
 
 test('multiple providers use the Hermes provider chooser', async ({ page, context }) => {

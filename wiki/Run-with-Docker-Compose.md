@@ -6,6 +6,9 @@ Docker Compose is optional. For the direct Docker setup, see the main
 Athena serves the web app and proxies requests to a Hermes Gateway that you
 run separately. The Compose service does not start a gateway or model runtime.
 
+For identity-provider sign-in, follow [Set up OIDC](Set-up-OIDC) after configuring
+the backend connection and HTTPS access.
+
 ## 1. Create the environment file
 
 From the repository root, copy the supplied template:

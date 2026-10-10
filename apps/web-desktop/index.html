@@ -59,22 +59,35 @@
     <script>
       // Pre-paint the themed background before the app bundle loads (mirrors
       // apps/desktop/index.html; avoids the white flash).
+      const dark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      let bg = dark ? '#111111' : '#f7f7f7'
+      let scheme = dark ? 'dark' : 'light'
       try {
-        let bg = localStorage.getItem('hermes-boot-background')
-        let scheme = localStorage.getItem('hermes-boot-color-scheme')
-        if (!bg) {
-          const dark = window.matchMedia('(prefers-color-scheme: dark)').matches
-          bg = dark ? '#111111' : '#f7f7f7'
-          scheme = dark ? 'dark' : 'light'
-        }
-        document.documentElement.style.backgroundColor = bg
-        document.documentElement.style.setProperty('--hermes-boot-background', bg)
-        if (scheme === 'dark' || scheme === 'light') {
-          document.documentElement.style.colorScheme = scheme
+        const savedBg = localStorage.getItem('hermes-boot-background')
+        const savedScheme = localStorage.getItem('hermes-boot-color-scheme')
+        if (savedBg && (savedScheme === 'dark' || savedScheme === 'light')) {
+          bg = savedBg
+          scheme = savedScheme
+        } else if (savedBg) {
+          // Older themes saved only the background. Infer its scheme so a
+          // dark saved background cannot inherit light-mode sign-in text.
+          const hex = savedBg.match(/^#([\da-f]{3}|[\da-f]{6})$/i)?.[1]
+          const rgb = savedBg.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
+          const fullHex = hex?.length === 3 ? [...hex].map(value => value + value).join('') : hex
+          const channels = fullHex ? [0, 2, 4].map(offset => parseInt(fullHex.slice(offset, offset + 2), 16)) : rgb?.slice(1, 4).map(Number)
+          if (channels) {
+            const linear = channels.map(value => value / 255 <= .04045 ? value / 255 / 12.92 : ((value / 255 + .055) / 1.055) ** 2.4)
+            scheme = linear[0] * .2126 + linear[1] * .7152 + linear[2] * .0722 < .179 ? 'dark' : 'light'
+            bg = savedBg
+          }
         }
       } catch {
-        // localStorage unavailable — keep UA defaults.
+        // Browser storage is optional; keep the system theme defaults.
       }
+      document.documentElement.style.backgroundColor = bg
+      document.documentElement.style.setProperty('--hermes-boot-background', bg)
+      document.documentElement.style.colorScheme = scheme
+      document.documentElement.dataset.athenaBootScheme = scheme
     </script>
   </head>
   <body>

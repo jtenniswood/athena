@@ -114,6 +114,9 @@ selection, credentials, OIDC callbacks, and session refresh. See the
 for provider and proxy configuration. OIDC controls access to the connected
 Hermes instance; it does not create separate user workspaces.
 
+For step-by-step client registration, backend settings, Docker configuration,
+and troubleshooting, see [Set up OIDC in the wiki](https://github.com/jtenniswood/athena/wiki/Set-up-OIDC).
+
 ### Acknowledgment
 
 Athena is an original project based on the work of

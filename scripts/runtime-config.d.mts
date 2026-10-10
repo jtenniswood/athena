@@ -1,4 +1,5 @@
 export const proxyRoutes: string[]
+export const navigationFallbackDenylist: RegExp[]
 export function matchesGatewayRoute(url?: string): boolean
 export interface HostingConfiguration {
   target: string

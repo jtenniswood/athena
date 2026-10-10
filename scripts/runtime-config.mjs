@@ -4,6 +4,13 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const proxyRoutes = ['/api', '/auth', '/login']
+// Workbox matches pathname + search, so a query must count as a route boundary.
+export const navigationFallbackDenylist = [
+  /[?&]hermes-reconnect=1(?:&|$)/,
+  /^\/(?:api|auth|login|plugins|desktop-plugins|cdn-cgi)(?:\/|\?|$)/,
+  /^\/(?:runtime-config|gateway-config)\.js(?:\?|$)/,
+  /^\/build-info\.json(?:\?|$)/
+]
 export function matchesGatewayRoute(url) {
   const pathname = new URL(url || '/', 'http://local.invalid').pathname
   return proxyRoutes.some(prefix => pathname === prefix || pathname.startsWith(prefix + '/'))
