@@ -1214,6 +1214,71 @@ for (const width of [390, 1440]) {
   })
 }
 
+for (const width of [390, 1440]) {
+  test.extend({ hasTouch: width === 390 })(`Permissions combines all controls and preserves legacy field links at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    const config = {
+      approvals: { mode: 'smart', timeout: 60, mcp_reload_confirm: true },
+      command_allowlist: ['echo'],
+      security: { redact_secrets: true, allow_private_urls: false },
+      checkpoints: { enabled: true }
+    }
+    const keys = [
+      'approvals.mode', 'approvals.timeout', 'approvals.mcp_reload_confirm', 'command_allowlist',
+      'security.redact_secrets', 'security.allow_private_urls', 'checkpoints.enabled'
+    ]
+    const writes = []
+    await page.route(/\/api\/config(?:\?|$)/, async route => {
+      if (route.request().method() === 'PUT') {
+        const patch = route.request().postDataJSON().config
+        writes.push(patch)
+        for (const [key, value] of Object.entries(patch)) {
+          config[key] = typeof value === 'object' && !Array.isArray(value) ? { ...config[key], ...value } : value
+        }
+        await route.fulfill({ json: { ok: true } })
+      } else await route.fulfill({ json: config })
+    })
+    await open(page)
+    await editor(page).fill('Keep this draft while editing permissions')
+    // The synthetic gateway may advertise an older renderer contract.
+    const dismiss = page.getByRole('button', { name: 'Dismiss notification', exact: true })
+    if (await dismiss.isVisible()) await dismiss.click()
+    const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+    const role = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
+    await trigger.click()
+    await page.getByRole(role, { name: 'Settings and workspace', exact: true })
+      .getByRole(role === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+    await page.getByRole('button', { name: 'Permissions', exact: true }).click()
+    const detail = page.getByRole('main', { name: 'Permissions', exact: true })
+    for (const key of keys) await expect(detail.locator(`[id="setting-field-${key}"]`)).toBeVisible()
+    await expect(page.locator('.browser-settings-category-button.is-child')).toHaveCount(0)
+    expect(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).has('page')).toBe(false)
+    await page.screenshot({ path: testInfo.outputPath('permissions.png') })
+
+    await detail.locator('[id="setting-field-approvals.timeout"] input').fill('120')
+    await detail.locator('[id="setting-field-security.allow_private_urls"]').getByRole('switch').click()
+    await detail.locator('[id="setting-field-checkpoints.enabled"]').getByRole('switch').click()
+    await expect.poll(() => config).toMatchObject({
+      approvals: { timeout: 120 }, security: { allow_private_urls: true }, checkpoints: { enabled: false }
+    })
+    expect(writes.length).toBeGreaterThan(0)
+
+    const settingsUrl = new URL(page.url())
+    const [routePath] = settingsUrl.hash.split('?')
+    for (const legacyPage of ['approvals', 'privacy', 'checkpoints']) {
+      settingsUrl.hash = `${routePath}?tab=config%3Asafety&page=${legacyPage}&field=security.redact_secrets`
+      await page.goto(settingsUrl.href)
+      await expect(detail.locator('[id="setting-field-security.redact_secrets"]')).toBeFocused()
+      for (const key of keys) await expect(detail.locator(`[id="setting-field-${key}"]`)).toBeVisible()
+      await expect(page.locator('.browser-settings-category-button.is-child')).toHaveCount(0)
+    }
+    await expect(detail.locator('[id="setting-field-approvals.timeout"] input')).toHaveValue('120')
+    await expect(detail.locator('[id="setting-field-checkpoints.enabled"]').getByRole('switch')).not.toBeChecked()
+    await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+    await expect(editor(page)).toHaveText('Keep this draft while editing permissions')
+  })
+}
+
 for (const width of [390, 820, 1440]) {
   test(`settings full-screen modal scales across compact and wide viewports at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
