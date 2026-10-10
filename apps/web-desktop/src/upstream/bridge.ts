@@ -1,4 +1,5 @@
 import { assertSafeConnectionChange, setActiveWork } from '../platform/reload-safety'
+import { browserSignInTarget } from '../platform/sign-in-target'
 import type { DesktopBootProgress, DesktopCloudAgentSignInResult, DesktopCloudDiscoverResult, DesktopCloudStatus, QuickEntryStatus, QuickEntrySubmitPayload } from '../upstream/types'
 import {
   activeUpstreamOrigin,
@@ -258,7 +259,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
       // cookie first so the IDP callback navigation reaches this gateway.
       syncDevGatewayCookie()
 
-      return openOauthLoginPopup(base, origin)
+      return openOauthLoginPopup(base, origin, browserSignInTarget().path)
     },
     oauthLogoutConnectionConfig: async remoteUrl => {
       const base = remoteUrl ? normalizeBase(remoteUrl) : baseUrl()

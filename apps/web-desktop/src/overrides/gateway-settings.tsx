@@ -9,6 +9,7 @@ import './gateway-settings.css'
 
 export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {}) {
   const gateway = getActiveGateway()
+  const authMode = runtimeConfig().auth?.mode || 'auto'
   const [mode, setMode] = useState(gateway.authMode)
   const [token, setToken] = useState('')
   const [message, setMessage] = useState('')
@@ -26,7 +27,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
       <p className="browser-gateway-settings-description">This app connects to the server configured by its operator.</p></div>
     <label className="browser-gateway-settings-field"><span>Sign-in method</span>
       <select className="block rounded border bg-background p-2" value={mode} disabled={busy} onChange={event => setMode(event.target.value as 'oauth' | 'token')}>
-        <option value="oauth">Browser sign-in</option><option value="token">Session token</option>
+        <option value="oauth">{authMode === 'hermes' ? 'Hermes Agent sign-in' : authMode === 'oidc' ? 'OIDC sign-in' : 'Browser sign-in'}</option><option value="token">Session token</option>
       </select>
     </label>
     {mode === 'token' && <label className="browser-gateway-settings-field"><span>Session token</span>

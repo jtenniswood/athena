@@ -32,10 +32,15 @@ export function runtimeConfiguration(env = process.env) {
   if (!Number.isInteger(port) || port < 1 || port > 65535 || !/^(?:localhost|[0-9a-fA-F:.]+)$/.test(host)) throw new Error('Invalid hosting bind address or port')
   const listen = `${host.includes(':') ? '[' + host + ']' : host}:${port}`
   const target = url.origin
+  const authMode = env.HERMES_AUTH_MODE || 'auto'
+  if (!['auto', 'hermes', 'oidc'].includes(authMode)) {
+    throw new Error('HERMES_AUTH_MODE must be auto, hermes, or oidc')
+  }
   return {
     target, home, staticRoot, stateDir, listen,
     publicConfig: {
       version: 1,
+      auth: { mode: authMode },
       gateway: {
         id: createHash('sha256').update(target).digest('hex'),
         name: env.HERMES_GATEWAY_NAME || 'Hermes',
