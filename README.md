@@ -74,6 +74,22 @@ and installed PWAs, sign-in uses the current window and returns to the original
 conversation; desktop browsers also offer a sign-in popup. **Use a session token**
 is available for existing token-based setups.
 
+Choose the sign-in flow in Athena's Docker environment file or with `docker run
+-e HERMES_AUTH_MODE=oidc`. Recreate the container after changing it; the same
+image supports all three values:
+
+| `HERMES_AUTH_MODE` | Sign-in flow |
+| --- | --- |
+| `auto` (default) | Detect the gateway's providers; use its chooser when several are available. |
+| `hermes` | Open the Hermes Agent login page for its configured account authentication. |
+| `oidc` | Open the gateway's self-hosted OIDC provider directly. |
+
+This also selects the browser sign-in flow in **Server Connection** settings. Existing
+sessions and session-token connections continue to work. Hermes verifies
+credentials and decides which authentication methods are accepted; this setting
+does not disable backend authentication. For `oidc`, configure the OIDC provider
+on the Hermes backend as described below.
+
 To sign out, open the settings menu and select **Sign out**. Athena saves your
 text drafts and returns to the sign-in screen. Finish active responses or
 recordings, and send or remove unsent attachments, before signing out.

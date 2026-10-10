@@ -1,12 +1,7 @@
 import { connectionState } from './connection-state'
 import { baseUrl, checkBrowserSession, fetchStatus, openOauthLoginPopup, resolveToken } from './connection'
 import { runtimeConfig } from './runtime'
-
-interface SignInProvider {
-  name: string
-  display_name: string
-  supports_password: boolean
-}
+import { browserSignInTarget, SignInConfigurationError, type SignInProvider } from './sign-in-target'
 
 /** Use Hermes's public provider metadata; credentials and OIDC stay on Hermes. */
 async function signInProviders(): Promise<SignInProvider[]> {
@@ -20,13 +15,6 @@ async function signInProviders(): Promise<SignInProvider[]> {
     return body.providers.filter((item): item is SignInProvider =>
       item && typeof item.name === 'string' && typeof item.display_name === 'string' && typeof item.supports_password === 'boolean')
   } catch { return [] }
-}
-
-function loginPath(providers: SignInProvider[], returnTo: string): string {
-  const provider = providers.length === 1 && !providers[0].supports_password ? providers[0] : null
-  const params = new URLSearchParams({ next: returnTo })
-  if (provider) params.set('provider', provider.name)
-  return `${provider ? '/auth/login' : '/login'}?${params}`
 }
 
 /** Gate cold startup without evaluating upstream stores or touching saved drafts. */
@@ -107,13 +95,13 @@ export async function waitForSignIn(): Promise<void> {
         const providers = await signInProviders()
         const url = new URL(window.location.href)
         const returnTo = url.pathname.startsWith('//') ? '/' : `${url.pathname}${url.search}${url.hash}`
-        path = loginPath(providers, returnTo)
-        signIn.textContent = providers.length === 1 && !providers[0].supports_password
-          ? `Sign in with ${providers[0].display_name}` : 'Sign in'
+        const target = browserSignInTarget(providers, returnTo)
+        path = target.path
+        signIn.textContent = target.label
         status.textContent = 'Your server is ready. Sign in to continue.'
         actions.hidden = advanced.hidden = false
-      } catch {
-        status.textContent = 'Could not reach your Hermes server. Check your connection and try again.'
+      } catch (error) {
+        status.textContent = error instanceof SignInConfigurationError ? error.message : 'Could not reach your Hermes server. Check your connection and try again.'
         retry.hidden = false
       } finally { if (!finished) setBusy(false) }
     }

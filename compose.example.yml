@@ -9,3 +9,4 @@ services:
     environment:
       HERMES_GATEWAY_URL: ${HERMES_GATEWAY_URL:-http://host.docker.internal:9119}
       HERMES_GATEWAY_NAME: ${HERMES_GATEWAY_NAME:-Local Hermes}
+      HERMES_AUTH_MODE: ${HERMES_AUTH_MODE:-auto}
