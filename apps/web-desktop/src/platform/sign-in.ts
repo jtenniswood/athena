@@ -1,6 +1,5 @@
 import { connectionState } from './connection-state'
-import { baseUrl, checkBrowserSession, fetchStatus, openOauthLoginPopup, resolveToken } from './connection'
-import { runtimeConfig } from './runtime'
+import { baseUrl, browserLoginUrl, checkBrowserSession, fetchStatus, openOauthLoginPopup, resolveToken } from './connection'
 
 interface SignInProvider {
   name: string
@@ -41,8 +40,6 @@ export async function waitForSignIn(): Promise<void> {
     <section class="athena-sign-in-card" aria-labelledby="athena-sign-in-title">
       <img class="hermes-startup-logo" src="/athena.svg" width="64" height="64" alt="" />
       <h1 id="athena-sign-in-title">Welcome to Athena</h1>
-      <p>Sign in to start chatting with Hermes.</p>
-      <p class="athena-sign-in-server"></p>
       <p class="athena-sign-in-status" role="status" aria-live="polite">Checking your session…</p>
       <div class="athena-sign-in-actions" hidden>
         <button type="button" class="athena-sign-in-primary">Sign in</button>
@@ -66,15 +63,20 @@ export async function waitForSignIn(): Promise<void> {
   const retry = find<HTMLButtonElement>('.athena-sign-in-retry')
   const advanced = find<HTMLDetailsElement>('details')
   const tokenInput = find<HTMLInputElement>('input')
-  find<HTMLParagraphElement>('.athena-sign-in-server').textContent = runtimeConfig().gateway.name
   root.replaceChildren(section)
 
   return new Promise(resolve => {
     let finished = false
     let busy = false
+    let resuming = false
     let path = '/login'
     const preferCurrentWindow = window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(pointer: coarse)').matches
-    currentWindow.hidden = preferCurrentWindow
+    currentWindow.hidden = true
+
+    function setStatus(message: string) {
+      status.textContent = message
+      status.hidden = !message
+    }
 
     function setBusy(value: boolean) {
       busy = value
@@ -88,14 +90,14 @@ export async function waitForSignIn(): Promise<void> {
       window.removeEventListener('focus', onFocus)
       document.removeEventListener('visibilitychange', onVisible)
       actions.hidden = retry.hidden = advanced.hidden = true
-      status.textContent = 'Connecting to Hermes…'
+      setStatus('Connecting to Hermes…')
       resolve()
     }
 
     async function check() {
       if (finished || busy) return
       setBusy(true)
-      status.textContent = 'Checking your session…'
+      setStatus('Checking your session…')
       actions.hidden = retry.hidden = advanced.hidden = true
       try {
         const server = await fetchStatus(baseUrl())
@@ -110,18 +112,18 @@ export async function waitForSignIn(): Promise<void> {
         path = loginPath(providers, returnTo)
         signIn.textContent = providers.length === 1 && !providers[0].supports_password
           ? `Sign in with ${providers[0].display_name}` : 'Sign in'
-        status.textContent = 'Your server is ready. Sign in to continue.'
+        setStatus('')
         actions.hidden = advanced.hidden = false
       } catch {
-        status.textContent = 'Could not reach your Hermes server. Check your connection and try again.'
+        setStatus('Could not reach your Hermes server. Check your connection and try again.')
         retry.hidden = false
       } finally { if (!finished) setBusy(false) }
     }
 
     function navigateToSignIn() {
       setBusy(true)
-      status.textContent = 'Opening sign-in…'
-      window.location.assign(new URL(path, baseUrl()).href)
+      setStatus('Opening sign-in…')
+      window.location.assign(browserLoginUrl(baseUrl(), path).href)
     }
 
     signIn.onclick = () => {
@@ -129,19 +131,21 @@ export async function waitForSignIn(): Promise<void> {
       if (preferCurrentWindow) { navigateToSignIn(); return }
       setBusy(true)
       currentWindow.disabled = false
-      status.textContent = 'Complete sign-in in the window that opened.'
+      setStatus('Complete sign-in in the window that opened.')
       // Open synchronously from the click so browsers accept the popup.
       void openOauthLoginPopup(baseUrl(), null, path).then(result => {
         if (result.connected) {
           connectionState().update({ authMode: 'oauth', token: '' })
           connected()
         } else {
-          status.textContent = result.ok
+          currentWindow.hidden = false
+          setStatus(result.ok
             ? 'Sign-in did not complete. Try again or continue in this window.'
-            : 'The sign-in window was blocked. Continue in this window to sign in.'
+            : 'The sign-in window was blocked. Continue in this window to sign in.')
         }
       }).catch(() => {
-        status.textContent = 'Sign-in could not be completed. Try again or continue in this window.'
+        currentWindow.hidden = false
+        setStatus('Sign-in could not be completed. Try again or continue in this window.')
       }).finally(() => { if (!finished) setBusy(false) })
     }
     currentWindow.onclick = navigateToSignIn
@@ -154,15 +158,15 @@ export async function waitForSignIn(): Promise<void> {
       connected()
     }
     async function resume() {
-      if (finished || busy) return
-      setBusy(true)
+      if (finished || busy || resuming) return
+      resuming = true
       try {
-        if (await checkBrowserSession()) {
+        if (await checkBrowserSession() && !finished && !busy) {
           connectionState().update({ authMode: 'oauth', token: '' })
           connected()
         }
       } catch { /* Keep the sign-in screen usable when returning offline. */ }
-      finally { if (!finished) setBusy(false) }
+      finally { resuming = false }
     }
     function onFocus() { void resume() }
     function onVisible() { if (document.visibilityState === 'visible') void resume() }
