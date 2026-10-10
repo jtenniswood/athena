@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { Button, Input, SettingsContent } from '../upstream/ui'
 import { runtimeConfig } from '../platform/runtime'
 import { getActiveGateway, updateGateway } from '../web-bridge/gateways'
+import './gateway-settings.css'
 
 export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {}) {
   const gateway = getActiveGateway()
@@ -30,7 +31,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
       </select>
     </label>
     {mode === 'token' && <label className="browser-gateway-settings-field"><span>Session token</span>
-      <Input type="password" autoComplete="off" value={token} onChange={event => setToken(event.target.value)} placeholder={gateway.token ? 'Leave blank to keep the saved token' : 'Enter a session token'} />
+      <Input type="password" autoComplete="off" value={token} onChange={event => setToken(event.target.value)} placeholder={gateway.token ? 'Leave blank to keep token' : 'Enter a session token'} />
     </label>}
     <div className="browser-gateway-settings-actions">
       <Button disabled={busy} onClick={() => void run(async () => {

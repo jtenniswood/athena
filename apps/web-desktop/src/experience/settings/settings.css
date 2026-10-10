@@ -31,20 +31,16 @@
   background: var(--web-bg);
   cursor: pointer;
 }
-.browser-settings-page,
-.browser-gateway-settings {
+.browser-settings-page {
   display: grid;
   align-content: start;
   gap: var(--web-space-6);
   padding-inline: var(--web-space-1);
   padding-block-start: var(--web-space-2);
 }
-.browser-settings-page-header,
-.browser-gateway-settings-intro { display: grid; gap: var(--web-space-1); }
-.browser-settings-page-title,
-.browser-gateway-settings-intro h2 { margin: 0; font-size: var(--web-text-body); font-weight: 500; line-height: var(--web-line-body); }
-.browser-settings-page-description,
-.browser-gateway-settings-intro p { margin: 0; color: var(--web-text-muted); font-size: var(--web-text-caption); line-height: var(--web-line-body); }
+.browser-settings-page-header { display: grid; gap: var(--web-space-1); }
+.browser-settings-page-title { margin: 0; font-size: var(--web-text-body); font-weight: 500; line-height: var(--web-line-body); }
+.browser-settings-page-description { margin: 0; color: var(--web-text-muted); font-size: var(--web-text-caption); line-height: var(--web-line-body); }
 .browser-configuration-page { padding-inline: 0; }
 .browser-color-themes-mode { display: flex; gap: 0.35rem; }
 .browser-color-themes-mode button {
@@ -308,35 +304,6 @@ body:has([data-browser-settings-frame]) [data-slot='select-item'][data-highlight
 }
 .browser-advanced-settings[open] > summary { margin-bottom: var(--web-space-2); }
 
-.browser-gateway-settings-name { color: var(--web-text); font-size: var(--web-text-body); font-weight: 500; }
-.browser-gateway-settings-description { color: var(--web-text-muted); font-size: var(--web-text-caption); }
-.browser-gateway-settings-field { display: grid; width: min(100%, 28rem); gap: var(--web-space-2); font-size: var(--web-text-body); }
-.browser-gateway-settings-field > :is(select, input) {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  min-height: 2.5rem;
-  padding: var(--web-space-2) var(--web-space-3);
-  border: 1px solid var(--web-border-subtle);
-  border-radius: var(--web-radius-control);
-  color: var(--web-text);
-  background: var(--web-bg);
-  font: inherit;
-}
-.browser-gateway-settings-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--web-space-2); }
-.browser-gateway-settings-actions > button {
-  min-height: 2.5rem;
-  padding: var(--web-space-2) var(--web-space-4);
-  border-radius: var(--web-radius-control);
-  font-family: var(--web-font);
-  font-size: var(--web-text-body);
-  font-weight: 500;
-  line-height: var(--web-line-body);
-  letter-spacing: normal;
-  box-shadow: none;
-}
-.browser-gateway-settings > [role='status'] { margin: 0; color: var(--web-text-muted); font-size: var(--web-text-caption); }
-
 @media (max-width: 55.999rem), (pointer: coarse) and (max-height: 27rem) {
   .browser-settings-header { gap: var(--web-space-2); padding-right: calc(var(--web-sheet-padding-end) + var(--web-touch-min) + var(--web-space-2)); }
   .browser-settings-heading { flex: 1; min-height: var(--settings-header-height); }
@@ -355,8 +322,6 @@ body:has([data-browser-settings-frame]) [data-slot='select-item'][data-highlight
   .browser-settings-fullscreen-card > .pointer-events-none button { width: var(--web-touch-min); height: var(--web-touch-min); }
   .browser-settings-frame :is(button:not(.browser-settings-category-button), input:not([type='checkbox'], [type='radio']), select, textarea) { min-height: var(--web-touch-min); }
   .browser-settings-frame :is(input:not([type='checkbox'], [type='radio']), textarea, select) { font-size: max(1rem, calc(16px / var(--web-ui-scale, 1))); }
-  .browser-gateway-settings-field > :is(select, input),
-  .browser-gateway-settings-actions > button { min-height: max(2.5rem, var(--web-touch-min)); }
 }
 
 /* Match chat navigation's touch density without enlarging mouse layouts. */
