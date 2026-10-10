@@ -74,6 +74,10 @@ and installed PWAs, sign-in uses the current window and returns to the original
 conversation; desktop browsers also offer a sign-in popup. **Use a session token**
 is available for existing token-based setups.
 
+To sign out, open the settings menu and select **Sign out**. Athena saves your
+text drafts and returns to the sign-in screen. Finish active responses or
+recordings, and send or remove unsent attachments, before signing out.
+
 Authentication is configured on the **Hermes backend**, separately from Athena's
 container. For OIDC, register a public client with authorization code and PKCE
 (S256), and allow `https://athena.example.com/auth/callback` as its redirect URI.

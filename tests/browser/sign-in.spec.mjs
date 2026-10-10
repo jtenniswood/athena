@@ -26,12 +26,13 @@ const oidc = { name: 'self-hosted', display_name: 'Self-Hosted OIDC', supports_p
 const editor = page => page.locator('[contenteditable="true"]:visible').first()
 
 async function hermesAuth(context, { providers = [oidc], signedIn = false } = {}) {
+  if (signedIn) await context.addCookies([{ name: 'athena_test_session', value: 'authenticated', url: origin, httpOnly: true }])
   await context.route('**/api/status', route => route.fulfill({ json: { auth_required: true, auth_providers: providers.map(item => item.name) } }))
   await context.route('**/api/auth/providers', route => route.fulfill({ json: { providers } }))
   await context.route('**/api/auth/me', async route => {
     // WebKit omits Cookie from intercepted request headers. Inspect the
     // per-origin browser jar when simulating Hermes's session verification.
-    const authenticated = signedIn || (await context.cookies(route.request().url()))
+    const authenticated = (await context.cookies(route.request().url()))
       .some(cookie => cookie.name === 'athena_test_session' && cookie.value === 'authenticated')
     return route.fulfill({ status: authenticated ? 200 : 401, json: authenticated ? { provider: 'self-hosted', user_id: 'test-user' } : { detail: 'sign_in_required' } })
   })
@@ -52,7 +53,109 @@ async function hermesAuth(context, { providers = [oidc], signedIn = false } = {}
     headers: { 'set-cookie': 'athena_test_session=authenticated; Path=/; HttpOnly; SameSite=Lax' },
     body: `<script>location.replace(${JSON.stringify(returnTo)})</script>`
   }))
+  await context.route('**/auth/logout', route => route.fulfill({
+    // WebKit cannot fulfill mocked redirects; model the completed login response.
+    status: context.browser().browserType().name() === 'webkit' ? 200 : 302,
+    contentType: 'text/html', body: '<p>Signed out</p>',
+    headers: { location: '/login', 'set-cookie': 'athena_test_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0' }
+  }))
 }
+
+async function selectSignOut(page, compact = false) {
+  await page.getByRole('button', { name: 'Open settings menu', exact: true }).click()
+  const menu = page.getByRole(compact ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
+  await menu.getByRole(compact ? 'button' : 'menuitem', { name: 'Sign out', exact: true }).click()
+}
+
+async function expectSignOutError(page, message) {
+  // The fixture can also report backend skew; expand the notification stack.
+  await expect.poll(async () => {
+    const more = page.getByRole('button', { name: /^Show \d+ more notifications?$/ })
+    if (await more.isVisible()) await more.click()
+    return page.getByText(message, { exact: true }).isVisible()
+  }).toBe(true)
+}
+
+for (const width of [390, 1440]) {
+  test.extend({ hasTouch: width === 390 })(`settings sign-out returns to sign-in and preserves text drafts at ${width}px`, async ({ page, context }) => {
+    await hermesAuth(context, { signedIn: true })
+    await page.setViewportSize({ width, height: 960 })
+    await page.goto(`${origin}/#/preview-week`)
+    await expect(editor(page)).toBeVisible({ timeout: 30000 })
+    await editor(page).fill('Keep this draft after signing out')
+    const logout = page.waitForRequest(request => request.url().endsWith('/auth/logout'))
+    await selectSignOut(page, width === 390)
+    expect((await logout).method()).toBe('POST')
+    await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' })).toBeEnabled()
+    await expect(editor(page)).toHaveCount(0)
+    await expect(page).toHaveURL(/#\/preview-week$/)
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes:composer-drafts:v3'))['preview-week'])).toBe('Keep this draft after signing out')
+    await context.addCookies([{ name: 'athena_test_session', value: 'authenticated', url: origin, httpOnly: true }])
+    await page.reload()
+    await expect(editor(page)).toHaveText('Keep this draft after signing out', { timeout: 30000 })
+  })
+}
+
+test('settings sign-out clears imported session tokens', async ({ page, context }) => {
+  await hermesAuth(context, { signedIn: true })
+  await page.goto(`${origin}/?token=synthetic-session-token#/preview-week`)
+  await expect(editor(page)).toBeVisible({ timeout: 30000 })
+  await selectSignOut(page)
+  await expect(page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' })).toBeEnabled()
+  expect(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('hermes-web.connection.v2.')).map(key => JSON.parse(localStorage.getItem(key))).every(state => state.authMode === 'oauth' && state.token === ''))).toBe(true)
+})
+
+test('failed sign-out keeps chat and token credentials available for retry', async ({ page, context }) => {
+  await hermesAuth(context, { signedIn: true })
+  await context.route('**/auth/logout', route => route.fulfill({ status: 503, json: { detail: 'Unavailable' } }))
+  await page.goto(`${origin}/?token=synthetic-session-token#/preview-week`)
+  await expect(editor(page)).toBeVisible({ timeout: 30000 })
+  await editor(page).fill('Keep this draft on failure')
+  await selectSignOut(page)
+  await expectSignOutError(page, 'Sign-out failed (503). Try again.')
+  await expect(editor(page)).toHaveText('Keep this draft on failure')
+  expect(await page.evaluate(() => window.hermesDesktop.getConnectionConfig())).toMatchObject({ remoteAuthMode: 'token', remoteTokenSet: true })
+  await page.getByRole('button', { name: 'Open settings menu', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: 'Sign out', exact: true })).toBeEnabled()
+})
+
+test('sign-out saves text edited while logout is pending', async ({ page, context }) => {
+  await hermesAuth(context, { signedIn: true })
+  let releaseLogout
+  const pendingLogout = new Promise(resolve => { releaseLogout = resolve })
+  await context.route('**/auth/logout', async route => {
+    await pendingLogout
+    await route.fallback()
+  })
+  await page.goto(`${origin}/#/preview-week`)
+  await expect(editor(page)).toBeVisible({ timeout: 30000 })
+  await editor(page).fill('Before sign-out')
+  const requested = page.waitForRequest(request => request.url().endsWith('/auth/logout'))
+  await selectSignOut(page)
+  await requested
+  await editor(page).fill('Edited while signing out')
+  releaseLogout()
+  await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes:composer-drafts:v3'))['preview-week'])).toBe('Edited while signing out')
+})
+
+test('sign-out leaves unsent attachments in chat without ending the session', async ({ page, context }) => {
+  await hermesAuth(context, { signedIn: true })
+  let logouts = 0
+  page.on('request', request => { if (request.url().endsWith('/auth/logout')) logouts++ })
+  await page.goto(`${origin}/#/preview-week`)
+  await expect(editor(page)).toBeVisible({ timeout: 30000 })
+  await page.getByRole('button', { name: 'Add context', exact: true }).click()
+  const picker = page.waitForEvent('filechooser')
+  await page.getByRole('menuitem', { name: 'Files…', exact: true }).click()
+  await (await picker).setFiles({ name: 'unsent.txt', mimeType: 'text/plain', buffer: Buffer.from('Keep this attachment') })
+  await expect(page.getByRole('button', { name: 'Remove unsent.txt', exact: true })).toBeVisible()
+  await selectSignOut(page)
+  await expectSignOutError(page, 'Send or remove unsent attachments before reloading.')
+  await expect(page.getByRole('button', { name: 'Remove unsent.txt', exact: true })).toBeVisible()
+  expect(logouts).toBe(0)
+})
 
 test('signed-out users see sign-in before any chat connection; server labels are plain text', async ({ page, context }) => {
   await hermesAuth(context, { providers: [{ ...oidc, display_name: '<img src=x onerror=alert(1)>' }] })

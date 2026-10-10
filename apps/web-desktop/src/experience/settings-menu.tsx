@@ -1,5 +1,6 @@
 import { useState, type RefObject } from 'react'
-import { APP_ROUTES, Codicon, useI18n, type StatusbarItem } from '../upstream/browser-api'
+import { APP_ROUTES, Codicon, notifyError, useI18n, type StatusbarItem } from '../upstream/browser-api'
+import { signOut } from '../platform/sign-out'
 import { useBrowserApproval } from '../upstream/approval'
 import { useBrowserActiveProfile } from '../upstream/profiles'
 import { useBrowserGatewayRequest } from '../upstream/gateway-request'
@@ -49,6 +50,7 @@ type SettingsMenuProps = {
 export function SettingsMenu({ triggerRef, backendVersion, onOpenGateway, onOpenPanel, onOpenRoute, panelPanes }: SettingsMenuProps) {
   const compact = useMobileBrowser()
   const [anchor, setAnchor] = useState<BrowserActionAnchor | null>(null)
+  const [signingOut, setSigningOut] = useState(false)
   const { t } = useI18n()
   const activeProfile = useBrowserActiveProfile()
   const requestGateway = useBrowserGatewayRequest()
@@ -72,7 +74,11 @@ export function SettingsMenu({ triggerRef, backendVersion, onOpenGateway, onOpen
       { key: 'workspace-options', label: 'Workspace', icon: <Codicon name="folder" size="1rem" />, children: [{ key: 'workspace-routes', actions: APP_ROUTES.filter(route => WORKSPACE_ROUTE_IDS.has(route.id)).map(route => ({ key: route.path, label: toolRouteLabel(route.id), icon: <Codicon name={toolRouteIcon(route.id)} size="1rem" />, afterClose: true, run: () => onOpenRoute(route.path) })) }], run: () => {} },
       { key: 'approval-mode', label: 'Approval mode', hideSubmenuTitle: true, icon: <Codicon name="shield" size="1rem" />, children: [{ key: 'approval-modes', selection: 'single', actions: (['manual', 'smart', 'off'] as const).map(value => ({ key: value, label: approvalLabels[value], description: approvalDescriptions[value], icon: <Codicon name={value === 'manual' ? 'shield' : value === 'smart' ? 'sparkle' : 'circle-slash'} size="1rem" />, checked: mode === value, afterClose: true, run: () => void setMode(value) })) }], run: () => {} }
     ] },
-    ...(backendVersion ? [{ key: 'updates', label: 'Updates', actions: [{ key: backendVersion.id, label: typeof backendVersion.label === 'string' ? backendVersion.label : 'Backend update', icon: backendVersion.icon, disabled: backendVersion.disabled, afterClose: true, run: () => backendVersion.onSelect?.({ shiftKey: false }) }] }] : [])
+    ...(backendVersion ? [{ key: 'updates', label: 'Updates', actions: [{ key: backendVersion.id, label: typeof backendVersion.label === 'string' ? backendVersion.label : 'Backend update', icon: backendVersion.icon, disabled: backendVersion.disabled, afterClose: true, run: () => backendVersion.onSelect?.({ shiftKey: false }) }] }] : []),
+    { key: 'account', actions: [{ key: 'sign-out', label: signingOut ? 'Signing out…' : 'Sign out', icon: <Codicon name="sign-out" size="1rem" />, disabled: signingOut, afterClose: true, run: () => {
+      setSigningOut(true)
+      void signOut().catch(error => notifyError(error, 'Could not sign out')).finally(() => setSigningOut(false))
+    } }] }
   ]
   return <>
     <BrowserToolbarButton ref={triggerRef} tooltip="Settings" aria-label="Open settings menu" aria-haspopup={compact ? 'dialog' : 'menu'} aria-expanded={Boolean(anchor)} onClick={event => {

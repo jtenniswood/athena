@@ -263,7 +263,9 @@ export function createWebBridge(): Window['hermesDesktop'] {
     oauthLogoutConnectionConfig: async remoteUrl => {
       const base = remoteUrl ? normalizeBase(remoteUrl) : baseUrl()
       const origin = remoteUrl ? upstreamOriginFor(remoteUrl) : activeUpstreamOrigin()
-      const response = await fetch(withGatewayRoute(`${base}/auth/logout`, origin), { method: 'POST', credentials: 'same-origin' })
+      const response = await fetch(withGatewayRoute(`${base}/auth/logout`, origin), {
+        method: 'POST', credentials: 'same-origin', signal: AbortSignal.timeout(10_000)
+      })
       if (!response.ok) throw new Error(`Sign-out failed (${response.status}). Try again.`)
 
       return { ok: true, connected: false }
