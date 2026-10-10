@@ -196,11 +196,11 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
     ["useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:model' as SettingsViewId)", "useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:appearance' as SettingsViewId)"],
     [
       '  const subpage = resolveSettingsSubpage(activeView, params)',
-      "  const subpage = ['gateway', 'keybinds', 'sessions'].includes(activeView) ? undefined : resolveSettingsSubpage(activeView, params)"
+      "  const subpage = ['gateway', 'keybinds', 'sessions', 'config:safety'].includes(activeView) ? undefined : resolveSettingsSubpage(activeView, params)"
     ],
     [
       '      const destination = page ?? settingsSubpages(view)[0]?.id',
-      "      const destination = page ?? (['gateway', 'keybinds', 'sessions'].includes(view) ? undefined : settingsSubpages(view)[0]?.id)"
+      "      const destination = page ?? (['gateway', 'keybinds', 'sessions', 'config:safety'].includes(view) ? undefined : settingsSubpages(view)[0]?.id)"
     ],
     ["import { SettingsSubpageHeader } from './subpage-navigation'\n", ''],
     ["  const activeGroup = navGroups.find(group => group.active)\n  const activeChild = activeGroup?.children?.find(child => child.active)\n", ''],
