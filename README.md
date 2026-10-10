@@ -65,6 +65,35 @@ docker stop athena
 For microphone access from another device, open Athena over HTTPS (for example,
 through Tailscale Serve).
 
+### Sign in
+
+Athena checks the configured Hermes server before opening chat. If authentication
+is required, its welcome screen offers **Sign in** and connects automatically
+after Hermes creates a session. Existing sessions go straight to chat. On mobile
+and installed PWAs, sign-in uses the current window and returns to the original
+conversation; desktop browsers also offer a sign-in popup. **Use a session token**
+is available for existing token-based setups.
+
+Authentication is configured on the **Hermes backend**, separately from Athena's
+container. For OIDC, register a public client with authorization code and PKCE
+(S256), and allow `https://athena.example.com/auth/callback` as its redirect URI.
+Set these values in the backend's environment, using your own URLs and client ID:
+
+```dotenv
+HERMES_DASHBOARD_OIDC_ISSUER=https://auth.example.com/application/o/hermes/
+HERMES_DASHBOARD_OIDC_CLIENT_ID=hermes-dashboard
+HERMES_DASHBOARD_PUBLIC_URL=https://athena.example.com
+```
+
+Use Athena's browser-facing HTTPS URL as `HERMES_DASHBOARD_PUBLIC_URL`. Keep
+`/login`, `/auth`, and `/api` on that same origin; Athena's bundled nginx already
+proxies these routes. If another proxy terminates TLS, configure Hermes's trusted
+proxies so HTTPS redirects and secure cookies work. Hermes handles provider
+selection, credentials, OIDC callbacks, and session refresh. See the
+[Hermes authentication guide](https://github.com/NousResearch/hermes-agent/blob/f97608f178d1ffeca59860195ab7da295f7c8e5f/website/docs/user-guide/features/web-dashboard.md#self-hosted-oidc-provider)
+for provider and proxy configuration. OIDC controls access to the connected
+Hermes instance; it does not create separate user workspaces.
+
 ### Acknowledgment
 
 Athena is an original project based on the work of

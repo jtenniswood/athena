@@ -36,14 +36,20 @@ for (const scale of [100, 125, 150]) {
     })
     // Expired authentication must expose the real boot-recovery form.
     await page.route('**/api/auth/ws-ticket', route => route.fulfill({ status: 401, body: 'Sign in required' }))
-    await page.route('**/api/auth/me', route => route.fulfill({ status: 401 }))
+    // Pass cold-start authentication, then expire before renderer recovery.
+    let startupSession = true
+    await page.route('**/api/auth/me', route => {
+      const status = startupSession ? 200 : 401
+      startupSession = false
+      return route.fulfill({ status, json: status === 200 ? { provider: 'basic', user_id: 'test-user' } : {} })
+    })
     await page.route('**/api/status', route => route.fulfill({ json: { auth_required: true, auth_providers: ['basic'] } }))
     await context.route('**/login', route => route.fulfill({ contentType: 'text/html', body: '<h1>Gateway sign-in</h1>' }))
     await page.goto(origin)
     await page.getByRole('button', { name: 'Gateway settings', exact: true }).click({ timeout: 30000 })
     await page.evaluate(percent => window.hermesDesktop.zoom.setPercent(percent), scale)
     const form = page.getByRole('region', { name: 'Gateway connection' })
-    await expect(form.getByRole('heading', { name: 'Remote gateway', exact: true })).toBeVisible()
+    await expect(form.getByRole('heading', { name: 'Server Connection', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: /Use local gateway|Hermes Cloud|Connect via SSH/ })).toHaveCount(0)
     await expect(form.getByRole('textbox', { name: 'Remote URL' })).toHaveCount(0)
 

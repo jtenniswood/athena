@@ -1,0 +1,39 @@
+.athena-sign-in {
+  box-sizing: border-box;
+  position: fixed;
+  inset-inline: 0;
+  top: var(--web-viewport-top, 0px);
+  height: var(--web-viewport-height, 100dvh);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  padding: max(1.5rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) max(1.5rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
+  background: var(--hermes-boot-background, Canvas);
+  color: light-dark(#202530, #e7e9ee);
+  font: 1rem/1.5 system-ui, sans-serif;
+}
+.athena-sign-in-card { width: min(100%, 24rem); margin: auto; flex-shrink: 0; display: grid; gap: 1rem; }
+.athena-sign-in-card h1 { margin: 0.25rem 0 0; font-size: 1.75rem; font-weight: 650; letter-spacing: -0.04em; }
+.athena-sign-in-card p { margin: 0; }
+.athena-sign-in-server { color: light-dark(#626a78, #a9afbb); font-size: 0.875rem; overflow-wrap: anywhere; }
+.athena-sign-in-status { min-height: 3em; font-size: 0.875rem; color: light-dark(#626a78, #a9afbb); }
+.athena-sign-in-actions { display: grid; gap: 0.75rem; }
+.athena-sign-in button, .athena-sign-in input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid light-dark(#c4c9d2, #4b515e);
+  border-radius: 0.65rem;
+  padding: 0.65rem 0.9rem;
+  background: light-dark(#fff, #20232a);
+  color: inherit;
+  font: inherit;
+}
+.athena-sign-in button { cursor: pointer; }
+.athena-sign-in button:disabled { cursor: wait; opacity: 0.65; }
+.athena-sign-in .athena-sign-in-primary { background: light-dark(#202530, #e7e9ee); color: light-dark(#fff, #171a20); border-color: transparent; font-weight: 600; }
+.athena-sign-in :is(button, input, summary):focus-visible { outline: 2px solid light-dark(#335ad1, #9bb3ff); outline-offset: 3px; }
+.athena-sign-in-advanced { font-size: 0.875rem; }
+.athena-sign-in-advanced summary { cursor: pointer; color: light-dark(#626a78, #a9afbb); padding: 0.5rem 0; }
+.athena-sign-in-advanced form { display: grid; gap: 0.75rem; padding-top: 0.75rem; }
+.athena-sign-in [hidden] { display: none; }

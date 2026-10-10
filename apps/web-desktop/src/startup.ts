@@ -2,6 +2,7 @@ import { initializeBrowserExperience } from './experience/browser-experience'
 import { consumeConnectionToken } from './platform/connection-state'
 import { trackMediaRequests } from './platform/reload-safety'
 import { runtimeConfig } from './platform/runtime'
+import { waitForSignIn } from './platform/sign-in'
 import { registerPwa } from './pwa/register'
 import { prepareBrowserBridge } from './upstream/browser-bootstrap'
 import { startUpstreamRenderer } from './upstream/entry'
@@ -13,6 +14,7 @@ export async function startBrowserApplication(): Promise<void> {
   runtimeConfig()
   trackMediaRequests()
   consumeConnectionToken()
+  await waitForSignIn()
   initializeBrowserExperience()
 
   // Bridge dependencies may read browser state while evaluating. Load them

@@ -7,8 +7,8 @@ import ts from 'typescript'
 
 const root = path.resolve('apps/web-desktop/src')
 
-function startupHarness({ configurationError, rendererError, existingBridge } = {}) {
-  const state = { configured: false, tracking: false, tokenConsumed: false, rendererLoaded: false }
+function startupHarness({ configurationError, rendererError, existingBridge, signInReady = Promise.resolve() } = {}) {
+  const state = { configured: false, tracking: false, tokenConsumed: false, signedIn: false, rendererLoaded: false }
   const listeners = new Map()
   const storage = new Map([['hermes-web.comparison.profile', 'saved-profile']])
   const window = {
@@ -33,9 +33,10 @@ function startupHarness({ configurationError, rendererError, existingBridge } = 
     } },
     'platform/reload-safety.ts': { trackMediaRequests() { state.tracking = true } },
     'platform/connection-state.ts': { consumeConnectionToken() { state.tokenConsumed = true } },
+    'platform/sign-in.ts': { async waitForSignIn() { await signInReady; state.signedIn = true } },
     'web-bridge/bridge.ts': () => {
       // Check prerequisites at dependency evaluation, before installation.
-      assert.equal(state.configured && state.tracking && state.tokenConsumed, true)
+      assert.equal(state.configured && state.tracking && state.tokenConsumed && state.signedIn, true)
       assert.equal(document.documentElement.dataset.experience, 'browser')
       assert.equal(storage.get('hermes-web.browser.profile'), 'saved-profile')
       return { createWebBridge: () => ({ getConnection: async profile => ({ profile }), profile: {} }) }
@@ -101,6 +102,21 @@ test('invalid configuration stops startup before bridge and renderer initializat
   assert.equal(harness.window.hermesDesktop, undefined)
   assert.equal(harness.listeners.size, 0)
   assert.equal(harness.state.rendererLoaded, false)
+})
+
+test('signed-out startup waits for authentication before installing the bridge or loading chat', async () => {
+  let finishSignIn
+  const signInReady = new Promise(resolve => { finishSignIn = resolve })
+  const harness = startupHarness({ signInReady })
+  const starting = harness.load('startup.ts').startBrowserApplication()
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(harness.state.tokenConsumed, true)
+  assert.equal(harness.window.hermesDesktop, undefined)
+  assert.equal(harness.state.rendererLoaded, false)
+  finishSignIn()
+  harness.finishRenderer()
+  await starting
+  assert.equal(harness.state.rendererLoaded, true)
 })
 
 test('renderer load errors reach the caller unchanged for startup recovery', async () => {
