@@ -3,7 +3,7 @@ import { dependencyCompatibilityPlugin } from './src/upstream/dependency-compati
 import { browserPlugin, browserActivityNotificationsPlugin } from './src/upstream/browser-plugin'
 import { athenaBranding } from './src/upstream/athena-branding'
 import { rendererOverrides } from './src/upstream/overrides'
-import { runtimeConfiguration, runtimeScripts, matchesGatewayRoute, type HostingConfiguration } from '../../scripts/runtime-config.mjs'
+import { runtimeConfiguration, runtimeScripts, matchesGatewayRoute, navigationFallbackDenylist, type HostingConfiguration } from '../../scripts/runtime-config.mjs'
 import { rendererAliases, compatibilityAliases, compatibilitySingletons } from '../../scripts/aliases.mjs'
 import { buildInfoPlugin } from '../../scripts/build-info.mjs'
 import { defineConfig, loadEnv, type Plugin, type PreviewServer } from 'vite'
@@ -303,7 +303,7 @@ export default defineConfig(({ command, mode }) => {
             handler: 'NetworkOnly'
           }
         ],
-        navigateFallbackDenylist: [/[?&]hermes-reconnect=1(?:&|$)/, /^\/(?:api|auth|login|plugins|desktop-plugins|cdn-cgi)(?:\/|$)/, /^\/(?:runtime-config|gateway-config)\.js$/, /^\/build-info\.json$/]
+        navigateFallbackDenylist: navigationFallbackDenylist
       },
       devOptions: {
         // Keep the SW off in dev so it can't shadow the Vite proxy.
