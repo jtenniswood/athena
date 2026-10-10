@@ -148,20 +148,23 @@ export function isSameOrigin(base: string): boolean {
   }
 }
 
-/**
- * Browser equivalent of the desktop's `openOauthLoginWindow`: open the
- * gateway's `/login` in a child window and poll our own (same-origin) session
- * until it goes live, resolving `connected: true` then. The app window is never
- * navigated away - exactly the desktop behaviour. Resolves `connected: false`
- * if the popup is blocked, the user closes it before finishing, or the login
- * doesn't complete within the timeout.
- */
-export function openOauthLoginPopup(base: string, origin: string | null, loginPath = '/login'): Promise<DesktopOauthLoginResult> {
+/** Keep login on the configured origin and bypass old PWA app-shell fallbacks. */
+export function browserLoginUrl(base: string, loginPath: string): URL {
   // A caller may select a discovered provider, but never a different origin.
   const loginUrl = new URL(loginPath, base)
   if (loginUrl.origin !== new URL(base).origin || !['/login', '/auth/login'].includes(loginUrl.pathname)) {
-    return Promise.reject(new Error('Sign-in must use the configured Hermes server.'))
+    throw new Error('Sign-in must use the configured Hermes server.')
   }
+  // Older installed workers exclude this marker but can cache /login?next=….
+  if (loginUrl.pathname === '/login' && loginUrl.search) loginUrl.searchParams.set('hermes-reconnect', '1')
+  return loginUrl
+}
+
+/** Open the gateway login popup and wait for its same-origin session cookie. */
+export function openOauthLoginPopup(base: string, origin: string | null, loginPath = '/login'): Promise<DesktopOauthLoginResult> {
+  let loginUrl: URL
+  try { loginUrl = browserLoginUrl(base, loginPath) }
+  catch (error) { return Promise.reject(error) }
   return new Promise(resolve => {
     const popup = window.open(
       withGatewayRoute(loginUrl.href, origin),
