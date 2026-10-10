@@ -18,7 +18,7 @@
 .browser-gateway-settings-name { color: var(--web-text); font-weight: 500; overflow-wrap: anywhere; }
 .browser-gateway-settings-description { color: var(--web-text-muted); font-size: .8125rem; }
 .browser-gateway-settings-field { display: grid; min-width: 0; gap: var(--web-space-2); }
-.browser-gateway-settings-field > :is(select, input) {
+.browser-gateway-settings-field > :is([data-slot='select-trigger'], input) {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
@@ -49,7 +49,7 @@
   .browser-gateway-settings-actions > button:not(:first-child) { flex: 1; }
 }
 @media (pointer: coarse) {
-  .browser-gateway-settings-field > :is(select, input),
+  .browser-gateway-settings-field > :is([data-slot='select-trigger'], input),
   .browser-gateway-settings-actions > button { min-height: max(2.5rem, var(--web-touch-min)); }
-  .browser-gateway-settings-field > :is(select, input) { font-size: max(1rem, calc(16px / var(--web-ui-scale, 1))); }
+  .browser-gateway-settings-field > :is([data-slot='select-trigger'], input) { font-size: max(1rem, calc(16px / var(--web-ui-scale, 1))); }
 }

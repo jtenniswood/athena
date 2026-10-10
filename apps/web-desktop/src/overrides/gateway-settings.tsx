@@ -1,8 +1,8 @@
 import { settingsPageLabel } from '../experience/settings/policy'
 import { assertSafeConnectionChange } from '../platform/reload-safety'
 import { connectionState } from '../platform/connection-state'
-import { useEffect, useState } from 'react'
-import { Button, Input, SettingsContent } from '../upstream/ui'
+import { useEffect, useId, useState } from 'react'
+import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SettingsContent } from '../upstream/ui'
 import { runtimeConfig } from '../platform/runtime'
 import { getActiveGateway, updateGateway } from '../web-bridge/gateways'
 import './gateway-settings.css'
@@ -10,6 +10,7 @@ import './gateway-settings.css'
 export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {}) {
   const gateway = getActiveGateway()
   const authMode = runtimeConfig().auth?.mode || 'auto'
+  const signInMethodId = useId()
   const [mode, setMode] = useState(gateway.authMode)
   const [token, setToken] = useState('')
   const [message, setMessage] = useState('')
@@ -25,11 +26,16 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
     <div className="browser-gateway-settings-intro"><h2>{settingsPageLabel('gateway', 'Remote gateway')}</h2>
       <p className="browser-gateway-settings-name">{runtimeConfig().gateway.name}</p>
       <p className="browser-gateway-settings-description">This app connects to the server configured by its operator.</p></div>
-    <label className="browser-gateway-settings-field"><span>Sign-in method</span>
-      <select className="block rounded border bg-background p-2" value={mode} disabled={busy} onChange={event => setMode(event.target.value as 'oauth' | 'token')}>
-        <option value="oauth">{authMode === 'hermes' ? 'Hermes Agent sign-in' : authMode === 'oidc' ? 'OIDC sign-in' : 'Browser sign-in'}</option><option value="token">Session token</option>
-      </select>
-    </label>
+    <div className="browser-gateway-settings-field">
+      <label htmlFor={signInMethodId}>Sign-in method</label>
+      <Select value={mode} disabled={busy} onValueChange={value => setMode(value as 'oauth' | 'token')}>
+        <SelectTrigger id={signInMethodId}><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="oauth">{authMode === 'hermes' ? 'Hermes Agent sign-in' : authMode === 'oidc' ? 'OIDC sign-in' : 'Browser sign-in'}</SelectItem>
+          <SelectItem value="token">Session token</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
     {mode === 'token' && <label className="browser-gateway-settings-field"><span>Session token</span>
       <Input type="password" autoComplete="off" value={token} onChange={event => setToken(event.target.value)} placeholder={gateway.token ? 'Leave blank to keep token' : 'Enter a session token'} />
     </label>}
