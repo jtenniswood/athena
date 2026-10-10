@@ -111,15 +111,24 @@ export async function probeAuthConnected(
   }
 
   try {
-    const res = await fetch(withGatewayRoute(`${base}/api/auth/me`, origin), {
-      credentials: 'same-origin',
-      signal: AbortSignal.timeout(6_000)
-    })
-
-    return res.ok
+    return await checkBrowserSession(base, origin)
   } catch {
     return false
   }
+}
+
+/** Distinguish signed-out sessions from server failures or proxy login pages. */
+export async function checkBrowserSession(base = baseUrl(), origin: string | null = activeUpstreamOrigin()): Promise<boolean> {
+  const response = await fetch(withGatewayRoute(`${base}/api/auth/me`, origin), {
+    cache: 'no-store', credentials: 'same-origin', redirect: 'error', signal: AbortSignal.timeout(6_000)
+  })
+  if (response.status === 401) return false
+  if (!response.ok) throw new Error('The Hermes session could not be checked.')
+  const session = await response.json() as { user_id?: unknown; provider?: unknown }
+  if (typeof session.user_id !== 'string' || typeof session.provider !== 'string') {
+    throw new Error('The server did not return a Hermes session.')
+  }
+  return true
 }
 
 /**
@@ -147,10 +156,15 @@ export function isSameOrigin(base: string): boolean {
  * if the popup is blocked, the user closes it before finishing, or the login
  * doesn't complete within the timeout.
  */
-export function openOauthLoginPopup(base: string, origin: string | null): Promise<DesktopOauthLoginResult> {
+export function openOauthLoginPopup(base: string, origin: string | null, loginPath = '/login'): Promise<DesktopOauthLoginResult> {
+  // A caller may select a discovered provider, but never a different origin.
+  const loginUrl = new URL(loginPath, base)
+  if (loginUrl.origin !== new URL(base).origin || !['/login', '/auth/login'].includes(loginUrl.pathname)) {
+    return Promise.reject(new Error('Sign-in must use the configured Hermes server.'))
+  }
   return new Promise(resolve => {
     const popup = window.open(
-      withGatewayRoute(`${base}/login`, origin),
+      withGatewayRoute(loginUrl.href, origin),
       'hermes-oauth-login',
       'width=520,height=720'
     )
@@ -173,6 +187,7 @@ export function openOauthLoginPopup(base: string, origin: string | null): Promis
     }
 
     let settled = false
+    let polling = false
     const startedAt = Date.now()
     const TIMEOUT_MS = 5 * 60_000
 
@@ -195,17 +210,12 @@ export function openOauthLoginPopup(base: string, origin: string | null): Promis
     // observe from the app window via /api/auth/me now that it's same-origin.
     const timer = setInterval(() => {
       void (async () => {
-        if (settled) {return}
-
-        if (await probeAuthConnected(base, origin)) {
-          finish(true)
-
-          return
-        }
-
-        if (popup.closed || Date.now() - startedAt > TIMEOUT_MS) {
-          finish(false)
-        }
+        if (settled || polling) {return}
+        polling = true
+        try {
+          if (await probeAuthConnected(base, origin)) { finish(true); return }
+          if (popup.closed || Date.now() - startedAt > TIMEOUT_MS) finish(false)
+        } finally { polling = false }
       })()
     }, 600)
   })
