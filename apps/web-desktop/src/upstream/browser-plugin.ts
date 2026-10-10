@@ -1028,15 +1028,21 @@ export function disableBrowserSessionOpenActions(source: string): string {
   const tabCondition = "...(surface === 'row' && !alreadyTabbed"
   const windowCondition = '...(canOpenSessionWindow()'
   const projectTarget = '        >\n          {node.label}\n        </kit.Item>'
+  const contextCopyTarget = '      <CopyButton\n        appearance={kit.copyAppearance}'
+  const contextProjectTarget = '      <kit.Sub>\n        <kit.SubTrigger disabled={!sessionId}>\n          <Codicon name="folder"'
+  const copyImport = "import { CopyButton } from '@/components/ui/copy-button'\n"
   const contract = contracts.find(item => item.module === 'app/chat/sidebar/session-actions-menu.tsx')!
-  if (createHash('sha256').update(source).digest('hex') !== contract.sourceHash || source.split(tabCondition).length !== 2 || source.split(windowCondition).length !== 2 || source.split(projectTarget).length !== 2) {
+  if (createHash('sha256').update(source).digest('hex') !== contract.sourceHash || source.split(tabCondition).length !== 2 || source.split(windowCondition).length !== 2 || source.split(projectTarget).length !== 2 || source.split(contextCopyTarget).length !== 2 || source.split(contextProjectTarget).length !== 2 || source.split(copyImport).length !== 2) {
     throw new Error('Browser session open-action contract changed')
   }
-  // Browser chat is single-view. Keep the session action menu for rename,
-  // pinning, export and other actions, but remove tab/window hops. Project
-  // destinations retain their names and gain the same leading folder cue.
-  return source.replace(tabCondition, '...(false').replace(windowCondition, '...(false')
+  // Browser chat is single-view. Remove tab/window and copy/branch/export
+  // actions while retaining session mutations and project destinations.
+  const output = source.replace(tabCondition, '...(false').replace(windowCondition, '...(false')
     .replace(projectTarget, '        >\n          <Codicon name="root-folder" size="0.875rem" />\n          {node.label}\n        </kit.Item>')
+  const copyStart = output.indexOf(contextCopyTarget)
+  const projectStart = output.indexOf(contextProjectTarget, copyStart)
+  if (copyStart < 0 || projectStart < 0) throw new Error('Browser session context-action boundary changed')
+  return (output.slice(0, copyStart) + output.slice(projectStart)).replace(copyImport, '')
 }
 
 export function filterBrowserKeybinds(source: string): string {

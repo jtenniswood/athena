@@ -174,6 +174,21 @@ function BrowserLayout() {
   const conversation = useBrowserConversation()
   const selected = conversation.sessionId
   const sessionActions = useBrowserSessionActions()
+  const archiveShortcut = useRef({ selected, archive: sessionActions.archive })
+  archiveShortcut.current = { selected, archive: sessionActions.archive }
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || !event.shiftKey || event.altKey || event.repeat || event.isComposing || event.key.toLowerCase() !== 'a') return
+      if (event.defaultPrevented || !archiveShortcut.current.selected) return
+      const target = event.target
+      if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"], [role="menu"], [data-browser-action-surface]'))) return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      void archiveShortcut.current.archive()
+    }
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
+  }, [])
   const gatewayStatus = useBrowserGatewayStatus()
   const chatTitle = conversation.displayName || ''
   const panes = useContributions('panes')

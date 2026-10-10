@@ -299,6 +299,17 @@
   line-height: 1;
 }
 
+/* Keep the archive shortcut visible in both session dropdown and context menus. */
+:is([data-slot='dropdown-menu-content'], [data-slot='context-menu-content'])
+[role^='menuitem']:has(> .codicon-archive)::after {
+  content: '\21e7 \2318 A';
+  margin-left: auto;
+  padding-left: var(--web-space-4);
+  color: var(--web-text-subtle);
+  font-size: .85em;
+  white-space: nowrap;
+}
+
 /* Match pointer, keyboard, and open-submenu states across menu providers.
    Destructive actions retain their warning color and tinted highlight. */
 :is([data-radix-menu-content], .browser-action-menu, .browser-action-sheet)
