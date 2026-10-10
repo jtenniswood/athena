@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import vm from 'node:vm'
-import { matchesGatewayRoute, runtimeConfiguration, runtimeScripts, renderNginx } from './runtime-config.mjs'
+import { matchesGatewayRoute, runtimeConfiguration, runtimeScripts, renderNginx, navigationFallbackDenylist } from './runtime-config.mjs'
 
 test('runtime identity changes with the backend and excludes credentials', () => {
   const a = runtimeConfiguration({ HERMES_GATEWAY_URL: 'http://gateway.example.test:9119' })
@@ -28,4 +28,21 @@ test('production and development routes have exact path boundaries', () => {
   assert.ok(rendered.includes('alias "/tmp/plugin files/plugins/"'))
   assert.ok(rendered.includes('proxy_pass http://127.0.0.1:9119;'))
   assert.throws(() => runtimeConfiguration({ HERMES_HOME: '/tmp/"; include arbitrary;' }), /Hosting paths/)
+})
+
+test('Workbox sends queried login and callback navigations to the server', async () => {
+  const originalSelf = globalThis.self
+  globalThis.self = { __WB_DISABLE_DEV_LOGS: true }
+  try {
+    const { NavigationRoute } = await import('workbox-routing/NavigationRoute.js')
+    const route = new NavigationRoute(async () => new Response(), { denylist: navigationFallbackDenylist })
+    const matches = path => route.match({ url: new URL(path, 'https://athena.example.test'), request: { mode: 'navigate' } })
+    for (const path of ['/login', '/login?next=%2F', '/auth?next=%2F', '/auth/login?provider=self-hosted', '/auth/callback?code=synthetic', '/api?test=1', '/runtime-config.js?hermes-runtime=1', '/build-info.json?test=1']) {
+      assert.equal(matches(path), false, path)
+    }
+    for (const path of ['/', '/?source=bookmark', '/login-help?test=1', '/apiary']) assert.equal(matches(path), true, path)
+  } finally {
+    if (originalSelf === undefined) delete globalThis.self
+    else globalThis.self = originalSelf
+  }
 })
