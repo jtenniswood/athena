@@ -1,0 +1,50 @@
+# Browser architecture
+
+Athena is a browser shell around the pinned Hermes renderer. The shell keeps
+browser behavior and product composition in wrapper-owned code while the
+renderer remains responsible for conversation state and upstream features.
+
+## Ownership
+
+- `apps/web-desktop/src/experience/` owns navigation, layout, wrapper actions,
+  settings presentation, and the composition of renderer contributions.
+- `apps/web-desktop/src/platform/` owns browser APIs, browser persistence,
+  connection state, and safe lifecycle transitions such as update and sign-out.
+- `apps/web-desktop/src/upstream/` owns the adapter boundary to the fetched
+  renderer: its browser root, desktop-shaped bridge, route and workspace
+  adapters, and reviewed transforms.
+- `apps/web-desktop/src/overrides/` replaces a narrow renderer surface when the
+  browser needs a different interaction, such as gateway settings.
+- `apps/web-desktop/src/pwa/` owns service-worker registration and the
+  cross-tab update handshake.
+
+Renderer modules are loaded only after startup installs the bridge and runs
+browser initialization. Browser pane ownership is derived once by the wrapper
+and passed into the workspace adapter. The adapter projects the existing
+renderer layout without changing its saved state.
+
+## Capability and lifecycle boundaries
+
+Browser, hosting, and connected-server support facts are described in
+`platform/capabilities.ts`. API availability does not imply permission; the
+owning browser operation still handles permission and failure at use time.
+
+The renderer registers its draft store through `platform/draft-safety.ts`.
+Update and connection transitions use that typed boundary to flush cross-tab
+writes and verify persisted text before they proceed. Ordinary draft saves keep
+their synchronous behavior.
+
+## Compatibility ownership
+
+Every renderer replacement or transform is recorded in
+`upstream/compatibility-registry.json` with its owner, reviewed source and output
+fingerprints, behavioral verification references, and removal condition. The
+generated [browser transform inventory](browser-transform-inventory.md) is the
+human-readable index. Add or change an adapter only in wrapper-owned code, and
+refresh a fingerprint only after reviewing the corresponding renderer change
+and its behavior.
+
+Remove a compatibility seam when the pinned renderer provides an equivalent
+public contract and the affected browser behavior is verified. Keep seams that
+still protect drafts, selection, or browser-specific interaction even when
+their transform has been stable for a long time.
