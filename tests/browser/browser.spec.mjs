@@ -58,6 +58,12 @@ const openNavigation = async page => {
   // Let the full-page transition finish before measuring touch targets.
   await page.waitForTimeout(200)
 }
+const settingsTrigger = async page => {
+  for (const dismiss of await page.getByRole('button', { name: 'Dismiss notification', exact: true }).all()) await dismiss.click()
+  const trigger = page.getByRole('button', { name: 'Navigation tabs', exact: true })
+  if (!await trigger.isVisible()) await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  return trigger
+}
 const open = async (page, session = 'preview-week') => {
   await page.goto(`${origin}/#/${session}`)
   // A cold Vite graph can race the first document module request. A single
@@ -1108,12 +1114,12 @@ for (const width of [390, 1440]) {
       await open(page)
       await page.evaluate(value => window.hermesDesktop.zoom.setPercent(value), scale)
       await editor(page).fill('Keep this settings actions draft')
-      const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+      const trigger = await settingsTrigger(page)
       const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
       const role = width === 390 ? 'button' : 'menuitem'
-      await trigger.click()
-      await expect(surface.locator('.browser-action-group-label')).toHaveText(['Notifications', 'Panels', 'Systems', 'Workspace'])
-      for (const name of ['Settings', 'Gateway', 'Command center', 'Webhooks', 'Profiles', 'Agents']) {
+      await (await settingsTrigger(page)).click()
+      await expect(surface.locator('.browser-action-group-label')).toContainText(['Panels', 'Systems'])
+      for (const name of ['Settings']) {
         await expect(surface.getByRole(role, { name, exact: true })).toHaveCount(1)
       }
       await page.screenshot({ path: testInfo.outputPath('settings-actions.png') })
@@ -1124,8 +1130,8 @@ for (const width of [390, 1440]) {
       expect(bounds.y + bounds.height).toBeLessThanOrEqual(961)
       await page.keyboard.press('Escape')
       await expect(surface).toHaveCount(0)
-      await expect(trigger).toBeFocused()
-      await trigger.click()
+      if (await trigger.isVisible()) await expect(trigger).toBeFocused()
+      await (await settingsTrigger(page)).click()
       await surface.getByRole(role, { name: 'Settings', exact: true }).click()
       await expect(page.getByText('Appearance', { exact: true }).first()).toBeVisible()
       const overlay = page.locator('[data-overlay-surface]')
@@ -1140,18 +1146,19 @@ for (const width of [390, 1440]) {
       await expect.poll(() => overlay.evaluate((el, selector) => document.activeElement === Array.from(el.querySelectorAll(selector)).filter(node => node.getClientRects().length && !node.closest('[hidden],[inert],[aria-disabled="true"]')).at(-1), focusable)).toBe(true)
       await page.keyboard.press('Escape')
       await expect(overlay).toHaveCount(0)
-      await expect(trigger).toBeFocused()
+      if (await trigger.isVisible()) await expect(trigger).toBeFocused()
       await expect(editor(page)).toHaveText('Keep this settings actions draft')
       await page.keyboard.press('Control+l')
       await expect(editor(page)).toBeFocused()
       await expect(page).toHaveURL(/#\/preview-week$/)
-      await trigger.click()
-      await surface.getByRole(role, { name: 'Gateway', exact: true }).click()
-      const gateway = page.getByRole('dialog', { name: 'Gateway', exact: true })
-      await expect(gateway.getByRole('heading', { name: 'Gateway', exact: true })).toBeFocused()
+      await (await settingsTrigger(page)).click()
+      await surface.getByRole(role, { name: 'Settings', exact: true }).click()
+      await page.getByRole('navigation', { name: 'Settings categories' }).getByRole('button', { name: 'Gateway', exact: true }).click()
+      const gateway = page.getByRole('main', { name: 'Gateway', exact: true })
+      await expect(gateway).toBeVisible()
       await page.keyboard.press('Escape')
       await expect(gateway).toHaveCount(0)
-      await expect(trigger).toBeFocused()
+      if (await trigger.isVisible()) await expect(trigger).toBeFocused()
       await expect(editor(page)).toHaveText('Keep this settings actions draft')
     })
   }
@@ -1162,9 +1169,9 @@ for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     await open(page)
     await editor(page).fill('Keep my draft while finding renamed settings')
-    const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+    const trigger = await settingsTrigger(page)
     const role = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
-    await trigger.click()
+    await (await settingsTrigger(page)).click()
     await page.getByRole(role, { name: 'Settings and workspace', exact: true })
       .getByRole(role === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
     await expect(page.locator('.browser-settings-group-heading')).toHaveText([
@@ -1172,18 +1179,22 @@ for (const width of [390, 1440]) {
     ])
     await expect(page.locator('.browser-settings-category-button:not(.is-child) > span:not(.codicon)')).toHaveText([
       'Appearance', 'Notifications', 'Keyboard Shortcuts', 'Models', 'AI Connections', 'Chat', 'Voice',
-      'Memory', 'Workspace', 'Browser Automation', 'Permissions', 'Saved Logins',
-      'Credentials', 'Server Connection', 'Billing', 'Archived Chats', 'Configuration', 'Advanced'
+      'Profiles', 'Agents', 'Memory', 'Workspace', 'Webhooks', 'Permissions',
+      'Credentials', 'Gateway', 'Command center', 'Billing', 'Archived Chats', 'Configuration', 'Advanced'
     ])
     await page.screenshot({ path: testInfo.outputPath('settings-groups.png') })
     for (const [query, result, view, title] of [
-      ['Gateway', 'Server Connection', 'gateway', 'Server Connection'],
+      ['Server Connection', 'Gateway', 'gateway', 'Gateway'],
+      ['Profiles', 'Profiles', 'config:profiles', 'Profiles'],
+      ['Webhooks', 'Webhooks', 'config:webhooks', 'Webhooks'],
+      ['Agents', 'Agents', 'config:agents', 'Agents'],
+      ['Command center', 'Command center', 'config:command-center', 'Command center'],
       ['Backup & reset', 'Configuration', 'config:browser-configuration', 'Configuration'],
       ['Providers', 'AI Connections — Accounts', 'providers', 'AI Connections'],
       ['Server credentials', 'Credentials — Server Credentials', 'keys', 'Credentials']
     ]) {
       await page.locator('.browser-settings-search > button').click()
-      const input = page.locator('input[role="combobox"]')
+      const input = page.locator('[data-browser-command-palette] input[role="combobox"]')
       await expect(input).toBeVisible()
       await input.fill(query)
       const palette = page.locator('[data-browser-command-palette]')
@@ -1191,7 +1202,9 @@ for (const width of [390, 1440]) {
       expect(bounds.x).toBeGreaterThanOrEqual(0)
       expect(bounds.x + bounds.width).toBeLessThanOrEqual(width)
       if (query === 'Gateway') await page.screenshot({ path: testInfo.outputPath('settings-search.png') })
-      const option = page.getByRole('option', { name: result, exact: true })
+      const results = ['config:profiles', 'config:webhooks', 'config:agents', 'config:command-center'].includes(view)
+        ? palette.getByRole('group', { name: 'Settings', exact: true }) : palette
+      const option = results.getByRole('option', { name: result, exact: true })
       if (width === 390) await option.tap()
       else {
         await page.mouse.move(10, 10)
@@ -1202,7 +1215,7 @@ for (const width of [390, 1440]) {
       await expect(page.locator('.browser-settings-heading h1')).toHaveText(width < 896 ? title : 'Settings')
       expect(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('tab')).toBe(view)
       if (view === 'keys') {
-        await expect(page.getByRole('button', { name: 'Server Credentials', exact: true })).toHaveAttribute('aria-current', 'page')
+        expect(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('kview')).toBe('settings')
       }
       if (width < 896) {
         await expect(page.locator('.browser-settings-search')).toHaveCount(0)
@@ -1448,53 +1461,52 @@ test('desktop panel actions follow upstream visibility when reopening settings',
   await expect(editor(page)).toHaveText('Keep this pane toggle draft')
 })
 
-test('settings menu consolidates workspace and gateway controls', async ({ page }) => {
-  await open(page)
-  await expect(page.getByRole('button', { name: 'Open workspace', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Gateway ready', exact: true })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Open settings menu', exact: true }).click()
-  const menu = page.getByRole('menu', { name: 'Settings and workspace', exact: true })
-  await expect(menu).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: 'Starmap', exact: true })).toHaveCount(0)
-  await expect(menu.locator('.browser-action-group-label')).toHaveText(['Notifications', 'Panels', 'Systems', 'Workspace'])
-  for (const label of ['Command center', 'Webhooks', 'Profiles', 'Agents', 'Settings', 'Gateway']) {
-    await expect(menu.getByRole('menuitem', { name: label, exact: true })).toBeVisible()
-  }
-  await expect(page.getByRole('tab', { name: 'Tools', exact: true })).toHaveCount(0)
-})
-
 for (const width of [390, 1440]) {
-  test.extend({ hasTouch: width === 390 })(`gateway opens as a modal from the settings menu at ${width}px`, async ({ page }, testInfo) => {
+  test.extend({ hasTouch: width === 390 })(`workspace controls live inside settings and preserve the conversation at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 960 })
-    await page.emulateMedia({ colorScheme: 'dark' })
     await open(page)
-    await editor(page).fill('Keep my draft while checking the gateway')
-    const settings = page.getByRole('button', { name: 'Open settings menu', exact: true })
-    await settings.click()
-    await page.screenshot({ path: testInfo.outputPath('settings-menu.png') })
-    await page.getByRole(width === 390 ? 'button' : 'menuitem', { name: 'Gateway', exact: true }).click()
-    const dialog = page.getByRole('dialog', { name: 'Gateway', exact: true })
-    await expect(dialog).toBeVisible()
-    await expect(dialog.getByText('Connected', { exact: true })).toBeVisible()
-    await expect(page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })).toBeHidden()
-    await expect(dialog.getByRole('heading', { name: 'Gateway' })).toBeFocused()
-    await page.waitForTimeout(250)
-    const bounds = await dialog.boundingBox()
-    expect(bounds.x).toBeGreaterThanOrEqual(0)
-    expect(bounds.x + bounds.width).toBeLessThanOrEqual(width)
-    expect(Math.abs(bounds.x + bounds.width / 2 - width / 2)).toBeLessThan(2)
-    expect(Math.abs(bounds.y + bounds.height / 2 - 480)).toBeLessThan(2)
-    await page.screenshot({ path: testInfo.outputPath('gateway-modal.png') })
-    await page.keyboard.press('Escape')
-    await expect(dialog).toBeHidden()
-    await expect(settings).toBeFocused()
-    await expect(editor(page)).toContainText('Keep my draft while checking the gateway')
-    await settings.click()
-    await page.getByRole(width === 390 ? 'button' : 'menuitem', { name: 'Gateway', exact: true }).click()
-    await page.keyboard.press('Tab')
-    expect(await dialog.evaluate(el => el.contains(document.activeElement))).toBe(true)
-    await dialog.getByRole('button', { name: 'Close', exact: true }).click()
-    await expect(dialog).toBeHidden()
+    for (const dismiss of await page.getByRole('button', { name: 'Dismiss notification', exact: true }).all()) await dismiss.click()
+    await editor(page).fill('Keep my draft while managing the workspace')
+    const trigger = await settingsTrigger(page)
+    await (await settingsTrigger(page)).click()
+    const menu = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
+    const actionRole = width === 390 ? 'button' : 'menuitem'
+    for (const name of ['Gateway', 'Profiles', 'Command center', 'Webhooks', 'Agents', 'Workspace']) {
+      await expect(menu.getByRole(actionRole, { name, exact: true })).toHaveCount(0)
+    }
+    await menu.getByRole(actionRole, { name: 'Settings', exact: true }).click()
+    const frame = page.locator('[data-browser-settings-frame]')
+    const navigation = frame.getByRole('navigation', { name: 'Settings categories', exact: true })
+    for (const [label, tab] of [['Profiles', 'config:profiles'], ['Webhooks', 'config:webhooks'], ['Agents', 'config:agents'], ['Command center', 'config:command-center'], ['Gateway', 'gateway']]) {
+      await navigation.getByRole('button', { name: label, exact: true }).click()
+      await expect(frame.getByRole('main', { name: label, exact: true })).toBeVisible()
+      await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)
+      await expect(page).toHaveURL(new RegExp('tab=' + tab.replace(':', '(?:%3A|:)')))
+      if (label === 'Profiles') {
+        await expect(frame.getByRole('button', { name: 'New profile', exact: true })).toBeVisible()
+        await frame.getByRole('button', { name: 'New profile', exact: true }).click()
+        const create = page.getByRole('dialog', { name: 'New profile', exact: true })
+        await expect(create).toBeVisible()
+        await page.keyboard.press('Escape')
+        await expect(create).toBeHidden()
+        await expect(frame).toBeVisible()
+      }
+      if (label === 'Command center') await expect(frame.getByText('Plan a calmer working week', { exact: true })).toBeVisible()
+      if (label === 'Webhooks') await expect(frame.getByRole('button', { name: 'Enable webhooks', exact: true })).toBeVisible()
+      if (label === 'Gateway') {
+        await expect(frame.getByText('Connected', { exact: true })).toBeVisible()
+        await expect(frame.getByLabel('Sign-in method')).toBeVisible()
+      }
+      await page.screenshot({ path: testInfo.outputPath(`settings-${tab.replace(':', '-')}.png`) })
+      expect(await frame.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+      if (width === 390) await frame.getByRole('button', { name: 'Back', exact: true }).click()
+    }
+    await frame.getByRole('button', { name: 'Command center', exact: true }).click()
+    await expect(frame.getByText('Plan a calmer working week', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+    await expect(frame).toBeHidden()
+    if (await trigger.isVisible()) await expect(trigger).toBeFocused()
+    await expect(editor(page)).toHaveText('Keep my draft while managing the workspace')
   })
 }
 

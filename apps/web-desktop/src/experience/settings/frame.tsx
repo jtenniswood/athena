@@ -1,9 +1,10 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
-import { useLocation } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { Codicon, OverlayView } from '../../upstream/browser-api'
 import { groupSettingsSections, isSettingsSectionVisible, orderSettingsSections, settingsPageLabel, settingsScopeDescription } from './policy'
 import { BrowserToolbarButton } from '../ui/toolbar-button'
 import { BrowserColorThemesPage } from './themes-page'
+import { SETTINGS_TOOL_PAGES } from '../../upstream/settings-tools'
 import './settings.css'
 
 type SettingsNavItem = {
@@ -58,10 +59,17 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const moveFocus = useRef(false)
   const compact = useCompactSettings()
   const location = useLocation()
+  const navigate = useNavigate()
   const [compactPresentation, setCompactPresentation] = useState<CompactPresentation>({ mode: 'automatic' })
   const params = new URLSearchParams(location.search)
   const hasDirectTarget = params.has('tab') || params.has('field') || params.has('setting')
-  const navigationGroups = groupSettingsSections(groups)
+  const navigationGroups = groupSettingsSections<SettingsNavGroup>([...groups, ...SETTINGS_TOOL_PAGES.map(page => ({
+    id: page.id,
+    label: page.label,
+    icon: ({ className }: { className?: string }) => <Codicon name={page.icon} className={className} />,
+    active: activeView === page.id,
+    onSelect: () => navigate(`/settings?tab=${page.id}`, { replace: true })
+  }))])
   const visibleGroups = navigationGroups.flatMap(group => group.items)
   const activeGroup = visibleGroups.find(group => group.active)
   const pageNotice = settingsScopeDescription(activeView)

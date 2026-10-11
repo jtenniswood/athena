@@ -1,32 +1,10 @@
 import { useEffect, useState, type RefObject } from 'react'
-import { APP_ROUTES, Codicon, notifyError, type StatusbarItem } from '../upstream/browser-api'
+import { Codicon, notifyError, type StatusbarItem } from '../upstream/browser-api'
 import { signOut } from '../platform/sign-out'
 import { useBrowserSettings } from '../upstream/settings'
 import { BrowserActionSurface, type BrowserActionAnchor, type BrowserActionGroup } from './ui/action-surface'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { useMobileBrowser } from './ui/use-compact-browser'
-
-const TOOL_ROUTE_META: Record<string, { label: string; icon: string }> = {
-  'command-center': { label: 'Command center', icon: 'symbol-misc' },
-  skills: { label: 'Capabilities', icon: 'symbol-misc' },
-  messaging: { label: 'Messaging', icon: 'comment' },
-  webhooks: { label: 'Webhooks', icon: 'globe' },
-  artifacts: { label: 'Artifacts', icon: 'files' },
-  cron: { label: 'Scheduled jobs', icon: 'watch' },
-  profiles: { label: 'Profiles', icon: 'account' },
-  agents: { label: 'Agents', icon: 'hubot' }
-}
-
-export const WORKSPACE_ROUTE_IDS = new Set(['command-center', 'webhooks', 'agents'])
-
-export function toolRouteIcon(id: string) {
-  return TOOL_ROUTE_META[id]?.icon || 'folder'
-}
-
-export function toolRouteLabel(id: string) {
-  const value = TOOL_ROUTE_META[id]?.label || id
-  return value ? `${value[0].toUpperCase()}${value.slice(1)}` : value
-}
 
 type PanelEntry = {
   id: string
@@ -37,7 +15,6 @@ type PanelEntry = {
 type SettingsMenuProps = {
   triggerRef: RefObject<HTMLButtonElement | null>
   backendVersion: StatusbarItem | null
-  onOpenGateway: () => void
   onOpenPanel: () => void
   onOpenRoute: (path: string) => void
   panelPanes: PanelEntry[]
@@ -47,7 +24,7 @@ type SettingsMenuProps = {
   navigationOpen?: boolean
 }
 
-export function SettingsMenu({ triggerRef, backendVersion, onOpenGateway, onOpenPanel, onOpenRoute, panelPanes, additionalGroups = [], triggerClassName, triggerTooltip = 'Settings', navigationOpen }: SettingsMenuProps) {
+export function SettingsMenu({ triggerRef, backendVersion, onOpenPanel, onOpenRoute, panelPanes, additionalGroups = [], triggerClassName, triggerTooltip = 'Settings', navigationOpen }: SettingsMenuProps) {
   const compact = useMobileBrowser()
   const [anchor, setAnchor] = useState<BrowserActionAnchor | null>(null)
   const [signingOut, setSigningOut] = useState(false)
@@ -60,12 +37,6 @@ export function SettingsMenu({ triggerRef, backendVersion, onOpenGateway, onOpen
     }) },
     { key: 'systems', label: 'Systems', actions: [
       { key: 'settings', label: 'Settings', icon: <Codicon name="settings-gear" size="1rem" />, afterClose: true, run: () => onOpenRoute('/settings') },
-      { key: 'gateway', label: 'Gateway', icon: <Codicon name="pulse" size="1rem" />, afterClose: true, run: onOpenGateway },
-      { key: 'profiles', label: 'Profiles', icon: <Codicon name={toolRouteIcon('profiles')} size="1rem" />, afterClose: true, run: () => {
-        const route = APP_ROUTES.find(item => item.id === 'profiles')
-        if (route) onOpenRoute(route.path)
-      } },
-      { key: 'workspace-options', label: 'Workspace', icon: <Codicon name="folder" size="1rem" />, children: [{ key: 'workspace-routes', actions: APP_ROUTES.filter(route => WORKSPACE_ROUTE_IDS.has(route.id)).map(route => ({ key: route.path, label: toolRouteLabel(route.id), icon: <Codicon name={toolRouteIcon(route.id)} size="1rem" />, afterClose: true, run: () => onOpenRoute(route.path) })) }], run: () => {} }
     ] },
     ...additionalGroups,
     ...(backendVersion ? [{ key: 'updates', label: 'Updates', actions: [{ key: backendVersion.id, label: typeof backendVersion.label === 'string' ? backendVersion.label : 'Backend update', icon: backendVersion.icon, disabled: backendVersion.disabled, afterClose: true, run: () => backendVersion.onSelect?.({ shiftKey: false }) }] }] : []),

@@ -428,3 +428,58 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
 .browser-settings-content-slot nav[aria-label="breadcrumb" i] {
   display: none;
 }
+
+/* Embedded tools use the settings surface and retain their own live controls. */
+.browser-settings-embedded-content {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  container-type: inline-size;
+}
+.browser-settings-embedded-content > header { padding-right: 0; }
+.browser-settings-embedded-content > .grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--web-space-4);
+}
+.browser-settings-embedded-content [data-tour="overlay-nav"] {
+  display: flex;
+  flex-direction: row;
+  flex: 0 0 auto;
+  gap: var(--web-space-1);
+  overflow-x: auto;
+  padding: 0 0 var(--web-space-2);
+  border-bottom: 1px solid var(--web-border-subtle);
+  background: transparent;
+}
+.browser-settings-embedded-content [data-tour="overlay-nav"] button {
+  width: auto;
+  height: var(--web-navigation-row);
+  flex: 0 0 auto;
+  border-color: transparent;
+  font-size: var(--web-text-body);
+}
+.browser-settings-embedded-content > .grid > main { max-width: none; padding: 0; }
+.browser-settings-embedded-content > .grid > main > header > div:first-child { display: block; }
+@container (max-width: 36rem) {
+  .browser-settings-embedded-content > .flex { flex-direction: column; }
+  .browser-settings-embedded-content > .grid > main > header { flex-wrap: wrap; }
+  .browser-settings-embedded-content > .grid > main > header > .flex { width: 100%; }
+  .browser-settings-embedded-content > .grid > main > header > .flex > div { width: 100%; max-width: 100%; }
+  .browser-settings-embedded-content > .flex > .shrink-0 { width: 100%; max-height: 40%; }
+}
+.browser-settings-gateway-status {
+  padding-block: var(--web-space-4);
+  border-block: 1px solid var(--web-border-subtle);
+}
+.browser-settings-gateway-status > h3,
+.browser-gateway-settings-intro > h3 { margin: 0 0 var(--web-space-3); font-size: var(--web-text-body); font-weight: 500; }
+.browser-settings-gateway-status > div { border: 0; background: transparent; }
+
+.browser-settings-embedded-content > .grid > .pointer-events-none { display: none; }
+.browser-settings-frame .browser-gateway-settings { max-width: none; padding: 0; }
+
+.browser-settings-frame .browser-settings-navigation { width: auto; min-width: 0; }
