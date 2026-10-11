@@ -189,7 +189,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
     getConnectionConfig: async () => toConnectionConfig(loadStoredConnection()),
     saveConnectionConfig: async input => toConnectionConfig(persistConnection(input)),
     applyConnectionConfig: async input => {
-      assertSafeConnectionChange()
+      await assertSafeConnectionChange()
       const next = persistConnection(input)
       // Use upstream's normal soft reconnect, preserving in-memory credentials.
       queueMicrotask(() => { for (const callback of connectionListeners) callback() })
