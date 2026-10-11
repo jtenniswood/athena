@@ -2170,11 +2170,11 @@
     "sourceRoot": "renderer",
     "sourceHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
     "inputHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
-    "outputHash": "3f3d12c7d55ed87aa8d80f9f082874ba37dda088238330bbab8a5d28c14d84bb",
+    "outputHash": "efd5428c5decbc2f562e81f35fda82d9a542d8d9359c6d2c011ec52f87c4d71b",
     "handlers": [
       "useBrowserSettingsPresentation"
     ],
-    "reason": "Keep the responsive settings layout, configuration management page, and visibility policy in the wrapper while upstream owns settings content and persistence.",
+    "reason": "Keep the responsive settings layout, configuration management page, and visibility policy in the wrapper while upstream owns settings content and persistence. Present all permission controls together without subpage filtering.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -2184,6 +2184,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "configuration page retains import export and reset behavior"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Permissions combines all controls and preserves legacy field links"
       }
     ],
     "removal": "Remove when upstream SettingsView provides an equivalent responsive browser presentation seam while retaining upstream settings pages and actions."
