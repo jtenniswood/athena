@@ -1,4 +1,4 @@
-import { useState, type RefObject } from 'react'
+import { useEffect, useState, type RefObject } from 'react'
 import { APP_ROUTES, Codicon, notifyError, type StatusbarItem } from '../upstream/browser-api'
 import { signOut } from '../platform/sign-out'
 import { useBrowserSettings } from '../upstream/settings'
@@ -41,12 +41,17 @@ type SettingsMenuProps = {
   onOpenPanel: () => void
   onOpenRoute: (path: string) => void
   panelPanes: PanelEntry[]
+  additionalGroups?: BrowserActionGroup[]
+  triggerClassName?: string
+  triggerTooltip?: string
+  navigationOpen?: boolean
 }
 
-export function SettingsMenu({ triggerRef, backendVersion, onOpenGateway, onOpenPanel, onOpenRoute, panelPanes }: SettingsMenuProps) {
+export function SettingsMenu({ triggerRef, backendVersion, onOpenGateway, onOpenPanel, onOpenRoute, panelPanes, additionalGroups = [], triggerClassName, triggerTooltip = 'Settings', navigationOpen }: SettingsMenuProps) {
   const compact = useMobileBrowser()
   const [anchor, setAnchor] = useState<BrowserActionAnchor | null>(null)
   const [signingOut, setSigningOut] = useState(false)
+  useEffect(() => { if (navigationOpen === false) setAnchor(null) }, [navigationOpen])
   const model = useBrowserSettings(panelPanes.map(pane => ({ id: pane.id, collapsible: Boolean((pane.data as { collapsible?: boolean } | undefined)?.collapsible) })))
   const groups: BrowserActionGroup[] = [
     { key: 'panels', label: 'Panels', actions: model.panels.map(panel => {
@@ -62,6 +67,7 @@ export function SettingsMenu({ triggerRef, backendVersion, onOpenGateway, onOpen
       } },
       { key: 'workspace-options', label: 'Workspace', icon: <Codicon name="folder" size="1rem" />, children: [{ key: 'workspace-routes', actions: APP_ROUTES.filter(route => WORKSPACE_ROUTE_IDS.has(route.id)).map(route => ({ key: route.path, label: toolRouteLabel(route.id), icon: <Codicon name={toolRouteIcon(route.id)} size="1rem" />, afterClose: true, run: () => onOpenRoute(route.path) })) }], run: () => {} }
     ] },
+    ...additionalGroups,
     ...(backendVersion ? [{ key: 'updates', label: 'Updates', actions: [{ key: backendVersion.id, label: typeof backendVersion.label === 'string' ? backendVersion.label : 'Backend update', icon: backendVersion.icon, disabled: backendVersion.disabled, afterClose: true, run: () => backendVersion.onSelect?.({ shiftKey: false }) }] }] : []),
     { key: 'account', actions: [{ key: 'sign-out', label: signingOut ? 'Signing out…' : 'Sign out', icon: <Codicon name="sign-out" size="1rem" />, disabled: signingOut, afterClose: true, run: () => {
       setSigningOut(true)
@@ -69,7 +75,7 @@ export function SettingsMenu({ triggerRef, backendVersion, onOpenGateway, onOpen
     } }] }
   ]
   return <>
-    <BrowserToolbarButton ref={triggerRef} tooltip="Settings" aria-label="Open settings menu" aria-haspopup={compact ? 'dialog' : 'menu'} aria-expanded={Boolean(anchor)} onClick={event => {
+    <BrowserToolbarButton ref={triggerRef} tooltip={triggerTooltip} className={triggerClassName} aria-label="Navigation tabs" aria-haspopup={compact ? 'dialog' : 'menu'} aria-expanded={Boolean(anchor)} onClick={event => {
       const bounds = event.currentTarget.getBoundingClientRect()
       setAnchor({ x: bounds.right, y: bounds.bottom, returnFocus: event.currentTarget })
     }}><Codicon name="settings-gear" /></BrowserToolbarButton>
