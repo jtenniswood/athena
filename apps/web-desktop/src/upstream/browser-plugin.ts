@@ -1078,7 +1078,7 @@ export function disableBrowserSessionRowTabs(source: string): string {
     .replace(rowTarget, `${rowTarget}        data-web-session-id={session.id}\n        data-web-session-profile={session.profile || 'default'}\n`)
 }
 
-export function disableBrowserSessionOpenActions(source: string): string {
+export function disableBrowserSessionOpenActions(source: string, root: string): string {
   const tabCondition = "...(surface === 'row' && !alreadyTabbed"
   const windowCondition = '...(canOpenSessionWindow()'
   const projectTarget = '        >\n          {node.label}\n        </kit.Item>'
@@ -1096,7 +1096,29 @@ export function disableBrowserSessionOpenActions(source: string): string {
   const copyStart = output.indexOf(contextCopyTarget)
   const projectStart = output.indexOf(contextProjectTarget, copyStart)
   if (copyStart < 0 || projectStart < 0) throw new Error('Browser session context-action boundary changed')
-  return (output.slice(0, copyStart) + output.slice(projectStart)).replace(copyImport, '')
+  const owner = JSON.stringify(path.join(root, 'src/experience/session-shortcuts'))
+  let menu = (output.slice(0, copyStart) + output.slice(projectStart)).replace(copyImport, '')
+  const shortcuts = [
+    ['  onPin?: () => void', '  keyboardShortcuts?: boolean\n  onPin?: () => void'],
+    ['  pinned = false,', '  keyboardShortcuts = false,\n  pinned = false,'],
+    ['        suppressCloseFocusRef.current = true', '        suppressCloseFocusRef.current = Boolean(document.querySelector(\'[role="menu"]\'))'],
+    ['      label: r.rename,', "      key: 'rename',\n      label: browserSessionActionLabel('rename', r.rename.replace(/(?:\\.{3}|…)$/, '')),"],
+    ['      label: pinned ? r.unpin : r.pin,', "      key: 'pin',\n      label: browserSessionActionLabel('pin', pinned ? r.unpin : r.pin),"],
+    ['      label: unread || isUnread ? r.markRead : r.markUnread,', "      key: 'unread',\n      label: browserSessionActionLabel('unread', unread || isUnread ? r.markRead : r.markUnread),"],
+    ['      label: r.archive,', "      key: 'archive',\n      label: browserSessionActionLabel('archive', r.archive),"],
+    ['      label: t.common.delete,', "      key: 'delete',\n      label: browserSessionActionLabel('delete', t.common.delete),"],
+    ['  const renderItems = (kit: MenuKit) => (', `  useBrowserSessionShortcuts(keyboardShortcuts && Boolean(sessionId), {
+    rename: identityItems[0], pin: identityItems[1], unread: identityItems[2],
+    archive: dangerItems[0], delete: dangerItems[1]
+  })
+
+  const renderItems = (kit: MenuKit) => (`]
+  ]
+  for (const [before, after] of shortcuts) {
+    if (menu.split(before).length !== 2) throw new Error('Browser session shortcut contract changed')
+    menu = menu.replace(before, after)
+  }
+  return `import { browserSessionActionLabel, useBrowserSessionShortcuts } from ${owner}\n` + menu
 }
 
 export function filterBrowserKeybinds(source: string): string {
@@ -1193,7 +1215,9 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth, filterBrowserSessionMenu,
     showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
-    disableBrowserSessionRowTabs, disableBrowserSessionOpenActions, filterBrowserKeybinds,
+    disableBrowserSessionRowTabs,
+    disableBrowserSessionOpenActions: source => disableBrowserSessionOpenActions(source, root),
+    filterBrowserKeybinds,
     useBrowserSessionSelection: source => useBrowserSessionSelection(source, root),
     useBrowserBotSelection: source => useBrowserRosterSelection(source, root, 'bot'),
     useBrowserGroupSelection: source => useBrowserRosterSelection(source, root, 'group'),

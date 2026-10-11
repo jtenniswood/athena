@@ -465,12 +465,16 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/session-actions-menu.tsx",
-    "reason": "Remove tab/window actions, retain session mutations, and add leading icons to project destinations.",
+    "reason": "Remove tab/window actions, retain session mutations, and share keyboard shortcuts with the chat toolbar.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "chat actions open from the title toolbar"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "conversation action shortcuts"
       }
     ],
     "removal": "The browser owns session menus or upstream accepts browser capabilities.",
@@ -480,7 +484,7 @@
     "sourceHash": "235143c976b1d6b777dd2f13ad1f1ddadd6d0a3ff2b5bb83034d8fc9b630dc71",
     "sourceRoot": "renderer",
     "inputHash": "235143c976b1d6b777dd2f13ad1f1ddadd6d0a3ff2b5bb83034d8fc9b630dc71",
-    "outputHash": "34b9113397b3c918f37ba5d740d41c8adb2eafa5a2b4d624d0141941eedf6db5"
+    "outputHash": "23ade04edf4924533fbce2e0d14f0910978c519e7f909b674d34e4a32d3bf82e"
   },
   {
     "name": "canonical-bot-row-actions",
