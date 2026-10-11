@@ -868,6 +868,58 @@ for (const platform of ['MacIntel', 'Linux x86_64']) {
   })
 }
 
+for (const platform of ['MacIntel', 'Linux x86_64']) {
+  test(`sidebar action shortcuts preserve the selected chat and draft on ${platform}`, async ({ page }) => {
+    await page.addInitScript(platform => Object.defineProperty(navigator, 'platform', { value: platform }), platform)
+    const modifier = platform === 'MacIntel' ? 'Meta' : 'Control'
+    const prefix = platform === 'MacIntel' ? '⌘⌥' : 'Ctrl+Alt+'
+    await open(page)
+    await editor(page).fill('Keep my sidebar shortcut draft')
+    const filters = page.getByRole('button', { name: 'Filters', exact: true }).first()
+    const archived = page.getByRole('menuitemcheckbox', { name: 'Archived', exact: true })
+    const read = page.getByRole('menuitem', { name: 'Mark all as read', exact: true })
+    await filters.click()
+    await expect(archived.locator('.browser-session-shortcut')).toHaveText(prefix + 'A')
+    await expect(read.locator('.browser-session-shortcut')).toHaveText(prefix + 'R')
+    await expect(archived).toHaveAttribute('aria-checked', 'false')
+    await expect(read).toBeDisabled()
+    await page.keyboard.press('Escape')
+
+    // Typing and open dialogs retain their own keyboard behavior.
+    await editor(page).evaluate((element, mac) => {
+      for (const key of ['a', 'r']) element.dispatchEvent(new KeyboardEvent('keydown', {
+        key, code: `Key${key.toUpperCase()}`, altKey: true, metaKey: mac, ctrlKey: !mac, bubbles: true, cancelable: true
+      }))
+    }, platform === 'MacIntel')
+    await filters.click()
+    await expect(archived).toHaveAttribute('aria-checked', 'false')
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Delete', exact: true }).click()
+    const confirm = page.getByRole('dialog', { name: 'Delete session?', exact: true })
+    await expect(confirm).toBeVisible()
+    await page.keyboard.press(`${modifier}+Alt+A`)
+    await expect(confirm).toBeVisible()
+    await confirm.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await filters.click()
+    await expect(archived).toHaveAttribute('aria-checked', 'false')
+    await page.keyboard.press('Escape')
+
+    const main = page.getByRole('main', { name: 'Conversation and workspace' })
+    for (const checked of ['true', 'false']) {
+      await main.focus()
+      await page.keyboard.press(`${modifier}+Alt+A`)
+      await filters.click()
+      await expect(archived).toHaveAttribute('aria-checked', checked)
+      await page.keyboard.press('Escape')
+    }
+    await main.focus()
+    await page.keyboard.press(`${modifier}+Alt+R`)
+    await expect(page).toHaveURL(/#\/preview-week$/)
+    await expect(editor(page)).toHaveText('Keep my sidebar shortcut draft')
+  })
+}
+
 test('conversation action shortcuts preserve editing and modal focus', async ({ page }) => {
   await open(page)
   await editor(page).fill('Keep this draft untouched')
