@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router'
+import { BrowserGatewayPanel, useBrowserGatewayStatus } from '../upstream/browser-gateway-panel'
 import { settingsPageLabel } from '../experience/settings/policy'
 import { assertSafeConnectionChange } from '../platform/reload-safety'
 import { connectionState } from '../platform/connection-state'
@@ -9,6 +11,8 @@ import './gateway-settings.css'
 
 export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {}) {
   const gateway = getActiveGateway()
+  const status = useBrowserGatewayStatus()
+  const navigate = useNavigate()
   const authMode = runtimeConfig().auth?.mode || 'auto'
   const signInMethodId = useId()
   const [mode, setMode] = useState(gateway.authMode)
@@ -23,7 +27,13 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
     finally { setBusy(false) }
   }
   const content = <section className="browser-gateway-settings" aria-label="Gateway connection">
-    <div className="browser-gateway-settings-intro"><h2>{settingsPageLabel('gateway', 'Remote gateway')}</h2>
+    <div className="browser-settings-page-header"><h2 className="browser-settings-page-title">{settingsPageLabel('gateway', 'Gateway')}</h2>
+      <p className="browser-settings-page-description">Monitor your gateway and manage how this browser connects.</p></div>
+    <section className="browser-settings-gateway-status" aria-label="Gateway status">
+      <h3>Connection status</h3>
+      <BrowserGatewayPanel status={status} onClose={() => {}} onOpenSystem={() => navigate('/settings?tab=config:command-center&section=system', { replace: true })} />
+    </section>
+    <div className="browser-gateway-settings-intro"><h3>Sign-in</h3>
       <p className="browser-gateway-settings-name">{runtimeConfig().gateway.name}</p>
       <p className="browser-gateway-settings-description">This app connects to the server configured by its operator.</p></div>
     <div className="browser-gateway-settings-field">

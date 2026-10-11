@@ -392,6 +392,10 @@
       {
         "file": "tests/browser/interruptions.spec.mjs",
         "scenario": "a direct resume command supersedes delayed Bot activation"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace controls live inside settings and preserve the conversation"
       }
     ],
     "removal": "Upstream wiring accepts a single-conversation capability.",
@@ -399,12 +403,13 @@
       "disableBrowserSessionTabs",
       "disableBrowserOnboardingTips",
       "useBrowserSessionSelection",
-      "useBrowserDirectResumeOwner"
+      "useBrowserDirectResumeOwner",
+      "useBrowserSettingsToolActions"
     ],
     "sourceHash": "244e5e9bb4a0a36b634f6942b5c7d88a2b27c43b1716120b3c417b63d2ebd473",
     "sourceRoot": "renderer",
     "inputHash": "244e5e9bb4a0a36b634f6942b5c7d88a2b27c43b1716120b3c417b63d2ebd473",
-    "outputHash": "a19be9018350a01323d3fc2f9a278da2f49f78a228874162f2c0b43c6a43f2c2"
+    "outputHash": "7524651784571550df0a3dd87144fc1e122dfd2803c677b6366ef66974f2de7e"
   },
   {
     "name": "single-conversation-controller",
@@ -742,12 +747,16 @@
     "kind": "replacement",
     "order": 20,
     "module": "app/shell/statusbar-controls.tsx",
-    "reason": "Place statusbar contributions in the browser toolbar.",
+    "reason": "Hide desktop statusbar chrome while browser controls live in navigation, the composer, and Settings.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "approval mode keeps the selected profile mode and composer icon synchronized"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "system updates use the native settings page"
       }
     ],
     "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",
@@ -1559,13 +1568,17 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "settings actions retain drafts and transfer modal focus"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace controls live inside settings and preserve the conversation"
       }
     ],
     "removal": "Remove when upstream workspace overlays own focus entry, nested-surface-aware tab containment, and focus restoration in the browser.",
     "sourceRoot": "renderer",
     "sourceHash": "98a36f95e194817923c07bc360b4ffde0faed2aaa00bcecb6164b247211d73ad",
     "inputHash": "98a36f95e194817923c07bc360b4ffde0faed2aaa00bcecb6164b247211d73ad",
-    "outputHash": "e3f8bcab0283276a5db9c3c8869708acb9ab81414fee8a4fa637ba6c3b61e0b9"
+    "outputHash": "567a2a68017793cb3a892fea0e1b87c72adcc729827cc576f43aaac2a56e2bd0"
   },
   {
     "name": "browser-overlay-return-focus",
@@ -2170,7 +2183,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
     "inputHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
-    "outputHash": "efd5428c5decbc2f562e81f35fda82d9a542d8d9359c6d2c011ec52f87c4d71b",
+    "outputHash": "aa6af74a3a97a3372a0d90222355ffdb43a21665b9b5258dd0a8a84216ec987c",
     "handlers": [
       "useBrowserSettingsPresentation"
     ],
@@ -2188,6 +2201,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "Permissions combines all controls and preserves legacy field links"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace controls live inside settings and preserve the conversation"
       }
     ],
     "removal": "Remove when upstream SettingsView provides an equivalent responsive browser presentation seam while retaining upstream settings pages and actions."
