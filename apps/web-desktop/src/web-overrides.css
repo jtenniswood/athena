@@ -195,7 +195,13 @@ body > [data-slot='fan-menu'] {
   line-height: var(--web-line-compact);
 }
 
-[data-slot='composer-root'] :is([data-browser-model-pill], [data-testid='reasoning-pill'], [data-browser-approval-control]):is(:hover, :focus-visible, [aria-expanded='true']):not(:disabled) {
+/* Quiet controls share one content colour. Active voice toggles retain their
+   accent, while disabled controls keep the button's disabled opacity. */
+[data-slot='composer-root'] :is([data-browser-composer-action][data-variant='ghost'], [data-browser-approval-control], [data-slot='fan-menu-anchor'] > button):not([aria-pressed='true']) {
+  color: var(--ui-text-tertiary);
+}
+
+[data-slot='composer-root'] :is([data-browser-composer-action][data-variant='ghost'], [data-browser-approval-control], [data-slot='fan-menu-anchor'] > button):is(:hover, :focus-visible, [aria-expanded='true']):not(:disabled, [aria-pressed='true']) {
   background: var(--chrome-action-hover);
   color: var(--web-text);
 }
@@ -219,18 +225,30 @@ body > [data-slot='fan-menu'] {
   height: .625rem;
   font-size: .625rem !important;
   flex: 0 0 .625rem;
+  color: inherit;
+  opacity: 1;
 }
 
 /* Align the voice menu hint beside the mic like the other composer dropdowns. */
 [data-slot='composer-root'] [data-slot='fan-menu-anchor'] {
   align-items: center;
   gap: var(--web-space-1);
+  color: var(--ui-text-tertiary);
+}
+
+[data-slot='composer-root'] [data-slot='fan-menu-anchor']:has(> button:is(:hover, :focus-visible, [aria-expanded='true'])) {
+  color: var(--web-text);
+}
+
+[data-slot='composer-root'] [data-slot='fan-menu-anchor']:has(> button[aria-pressed='true']) {
+  color: var(--web-accent);
 }
 
 [data-slot='composer-root'] [data-slot='fan-menu-anchor'] > .codicon-chevron-up {
   position: static;
   font-size: 0.625rem !important;
   transform: rotate(180deg);
+  color: inherit;
 }
 
 /* Keep the composer text on its own row and place its controls underneath,
