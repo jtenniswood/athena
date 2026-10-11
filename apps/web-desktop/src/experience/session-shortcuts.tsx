@@ -2,9 +2,9 @@ import { useEffect, useRef } from 'react'
 import type { ActionItemSpec } from '@/components/ui/actions-menu'
 import { IS_MAC } from '@/lib/keybinds/combo'
 
-const shortcutKeys = { rename: 'r', pin: 'p', unread: 'u', archive: 'a', delete: 'backspace' } as const
+const shortcutKeys = { rename: 'r', pin: 'p', unread: 'u', files: 'e', review: 'g', archive: 'a', delete: 'backspace' } as const
 type SessionAction = keyof typeof shortcutKeys
-type ShortcutActions = Record<SessionAction, Pick<ActionItemSpec, 'disabled' | 'onSelect'>>
+type ShortcutActions = Partial<Record<SessionAction, Pick<ActionItemSpec, 'disabled' | 'onSelect'>>>
 
 export function browserSessionActionLabel(action: SessionAction, label: string) {
   const key = action === 'delete' ? (IS_MAC ? '⌫' : 'Backspace') : shortcutKeys[action].toUpperCase()
@@ -27,7 +27,7 @@ export function useBrowserSessionShortcuts(enabled: boolean, actions: ShortcutAc
       if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select, [contenteditable], [role="textbox"]'))) return
       if (document.querySelector('[role="dialog"], [role="alertdialog"], [role="menu"], [data-browser-action-surface]')) return
       const item = latest.current[action]
-      if (item.disabled) return
+      if (!item || item.disabled) return
       event.preventDefault()
       event.stopImmediatePropagation()
       item.onSelect(event)
