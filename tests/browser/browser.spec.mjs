@@ -746,13 +746,65 @@ test('chat actions open from the title toolbar with panel controls', async ({ pa
   await expect(page.locator('.browser-chat-toolbar .browser-actions').getByRole('button').first()).toHaveAccessibleName('Chat actions')
   await trigger.click()
   const menu = page.locator('[role="menu"]:visible').last()
-  await expect(menu.getByText('Panels', { exact: true })).toBeVisible()
+  await expect(menu.getByText('Panels', { exact: true })).toHaveCount(0)
   await expect(menu.getByRole('menuitem', { name: 'Files', exact: true })).toBeVisible()
   await expect(menu.getByRole('menuitem', { name: 'Review', exact: true })).toBeVisible()
   await expect(menu.getByText(/Rename/)).toBeVisible()
   await expect(menu.getByText(/Open in new tab/)).toHaveCount(0)
   await expect(menu.getByText(/New window/)).toHaveCount(0)
+  await expect(menu.getByText('Appearance', { exact: true })).toHaveCount(0)
+  await expect(menu.getByText('Move to project', { exact: true })).toHaveCount(0)
+  expect(await menu.evaluate(element => Array.from(element.children).map(child =>
+    child.getAttribute('role') === 'separator' ? 'separator' : child.querySelector('span')?.textContent
+  ).filter(Boolean))).toEqual(['Rename', 'Pin', 'Mark as unread', 'Files', 'Review', 'separator', 'Archive', 'Delete'])
+  await page.keyboard.press('Escape')
+  await page.locator('[data-web-session-id="preview-week"]').first().click({ button: 'right' })
+  await expect(page.getByRole('menuitem', { name: 'Appearance', exact: true })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Move to project', exact: true })).toBeVisible()
 })
+
+for (const platform of ['MacIntel', 'Linux x86_64']) {
+  for (const width of [600, 1440]) {
+    test(`panel shortcuts toggle without losing drafts on ${platform} at ${width}px`, async ({ page }) => {
+      await page.addInitScript(platform => Object.defineProperty(navigator, 'platform', { value: platform }), platform)
+      await page.setViewportSize({ width, height: 960 })
+      await open(page)
+      for (const dismiss of await page.getByRole('button', { name: 'Dismiss notification', exact: true }).all()) await dismiss.click()
+      const modifier = platform === 'MacIntel' ? 'Meta' : 'Control'
+      const prefix = platform === 'MacIntel' ? '⇧⌘' : 'Ctrl+Shift+'
+      const main = page.getByRole('main', { name: 'Conversation and workspace' })
+      const trigger = page.getByRole('button', { name: 'Chat actions', exact: true })
+      const panel = id => width === 600
+        ? page.getByRole('button', { name: new RegExp(`^Close ${id} panel$`, 'i') })
+        : page.locator(`[data-tree-tab="${id}"]:visible`)
+      await editor(page).fill('Keep my panel shortcut draft')
+      for (const [id, label, key] of [['files', 'Files', 'E'], ['review', 'Review', 'G']]) {
+        await trigger.click()
+        await expect(page.getByRole('menuitem', { name: label, exact: true }).locator('.browser-session-shortcut')).toHaveText(prefix + key)
+        await page.keyboard.press('Escape')
+        await main.focus()
+        // Start closed even when an upstream panel is restored by default.
+        if (await panel(id).isVisible()) {
+          await page.keyboard.press(`${modifier}+Shift+${key}`)
+          await expect(panel(id)).toBeHidden()
+        }
+        await page.keyboard.press(`${modifier}+Shift+${key}`)
+        await expect(panel(id)).toBeVisible()
+        await page.keyboard.press(`${modifier}+Shift+${key}`)
+        await expect(panel(id)).toBeHidden()
+        // Menu clicks and shortcuts share the same visibility owner.
+        await trigger.click()
+        await page.getByRole('menuitem', { name: label, exact: true }).click()
+        await expect(panel(id)).toBeVisible()
+        await main.focus()
+        await page.keyboard.press(`${modifier}+Shift+${key}`)
+        await expect(panel(id)).toBeHidden()
+        await expect(editor(page)).toHaveText('Keep my panel shortcut draft')
+        await expect(page).toHaveURL(/#\/preview-week$/)
+      }
+    })
+  }
+}
 
 for (const platform of ['MacIntel', 'Linux x86_64']) {
   test(`conversation action shortcuts reuse menu actions on ${platform}`, async ({ page }) => {
@@ -821,12 +873,12 @@ test('conversation action shortcuts preserve editing and modal focus', async ({ 
   await editor(page).fill('Keep this draft untouched')
   // Synthetic keydowns exercise the application guard without invoking the
   // browser's reload shortcut or the editor's native word-deletion command.
-  const prevented = await editor(page).evaluate(element => ['R', 'P', 'U', 'A', 'Backspace'].map(key => {
+  const prevented = await editor(page).evaluate(element => ['R', 'P', 'U', 'E', 'G', 'A', 'Backspace'].map(key => {
     const event = new KeyboardEvent('keydown', { key, ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true })
     element.dispatchEvent(event)
     return event.defaultPrevented
   }))
-  expect(prevented).toEqual([false, false, false, false, false])
+  expect(prevented).toEqual([false, false, false, false, false, false, false])
   await expect(editor(page)).toHaveText('Keep this draft untouched')
   await expect(page.getByRole('dialog')).toHaveCount(0)
   const trigger = page.getByRole('button', { name: 'Chat actions', exact: true })
@@ -834,9 +886,12 @@ test('conversation action shortcuts preserve editing and modal focus', async ({ 
   await page.getByRole('menuitem', { name: 'Delete', exact: true }).click()
   const confirm = page.getByRole('dialog', { name: 'Delete session?', exact: true })
   await confirm.getByRole('button', { name: 'Cancel', exact: true }).focus()
-  await confirm.getByRole('button', { name: 'Cancel', exact: true }).evaluate(element => {
-    element.dispatchEvent(new KeyboardEvent('keydown', { key: 'R', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }))
-  })
+  const modalPrevented = await confirm.getByRole('button', { name: 'Cancel', exact: true }).evaluate(element => ['R', 'E', 'G'].map(key => {
+    const event = new KeyboardEvent('keydown', { key, ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true })
+    element.dispatchEvent(event)
+    return event.defaultPrevented
+  }))
+  expect(modalPrevented).toEqual([false, false, false])
   await expect(confirm).toBeVisible()
   await expect(page.getByRole('dialog', { name: 'Rename session', exact: true })).toHaveCount(0)
   await confirm.getByRole('button', { name: 'Cancel', exact: true }).click()
@@ -1151,6 +1206,7 @@ test('None grouping shows all sessions without subheaders and survives reload', 
   }
   for (const allProfiles of [false, true]) {
     if (allProfiles) await page.getByRole('button', { name: 'All profiles', exact: true }).click()
+    await chooseGrouping('Updated')
     await expect(dividers.first()).toBeVisible()
     // None must reveal sessions from collapsed groups, not just hide their labels.
     if (await dividers.first().getAttribute('aria-expanded') === 'true') await dividers.first().click()
@@ -1164,7 +1220,9 @@ test('None grouping shows all sessions without subheaders and survives reload', 
     await expect(olderSession).toBeVisible()
     await expect(dividers).toHaveCount(0)
     await page.getByRole('button', { name: 'Filters', exact: true }).click()
-    await expect(page.getByRole('menuitem', { name: 'Grouping None', exact: true })).toBeVisible()
+    await page.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
+    await expect(page.getByRole('menuitemradio', { name: 'None', exact: true })).toHaveAttribute('aria-checked', 'true')
+    await page.keyboard.press('Escape')
     await page.keyboard.press('Escape')
     await chooseGrouping('Updated')
     await expect(dividers.first()).toBeVisible()

@@ -256,7 +256,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
-    "reason": "Hide desktop profile/card controls, expose None grouping, and add leading icons to filter menu actions.",
+    "reason": "Hide desktop profile/card controls and the grouping summary, expose None grouping, and add leading icons to filter menu actions.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -272,7 +272,7 @@
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
     "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
-    "outputHash": "8dea3e425734a69081b926deecdb2de1bb8e36d56a2e1c514d17a79897acf4b2"
+    "outputHash": "368020d54276b26fa0749a9c61307eb58d22385ea1dc7ef4edf65ceaa9aa5c9b"
   },
   {
     "name": "hidden-bot-roster",
@@ -485,7 +485,7 @@
     "sourceHash": "235143c976b1d6b777dd2f13ad1f1ddadd6d0a3ff2b5bb83034d8fc9b630dc71",
     "sourceRoot": "renderer",
     "inputHash": "235143c976b1d6b777dd2f13ad1f1ddadd6d0a3ff2b5bb83034d8fc9b630dc71",
-    "outputHash": "ac35f71e77011a791b234ecdd32e691aae99144ed0d2f6cb84a678b7b924d76e"
+    "outputHash": "ef0bf7f8a6072914c272e4f33ace23c758991dc9db88351bc77ce1a43619f373"
   },
   {
     "name": "canonical-bot-row-actions",
