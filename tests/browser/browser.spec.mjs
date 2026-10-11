@@ -732,7 +732,7 @@ test('settings fills the viewport and uses compact list and detail navigation', 
   await expect(chat).toHaveText('Keep this draft while changing settings layout')
 })
 
-test('approval mode keeps the selected profile mode and toolbar icon synchronized', async ({ page }) => {
+test('approval mode keeps the selected profile mode and composer icon synchronized', async ({ page }) => {
   await open(page)
   const control = page.locator('.browser-approval-control button')
   await expect(control).toBeVisible()
