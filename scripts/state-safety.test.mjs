@@ -76,7 +76,8 @@ test('reload readiness flushes and verifies text and blocks turns, uploads, file
   let persisted = JSON.stringify(draft.texts)
   const track = { readyState: 'live' }
   const navigator = { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [track] }) } }
-  const draftSafety = { browserDraftSnapshot: () => draft, flushBrowserDrafts: async () => {} }
+  let flush = async () => {}
+  const draftSafety = { browserDraftSnapshot: () => draft, flushBrowserDrafts: () => flush() }
   const safety = load('reload-safety', { navigator, draftSafety, window: { localStorage: { getItem: () => persisted } } })
   assert.equal(safety.reloadReadiness().ready, false)
   safety.setActiveWork({ count: 0 }); assert.equal(safety.reloadReadiness().ready, true)
@@ -86,6 +87,12 @@ test('reload readiness flushes and verifies text and blocks turns, uploads, file
   draft.attachments = 1; assert.match(safety.reloadReadiness().reason, /attachments/); draft.attachments = 0
   draft.blocked = true; assert.equal(safety.reloadReadiness().ready, false); draft.blocked = false
   persisted = '{}'; assert.match(safety.reloadReadiness().reason, /could not be saved/); persisted = JSON.stringify(draft.texts)
+  flush = async () => { persisted = JSON.stringify(draft.texts) }
+  await safety.assertSafeConnectionChange()
+  persisted = '{}'
+  flush = async () => {}
+  await assert.rejects(safety.assertSafeConnectionChange(), /could not be saved/)
+  persisted = JSON.stringify(draft.texts)
   safety.trackMediaRequests(); await navigator.mediaDevices.getUserMedia({ audio: true })
   assert.match(safety.reloadReadiness().reason, /recording/)
   track.readyState = 'ended'; assert.equal(safety.reloadReadiness().ready, true)
