@@ -345,7 +345,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/index.tsx",
-    "reason": "Compose browser search, disclosures, pins, and None grouping without desktop shortcuts.",
+    "reason": "Compose browser search, disclosures, pins, and None grouping without desktop shortcuts or the duplicate top Capabilities link.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -355,6 +355,10 @@
       {
         "file": "scripts/sidebar-contracts.test.mjs",
         "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser sidebar keeps Capabilities only in More controls"
       }
     ],
     "removal": "A browser-owned navigation surface consumes public session models and actions.",
@@ -362,12 +366,13 @@
       "useBrowserSearchLabel",
       "ungroupedSidebar",
       "removeBrowserNewSessionShortcut",
+      "removeBrowserTopCapabilitiesLink",
       "useBrowserSectionIds"
     ],
     "sourceHash": "0532c4c32d7cd1525c65a8f62b0ac248016c24648e4256ad812836e9b1a6cc7f",
     "sourceRoot": "renderer",
     "inputHash": "0532c4c32d7cd1525c65a8f62b0ac248016c24648e4256ad812836e9b1a6cc7f",
-    "outputHash": "0cbf991d2b921af9b32e0e431af9c5fac4133cc265d300c59f4d0467a251c30d"
+    "outputHash": "0ec092e59550b4a83907af7b362507bf2af2803d8e610d11393eb911a65bc23b"
   },
   {
     "name": "single-conversation-wiring",
