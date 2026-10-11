@@ -69,6 +69,8 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
       { id: 'providers', title: 'AI Connections', aliases: ['Providers', 'accounts', 'API keys', 'endpoints'], scope: 'connected-server' },
       { id: 'config:chat', title: 'Chat', scope: 'mixed' },
       { id: 'config:voice', title: 'Voice', scope: 'mixed' },
+      { id: 'config:profiles', title: 'Profiles', scope: 'connected-server' },
+      { id: 'config:agents', title: 'Agents', scope: 'connected-server' },
       { id: 'config:memory', title: 'Memory', aliases: ['Memory & context'], scope: 'connected-server' }
     ]
   },
@@ -82,6 +84,7 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
         capability: 'server.real-browser-profile',
         scopeDescription: 'Browser automation runs on the connected Hermes server. “Use My Real Browser Profile” uses that server’s supported Chromium profile, not the browser viewing this page. Private URLs and local network access refer to networks visible from that server.'
       },
+      { id: 'config:webhooks', title: 'Webhooks', scope: 'connected-server' },
       { id: 'config:safety', title: 'Permissions', aliases: ['Permissions & safety'], scope: 'connected-server' },
       {
         id: 'vault', title: 'Saved Logins', aliases: ['Passwords & Logins'], scope: 'connected-server', visibility: 'hidden',
@@ -100,7 +103,8 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
     id: 'service',
     title: 'Service',
     pages: [
-      { id: 'gateway', title: 'Server Connection', aliases: ['Gateways', 'gateway', 'sign in'], scope: 'connection' },
+      { id: 'gateway', title: 'Gateway', aliases: ['Gateways', 'Server Connection', 'sign in'], scope: 'connection' },
+      { id: 'config:command-center', title: 'Command center', aliases: ['system', 'logs', 'usage', 'maintenance'], scope: 'connected-server' },
       {
         id: 'billing', title: 'Billing', aliases: ['Usage & billing'], scope: 'connected-server',
         scopeDescription: 'This page shows billing from the connected Hermes server, such as Nous usage. It does not include external model provider or web hosting charges.'
@@ -111,6 +115,7 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
     id: 'maintenance',
     title: 'Maintenance',
     pages: [
+      { id: 'config:system-updates', title: 'System updates', aliases: ['backend', 'update Hermes', 'version'], scope: 'connected-server' },
       { id: 'sessions', title: 'Archived Chats', scope: 'connected-server' },
       {
         id: 'config:browser-configuration', title: 'Configuration',

@@ -95,7 +95,7 @@ test('settings groups retain new upstream pages and search keeps old names and d
     { id: 'sp-about', label: 'About', run }
   ], (id, label) => ({ id: `set-${id}`, label, run: () => id }))
   const gateway = entries.find(entry => entry.id === 'sp-gateway')
-  assert.equal(gateway.label, 'Server Connection')
+  assert.equal(gateway.label, 'Gateway')
   assert.ok(gateway.keywords.includes('Gateways'))
   assert.equal(gateway.run, run)
   const providers = entries.find(entry => entry.id === 'sp-providers&pview=accounts')
