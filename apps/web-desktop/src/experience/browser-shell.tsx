@@ -17,6 +17,7 @@ import { useBrowserSessionActions } from '../upstream/conversation-actions'
 import { browserDropProjectId, moveBrowserSessionToProject, reportBrowserProjectMoveFailure } from '../upstream/project-actions'
 import { currentPwaUpdate, subscribePwaUpdate, type PwaUpdateNotice } from '../pwa/register'
 import { installConversationSubmitScroll } from './ui/submit-scroll'
+import { useBrowserChatPanelShortcuts } from './chat-panel-actions'
 
 interface SessionProjectDrag {
   pointerId: number
@@ -187,6 +188,7 @@ function BrowserLayout() {
     navigation.closeDrawer()
   }
   const panelPanes = panes.filter(pane => !['workspace', 'sessions', 'hermes-bots:pane', 'terminal'].includes(pane.id))
+  useBrowserChatPanelShortcuts(Boolean(selected), panelPanes, () => main.current?.focus())
   return <div className="browser-shell" data-browser-shell="" data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined}>
     <BrowserActionError />
     <div className="browser-workspace">
