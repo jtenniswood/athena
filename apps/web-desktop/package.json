@@ -15,7 +15,7 @@
     "@tailwindcss/vite": "4.3.3",
     "@types/d3-force": "3.0.10",
     "@types/hast": "3.0.5",
-    "@types/node": "22.20.1",
+    "@types/node": "22.20.5",
     "@types/qrcode": "1.5.6",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
@@ -28,7 +28,7 @@
   "dependencies": {
     "@assistant-ui/core": "0.2.23",
     "@assistant-ui/react": "0.14.24",
-    "@assistant-ui/react-streamdown": "0.3.5",
+    "@assistant-ui/react-streamdown": "0.3.20",
     "@audiowave/react": "0.6.2",
     "@chenglou/pretext": "0.0.6",
     "@codemirror/commands": "6.10.4",
