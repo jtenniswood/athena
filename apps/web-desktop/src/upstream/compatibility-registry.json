@@ -460,22 +460,23 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/session-actions-menu.tsx",
-    "reason": "Remove tab/window actions, retain session mutations, and add leading icons to project destinations.",
+    "reason": "Remove tab/window actions, retain session mutations, and add panel controls to the chat menu.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "chat actions open from the title toolbar"
+        "scenario": "chat actions open from the title toolbar with panel controls"
       }
     ],
     "removal": "The browser owns session menus or upstream accepts browser capabilities.",
     "handlers": [
-      "disableBrowserSessionOpenActions"
+      "disableBrowserSessionOpenActions",
+      "addBrowserChatPanelActions"
     ],
     "sourceHash": "235143c976b1d6b777dd2f13ad1f1ddadd6d0a3ff2b5bb83034d8fc9b630dc71",
     "sourceRoot": "renderer",
     "inputHash": "235143c976b1d6b777dd2f13ad1f1ddadd6d0a3ff2b5bb83034d8fc9b630dc71",
-    "outputHash": "34b9113397b3c918f37ba5d740d41c8adb2eafa5a2b4d624d0141941eedf6db5"
+    "outputHash": "c6d9124446465ad263f20c1b46a7c5cf14018ef25088ace84b3512a72e20ff39"
   },
   {
     "name": "canonical-bot-row-actions",

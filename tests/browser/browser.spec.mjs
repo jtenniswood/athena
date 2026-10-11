@@ -739,13 +739,16 @@ for (const width of [390, 1440]) {
   })
 }
 
-test('chat actions open from the title toolbar', async ({ page }) => {
+test('chat actions open from the title toolbar with panel controls', async ({ page }) => {
   await open(page)
   const trigger = page.getByRole('button', { name: 'Chat actions', exact: true })
   await expect(trigger).toBeVisible()
   await expect(page.locator('.browser-chat-toolbar .browser-actions').getByRole('button').first()).toHaveAccessibleName('Chat actions')
   await trigger.click()
   const menu = page.locator('[role="menu"]:visible').last()
+  await expect(menu.getByText('Panels', { exact: true })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: 'Files', exact: true })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: 'Review', exact: true })).toBeVisible()
   await expect(menu.getByText(/Rename/)).toBeVisible()
   await expect(menu.getByText(/Open in new tab/)).toHaveCount(0)
   await expect(menu.getByText(/New window/)).toHaveCount(0)
@@ -1175,7 +1178,9 @@ for (const width of [390, 1440]) {
       const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
       const role = width === 390 ? 'button' : 'menuitem'
       await (await settingsTrigger(page)).click()
-      await expect(surface.locator('.browser-action-group-label')).toContainText(['Panels', 'Systems'])
+      await expect(surface.locator('.browser-action-group-label')).toContainText(['Systems'])
+      await expect(surface.getByRole(role, { name: 'Files', exact: true })).toHaveCount(0)
+      await expect(surface.getByRole(role, { name: 'Review', exact: true })).toHaveCount(0)
       for (const name of ['Settings']) {
         await expect(surface.getByRole(role, { name, exact: true })).toHaveCount(1)
       }

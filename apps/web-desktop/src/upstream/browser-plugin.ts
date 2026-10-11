@@ -1074,6 +1074,20 @@ export function disableBrowserSessionOpenActions(source: string): string {
   return (output.slice(0, copyStart) + output.slice(projectStart)).replace(copyImport, '')
 }
 
+export function addBrowserChatPanelActions(source: string, root: string): string {
+  const importTarget = "import type { SessionTitleResponse } from '../../types'\n"
+  const actionInterface = '  onHideTabBar?: () => void\n'
+  const actionDestructure = '  onHideTabBar,\n  surface = \'row\',\n  tabPaneId\n}: SessionActions) {'
+  const actionItemsTarget = '      {dangerItems.map(item => renderActionItem(kit, item))}'
+  if (source.split(importTarget).length !== 2 || source.split(actionInterface).length !== 2 || source.split(actionDestructure).length !== 2 || source.split(actionItemsTarget).length !== 2) {
+    throw new Error('Browser chat panel menu contract changed')
+  }
+  return source.replace(importTarget, `${importTarget}import { BrowserChatPanelActions } from ${JSON.stringify(path.join(root, 'src/experience/chat-panel-actions.tsx'))}\n`)
+    .replace(actionInterface, `${actionInterface}  browserPanelEntries?: readonly { id: string; title?: unknown; data?: unknown }[]\n  onBrowserPanelOpen?: () => void\n`)
+    .replace(actionDestructure, '  surface = \'row\',\n  tabPaneId,\n  browserPanelEntries,\n  onBrowserPanelOpen\n}: SessionActions) {')
+    .replace(actionItemsTarget, `      <BrowserChatPanelActions kit={kit} entries={browserPanelEntries} onOpen={onBrowserPanelOpen} />\n${actionItemsTarget}`)
+}
+
 export function filterBrowserKeybinds(source: string): string {
   const browserSet = `const BROWSER_UNSUPPORTED_KEYBINDS = new Set([\n  'session.newTab', 'session.newWindow', 'session.next', 'session.prev',\n  'view.showBrowser', 'view.toggleHud', 'view.showTerminal', 'view.newTerminal',\n  'view.nextTerminal', 'view.prevTerminal', 'view.closeTerminal',\n  'view.terminalCopy', 'view.terminalPaste', 'hud.snapToPointer',\n  'view.findInPage', 'view.findNext', 'view.findPrevious'\n])\n`
   const actionTarget = '  const actionList = allKeybindActions(contributions)'
@@ -1169,6 +1183,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth, filterBrowserSessionMenu,
     showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
     disableBrowserSessionRowTabs, disableBrowserSessionOpenActions, filterBrowserKeybinds,
+    addBrowserChatPanelActions: source => addBrowserChatPanelActions(source, root),
     useBrowserSessionSelection: source => useBrowserSessionSelection(source, root),
     useBrowserBotSelection: source => useBrowserRosterSelection(source, root, 'bot'),
     useBrowserGroupSelection: source => useBrowserRosterSelection(source, root, 'group'),
