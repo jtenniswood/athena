@@ -43,12 +43,6 @@ test('accepted composer submissions report only successful sends', () => {
   assert.match(output, /if \\(!accepted\\) \\{\\s*keep\\(\\)\\s*\\} else \\{\\s*announceBrowserAcceptedSubmit\\(\\{ text, sessionId \\}\\)/)
   assert.match(output, /accepted-submit/)
 })
-test('browser initialization runs after bridge setup and before upstream renderer import', () => {
-  const entry = readFileSync(path.join(root, 'src/upstream/entry.ts'), 'utf8')
-  const browserRoot = readFileSync(path.join(root, 'src/upstream/browser-root.tsx'), 'utf8')
-  assert.ok(entry.indexOf("await import('./browser-initialize')") < entry.indexOf("await import('../../../desktop/src/main')"))
-  assert.doesNotMatch(browserRoot, /browser-initialize/)
-})
 test('profile switch hook ignores repeated mount effects but handles real profile changes', () => {
   const source = readFileSync(path.join(root, '../desktop/src/app/hooks/use-on-profile-switch.ts'), 'utf8')
   let profile = 'default', reference, effect
@@ -375,9 +369,11 @@ test('browser shell does not register chat tab creation actions', () => {
 
 test('browser startup keeps shared controller registration without rendering desktop UI', () => {
   const initializer = readFileSync(path.join(root, 'src/upstream/browser-initialize.ts'), 'utf8')
+  const entry = readFileSync(path.join(root, 'src/upstream/entry.ts'), 'utf8')
   const browserRoot = readFileSync(path.join(root, 'src/upstream/browser-root.tsx'), 'utf8')
   assert.match(initializer, /import ['"]\.\.\/\.\.\/\.\.\/desktop\/src\/app\/contrib\/controller['"];?/)
-  assert.match(browserRoot, /import ['"]\.\/browser-initialize['"];?/)
+  assert.ok(entry.indexOf("await import('./browser-initialize')") < entry.indexOf("await import('../../../desktop/src/main')"))
+  assert.doesNotMatch(browserRoot, /browser-initialize/)
   assert.doesNotMatch(browserRoot, /ContribController/)
 })
 
