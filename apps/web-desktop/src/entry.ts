@@ -1,5 +1,5 @@
 import { buildInfo } from './build-info'
-import { completeStartup, recoverStartupChunk, showStartupRecovery } from './platform/startup-recovery'
+import { completeStartup, recoverStartupChunk, restoreStartupLocation, showStartupRecovery } from './platform/startup-recovery'
 import { startBrowserApplication } from './startup'
 import './web.css'
 import './experience/styles/tokens.css'
@@ -20,6 +20,7 @@ if (import.meta.hot) import.meta.hot.dispose(stopComposerKeyboard)
 
 async function start(): Promise<void> {
   try {
+    restoreStartupLocation()
     await startBrowserApplication()
     completeStartup()
   } catch (error) {
