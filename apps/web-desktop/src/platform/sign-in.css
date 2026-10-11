@@ -54,4 +54,6 @@
 .athena-sign-in-advanced { font-size: 0.875rem; text-align: left; }
 .athena-sign-in-advanced summary { text-align: center; cursor: pointer; color: var(--sign-in-muted); padding: 0.5rem 0; }
 .athena-sign-in-advanced form { display: grid; gap: 0.75rem; padding-top: 0.75rem; }
+.athena-sign-in-advanced p { margin-block: 0.75rem; color: var(--sign-in-muted); }
+.athena-sign-in-build { font-size: 0.75rem; overflow-wrap: anywhere; }
 .athena-sign-in [hidden] { display: none; }

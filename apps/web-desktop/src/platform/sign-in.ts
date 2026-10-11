@@ -1,6 +1,7 @@
 import { connectionState } from './connection-state'
 import { baseUrl, browserLoginUrl, checkBrowserSession, fetchStatus, openOauthLoginPopup, resolveToken } from './connection'
 import { browserSignInTarget, SignInConfigurationError, type SignInProvider } from './sign-in-target'
+import { createSignInView } from './sign-in-view'
 
 /** Use Hermes's public provider metadata; credentials and OIDC stay on Hermes. */
 async function signInProviders(): Promise<SignInProvider[]> {
@@ -22,13 +23,8 @@ export async function waitForSignIn(): Promise<void> {
   if (resolveToken()) return
   const root = document.getElementById('root')
   if (!root) throw new Error('The sign-in screen could not be loaded.')
-  const section = document.createElement('main')
-  section.className = 'athena-sign-in'
-  section.innerHTML = `
-    <section class="athena-sign-in-card" aria-labelledby="athena-sign-in-title">
-      <img class="hermes-startup-logo" src="/athena.svg" width="64" height="64" alt="" />
-      <h1 id="athena-sign-in-title">Welcome to Athena</h1>
-      <p class="athena-sign-in-status" role="status" aria-live="polite">Checking your session…</p>
+  const { section, card, status } = createSignInView('Checking your session…')
+  card.insertAdjacentHTML('beforeend', `
       <div class="athena-sign-in-actions" hidden>
         <button type="button" class="athena-sign-in-primary">Sign in</button>
         <button type="button" class="athena-sign-in-current-window">Continue in this window</button>
@@ -41,10 +37,8 @@ export async function waitForSignIn(): Promise<void> {
           <input id="athena-sign-in-token" type="password" autocomplete="off" required />
           <button type="submit">Connect with token</button>
         </form>
-      </details>
-    </section>`
+      </details>`)
   const find = <T extends HTMLElement>(selector: string) => section.querySelector<T>(selector)!
-  const status = find<HTMLParagraphElement>('[role="status"]')
   const actions = find<HTMLDivElement>('.athena-sign-in-actions')
   const signIn = find<HTMLButtonElement>('.athena-sign-in-primary')
   const currentWindow = find<HTMLButtonElement>('.athena-sign-in-current-window')
@@ -100,7 +94,7 @@ export async function waitForSignIn(): Promise<void> {
         const target = browserSignInTarget(providers, returnTo)
         path = target.path
         signIn.textContent = target.label
-        setStatus('')
+        setStatus('Sign in to start chatting with Hermes Agent.')
         actions.hidden = advanced.hidden = false
       } catch (error) {
         setStatus(error instanceof SignInConfigurationError ? error.message : 'Could not reach your Hermes server. Check your connection and try again.')
