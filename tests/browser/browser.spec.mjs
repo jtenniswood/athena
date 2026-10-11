@@ -1206,6 +1206,7 @@ test('None grouping shows all sessions without subheaders and survives reload', 
   }
   for (const allProfiles of [false, true]) {
     if (allProfiles) await page.getByRole('button', { name: 'All profiles', exact: true }).click()
+    await chooseGrouping('Updated')
     await expect(dividers.first()).toBeVisible()
     // None must reveal sessions from collapsed groups, not just hide their labels.
     if (await dividers.first().getAttribute('aria-expanded') === 'true') await dividers.first().click()
@@ -1219,7 +1220,9 @@ test('None grouping shows all sessions without subheaders and survives reload', 
     await expect(olderSession).toBeVisible()
     await expect(dividers).toHaveCount(0)
     await page.getByRole('button', { name: 'Filters', exact: true }).click()
-    await expect(page.getByRole('menuitem', { name: 'Grouping None', exact: true })).toBeVisible()
+    await page.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
+    await expect(page.getByRole('menuitemradio', { name: 'None', exact: true })).toHaveAttribute('aria-checked', 'true')
+    await page.keyboard.press('Escape')
     await page.keyboard.press('Escape')
     await chooseGrouping('Updated')
     await expect(dividers.first()).toBeVisible()

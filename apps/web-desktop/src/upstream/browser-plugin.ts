@@ -913,6 +913,7 @@ function filterBrowserSessionMenu(source: string): string {
   const target = 'function OptionCheckbox({ checked, onCheck, option }: { checked: boolean; onCheck: () => void; option: Option }) {'
   if (source.split(target).length !== 2) throw new Error('Browser session filter menu target changed')
   const replacements: [string, string][] = [
+    ['  const groupingLabel = groupings.find(option => option.id === grouping)?.label\n', ''],
     [
       'function OptionGlyph({ option }: { option: Option }) {',
       `const OPTION_ICONS: Record<string, string> = { 'all-profiles': 'account', archived: 'archive' }
@@ -923,7 +924,16 @@ function OptionGlyph({ option }: { option: Option }) {`
       "  return option.icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={option.icon} size=\"0.8125rem\" /> : null",
       "  const icon = option.icon || OPTION_ICONS[option.id]\n  return icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={icon} size=\"0.8125rem\" /> : null"
     ],
-    ['<DropdownMenuSubTrigger hideChevron>\n              {f.grouping}', '<DropdownMenuSubTrigger hideChevron>\n              <Codicon name="list-tree" size="0.8125rem" />\n              {f.grouping}'],
+    [
+      `<DropdownMenuSubTrigger hideChevron>
+              {f.grouping}
+              <span className="ml-auto flex items-center gap-1 pl-4 text-(--ui-text-tertiary)">
+                {groupingLabel}
+                <Codicon name="chevron-right" size="1rem" />
+              </span>
+            </DropdownMenuSubTrigger>`,
+      '<DropdownMenuSubTrigger><Codicon name="list-tree" size="0.8125rem" />{f.grouping}</DropdownMenuSubTrigger>'
+    ],
     ['<DropdownMenuSubTrigger>{f.ordering}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="list-ordered" size="0.8125rem" />{f.ordering}</DropdownMenuSubTrigger>'],
     ['<DropdownMenuSubTrigger>{f.show}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="eye" size="0.8125rem" />{f.show}</DropdownMenuSubTrigger>'],
     ['<DropdownMenuSubTrigger>{f.status}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="pulse" size="0.8125rem" />{f.status}</DropdownMenuSubTrigger>'],

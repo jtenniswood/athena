@@ -256,7 +256,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
-    "reason": "Hide desktop profile/card controls, expose None grouping, and add leading icons to filter menu actions.",
+    "reason": "Hide desktop profile/card controls and the grouping summary, expose None grouping, and add leading icons to filter menu actions.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -272,7 +272,7 @@
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
     "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
-    "outputHash": "8dea3e425734a69081b926deecdb2de1bb8e36d56a2e1c514d17a79897acf4b2"
+    "outputHash": "368020d54276b26fa0749a9c61307eb58d22385ea1dc7ef4edf65ceaa9aa5c9b"
   },
   {
     "name": "hidden-bot-roster",
