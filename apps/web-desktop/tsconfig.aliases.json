@@ -36,6 +36,9 @@
       ],
       "hermes:web-draft-persistence": [
         "./src/platform/draft-persistence.ts"
+      ],
+      "hermes:web-draft-safety": [
+        "./src/platform/draft-safety.ts"
       ]
     }
   }
