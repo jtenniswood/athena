@@ -605,6 +605,21 @@ export function removeBrowserNewSessionShortcut(source: string): string {
   return source.replace(importTarget, '').replace(shortcut, '')
 }
 
+export function removeBrowserTopCapabilitiesLink(source: string): string {
+  const replacements = [
+    ["  CAPABILITIES_ROUTE,\n", ''],
+    [
+      "  {\n    id: 'capabilities',\n    label: '',\n    icon: props => <Codicon name=\"symbol-misc\" {...props} />,\n    route: CAPABILITIES_ROUTE,\n    keybindActionId: 'nav.capabilities'\n  },\n",
+      ''
+    ],
+    ["                  (item.id === 'capabilities' && currentView === 'capabilities') ||\n", '']
+  ]
+  for (const [before] of replacements) {
+    if (source.split(before).length !== 2) throw new Error('Browser top Capabilities link target changed')
+  }
+  return replacements.reduce((output, [before, after]) => output.replace(before, after), source)
+}
+
 export function removeBrowserNewBotChatAction(source: string): string {
   if (!source.includes('b.bot.newChatWith')) return source
   const invocation = 'newBotChat(bot)'
@@ -1164,7 +1179,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source, entry.module as 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     useBrowserProjectDisclosure,
-    exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut,
+    exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut, removeBrowserTopCapabilitiesLink,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth, filterBrowserSessionMenu,
     showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
