@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 22127)
-Total output lines: 1256
-
 import { existsSync, readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import path from 'node:path'
@@ -584,7 +581,163 @@ export function closeBrowserWorkspacePanels(source: string): string {
 export function exportBrowserStatusbarItem(source: string): string {
   const before = 'const StatusbarItemView = memo(function StatusbarItemView('
   const after = 'export ' + before
-  const original = source.repla…2127 tokens truncated…const labels = ['c.queueMessage', 'showStop ? c.stop : c.send', 'state.tools.label', 'copy.openModelPicker', 'triggerLabel', 'label', 'title']
+  const original = source.replace(after, before)
+  const contract = contracts.find(item => item.module === 'app/shell/statusbar-controls.tsx')!
+  if (createHash('sha256').update(original).digest('hex') !== contract.sourceHash || original.split(before).length !== 2) throw new Error('Browser statusbar item contract changed')
+  return original.replace(before, after)
+}
+
+export function filterBrowserActivityToasts(source: string): string {
+  const target = '      host.notify({'
+  if (source.split(target).length !== 2 || !source.includes('`${label} has new activity`')) {
+    throw new Error('Browser activity notification target changed')
+  }
+  // Keep unread tracking and explicit incoming-message alerts, but omit the
+  // generic roster activity toast that adds no information to the browser UI.
+  return source.replace(target, '      if (inbound) host.notify({')
+}
+
+export function removeBrowserNewSessionShortcut(source: string): string {
+  const importTarget = "import { KbdGroup } from '@/components/ui/kbd'\n"
+  const shortcut = [
+    '                    {isNewSession && (',
+    '                      <KbdGroup',
+    "                        className={cn('ml-auto opacity-55', newSessionKbdFlash && 'opacity-100!')}",
+    '                        keys={newSessionKbd}',
+    '                        size="sm"',
+    '                      />',
+    '                    )}'
+  ].join('\n') + '\n'
+  if (!source.includes('KbdGroup') && !source.includes(importTarget)) return source
+  if (source.split(importTarget).length !== 2 || source.split(shortcut).length !== 2) {
+    throw new Error('Browser new-session shortcut target changed')
+  }
+  return source.replace(importTarget, '').replace(shortcut, '')
+}
+
+export function removeBrowserTopCapabilitiesLink(source: string): string {
+  const replacements = [
+    ["  CAPABILITIES_ROUTE,\n", ''],
+    [
+      "  {\n    id: 'capabilities',\n    label: '',\n    icon: props => <Codicon name=\"symbol-misc\" {...props} />,\n    route: CAPABILITIES_ROUTE,\n    keybindActionId: 'nav.capabilities'\n  },\n",
+      ''
+    ],
+    ["                  (item.id === 'capabilities' && currentView === 'capabilities') ||\n", '']
+  ]
+  for (const [before] of replacements) {
+    if (source.split(before).length !== 2) throw new Error('Browser top Capabilities link target changed')
+  }
+  return replacements.reduce((output, [before, after]) => output.replace(before, after), source)
+}
+
+export function removeBrowserNewBotChatAction(source: string): string {
+  if (!source.includes('b.bot.newChatWith')) return source
+  const invocation = 'newBotChat(bot)'
+  const start = source.lastIndexOf('<ContextMenuItem', source.indexOf(invocation))
+  const close = source.indexOf('</ContextMenuItem>', source.indexOf(invocation))
+  const end = close < 0 ? -1 : close + '</ContextMenuItem>'.length
+  const action = start < 0 || end < 0 ? '' : source.slice(start, end)
+  const imports = ["  saveSelectedRosterBot\n", "  newBotChat,\n"]
+  if (!action || source.indexOf(invocation) !== source.lastIndexOf(invocation) || imports.some(target => source.split(target).length !== 2)) {
+    throw new Error('Browser new-bot-chat action target changed')
+  }
+  let output = source.replace(action, '')
+  output = output.replace(imports[0], '').replace(imports[1], '')
+  output = output.replace("import { botRosterMeta, botWorkspaceOwnerKey, setBotsWorkspaceOwner } from './routing'", "import { botRosterMeta } from './routing'")
+  return output
+}
+
+export function removeBrowserOpenBotChatAction(source: string): string {
+  const action = '<ContextMenuItem onSelect={() => void openRosterBot(bot)}>{b.bot.openBotChat}</ContextMenuItem>'
+  if (!source.includes('b.bot.openBotChat')) return source
+  if (source.split(action).length !== 2) throw new Error('Browser open-bot-chat action target changed')
+  return source.replace(action, '')
+}
+
+// Run after renderer compatibility has validated and transformed this module.
+export function browserActivityNotificationsPlugin(root: string): Plugin {
+  return {
+    name: 'hermes:browser-activity-notifications', enforce: 'pre',
+    transform(code, id) {
+      return applyBrowserTransform(code, id, root, 40)
+    }
+  }
+}
+
+export function useBrowserMicrophoneCapture(source: string): string {
+  const support = "    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {"
+  const permission = `    const permitted = await window.hermesDesktop?.requestMicrophoneAccess?.()
+
+    if (permitted === false) {
+      throw new Error(copy.microphoneAccessDenied)
+    }`
+  const denied = '    return new Error(copy.microphonePermissionDenied)'
+  for (const target of [support, permission, denied]) {
+    if (source.split(target).length !== 2) throw new Error('Browser microphone capture target changed')
+  }
+  return source
+    .replace(support, `    if (!window.isSecureContext) {
+      throw new Error('Microphone recording requires HTTPS or localhost. Open this app using its HTTPS address, then allow microphone access.')
+    }
+
+${support}`)
+    .replace(permission, `    // getUserMedia below requests browser permission and returns the recording
+    // stream in one step. The desktop preflight opens and immediately closes
+    // another stream, which can prompt twice or race device release.`)
+    .replace(denied, `    return new Error(copy.microphoneAccessDenied + ' Allow microphone access for this site in your browser settings, then try again.')`)
+}
+
+function useBrowserComposerLayoutWidth(source: string): string {
+  const target = '    const { width } = composer.getBoundingClientRect()'
+  if (source.split(target).length !== 2) throw new Error('Browser composer width target changed')
+  return source.replace(target, `    // Breakpoints use layout pixels; screen coordinates include browser UI zoom.
+    const width = composer.offsetWidth`)
+}
+
+function replaceBrowserContract(source: string, changes: [string, string][]): string {
+  for (const [before, after] of changes) {
+    if (source.split(before).length !== 2) throw new Error('Browser semantic hook target changed: ' + before)
+    source = source.replace(before, after)
+  }
+  return source
+}
+
+export function useBrowserSectionIdentity(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-sections'))
+  const sessions = source.includes('interface SidebarSessionsSectionProps')
+  const changes: [string, string][] = sessions ? [
+    ['interface SidebarSessionsSectionProps {', 'interface SidebarSessionsSectionProps {\n  browserSectionId: string'],
+    ['export function SidebarSessionsSection({', 'export function SidebarSessionsSection({\n  browserSectionId,'],
+    ['}: SidebarSessionsSectionProps) {', '}: SidebarSessionsSectionProps) {\n  const browserSection = useBrowserSidebarSection(browserSectionId, label)'],
+    ['<SidebarGroup className={rootClassName}>', '<SidebarGroup {...browserSection} className={rootClassName}>']
+  ] : [
+    ['}: SidebarCronJobsSectionProps) {', "}: SidebarCronJobsSectionProps) {\n  const browserSection = useBrowserSidebarSection('cron-jobs', label)"],
+    ['<SidebarGroup className="shrink-0 p-0 pb-1">', '<SidebarGroup {...browserSection} className="shrink-0 p-0 pb-1">']
+  ]
+  return `import { useBrowserSidebarSection } from ${owner}\n` + replaceBrowserContract(source, changes)
+}
+
+export function useBrowserSectionIds(source: string): string {
+  return replaceBrowserContract(source, [
+    ['label={s.results}', 'browserSectionId="sessions" label={s.results}'],
+    ['label={s.pinned}', 'browserSectionId="pinned" label={s.pinned}'],
+    ['label={sessionsLabel}', 'browserSectionId="sessions" label={sessionsLabel}'],
+    ['label={group.label}', 'browserSectionId={`messaging:${group.sourceId}`} label={group.label}']
+  ])
+}
+
+// Suppress only the automatic desktop updater notice at its owner. Explicit
+// update settings/actions and unrelated notifications keep their behavior.
+export function omitBrowserDesktopUpdateNotice(source: string): string {
+  const start = source.indexOf('export function maybeNotifyUpdateAvailable(')
+  const end = source.indexOf('\n/**', start)
+  if (start < 0 || end < 0) throw new Error('Browser update notice owner changed')
+  return source.slice(0, start) + 'export function maybeNotifyUpdateAvailable(_status: DesktopUpdateStatus | null, _target: UpdateTarget = \'client\') {}\n' + source.slice(end)
+}
+
+export function useBrowserTouchHooks(source: string, root: string): string {
+  const sendTarget = 'aria-label={showStop ? c.stop : c.send}'
+  const labels = ['c.queueMessage', 'showStop ? c.stop : c.send', 'state.tools.label', 'copy.openModelPicker', 'triggerLabel', 'label', 'title']
   const targets = labels.map(label => `aria-label={${label}}`).filter(target => source.includes(target))
   if (!targets.length) throw new Error('Browser composer touch controls changed')
   let output = replaceBrowserContract(source, targets.map(target => [target, `${target === sendTarget ? 'data-browser-send-action="" ' : ''}${target === 'aria-label={c.queueMessage}' ? 'data-browser-queue-action="" ' : ''}data-browser-composer-action="" ${target}`]))
