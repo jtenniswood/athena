@@ -20,7 +20,7 @@ export function useApprovalModeStatusbarItem(profile: string, requestGateway: Ap
 
   return {
     className: mode === 'off' ? 'bg-(--chrome-action-hover) text-foreground' : undefined,
-    icon: <ApprovalModeIcon mode={mode} />,
+    icon: <ShieldLock className="size-3.5" />,
     id: 'approval-mode',
     label: labels[mode],
     menuAlign: 'end',
