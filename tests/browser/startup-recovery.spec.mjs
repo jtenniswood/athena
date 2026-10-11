@@ -6,10 +6,11 @@ import { getBrowserTarget } from './test-target.mjs'
 
 const { image, url } = getBrowserTarget()
 test.skip(!image && !url && !process.env.CI, 'Set HERMES_TEST_IMAGE or HERMES_BROWSER_PREVIEW_URL')
+test.use({ colorScheme: 'dark' })
 
 // An expired edge session redirects network requests while the installed PWA
 // can still serve its cached shell. No real proxy account or gateway is used.
-test('configuration recovery reaches proxy sign-in and preserves browser data', async ({ page }) => {
+test('configuration recovery reaches proxy sign-in and preserves browser data', async ({ page }, testInfo) => {
   let container, server
   let expired = false
   try {
@@ -43,25 +44,58 @@ test('configuration recovery reaches proxy sign-in and preserves browser data', 
     })
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
     const origin = `http://127.0.0.1:${server.address().port}`
-    await page.goto(`${origin}/?fixture=keep`)
+    await page.goto(`${origin}/?fixture=keep#/preview-week`)
     await page.waitForFunction(() => navigator.serviceWorker.controller && typeof window.hermesDesktop?.getConnection === 'function')
-    await page.evaluate(() => localStorage.setItem('fixture-startup-draft', 'Keep my saved draft'))
+    await page.evaluate(() => localStorage.setItem('hermes:composer-drafts:v3', JSON.stringify({ 'preview-week': 'Keep my saved draft' })))
     expired = true
     const response = await page.reload()
     expect(response.fromServiceWorker()).toBe(true)
-    await expect(page.getByRole('heading', { name: 'Hermes could not read its runtime configuration.' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
+    await expect(page.getByRole('status')).toContainText('Your session may have expired')
     await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
+    expect(await page.evaluate(() => Boolean(window.hermesDesktop))).toBe(false)
+    await expect(page.getByRole('button', { name: 'Copy diagnostics' })).toBeHidden()
+    await page.screenshot({ path: testInfo.outputPath('reconnect-sign-in.png') })
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Proxy sign-in' })).toBeVisible()
     await page.getByRole('link', { name: 'Sign in', exact: true }).click()
     await page.waitForFunction(() => typeof window.hermesDesktop?.getConnection === 'function')
-    await expect(page.locator('.hermes-startup-recovery')).toHaveCount(0)
+    await expect(page.locator('.athena-sign-in')).toHaveCount(0)
     await expect.poll(() => page.evaluate(() => new URL(location.href).searchParams.has('hermes-reconnect'))).toBe(false)
     expect(new URL(page.url()).searchParams.get('fixture')).toBe('keep')
-    expect(await page.evaluate(() => localStorage.getItem('fixture-startup-draft'))).toBe('Keep my saved draft')
+    expect(new URL(page.url()).hash).toBe('#/preview-week')
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes:composer-drafts:v3'))['preview-week'])).toBe('Keep my saved draft')
   } finally {
     server?.closeAllConnections()
     if (server) await new Promise(resolve => server.close(resolve))
+    if (container) execFileSync('docker', ['stop', container], { stdio: 'ignore' })
+  }
+})
+
+test('unavailable configuration after reconnect offers retry and connection help', async ({ page, context }) => {
+  let container, origin = url
+  try {
+    if (!origin) {
+      if (!image) throw new Error('HERMES_TEST_IMAGE is required in CI')
+      container = execFileSync('docker', ['run', '-d', '--rm', '-p', '127.0.0.1::80', image], { encoding: 'utf8' }).trim()
+      const port = execFileSync('docker', ['port', container, '80/tcp'], { encoding: 'utf8' }).trim().split(':').at(-1)
+      origin = `http://127.0.0.1:${port}`
+    }
+    await expect.poll(async () => { try { return (await fetch(origin)).status } catch { return 0 } }).toBe(200)
+    await context.route(/\/runtime-config\.js(?:\?.*)?$/, route => route.fulfill({ contentType: 'application/javascript', body: '' }))
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(`${origin}/?hermes-reconnect=1&fixture=keep#/preview-week`)
+    await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
+    await expect(page.getByRole('status')).toContainText('Athena is still unavailable')
+    await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toHaveCount(0)
+    expect(await page.evaluate(() => Boolean(window.hermesDesktop))).toBe(false)
+    await page.getByText('Connection help', { exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Copy diagnostics' })).toBeVisible()
+    await page.getByRole('button', { name: 'Retry connection' }).click()
+    await expect(page.getByRole('button', { name: 'Retry connection' })).toBeEnabled()
+    expect(new URL(page.url()).searchParams.get('fixture')).toBe('keep')
+    expect(new URL(page.url()).hash).toBe('#/preview-week')
+  } finally {
     if (container) execFileSync('docker', ['stop', container], { stdio: 'ignore' })
   }
 })

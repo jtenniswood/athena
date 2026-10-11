@@ -1,4 +1,7 @@
+import { createSignInView } from './sign-in-view'
+
 const RETRY_KEY = 'hermes-web.startup-chunk-retry'
+const RETURN_HASH_KEY = 'athena.startup-return-hash'
 
 type RecoveryStage = 'application' | 'configuration' | 'renderer'
 
@@ -19,12 +22,42 @@ export function showStartupRecovery(error: unknown, revision: string): void {
   if (!root) return
 
   const stage = stageFor(error)
-  const copy = stage === 'configuration'
-    ? ['Hermes could not read its runtime configuration.', 'Your sign-in may have expired, or the web server configuration is unavailable. Retry to reconnect.']
-    : stage === 'renderer'
-      ? ['Hermes could not load the browser interface.', 'Reload once to retry the current build.']
-      : ['Hermes could not finish starting.', 'Retry the current page. Your saved browser data was not cleared.']
   const wrapperRevision = safeRevision(revision)
+  if (stage === 'configuration') {
+    // Configuration may be behind expired proxy authentication. Its login
+    // route is unknown until configuration loads, so navigate to this page
+    // through the server instead of guessing a Hermes authentication route.
+    const url = new URL(window.location.href)
+    const reconnecting = url.searchParams.get('hermes-reconnect') === '1'
+    const { section, card, status } = createSignInView(reconnecting
+      ? 'Athena is still unavailable. Check your connection and try again.'
+      : 'Your session may have expired. Sign in to reconnect to Athena.')
+    const signIn = document.createElement('button')
+    signIn.type = 'button'
+    signIn.className = 'athena-sign-in-primary'
+    signIn.textContent = reconnecting ? 'Retry connection' : 'Sign in'
+    signIn.onclick = () => {
+      signIn.disabled = true
+      section.setAttribute('aria-busy', 'true')
+      status.textContent = reconnecting ? 'Reconnecting…' : 'Opening sign-in…'
+      try { sessionStorage.setItem(RETURN_HASH_KEY, url.hash) } catch { /* Navigation remains available without storage. */ }
+      url.searchParams.set('hermes-reconnect', '1')
+      if (url.href === window.location.href) window.location.reload()
+      else window.location.assign(url.href)
+    }
+    const help = document.createElement('details')
+    help.className = 'athena-sign-in-advanced'
+    help.innerHTML = `<summary>Connection help</summary>
+      <p>If signing in does not reconnect you, check your internet connection or ask your server administrator to check Athena’s configuration.</p>
+      <p class="athena-sign-in-build">Build ${wrapperRevision}</p>`
+    help.append(diagnosticsButton(stage, wrapperRevision))
+    card.append(signIn, help)
+    root.replaceChildren(section)
+    return
+  }
+  const copy = stage === 'renderer'
+    ? ['Hermes could not load the browser interface.', 'Reload once to retry the current build.']
+    : ['Hermes could not finish starting.', 'Retry the current page. Your saved browser data was not cleared.']
   const section = document.createElement('main')
   section.className = 'hermes-startup-recovery'
   section.setAttribute('role', 'alert')
@@ -34,15 +67,14 @@ export function showStartupRecovery(error: unknown, revision: string): void {
   const retry = document.createElement('button')
   retry.type = 'button'
   retry.textContent = 'Retry'
-  retry.onclick = () => {
-    if (stage !== 'configuration') { window.location.reload(); return }
-    // A cached shell can outlive proxy authentication. Reach the server as a
-    // top-level navigation so its sign-in redirect can complete in the browser.
-    const url = new URL(window.location.href)
-    url.searchParams.set('hermes-reconnect', '1')
-    window.location.assign(url.href)
-  }
+  retry.onclick = () => window.location.reload()
   actions.append(retry)
+  actions.append(diagnosticsButton(stage, wrapperRevision))
+  section.append(actions)
+  root.replaceChildren(section)
+}
+
+function diagnosticsButton(stage: RecoveryStage, wrapperRevision: string): HTMLButtonElement {
   const copyButton = document.createElement('button')
   copyButton.type = 'button'
   copyButton.textContent = 'Copy diagnostics'
@@ -50,9 +82,7 @@ export function showStartupRecovery(error: unknown, revision: string): void {
     const diagnostics = `Athena startup failure\nStage: ${stage}\nBuild: ${wrapperRevision}`
     void navigator.clipboard?.writeText(diagnostics)
   }
-  actions.append(copyButton)
-  section.append(actions)
-  root.replaceChildren(section)
+  return copyButton
 }
 
 /** A navigation can abort a module fetch while the browser cache/worker changes.
@@ -70,6 +100,7 @@ export function recoverStartupChunk(error: unknown, revision: string): boolean {
 }
 export function completeStartup(): void {
   try { sessionStorage.removeItem(RETRY_KEY) } catch { /* Optional recovery marker. */ }
+  try { sessionStorage.removeItem(RETURN_HASH_KEY) } catch { /* Optional return location. */ }
   try {
     const url = new URL(window.location.href)
     if (url.searchParams.get('hermes-reconnect') === '1') {
@@ -77,4 +108,15 @@ export function completeStartup(): void {
       window.history.replaceState(window.history.state, '', url.href)
     }
   } catch { /* The reconnect marker is harmless if history is unavailable. */ }
+}
+
+/** Proxy login links can drop fragments; restore the conversation before chat loads. */
+export function restoreStartupLocation(): void {
+  try {
+    const url = new URL(window.location.href)
+    const hash = sessionStorage.getItem(RETURN_HASH_KEY)
+    if (url.searchParams.get('hermes-reconnect') !== '1' || url.hash || !hash?.startsWith('#/')) return
+    url.hash = hash
+    window.history.replaceState(window.history.state, '', url.href)
+  } catch { /* Optional return location must never block startup. */ }
 }
