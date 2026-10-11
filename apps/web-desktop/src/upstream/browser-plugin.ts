@@ -1131,7 +1131,7 @@ export function addBrowserChatPanelActions(source: string, root: string): string
   }
   return source.replace(importTarget, `${importTarget}import { BrowserChatPanelActions } from ${JSON.stringify(path.join(root, 'src/experience/chat-panel-actions.tsx'))}\n`)
     .replace(actionInterface, `${actionInterface}  browserPanelEntries?: readonly { id: string; title?: unknown; data?: unknown }[]\n  onBrowserPanelOpen?: () => void\n`)
-    .replace(actionDestructure, '  surface = \'row\',\n  tabPaneId,\n  browserPanelEntries,\n  onBrowserPanelOpen\n}: SessionActions) {')
+    .replace(actionDestructure, '  onHideTabBar,\n  surface = \'row\',\n  tabPaneId,\n  browserPanelEntries,\n  onBrowserPanelOpen\n}: SessionActions) {')
     .replace(actionItemsTarget, `      <BrowserChatPanelActions kit={kit} entries={browserPanelEntries} onOpen={onBrowserPanelOpen} />\n${actionItemsTarget}`)
 }
 

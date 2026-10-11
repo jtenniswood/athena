@@ -386,13 +386,14 @@ test('browser session rows resume chats instead of opening tabs or windows', () 
   assert.equal((output.match(/onResume\(\)/g) || []).length, (source.match(/onResume\(\)/g) || []).length + 3)
 })
 
-test('browser session menus omit tab and window actions', () => {
-  const { disableBrowserSessionOpenActions } = load('src/upstream/browser-plugin.ts')
+test('browser session menus omit tab and window actions while preserving hide-tab-bar props', () => {
+  const { disableBrowserSessionOpenActions, addBrowserChatPanelActions } = load('src/upstream/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/session-actions-menu.tsx'), 'utf8')
-  const output = disableBrowserSessionOpenActions(source, root)
+  const output = addBrowserChatPanelActions(disableBrowserSessionOpenActions(source, root), root)
   assert.doesNotMatch(output, /surface === 'row' && !alreadyTabbed/)
   assert.doesNotMatch(output, /canOpenSessionWindow\(\)/)
   assert.match(output, /canOpenSessionInTerminal\(\)/)
+  assert.match(output, /onHideTabBar,\s*surface = 'row'/)
 })
 
 test('browser workspace removes chat tabs while retaining tool groups', () => {
