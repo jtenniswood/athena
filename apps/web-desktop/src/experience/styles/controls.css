@@ -1,6 +1,6 @@
 /* BrowserToolbarButton owns normal/compact variants. These upstream controls
    use the same contract without modifying the fetched renderer. */
-:is([data-browser-toolbar-button], :where(.browser-approval-control > button), .browser-roster-action-trigger, :where(.browser-sessions-pane [data-browser-section-header] button[data-size='icon-xs'])) {
+:is([data-browser-toolbar-button], :where(.browser-chat-toolbar .browser-approval-control > button), .browser-roster-action-trigger, :where(.browser-sessions-pane [data-browser-section-header] button[data-size='icon-xs'])) {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -22,12 +22,12 @@
   height: var(--web-control-compact);
 }
 
-:is([data-browser-toolbar-button], :where(.browser-approval-control > button), .browser-roster-action-trigger, :where(.browser-sessions-pane [data-browser-section-header] button[data-size='icon-xs'])):is(:hover, :focus-visible, [aria-expanded='true']:not(.browser-menu)):not(:disabled) {
+:is([data-browser-toolbar-button], :where(.browser-chat-toolbar .browser-approval-control > button), .browser-roster-action-trigger, :where(.browser-sessions-pane [data-browser-section-header] button[data-size='icon-xs'])):is(:hover, :focus-visible, [aria-expanded='true']:not(.browser-menu)):not(:disabled) {
   background: var(--web-hover);
   color: var(--web-text);
 }
 
-:is([data-browser-toolbar-button], :where(.browser-approval-control > button), .browser-roster-action-trigger, :where(.browser-sessions-pane [data-browser-section-header] button[data-size='icon-xs'])):focus-visible {
+:is([data-browser-toolbar-button], :where(.browser-chat-toolbar .browser-approval-control > button), .browser-roster-action-trigger, :where(.browser-sessions-pane [data-browser-section-header] button[data-size='icon-xs'])):focus-visible {
   outline: var(--web-focus-ring);
   outline-offset: -2px;
 }
@@ -37,14 +37,14 @@
   cursor: default;
 }
 
-:is([data-browser-toolbar-button], :where(.browser-approval-control > button), .browser-roster-action-trigger, :where(.browser-sessions-pane [data-browser-section-header] button[data-size='icon-xs'])) :is(.codicon, svg) {
+:is([data-browser-toolbar-button], :where(.browser-chat-toolbar .browser-approval-control > button), .browser-roster-action-trigger, :where(.browser-sessions-pane [data-browser-section-header] button[data-size='icon-xs'])) :is(.codicon, svg) {
   width: var(--web-icon-size);
   height: var(--web-icon-size);
   flex-shrink: 0;
 }
 
 /* Upstream font icons sometimes set their size inline. */
-:is([data-browser-toolbar-button], :where(.browser-approval-control > button), .browser-roster-action-trigger, :where(.browser-sessions-pane [data-browser-section-header] button[data-size='icon-xs'])) .codicon {
+:is([data-browser-toolbar-button], :where(.browser-chat-toolbar .browser-approval-control > button), .browser-roster-action-trigger, :where(.browser-sessions-pane [data-browser-section-header] button[data-size='icon-xs'])) .codicon {
   display: inline-flex;
   align-items: center;
   justify-content: center;

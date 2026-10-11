@@ -57,6 +57,7 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
     title: 'Preferences',
     pages: [
       { id: 'config:appearance', title: 'Appearance', scope: 'mixed' },
+      { id: 'config:browser-theme', title: 'Theme', aliases: ['Colour themes', 'Color themes'], scope: 'browser' },
       { id: 'notifications', title: 'Notifications', scope: 'browser' },
       { id: 'keybinds', title: 'Keyboard Shortcuts', scope: 'browser' }
     ]

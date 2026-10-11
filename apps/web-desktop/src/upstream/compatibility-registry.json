@@ -345,7 +345,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/index.tsx",
-    "reason": "Compose browser search, disclosures, pins, and None grouping without desktop shortcuts.",
+    "reason": "Compose browser search, disclosures, pins, and None grouping without desktop shortcuts or the duplicate top Capabilities link.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -355,6 +355,10 @@
       {
         "file": "scripts/sidebar-contracts.test.mjs",
         "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser sidebar keeps Capabilities only in More controls"
       }
     ],
     "removal": "A browser-owned navigation surface consumes public session models and actions.",
@@ -362,12 +366,13 @@
       "useBrowserSearchLabel",
       "ungroupedSidebar",
       "removeBrowserNewSessionShortcut",
+      "removeBrowserTopCapabilitiesLink",
       "useBrowserSectionIds"
     ],
     "sourceHash": "0532c4c32d7cd1525c65a8f62b0ac248016c24648e4256ad812836e9b1a6cc7f",
     "sourceRoot": "renderer",
     "inputHash": "0532c4c32d7cd1525c65a8f62b0ac248016c24648e4256ad812836e9b1a6cc7f",
-    "outputHash": "0cbf991d2b921af9b32e0e431af9c5fac4133cc265d300c59f4d0467a251c30d"
+    "outputHash": "0ec092e59550b4a83907af7b362507bf2af2803d8e610d11393eb911a65bc23b"
   },
   {
     "name": "single-conversation-wiring",
@@ -2183,11 +2188,11 @@
     "sourceRoot": "renderer",
     "sourceHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
     "inputHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
-    "outputHash": "aa6af74a3a97a3372a0d90222355ffdb43a21665b9b5258dd0a8a84216ec987c",
+    "outputHash": "9bddd29f10f93cc30fd0e636e8495b1480f029030b4b10c2340560702799f5b1",
     "handlers": [
       "useBrowserSettingsPresentation"
     ],
-    "reason": "Keep the responsive settings layout, configuration management page, and visibility policy in the wrapper while upstream owns settings content and persistence. Present all permission controls together without subpage filtering.",
+    "reason": "Keep the responsive settings layout, configuration management page, and visibility policy in the wrapper while upstream owns settings content and persistence. Present Appearance and permission controls without subpage filtering, and provide a top-level Theme destination with legacy link redirects.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -2291,11 +2296,11 @@
     "sourceRoot": "renderer",
     "sourceHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
     "inputHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
-    "outputHash": "8b4c9d60cb8a865561575712ee033e16a683321ff8bd8dae4f0163009bf5818e",
+    "outputHash": "cc457471889546a94b218ea66170a074628d4d686a9087e095f690ab8a244c82",
     "handlers": [
       "hideBrowserAppearanceOnlySettings"
     ],
-    "reason": "Combine General, Typography, and Window & layout into one browser page; hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls while retaining installed browser themes.",
+    "reason": "Combine General, Typography, Window & layout, and Chat display into one Appearance page; hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls. Theme selection lives on the separate browser Theme page.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
