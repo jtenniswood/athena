@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type PointerEvent, type RefObject, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type ComponentProps, type PointerEvent, type RefObject, type MouseEvent } from 'react'
 import { useBrowserSidebarSections } from './sidebar-sections'
 import { Codicon } from '../upstream/browser-api'
-import { BrowserActionSurface, type BrowserActionAnchor } from './ui/action-surface'
+import { SettingsMenu } from './settings-menu'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { useCompactBrowser, useMobileBrowser } from './ui/use-compact-browser'
 import { $conversationOpenRequest, $preserveNavigationRequest, preserveNavigationForNextSelection } from './conversation-navigation'
@@ -107,18 +107,14 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
 
 type Navigation = ReturnType<typeof useBrowserNavigation>
 
-export function BrowserNavigationTabs({ navigation }: { navigation: Navigation }) {
-  const [anchor, setAnchor] = useState<BrowserActionAnchor | null>(null)
+export function BrowserNavigationTabs({ navigation, settingsMenu }: { navigation: Navigation; settingsMenu: Omit<ComponentProps<typeof SettingsMenu>, 'triggerRef' | 'additionalGroups' | 'triggerClassName' | 'triggerTooltip'> }) {
   const [draggedTab, setDraggedTab] = useState<NavigationTab | null>(null)
   const actionsTrigger = useRef<HTMLButtonElement>(null)
-  const { tab, setTab, visibleTabs, open } = navigation
-  const compact = useMobileBrowser()
-  useEffect(() => { if (!open) setAnchor(null) }, [open])
+  const { tab, setTab, visibleTabs } = navigation
   const showActions = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault()
     event.stopPropagation()
-    const bounds = event.currentTarget.getBoundingClientRect()
-    setAnchor({ x: event.type === 'contextmenu' ? event.clientX : bounds.left, y: event.type === 'contextmenu' ? event.clientY : bounds.bottom, returnFocus: event.currentTarget })
+    actionsTrigger.current?.click()
   }
   return <>
     <div className="browser-navigation-heading">
@@ -146,14 +142,13 @@ export function BrowserNavigationTabs({ navigation }: { navigation: Navigation }
             setTab(next)
             ;(event.currentTarget.parentElement?.children[visibleTabs.indexOf(next)] as HTMLElement)?.focus()
           }
-        }} onClick={() => { setAnchor(null); setTab(value) }}>{NAVIGATION_TAB_LABELS[value]}</button>)}
+        }} onClick={() => setTab(value)}>{NAVIGATION_TAB_LABELS[value]}</button>)}
       </div>
       {navigation.compact && !navigation.mobile && <BrowserToolbarButton tooltip="Close navigation" aria-label="Close navigation" onClick={navigation.dismissDrawer}><Codicon name="close" /></BrowserToolbarButton>}
-      <BrowserToolbarButton ref={actionsTrigger} tooltip="Navigation tabs" className="browser-navigation-actions-trigger" aria-label="Navigation tabs" aria-haspopup={compact ? 'dialog' : 'menu'} aria-expanded={Boolean(anchor)} onClick={showActions}><Codicon name="ellipsis" size="1rem" /></BrowserToolbarButton>
+      <SettingsMenu {...settingsMenu} triggerRef={actionsTrigger} triggerTooltip="Navigation tabs" triggerClassName="browser-navigation-actions-trigger" navigationOpen={navigation.open} additionalGroups={[{ key: 'tabs', label: 'Tabs', actions: NAVIGATION_TABS.map(value => ({
+        key: value, label: NAVIGATION_TAB_LABELS[value], icon: <Codicon name={value === 'sessions' ? 'history' : 'hubot'} size="1rem" />, checked: visibleTabs.includes(value), disabled: visibleTabs.includes(value) && visibleTabs.length === 1, keepOpen: true, run: () => navigation.toggleTab(value)
+      })) }, { key: 'sections', label: 'Sections', actions: navigation.sections.actions }]} />
     </div>
-    <BrowserActionSurface title="Navigation tabs" hideTitle anchor={anchor} compact={compact} fallbackFocus={actionsTrigger} onClose={() => setAnchor(null)} groups={[{ key: 'tabs', label: 'Tabs', actions: NAVIGATION_TABS.map(value => ({
-      key: value, label: NAVIGATION_TAB_LABELS[value], icon: <Codicon name={value === 'sessions' ? 'history' : 'hubot'} size="1rem" />, checked: visibleTabs.includes(value), disabled: visibleTabs.includes(value) && visibleTabs.length === 1, keepOpen: true, run: () => navigation.toggleTab(value)
-    })) }, { key: 'sections', label: 'Sections', actions: navigation.sections.actions }]} />
   </>
 }
 
