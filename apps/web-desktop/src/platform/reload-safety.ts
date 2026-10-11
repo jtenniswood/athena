@@ -66,7 +66,8 @@ export async function reloadReadinessAfterSaving(): Promise<ReturnType<typeof re
   return reloadReadiness()
 }
 
-export function assertSafeConnectionChange(): void {
-  const state = reloadReadiness(false)
+/** Flush cross-tab draft writes before changing the active gateway or credentials. */
+export async function assertSafeConnectionChange(): Promise<void> {
+  const state = await reloadReadinessAfterSaving()
   if (!state.ready) throw new Error(state.reason)
 }
