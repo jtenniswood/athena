@@ -169,7 +169,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
           </div>}
           <div className="browser-settings-content-slot" hidden={!showDetail} inert={!showDetail}>
             {pageVisible && pageNotice && <p className="browser-settings-page-notice" role="note">{pageNotice}</p>}
-            {pageVisible && activeView === 'config:appearance' && activeChildren.some(child => child.active && child.id === 'config:appearance:theme')
+            {pageVisible && activeView === 'config:browser-theme'
               ? <BrowserColorThemesPage /> : children}
           </div>
         </main>
