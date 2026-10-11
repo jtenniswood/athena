@@ -11,7 +11,6 @@ import { useLocation, useNavigate } from 'react-router'
 import { BrowserSidebarNavigation } from './sidebar-extras'
 import { BrowserSessionsPane } from './sidebar-sections'
 import { BrowserBotsFallback } from './browser-bots-fallback'
-import { SettingsMenu } from './settings-menu'
 import { installFollowupBehavior } from './followup-preferences'
 import { installTranscriptPreferences } from './transcript-preferences'
 import { Codicon, ContribWiring, WiredPane, SidebarProvider, ContribRender, ContribBoundary, useContributions, navigateToWorkspacePage, SessionTileCloseConfirm, BrowserWorkspace, SessionActionsMenu } from '../upstream/browser-api'
@@ -215,7 +214,7 @@ function BrowserLayout() {
     <div className="browser-workspace">
       {navigation.compact && !navigation.mobile && navigation.drawerOpen && <button type="button" className="browser-scrim" aria-label="Dismiss navigation" tabIndex={-1} onClick={navigation.dismissDrawer} />}
       <aside id="browser-navigation" ref={navigation.drawer} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={navigation.compact && navigation.drawerOpen ? 'dialog' : undefined} aria-modal={navigation.compact && navigation.drawerOpen ? true : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
-        <BrowserNavigationTabs navigation={navigation} />
+        <BrowserNavigationTabs navigation={navigation} settingsMenu={{ backendVersion, onOpenGateway: () => { navigation.closeDrawer(); setGatewayDialogOpen(true) }, onOpenPanel: () => main.current?.focus(), onOpenRoute: openRoute, panelPanes }} />
         <div className="browser-navigation-body" role="tabpanel" aria-label={tab}>
           <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}><BrowserSidebarNavigation onNavigate={openRoute}><WiredPane part="sidebar" /></BrowserSidebarNavigation></BrowserSessionsPane>
           <div hidden={tab !== 'bots'} className="browser-pane">{surface(bots) || <BrowserBotsFallback />}</div>
@@ -235,9 +234,8 @@ function BrowserLayout() {
           </BrowserToolbarButton>
           <div className="browser-actions">
             {selected && <SessionActionsMenu align="end" onArchive={sessionActions.archive} onDelete={sessionActions.delete} onPin={sessionActions.togglePin} onToggleUnread={sessionActions.toggleUnread} pinned={sessionActions.pinned} unread={sessionActions.unread} profile={sessionActions.profile} sessionId={selected} title={chatTitle}>
-              <BrowserToolbarButton tooltip="Chat actions" type="button" className="browser-chat-actions" aria-label="Chat actions"><Codicon name="kebab-vertical" /></BrowserToolbarButton>
+              <BrowserToolbarButton tooltip="Chat actions" type="button" className="browser-chat-actions" aria-label="Chat actions"><Codicon name="ellipsis" /></BrowserToolbarButton>
             </SessionActionsMenu>}
-            <SettingsMenu triggerRef={settingsTrigger} backendVersion={backendVersion} onOpenGateway={() => { navigation.closeDrawer(); setGatewayDialogOpen(true) }} onOpenPanel={() => main.current?.focus()} onOpenRoute={openRoute} panelPanes={panelPanes} />
           </div>
         </div>
         <BrowserWorkspace />
