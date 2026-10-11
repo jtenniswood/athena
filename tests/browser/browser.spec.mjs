@@ -515,27 +515,84 @@ test('short touch landscape uses phone surfaces while a taller touch tablet keep
 })
 
 for (const width of [390, 1440]) {
-  test.extend({ hasTouch: width === 390 })(`settings menu opens the backend updater at ${width}px`, async ({ page }) => {
-    await page.route(/\/api\/hermes\/update\/check(?:\?|$)/, route => route.fulfill({ json: {
-      current_version: 'synthetic-preview-v1', behind: 0, update_available: false, can_apply: true, commits: []
+  test.extend({ hasTouch: width === 390 })(`system updates use the native settings page at ${width}px`, async ({ page }, testInfo) => {
+    let checks = 0
+    await page.route(/\/api\/hermes\/update\/check(?:\?|$)/, route => {
+      if (new URL(route.request().url()).searchParams.get('force') === 'true') checks++
+      return route.fulfill({ json: {
+        current_version: '0.21.6', behind: 0, update_available: false, can_apply: true, commits: []
+      } })
+    })
+    await page.setViewportSize({ width, height: 960 })
+    await open(page)
+    await editor(page).fill('Keep my draft while checking updates')
+    await (await settingsTrigger(page)).click()
+    const menu = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
+    await expect(menu.getByText('Updates', { exact: true })).toHaveCount(0)
+    await expect(menu.getByText(/backend v/i)).toHaveCount(0)
+    await menu.getByRole(width === 390 ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+    await page.getByRole('navigation', { name: 'Settings categories' }).getByRole('button', { name: 'System updates', exact: true }).click()
+    const updates = page.getByRole('main', { name: 'System updates', exact: true })
+    await expect(updates.getByText('0.21.6', { exact: true })).toBeVisible()
+    await expect(updates.getByText('Hermes Agent is up to date', { exact: true })).toBeVisible()
+    const previousChecks = checks
+    await updates.getByRole('button', { name: 'Check for updates', exact: true }).click()
+    await expect.poll(() => checks).toBeGreaterThan(previousChecks)
+    await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)
+    await page.screenshot({ path: testInfo.outputPath('system-updates.png') })
+    await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+    await expect(editor(page)).toHaveText('Keep my draft while checking updates')
+  })
+
+  test.extend({ hasTouch: width === 390 })(`system update progress survives settings navigation at ${width}px`, async ({ page }) => {
+    let failCheck = false, actionRunning = true, installs = 0
+    await page.route(/\/api\/hermes\/update\/check(?:\?|$)/, route => route.fulfill(failCheck
+      ? { status: 503, json: { error: 'Synthetic update check failed' } }
+      : { json: { current_version: '0.21.6', behind: 1, update_available: true, can_apply: true,
+        commits: [{ sha: 'synthetic-update', summary: 'Improve server reliability', author: 'Preview', at: 0 }] } }))
+    await page.route(/\/api\/hermes\/update(?:\?|$)/, route => {
+      installs++
+      return route.fulfill({ json: installs === 1
+        ? { ok: true, name: 'hermes-update', pid: 123, action_id: 'synthetic-update' }
+        : { ok: false, update_command: 'hermes update', message: 'Run the update on your server.' } })
+    })
+    await page.route(/\/api\/actions\/hermes-update\/status(?:\?|$)/, route => route.fulfill({ json: {
+      name: 'hermes-update', running: actionRunning, exit_code: actionRunning ? null : 1,
+      lines: ['Synthetic update is running']
     } }))
     await page.setViewportSize({ width, height: 960 })
     await open(page)
-    await expect(page.locator('.browser-navigation')).not.toContainText('backend vsynthetic-preview-v1')
-    const settings = page.getByRole('button', { name: 'Open settings menu', exact: true })
-    await settings.click()
-    const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
-    const version = surface.getByRole(width === 390 ? 'button' : 'menuitem', { name: /backend vsynthetic-preview-v1/i })
-    await expect(version).toBeVisible()
-    const check = page.waitForRequest(request => request.url().includes('/api/hermes/update/check?force=true'))
-    await version.click()
-    await check
-    const updater = page.getByRole('dialog').filter({ hasText: 'The backend is running the latest version.' })
-    await expect(updater).toBeVisible()
-    await expect(surface).toBeHidden()
-    await page.keyboard.press('Escape')
-    await expect(updater).toBeHidden()
-    await expect(settings).toBeFocused()
+    await editor(page).fill('Preserve my draft through an update')
+    await (await settingsTrigger(page)).click()
+    const menu = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
+    await menu.getByRole(width === 390 ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+    const navigation = page.getByRole('navigation', { name: 'Settings categories' })
+    await navigation.getByRole('button', { name: 'System updates', exact: true }).click()
+    const updates = page.getByRole('main', { name: 'System updates', exact: true })
+    await expect(updates.getByText('Improve server reliability', { exact: true })).toBeVisible()
+    failCheck = true
+    await updates.getByRole('button', { name: 'Check for updates', exact: true }).click()
+    await expect(updates.getByRole('alert')).toContainText('Could not check for updates')
+    failCheck = false
+    await updates.getByRole('button', { name: 'Check for updates', exact: true }).click()
+    await updates.getByRole('button', { name: 'Update Hermes Agent', exact: true }).click()
+    await expect(updates.getByText('Updating Hermes Agent…', { exact: true })).toBeVisible()
+    await expect(updates.getByRole('button', { name: 'Check for updates', exact: true })).toBeDisabled()
+    if (width === 390) await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await navigation.getByRole('button', { name: 'Appearance', exact: true }).click()
+    if (width === 390) await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await navigation.getByRole('button', { name: 'System updates', exact: true }).click()
+    await expect(updates.getByText('Updating Hermes Agent…', { exact: true })).toBeVisible()
+    await expect.poll(() => installs).toBe(1)
+    actionRunning = false
+    await expect(updates.getByRole('alert')).toContainText('Update failed', { timeout: 10000 })
+    await updates.getByRole('button', { name: 'Retry update', exact: true }).click()
+    await expect(updates.getByText('Manual update required', { exact: true })).toBeVisible()
+    await expect(updates.getByRole('button', { name: 'Copy update command', exact: true })).toBeVisible()
+    expect(installs).toBe(2)
+    await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+    await expect(editor(page)).toHaveText('Preserve my draft through an update')
   })
 
   test(`composer stays at the bottom while idle, running, and reconnecting at ${width}px`, async ({ page }) => {
@@ -1180,11 +1237,12 @@ for (const width of [390, 1440]) {
     await expect(page.locator('.browser-settings-category-button:not(.is-child) > span:not(.codicon)')).toHaveText([
       'Appearance', 'Notifications', 'Keyboard Shortcuts', 'Models', 'AI Connections', 'Chat', 'Voice',
       'Profiles', 'Agents', 'Memory', 'Workspace', 'Webhooks', 'Permissions',
-      'Credentials', 'Gateway', 'Command center', 'Billing', 'Archived Chats', 'Configuration', 'Advanced'
+      'Credentials', 'Gateway', 'Command center', 'Billing', 'System updates', 'Archived Chats', 'Configuration', 'Advanced'
     ])
     await page.screenshot({ path: testInfo.outputPath('settings-groups.png') })
     for (const [query, result, view, title] of [
       ['Server Connection', 'Gateway', 'gateway', 'Gateway'],
+      ['System updates', 'System updates', 'config:system-updates', 'System updates'],
       ['Profiles', 'Profiles', 'config:profiles', 'Profiles'],
       ['Webhooks', 'Webhooks', 'config:webhooks', 'Webhooks'],
       ['Agents', 'Agents', 'config:agents', 'Agents'],

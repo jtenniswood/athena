@@ -483,3 +483,27 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
 .browser-settings-frame .browser-gateway-settings { max-width: none; padding: 0; }
 
 .browser-settings-frame .browser-settings-navigation { width: auto; min-width: 0; }
+
+.browser-updates-version {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--web-space-3);
+  padding-block: var(--web-space-3);
+  border-bottom: 1px solid var(--web-border-subtle);
+}
+.browser-updates-version > span:last-child { color: var(--web-text-muted); overflow-wrap: anywhere; text-align: right; }
+.browser-updates-status { display: flex; align-items: flex-start; gap: var(--web-space-3); }
+.browser-updates-status > .codicon { margin-top: .125rem; color: var(--web-text-muted); }
+.browser-updates-status > div { min-width: 0; }
+.browser-updates-status h3,
+.browser-updates-changes h3 { margin: 0; font-size: var(--web-text-body); font-weight: 500; }
+.browser-updates-status p { margin: var(--web-space-1) 0 0; color: var(--web-text-muted); overflow-wrap: anywhere; }
+.browser-updates-status[role="alert"] > .codicon { color: var(--web-danger); }
+.browser-updates-actions { display: flex; flex-wrap: wrap; gap: var(--web-space-2); }
+.browser-updates-command { display: flex; align-items: center; gap: var(--web-space-3); }
+.browser-updates-command code { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.browser-updates-changes ul { display: grid; gap: var(--web-space-2); padding-left: var(--web-space-4); color: var(--web-text-muted); }
+.browser-updates-log { border-top: 1px solid var(--web-border-subtle); padding-top: var(--web-space-3); }
+.browser-updates-log summary { cursor: pointer; }
+.browser-updates-log pre { max-height: 14rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--web-text-caption); color: var(--web-text-muted); }
+.browser-updates-page progress { width: 100%; accent-color: var(--web-accent); }

@@ -1,5 +1,5 @@
 import { useEffect, useState, type RefObject } from 'react'
-import { Codicon, notifyError, type StatusbarItem } from '../upstream/browser-api'
+import { Codicon, notifyError } from '../upstream/browser-api'
 import { signOut } from '../platform/sign-out'
 import { useBrowserSettings } from '../upstream/settings'
 import { BrowserActionSurface, type BrowserActionAnchor, type BrowserActionGroup } from './ui/action-surface'
@@ -14,7 +14,6 @@ type PanelEntry = {
 
 type SettingsMenuProps = {
   triggerRef: RefObject<HTMLButtonElement | null>
-  backendVersion: StatusbarItem | null
   onOpenPanel: () => void
   onOpenRoute: (path: string) => void
   panelPanes: PanelEntry[]
@@ -24,7 +23,7 @@ type SettingsMenuProps = {
   navigationOpen?: boolean
 }
 
-export function SettingsMenu({ triggerRef, backendVersion, onOpenPanel, onOpenRoute, panelPanes, additionalGroups = [], triggerClassName, triggerTooltip = 'Settings', navigationOpen }: SettingsMenuProps) {
+export function SettingsMenu({ triggerRef, onOpenPanel, onOpenRoute, panelPanes, additionalGroups = [], triggerClassName, triggerTooltip = 'Settings', navigationOpen }: SettingsMenuProps) {
   const compact = useMobileBrowser()
   const [anchor, setAnchor] = useState<BrowserActionAnchor | null>(null)
   const [signingOut, setSigningOut] = useState(false)
@@ -39,7 +38,6 @@ export function SettingsMenu({ triggerRef, backendVersion, onOpenPanel, onOpenRo
       { key: 'settings', label: 'Settings', icon: <Codicon name="settings-gear" size="1rem" />, afterClose: true, run: () => onOpenRoute('/settings') },
     ] },
     ...additionalGroups,
-    ...(backendVersion ? [{ key: 'updates', label: 'Updates', actions: [{ key: backendVersion.id, label: typeof backendVersion.label === 'string' ? backendVersion.label : 'Backend update', icon: backendVersion.icon, disabled: backendVersion.disabled, afterClose: true, run: () => backendVersion.onSelect?.({ shiftKey: false }) }] }] : []),
     { key: 'account', actions: [{ key: 'sign-out', label: signingOut ? 'Signing out…' : 'Sign out', icon: <Codicon name="sign-out" size="1rem" />, disabled: signingOut, afterClose: true, run: () => {
       setSigningOut(true)
       void signOut().catch(error => notifyError(error, 'Could not sign out')).finally(() => setSigningOut(false))

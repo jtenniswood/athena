@@ -115,6 +115,7 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
     id: 'maintenance',
     title: 'Maintenance',
     pages: [
+      { id: 'config:system-updates', title: 'System updates', aliases: ['backend', 'update Hermes', 'version'], scope: 'connected-server' },
       { id: 'sessions', title: 'Archived Chats', scope: 'connected-server' },
       {
         id: 'config:browser-configuration', title: 'Configuration',

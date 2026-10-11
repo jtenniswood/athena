@@ -747,12 +747,16 @@
     "kind": "replacement",
     "order": 20,
     "module": "app/shell/statusbar-controls.tsx",
-    "reason": "Place statusbar contributions in the browser toolbar.",
+    "reason": "Hide desktop statusbar chrome while browser controls live in navigation, the composer, and Settings.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "approval mode keeps the selected profile mode and composer icon synchronized"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "system updates use the native settings page"
       }
     ],
     "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",
