@@ -751,6 +751,95 @@ test('chat actions open from the title toolbar', async ({ page }) => {
   await expect(menu.getByText(/New window/)).toHaveCount(0)
 })
 
+for (const platform of ['MacIntel', 'Linux x86_64']) {
+  test(`conversation action shortcuts reuse menu actions on ${platform}`, async ({ page }) => {
+    await page.addInitScript(platform => Object.defineProperty(navigator, 'platform', { value: platform }), platform)
+    const modifier = platform === 'MacIntel' ? 'Meta' : 'Control'
+    const prefix = platform === 'MacIntel' ? '⇧⌘' : 'Ctrl+Shift+'
+    const writes = []
+    let deletes = 0
+    page.on('request', request => {
+      if (new URL(request.url()).pathname === '/api/sessions/preview-week' && request.method() === 'PATCH') writes.push(request.postDataJSON())
+    })
+    await page.route(/\/api\/sessions\/preview-week(?:\?|$)/, async route => {
+      if (route.request().method() !== 'DELETE') return route.continue()
+      deletes++
+      await route.fulfill({ status: 503, json: { error: 'Synthetic deletion rejected' } })
+    })
+    await open(page)
+    await editor(page).fill('Preserve my shortcut draft')
+    const trigger = page.getByRole('button', { name: 'Chat actions', exact: true })
+    await trigger.click()
+    for (const [label, key] of [['Rename', 'R'], ['Pin', 'P'], ['Mark as unread', 'U'], ['Archive', 'A'], ['Delete', platform === 'MacIntel' ? '⌫' : 'Backspace']]) {
+      await expect(page.getByRole('menuitem', { name: label, exact: true }).locator('.browser-session-shortcut')).toHaveText(prefix + key)
+    }
+    await page.keyboard.press('Escape')
+    const main = page.getByRole('main', { name: 'Conversation and workspace' })
+    await main.focus()
+    await page.keyboard.press(`${modifier}+Shift+R`)
+    const rename = page.getByRole('dialog', { name: 'Rename session', exact: true })
+    await expect(rename.getByRole('textbox')).toBeFocused()
+    await rename.getByRole('textbox').fill('Renamed with a shortcut')
+    await rename.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(rename).toBeHidden()
+    await expect(page.locator('[data-web-session-id="preview-week"]').first()).toContainText('Renamed with a shortcut')
+
+    for (const [key, field, label] of [['P', 'pinned', 'Unpin'], ['U', 'unread', 'Mark as read']]) {
+      await main.focus()
+      await page.keyboard.press(`${modifier}+Shift+${key}`)
+      await expect.poll(() => writes.filter(body => body[field] === true).length).toBe(1)
+      await trigger.click()
+      await expect(page.getByRole('menuitem', { name: label, exact: true })).toBeVisible()
+      await page.keyboard.press('Escape')
+      await main.focus()
+      await page.keyboard.press(`${modifier}+Shift+${key}`)
+      await expect.poll(() => writes.filter(body => body[field] === false).length).toBe(1)
+    }
+    await main.focus()
+    await page.keyboard.press(`${modifier}+Shift+Backspace`)
+    const confirm = page.getByRole('dialog', { name: 'Delete session?', exact: true })
+    await expect(confirm).toBeVisible()
+    expect(deletes).toBe(0)
+    await confirm.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await expect(confirm).toBeHidden()
+    expect(deletes).toBe(0)
+    await expect(editor(page)).toHaveText('Preserve my shortcut draft')
+    await main.focus()
+    await page.keyboard.press(`${modifier}+Shift+Backspace`)
+    await confirm.getByRole('button', { name: 'Delete', exact: true }).click()
+    await expect.poll(() => deletes).toBe(1)
+    await expect(page.getByRole('alert')).toContainText('Could not delete conversation.')
+    await expect(editor(page)).toHaveText('Preserve my shortcut draft')
+  })
+}
+
+test('conversation action shortcuts preserve editing and modal focus', async ({ page }) => {
+  await open(page)
+  await editor(page).fill('Keep this draft untouched')
+  // Synthetic keydowns exercise the application guard without invoking the
+  // browser's reload shortcut or the editor's native word-deletion command.
+  const prevented = await editor(page).evaluate(element => ['R', 'P', 'U', 'A', 'Backspace'].map(key => {
+    const event = new KeyboardEvent('keydown', { key, ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true })
+    element.dispatchEvent(event)
+    return event.defaultPrevented
+  }))
+  expect(prevented).toEqual([false, false, false, false, false])
+  await expect(editor(page)).toHaveText('Keep this draft untouched')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  const trigger = page.getByRole('button', { name: 'Chat actions', exact: true })
+  await trigger.click()
+  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click()
+  const confirm = page.getByRole('dialog', { name: 'Delete session?', exact: true })
+  await confirm.getByRole('button', { name: 'Cancel', exact: true }).focus()
+  await confirm.getByRole('button', { name: 'Cancel', exact: true }).evaluate(element => {
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: 'R', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }))
+  })
+  await expect(confirm).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Rename session', exact: true })).toHaveCount(0)
+  await confirm.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(editor(page)).toHaveText('Keep this draft untouched')
+})
+
 test('settings and command center use one upstream overlay and preserve the chat', async ({ page }) => {
   await open(page)
   const chat = editor(page)
