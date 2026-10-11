@@ -299,10 +299,12 @@
   line-height: 1;
 }
 
-/* Keep the archive shortcut visible in both session dropdown and context menus. */
-:is([data-slot='dropdown-menu-content'], [data-slot='context-menu-content'])
-[role^='menuitem']:has(> .codicon-archive)::after {
-  content: '\21e7 \2318 A';
+:is([data-slot='dropdown-menu-content'], [data-slot='context-menu-content']):has(.browser-session-shortcut) {
+  width: max-content;
+  max-width: calc(100vw - 1rem);
+}
+
+.browser-session-shortcut {
   margin-left: auto;
   padding-left: var(--web-space-4);
   color: var(--web-text-subtle);

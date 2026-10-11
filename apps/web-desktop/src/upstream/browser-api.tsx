@@ -1,3 +1,6 @@
+import type { ComponentProps, ComponentType } from 'react'
+import { SessionActionsMenu as RendererSessionActionsMenu } from '@/app/chat/sidebar/session-actions-menu'
+
 // All renderer imports for browser shell composition stay at this boundary.
 export { ContribWiring, WiredPane } from '@/app/contrib/wiring'
 export { Button, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, SearchField } from '@hermes/plugin-sdk'
@@ -7,7 +10,8 @@ export { Tip } from '@/components/ui/tooltip'
 export { ActionsMenu, ActionsContextMenu } from '@/components/ui/actions-menu'
 export { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 export type { OverlayNavGroup } from '@/app/overlays/overlay-split-layout'
-export { SessionActionsMenu } from '@/app/chat/sidebar/session-actions-menu'
+// The browser transform adds the toolbar's shortcut opt-in to the renderer menu.
+export const SessionActionsMenu = RendererSessionActionsMenu as ComponentType<ComponentProps<typeof RendererSessionActionsMenu> & { keyboardShortcuts?: boolean }>
 export { ContribRender, ContribBoundary } from '@/contrib/react/boundary'
 export { useContributions } from '@/contrib/react/use-contributions'
 export { contributedRoutes, ROUTES_AREA, APP_ROUTES, navigateToWorkspacePage } from '@/app/routes'
