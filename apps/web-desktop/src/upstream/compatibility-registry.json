@@ -532,7 +532,7 @@
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "approval mode keeps the selected profile mode and toolbar icon synchronized"
+        "scenario": "approval mode keeps the selected profile mode and composer icon synchronized"
       }
     ],
     "removal": "Upstream exports the statusbar item renderer publicly.",
@@ -747,7 +747,7 @@
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "approval mode keeps the selected profile mode and toolbar icon synchronized"
+        "scenario": "approval mode keeps the selected profile mode and composer icon synchronized"
       }
     ],
     "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",
@@ -1346,7 +1346,7 @@
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "approval mode keeps the selected profile mode and toolbar icon synchronized"
+        "scenario": "approval mode keeps the selected profile mode and composer icon synchronized"
       }
     ],
     "removal": "Remove when upstream publishes a standalone statusbar item module.",
@@ -1958,7 +1958,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "035a1e8b4d9f4b8416664e3b93f8f160484d885fd09d912821a7f80ecbc4fe33",
     "inputHash": "035a1e8b4d9f4b8416664e3b93f8f160484d885fd09d912821a7f80ecbc4fe33",
-    "outputHash": "2b769fb73b676294147b595b43458e344e9af03b2cc6171459cd14fed9bae982"
+    "outputHash": "baa916e0867fcae0d6c7bf722d87e9d97fbe77e9a7cf05e5cc4bfe2309e73105"
   },
   {
     "name": "browser-semantic-context-menu",
@@ -2010,7 +2010,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "3d639423fe1f440027b57a2416bc994c0ab6408cbef715ece02498d1939e8293",
     "inputHash": "3d639423fe1f440027b57a2416bc994c0ab6408cbef715ece02498d1939e8293",
-    "outputHash": "303a8b35407433d84ed869f16c8ec9e823cd53e6d81e112e7bf000c0fa5dec0b"
+    "outputHash": "483f3d574e36b4988164982daaab76728db05da66948fbfed5e2e1eaa4001695"
   },
   {
     "name": "browser-semantic-voice-menu",

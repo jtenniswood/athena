@@ -695,12 +695,26 @@ export function omitBrowserDesktopUpdateNotice(source: string): string {
   return source.slice(0, start) + 'export function maybeNotifyUpdateAvailable(_status: DesktopUpdateStatus | null, _target: UpdateTarget = \'client\') {}\n' + source.slice(end)
 }
 
-export function useBrowserTouchHooks(source: string): string {
+export function useBrowserTouchHooks(source: string, root: string): string {
   const sendTarget = 'aria-label={showStop ? c.stop : c.send}'
   const labels = ['c.queueMessage', 'showStop ? c.stop : c.send', 'state.tools.label', 'copy.openModelPicker', 'triggerLabel', 'label', 'title']
   const targets = labels.map(label => `aria-label={${label}}`).filter(target => source.includes(target))
   if (!targets.length) throw new Error('Browser composer touch controls changed')
-  return replaceBrowserContract(source, targets.map(target => [target, `${target === sendTarget ? 'data-browser-send-action="" ' : ''}data-browser-composer-action="" ${target}`]))
+  let output = replaceBrowserContract(source, targets.map(target => [target, `${target === sendTarget ? 'data-browser-send-action="" ' : ''}data-browser-composer-action="" ${target}`]))
+  if (source.includes("const tourMarker = useTourMarker('model-pill')")) {
+    const marker = 'data-tour={tourMarker}'
+    const matches = output.split(marker).length - 1
+    if (matches !== 2) throw new Error('Browser model pill marker boundary changed')
+    output = output.replaceAll(marker, `data-browser-model-pill="" ${marker}`)
+  }
+  if (source.includes("import { ModelPill } from './model-pill'")) {
+    const importTarget = "import { ModelPill } from './model-pill'\n"
+    const reasoningTarget = '              {compactModelPill ? null : <ReasoningPill disabled={disabled} model={state.model} />}\n'
+    if (output.split(importTarget).length !== 2 || output.split(reasoningTarget).length !== 2) throw new Error('Browser approval composer insertion point changed')
+    output = output.replace(importTarget, `${importTarget}import { BrowserApprovalComposerControl } from ${JSON.stringify(`${root}/src/experience/browser-approval-composer-control`)}\n`)
+      .replace(reasoningTarget, reasoningTarget + '              <BrowserApprovalComposerControl />\n')
+  }
+  return output
 }
 
 export function removeBrowserConversationalVoiceEntry(source: string, module: 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'): string {
@@ -1130,7 +1144,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserFreshSessionOwner: source => useBrowserFreshSessionOwner(source, root),
     useBrowserDirectResumeOwner: source => useBrowserDirectResumeOwner(source),
     useBrowserSectionIdentity: source => useBrowserSectionIdentity(source, root),
-    useBrowserTouchHooks, useBrowserCodingActionHooks, useBrowserSectionIds, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
+    useBrowserTouchHooks: source => useBrowserTouchHooks(source, root), useBrowserCodingActionHooks, useBrowserSectionIds, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source, entry.module as 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     useBrowserProjectDisclosure,
