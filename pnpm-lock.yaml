@@ -30,8 +30,8 @@ importers:
         specifier: 0.6.2
         version: 0.6.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@chenglou/pretext':
-        specifier: 0.0.6
-        version: 0.0.6
+        specifier: 0.0.9
+        version: 0.0.9
       '@codemirror/commands':
         specifier: 6.10.4
         version: 6.10.4
@@ -886,8 +886,8 @@ packages:
   '@braintree/sanitize-url@7.1.2':
     resolution: {integrity: sha512-jigsZK+sMF/cuiB7sERuo9V7N9jx+dhmHHnQyDSVdpZwVutaBu7WvNYqMDLSgFgfB30n452TP3vjDAvFC973mA==}
 
-  '@chenglou/pretext@0.0.6':
-    resolution: {integrity: sha512-U10s4tFeyu3oVHfXuNWwZSKqHXefhaigpcBkGj60qQFRJ+yUoQ+ez3cGJelP7BWDAB58HCgjcTSmOcg+77afBQ==}
+  '@chenglou/pretext@0.0.9':
+    resolution: {integrity: sha512-vInlpC//3vjRfWTs78k2BBIq/0bUdpjIp8TIn9fXe0NvnChhTQZfjioVzERQQbkQvCVpPpw7PDOrTWMHpq27VA==}
 
   '@chevrotain/types@11.1.2':
     resolution: {integrity: sha512-U+HFai5+zmJCkK86QsaJtoITlboZHBqrVketcO2ROv865xfCMSFpELQoz1GkX5GzME8pTa+3kbKrZHQtI0gdbw==}
@@ -6081,7 +6081,7 @@ snapshots:
 
   '@braintree/sanitize-url@7.1.2': {}
 
-  '@chenglou/pretext@0.0.6': {}
+  '@chenglou/pretext@0.0.9': {}
 
   '@chevrotain/types@11.1.2': {}
 
