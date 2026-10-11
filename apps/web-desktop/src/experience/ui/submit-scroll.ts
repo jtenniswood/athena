@@ -1,11 +1,10 @@
+import { BROWSER_SUBMIT_ACCEPTED_EVENT, type BrowserAcceptedSubmit } from './accepted-submit'
+
 const VIEWPORT = '[data-slot="aui_thread-viewport"]'
 const USER_MESSAGE = '[data-slot="aui_user-message-root"]'
 const CONTENT = '[data-slot="aui_thread-content"]'
 const TURN = '[data-slot="aui_turn-pair"]'
-const COMPOSER = '[data-slot="composer-root"]'
-const EDIT_COMPOSER = '[data-slot="aui_edit-composer-root"]'
 const TOP_GAP_PX = 12
-const OBSERVE_TIMEOUT_MS = 10_000
 
 function visibleChatViewport(): HTMLElement | null {
   const shell = document.querySelector('[data-browser-shell]')
@@ -113,21 +112,16 @@ function reserveResponseSpace(viewport: HTMLElement, prompt: HTMLElement) {
 /** Keep a submitted prompt and the start of its response together in view. */
 export function installConversationSubmitScroll(): () => void {
   const mobileViewport = window.matchMedia('(width < 48rem)')
-  let observer: MutationObserver | null = null
-  let timeout = 0
   let firstFrame = 0
   let secondFrame = 0
   let space: ReturnType<typeof reserveResponseSpace> = null
 
   const clearPending = () => {
-    observer?.disconnect()
-    observer = null
-    window.clearTimeout(timeout)
     window.cancelAnimationFrame(firstFrame)
     window.cancelAnimationFrame(secondFrame)
   }
 
-  const onSubmit = (event: Event) => {
+  const onSubmitAccepted = (event: Event) => {
     if (mobileViewport.matches) {
       clearPending()
       space?.dispose()
@@ -135,44 +129,24 @@ export function installConversationSubmitScroll(): () => void {
       return
     }
 
-    const target = event.target
-    if (!(target instanceof Element) || !target.closest(COMPOSER) || target.closest(EDIT_COMPOSER)) return
-
     const viewport = visibleChatViewport()
     if (!viewport) return
+    const detail = (event as CustomEvent<BrowserAcceptedSubmit>).detail
+    const shell = viewport.closest('[data-browser-shell]')
+    if (!detail || !shell) return
+    const conversationId = shell.getAttribute('data-browser-conversation-id')
+    if (detail.sessionId && conversationId && detail.sessionId !== conversationId) return
+    const prompt = latestUserMessage(viewport)
+    if (!prompt || (prompt.querySelector('[data-slot="aui_user-message-text"]') ?? prompt).textContent !== detail.text) return
 
     clearPending()
-    const previousPrompt = latestUserMessage(viewport)
-    const previousId = previousPrompt?.dataset.messageId
-
-    observer = new MutationObserver(() => {
-      // A conversation switch must not be mistaken for the submitted turn.
-      if (previousPrompt && !previousPrompt.isConnected) {
-        clearPending()
-        return
-      }
-      const nextPrompt = latestUserMessage(viewport)
-      if (!nextPrompt || nextPrompt === previousPrompt) return
-      if (previousId && nextPrompt.dataset.messageId === previousId) return
-
-      clearPending()
-      space?.dispose()
-      space = reserveResponseSpace(viewport, nextPrompt)
-      firstFrame = window.requestAnimationFrame(() => {
-        secondFrame = window.requestAnimationFrame(() => {
-          if (!mobileViewport.matches && viewport.isConnected && nextPrompt.isConnected) space?.align()
-        })
+    space?.dispose()
+    space = reserveResponseSpace(viewport, prompt)
+    firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        if (!mobileViewport.matches && viewport.isConnected && prompt.isConnected) space?.align()
       })
     })
-    observer.observe(viewport, { childList: true, subtree: true })
-    timeout = window.setTimeout(clearPending, OBSERVE_TIMEOUT_MS)
-  }
-
-  // The rich editor sends directly on Enter, without a native form submit.
-  const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return
-    if (!(event.target instanceof Element) || !event.target.closest('[data-slot="composer-rich-input"]')) return
-    onSubmit(event)
   }
   const onViewportModeChange = () => {
     if (!mobileViewport.matches) return
@@ -181,12 +155,10 @@ export function installConversationSubmitScroll(): () => void {
     space = null
   }
 
-  document.addEventListener('submit', onSubmit, true)
-  document.addEventListener('keydown', onKeyDown, true)
+  window.addEventListener(BROWSER_SUBMIT_ACCEPTED_EVENT, onSubmitAccepted)
   mobileViewport.addEventListener('change', onViewportModeChange)
   return () => {
-    document.removeEventListener('submit', onSubmit, true)
-    document.removeEventListener('keydown', onKeyDown, true)
+    window.removeEventListener(BROWSER_SUBMIT_ACCEPTED_EVENT, onSubmitAccepted)
     mobileViewport.removeEventListener('change', onViewportModeChange)
     clearPending()
     space?.dispose()
