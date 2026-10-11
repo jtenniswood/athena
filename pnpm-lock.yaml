@@ -25,7 +25,7 @@ importers:
         version: 0.14.24(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
       '@assistant-ui/react-streamdown':
         specifier: 0.3.20
-        version: 0.3.20(@assistant-ui/react@0.14.24(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7)))(@streamdown/code@1.1.1(react@19.2.7))(@streamdown/math@1.0.2(react@19.2.7))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 0.3.20(@assistant-ui/react@0.14.24(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7)))(@streamdown/code@1.1.1(react@19.2.7))(@streamdown/math@1.0.3(react@19.2.7))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@audiowave/react':
         specifier: 0.6.2
         version: 0.6.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -75,8 +75,8 @@ importers:
         specifier: 1.1.1
         version: 1.1.1(react@19.2.7)
       '@streamdown/math':
-        specifier: 1.0.2
-        version: 1.0.2(react@19.2.7)
+        specifier: 1.0.3
+        version: 1.0.3(react@19.2.7)
       '@tabler/icons-react':
         specifier: 3.44.0
         version: 3.44.0(react@19.2.7)
@@ -2245,8 +2245,8 @@ packages:
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
 
-  '@streamdown/math@1.0.2':
-    resolution: {integrity: sha512-r8Ur9/lBuFnzZAFdEWrLUF2s/gRwRRRwruqltdZibyjbCBnuW7SJbFm26nXqvpJPW/gzpBUMrBVBzd88z05D5g==}
+  '@streamdown/math@1.0.3':
+    resolution: {integrity: sha512-TOTRlPYs4LBNT8GaIWNCEVrcGVQsVcfc8WZ/x/0IyO+Rvsu6W+nF+YCS4Pl3JTVWQK8QX7LbWUChSilwlyzPZw==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
 
@@ -5343,7 +5343,7 @@ snapshots:
       - react-dom
       - supports-color
 
-  '@assistant-ui/react-streamdown@0.3.20(@assistant-ui/react@0.14.24(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7)))(@streamdown/code@1.1.1(react@19.2.7))(@streamdown/math@1.0.2(react@19.2.7))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@assistant-ui/react-streamdown@0.3.20(@assistant-ui/react@0.14.24(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7)))(@streamdown/code@1.1.1(react@19.2.7))(@streamdown/math@1.0.3(react@19.2.7))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@assistant-ui/react': 0.14.24(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
       '@assistant-ui/react-markdown': 0.14.20(@assistant-ui/react@0.14.24(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7)))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -5358,7 +5358,7 @@ snapshots:
       streamdown: 2.7.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
     optionalDependencies:
       '@streamdown/code': 1.1.1(react@19.2.7)
-      '@streamdown/math': 1.0.2(react@19.2.7)
+      '@streamdown/math': 1.0.3(react@19.2.7)
       '@types/react': 19.2.17
     transitivePeerDependencies:
       - '@types/react-dom'
@@ -7611,7 +7611,7 @@ snapshots:
       react: 19.2.7
       shiki: 3.23.0
 
-  '@streamdown/math@1.0.2(react@19.2.7)':
+  '@streamdown/math@1.0.3(react@19.2.7)':
     dependencies:
       katex: 0.16.47
       react: 19.2.7
