@@ -1,8 +1,5 @@
-import { useStore } from '@nanostores/react'
-
-import { $activeGatewayProfile } from '@/store/profile'
-import { $gatewayState } from '@/store/session'
 import { useBrowserApproval } from '../upstream/approval'
+import { useBrowserActiveProfile } from '../upstream/profiles'
 import { Button, Codicon, DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, Tip, useI18n, Brain, Power, ShieldLock } from '../upstream/browser-api'
 import { useBrowserGatewayRequest } from '../upstream/gateway-request'
 import type { BrowserApprovalMode } from './contracts/actions'
@@ -16,14 +13,13 @@ function ApprovalModeIcon({ mode }: { mode: BrowserApprovalMode }) {
 export function BrowserApprovalComposerControl() {
   const { t } = useI18n()
   const copy = t.shell.approvalMode
-  const profile = useStore($activeGatewayProfile)
-  const gatewayState = useStore($gatewayState)
+  const profile = useBrowserActiveProfile()
   const requestGateway = useBrowserGatewayRequest()
-  const { mode, setMode } = useBrowserApproval(profile, requestGateway)
+  const { mode, setMode, ready } = useBrowserApproval(profile, requestGateway)
   const labels: Record<BrowserApprovalMode, string> = { manual: copy.manual, smart: copy.smart, off: copy.off }
   const descriptions: Record<BrowserApprovalMode, string> = { manual: copy.manualDescription, smart: 'Ask when needed', off: copy.offDescription }
 
-  if (gatewayState !== 'open') return null
+  if (!ready) return null
 
   return (
     <div className="browser-approval-control">
