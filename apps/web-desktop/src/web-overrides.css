@@ -361,11 +361,11 @@ body > [data-slot='fan-menu'] {
   -webkit-overflow-scrolling: touch;
 }
 
-.browser-gateway-settings :is(input, select, button) {
+.browser-gateway-settings :is(input, button) {
   min-height: calc(44px / var(--web-ui-scale, 1));
 }
 
-.browser-gateway-settings :is(input, select) {
+.browser-gateway-settings :is(input, [data-slot='select-trigger']) {
   max-width: 100%;
   font-size: max(1rem, calc(16px / var(--web-ui-scale, 1)));
 }
