@@ -8,6 +8,7 @@ export { SidebarProvider } from '@/components/ui/sidebar'
 export { Codicon } from '@/components/ui/codicon'
 export { Tip } from '@/components/ui/tooltip'
 export { ActionsMenu, ActionsContextMenu } from '@/components/ui/actions-menu'
+export type { MenuKit } from '@/components/ui/actions-menu'
 export { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 export type { OverlayNavGroup } from '@/app/overlays/overlay-split-layout'
 // The browser transform adds the toolbar's shortcut opt-in to the renderer menu.
