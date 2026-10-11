@@ -3,6 +3,7 @@ import { BrowserGatewayPanel, useBrowserGatewayStatus } from '../upstream/browse
 import { settingsPageLabel } from '../experience/settings/policy'
 import { assertSafeConnectionChange } from '../platform/reload-safety'
 import { connectionState } from '../platform/connection-state'
+import { signOut } from '../platform/sign-out'
 import { useEffect, useId, useState } from 'react'
 import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SettingsContent } from '../upstream/ui'
 import { runtimeConfig } from '../platform/runtime'
@@ -65,11 +66,9 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
         await window.hermesDesktop.testConnectionConfig({ mode: 'remote', remoteUrl: window.location.origin })
         setMessage('The configured gateway is reachable.')
       })}>Test connection</Button>
-      <Button variant="outline" disabled={busy} onClick={() => void run(async () => {
-        assertSafeConnectionChange()
-        await window.hermesDesktop.oauthLogoutConnectionConfig(window.location.origin)
-        await window.hermesDesktop.applyConnectionConfig({ mode: 'remote', remoteAuthMode: 'oauth', remoteToken: '' }); setToken(''); setMessage('Signed out.')
-      })}>Sign out</Button>
+    </div>
+    <div className="browser-gateway-settings-sign-out">
+      <Button variant="outline" disabled={busy} onClick={() => void run(signOut)}>Sign out</Button>
     </div>
     {!connectionState().persisted() && <p role="status" className="text-sm">Browser storage is unavailable. Your sign-in works in this tab but may not survive a reload.</p>}
     {message && <p role="status" className="text-sm">{message}</p>}
