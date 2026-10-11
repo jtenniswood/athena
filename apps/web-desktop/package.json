@@ -40,7 +40,7 @@
     "@dnd-kit/sortable": "10.0.0",
     "@dnd-kit/utilities": "3.2.2",
     "@icons-pack/react-simple-icons": "13.11.1",
-    "@lezer/highlight": "1.2.3",
+    "@lezer/highlight": "1.2.5",
     "@nanostores/react": "1.1.0",
     "@nous-research/ui": "0.18.2",
     "@novnc/novnc": "1.7.0",
