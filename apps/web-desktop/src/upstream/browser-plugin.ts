@@ -909,10 +909,22 @@ export function useBrowserSearchLabel(source: string, root: string): string {
     .replace(placeholderTarget, "placeholder={'Search'}")
 }
 
-function filterBrowserSessionMenu(source: string): string {
+export function filterBrowserSessionMenu(source: string, root: string): string {
   const target = 'function OptionCheckbox({ checked, onCheck, option }: { checked: boolean; onCheck: () => void; option: Option }) {'
   if (source.split(target).length !== 2) throw new Error('Browser session filter menu target changed')
   const replacements: [string, string][] = [
+    [
+      "      {option.label}\n    </DropdownMenuCheckboxItem>",
+      "      {option.id === 'archived' ? browserSidebarActionLabel('archived', option.label) : option.label}\n    </DropdownMenuCheckboxItem>"
+    ],
+    [
+      '  const unreadIds = useStore($unreadFinishedSessionIds)',
+      `  const unreadIds = useStore($unreadFinishedSessionIds)
+  useBrowserSidebarShortcuts({
+    archived: { run: () => setSidebarShowArchived(!showArchived) },
+    read: { disabled: unreadIds.length === 0, run: markAllSessionsRead }
+  })`
+    ],
     [
       'function OptionGlyph({ option }: { option: Option }) {',
       `const OPTION_ICONS: Record<string, string> = { 'all-profiles': 'account', archived: 'archive' }
@@ -934,7 +946,7 @@ function OptionGlyph({ option }: { option: Option }) {`
     ['<DropdownMenuItem onSelect={() => void runImportProfileFlow()}>\n                {t.profiles.importProfile}', '<DropdownMenuItem onSelect={() => void runImportProfileFlow()}>\n                <Codicon name="cloud-download" size="0.8125rem" />\n                {t.profiles.importProfile}'],
     ['<DropdownMenuItem onSelect={resetSidebarView}>{f.resetToDefaults}</DropdownMenuItem>', '<DropdownMenuItem onSelect={resetSidebarView}><Codicon name="refresh" size="0.8125rem" />{f.resetToDefaults}</DropdownMenuItem>'],
     ['            {foldCollapsed ? f.expandAll : f.collapseAll}', '            <Codicon name={foldCollapsed ? "expand-all" : "collapse-all"} size="0.8125rem" />\n            {foldCollapsed ? f.expandAll : f.collapseAll}'],
-    ['          {t.sidebar.markAllRead}\n', '          <Codicon name="check-all" size="0.8125rem" />\n          {t.sidebar.markAllRead}\n']
+    ['          {t.sidebar.markAllRead}\n', '          <Codicon name="check-all" size="0.8125rem" />\n          {browserSidebarActionLabel(\'read\', t.sidebar.markAllRead)}\n']
   ]
   let output = source
   for (const [before, after] of replacements) {
@@ -945,7 +957,8 @@ function OptionGlyph({ option }: { option: Option }) {`
   const manualOrdering = "      return ordering === 'manual'"
   if (output.split(manualOrdering).length !== 2) throw new Error('Browser manual ordering option contract changed')
   output = output.replace(manualOrdering, '      return true')
-  return output.replace(target, target + hideDesktopOnlyRows)
+  const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-shortcuts'))
+  return `import { browserSidebarActionLabel, useBrowserSidebarShortcuts } from ${owner}\n` + output.replace(target, target + hideDesktopOnlyRows)
 }
 
 export function showHiddenBotsInBrowserRoster(source: string): string {
@@ -1227,7 +1240,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserProjectDisclosure,
     exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut, removeBrowserTopCapabilitiesLink,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
-    useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth, filterBrowserSessionMenu,
+    useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth,
+    filterBrowserSessionMenu: source => filterBrowserSessionMenu(source, root),
     showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
     disableBrowserSessionRowTabs,
     disableBrowserSessionOpenActions: source => disableBrowserSessionOpenActions(source, root),
