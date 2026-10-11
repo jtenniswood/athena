@@ -1175,7 +1175,8 @@ for (const width of [390, 1440]) {
       const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
       const role = width === 390 ? 'button' : 'menuitem'
       await (await settingsTrigger(page)).click()
-      await expect(surface.locator('.browser-action-group-label')).toContainText(['Panels', 'Systems'])
+      await expect(surface.locator('.browser-action-group-label')).toContainText(['Panels', 'Tabs', 'Sections', 'Systems'])
+      await expect(surface.getByRole(role, { name: 'Sign out', exact: true })).toHaveCount(0)
       for (const name of ['Settings']) {
         await expect(surface.getByRole(role, { name, exact: true })).toHaveCount(1)
       }
