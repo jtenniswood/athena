@@ -1135,9 +1135,21 @@ export function addBrowserChatPanelActions(source: string, root: string): string
   const importTarget = "import type { SessionTitleResponse } from '../../types'\n"
   const actionInterface = '  onHideTabBar?: () => void\n'
   const actionDestructure = '  onHideTabBar,\n  surface = \'row\',\n  tabPaneId\n}: SessionActions) {'
-  const actionItemsTarget = '      {dangerItems.map(item => renderActionItem(kit, item))}'
-  if (source.split(importTarget).length !== 2 || source.split(actionInterface).length !== 2 || source.split(actionDestructure).length !== 2 || source.split(actionItemsTarget).length !== 2) {
+  const actionItemsTarget = '      <kit.Separator />\n      {dangerItems.map(item => renderActionItem(kit, item))}'
+  const appearanceStart = '      <kit.Sub>\n        <kit.SubTrigger disabled={!sessionId}>\n          <Codicon name="symbol-color"'
+  const projectStart = '      <kit.Sub>\n        <kit.SubTrigger disabled={!sessionId}>\n          <Codicon name="folder"'
+  const submenuEnd = '      </kit.Sub>'
+  if (source.split(importTarget).length !== 2 || source.split(actionInterface).length !== 2 || source.split(actionDestructure).length !== 2 || source.split(actionItemsTarget).length !== 2 || source.split(appearanceStart).length !== 2 || source.split(projectStart).length !== 2) {
     throw new Error('Browser chat panel menu contract changed')
+  }
+  // Keep project and appearance actions on sidebar rows, while the chat
+  // toolbar exposes only conversation actions and workspace panel toggles.
+  for (const start of [appearanceStart, projectStart]) {
+    const from = source.indexOf(start)
+    const to = source.indexOf(submenuEnd, from) + submenuEnd.length
+    if (to < from) throw new Error('Browser chat submenu boundary changed')
+    const submenu = source.slice(from, to)
+    source = source.replace(submenu, `      {browserPanelEntries === undefined && (\n${submenu}\n      )}`)
   }
   return source.replace(importTarget, `${importTarget}import { BrowserChatPanelActions } from ${JSON.stringify(path.join(root, 'src/experience/chat-panel-actions.tsx'))}\n`)
     .replace(actionInterface, `${actionInterface}  browserPanelEntries?: readonly { id: string; title?: unknown; data?: unknown }[]\n  onBrowserPanelOpen?: () => void\n`)
