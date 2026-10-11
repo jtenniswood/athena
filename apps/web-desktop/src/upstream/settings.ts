@@ -24,7 +24,7 @@ export function useBrowserSettings(entries: readonly BrowserPanelEntry[]): Brows
       return {
         id: entry.id,
         checked: narrowViewport && entry.collapsible ? undefined : open,
-        select() {
+        select(mode: 'open' | 'toggle' = 'open') {
           const narrow = $narrowViewport.get() && entry.collapsible
           const currentSide = treeSideOfPane(entry.id)
           const currentlyOpen = $paneVisible(entry.id).get() && !(currentSide && $collapsedTreeSides.get().has(currentSide))
@@ -32,7 +32,7 @@ export function useBrowserSettings(entries: readonly BrowserPanelEntry[]): Brows
           restoreTreePane(entry.id)
           if (narrow) {
             // The overlay needs the newly restored contribution after React commits.
-            requestAnimationFrame(() => window.dispatchEvent(new CustomEvent(PANE_TOGGLE_REVEAL_EVENT, { detail: { id: entry.id, mode: 'open' } })))
+            requestAnimationFrame(() => window.dispatchEvent(new CustomEvent(PANE_TOGGLE_REVEAL_EVENT, { detail: { id: entry.id, mode } })))
           }
           return true
         }

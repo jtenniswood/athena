@@ -913,6 +913,7 @@ export function filterBrowserSessionMenu(source: string, root: string): string {
   const target = 'function OptionCheckbox({ checked, onCheck, option }: { checked: boolean; onCheck: () => void; option: Option }) {'
   if (source.split(target).length !== 2) throw new Error('Browser session filter menu target changed')
   const replacements: [string, string][] = [
+    ['  const groupingLabel = groupings.find(option => option.id === grouping)?.label\n', ''],
     [
       "      {option.label}\n    </DropdownMenuCheckboxItem>",
       "      {option.id === 'archived' ? browserSidebarActionLabel('archived', option.label) : option.label}\n    </DropdownMenuCheckboxItem>"
@@ -935,7 +936,16 @@ function OptionGlyph({ option }: { option: Option }) {`
       "  return option.icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={option.icon} size=\"0.8125rem\" /> : null",
       "  const icon = option.icon || OPTION_ICONS[option.id]\n  return icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={icon} size=\"0.8125rem\" /> : null"
     ],
-    ['<DropdownMenuSubTrigger hideChevron>\n              {f.grouping}', '<DropdownMenuSubTrigger hideChevron>\n              <Codicon name="list-tree" size="0.8125rem" />\n              {f.grouping}'],
+    [
+      `<DropdownMenuSubTrigger hideChevron>
+              {f.grouping}
+              <span className="ml-auto flex items-center gap-1 pl-4 text-(--ui-text-tertiary)">
+                {groupingLabel}
+                <Codicon name="chevron-right" size="1rem" />
+              </span>
+            </DropdownMenuSubTrigger>`,
+      '<DropdownMenuSubTrigger><Codicon name="list-tree" size="0.8125rem" />{f.grouping}</DropdownMenuSubTrigger>'
+    ],
     ['<DropdownMenuSubTrigger>{f.ordering}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="list-ordered" size="0.8125rem" />{f.ordering}</DropdownMenuSubTrigger>'],
     ['<DropdownMenuSubTrigger>{f.show}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="eye" size="0.8125rem" />{f.show}</DropdownMenuSubTrigger>'],
     ['<DropdownMenuSubTrigger>{f.status}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="pulse" size="0.8125rem" />{f.status}</DropdownMenuSubTrigger>'],
@@ -1138,9 +1148,21 @@ export function addBrowserChatPanelActions(source: string, root: string): string
   const importTarget = "import type { SessionTitleResponse } from '../../types'\n"
   const actionInterface = '  onHideTabBar?: () => void\n'
   const actionDestructure = '  onHideTabBar,\n  surface = \'row\',\n  tabPaneId\n}: SessionActions) {'
-  const actionItemsTarget = '      {dangerItems.map(item => renderActionItem(kit, item))}'
-  if (source.split(importTarget).length !== 2 || source.split(actionInterface).length !== 2 || source.split(actionDestructure).length !== 2 || source.split(actionItemsTarget).length !== 2) {
+  const actionItemsTarget = '      <kit.Separator />\n      {dangerItems.map(item => renderActionItem(kit, item))}'
+  const appearanceStart = '      <kit.Sub>\n        <kit.SubTrigger disabled={!sessionId}>\n          <Codicon name="symbol-color"'
+  const projectStart = '      <kit.Sub>\n        <kit.SubTrigger disabled={!sessionId}>\n          <Codicon name="folder"'
+  const submenuEnd = '      </kit.Sub>'
+  if (source.split(importTarget).length !== 2 || source.split(actionInterface).length !== 2 || source.split(actionDestructure).length !== 2 || source.split(actionItemsTarget).length !== 2 || source.split(appearanceStart).length !== 2 || source.split(projectStart).length !== 2) {
     throw new Error('Browser chat panel menu contract changed')
+  }
+  // Keep project and appearance actions on sidebar rows, while the chat
+  // toolbar exposes only conversation actions and workspace panel toggles.
+  for (const start of [appearanceStart, projectStart]) {
+    const from = source.indexOf(start)
+    const to = source.indexOf(submenuEnd, from) + submenuEnd.length
+    if (to < from) throw new Error('Browser chat submenu boundary changed')
+    const submenu = source.slice(from, to)
+    source = source.replace(submenu, `      {browserPanelEntries === undefined && (\n${submenu}\n      )}`)
   }
   return source.replace(importTarget, `${importTarget}import { BrowserChatPanelActions } from ${JSON.stringify(path.join(root, 'src/experience/chat-panel-actions.tsx'))}\n`)
     .replace(actionInterface, `${actionInterface}  browserPanelEntries?: readonly { id: string; title?: unknown; data?: unknown }[]\n  onBrowserPanelOpen?: () => void\n`)
