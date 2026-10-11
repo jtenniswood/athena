@@ -43,6 +43,12 @@ test('accepted composer submissions report only successful sends', () => {
   assert.match(output, /if \\(!accepted\\) \\{\\s*keep\\(\\)\\s*\\} else \\{\\s*announceBrowserAcceptedSubmit\\(\\{ text, sessionId \\}\\)/)
   assert.match(output, /accepted-submit/)
 })
+test('browser initialization runs after bridge setup and before upstream renderer import', () => {
+  const entry = readFileSync(path.join(root, 'src/upstream/entry.ts'), 'utf8')
+  const browserRoot = readFileSync(path.join(root, 'src/upstream/browser-root.tsx'), 'utf8')
+  assert.ok(entry.indexOf("await import('./browser-initialize')") < entry.indexOf("await import('../../../desktop/src/main')"))
+  assert.doesNotMatch(browserRoot, /browser-initialize/)
+})
 test('profile switch hook ignores repeated mount effects but handles real profile changes', () => {
   const source = readFileSync(path.join(root, '../desktop/src/app/hooks/use-on-profile-switch.ts'), 'utf8')
   let profile = 'default', reference, effect
