@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
-import type { ActionItemSpec } from '@/components/ui/actions-menu'
-import { IS_MAC } from '@/lib/keybinds/combo'
+import type { ActionItemSpec } from '../upstream/browser-api'
+import { IS_MAC } from '../upstream/browser-api'
 
 const shortcutKeys = { rename: 'r', pin: 'p', unread: 'u', archive: 'a', delete: 'backspace' } as const
 type SessionAction = keyof typeof shortcutKeys
