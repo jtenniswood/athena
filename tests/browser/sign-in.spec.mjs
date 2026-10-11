@@ -66,18 +66,18 @@ async function hermesAuth(context, { providers = [oidc], signedIn = false, authM
 }
 
 async function selectSignOut(page, compact = false) {
-  await page.getByRole('button', { name: 'Open settings menu', exact: true }).click()
+  const trigger = page.getByRole('button', { name: 'Navigation tabs', exact: true })
+  if (!await trigger.isVisible()) await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  await trigger.click()
   const menu = page.getByRole(compact ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
-  await menu.getByRole(compact ? 'button' : 'menuitem', { name: 'Sign out', exact: true }).click()
+  await expect(menu.getByRole(compact ? 'button' : 'menuitem', { name: 'Sign out', exact: true })).toHaveCount(0)
+  await menu.getByRole(compact ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Settings categories' }).getByRole('button', { name: 'Gateway', exact: true }).click()
+  await page.getByRole('region', { name: 'Gateway connection', exact: true }).getByRole('button', { name: 'Sign out', exact: true }).click()
 }
 
 async function expectSignOutError(page, message) {
-  // The fixture can also report backend skew; expand the notification stack.
-  await expect.poll(async () => {
-    const more = page.getByRole('button', { name: /^Show \d+ more notifications?$/ })
-    if (await more.isVisible()) await more.click()
-    return page.getByText(message, { exact: true }).isVisible()
-  }).toBe(true)
+  await expect(page.getByRole('region', { name: 'Gateway connection', exact: true }).getByText(message, { exact: true })).toBeVisible()
 }
 
 for (const width of [390, 1440]) {
@@ -93,9 +93,10 @@ for (const width of [390, 1440]) {
     await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' })).toBeEnabled()
     await expect(editor(page)).toHaveCount(0)
-    await expect(page).toHaveURL(/#\/preview-week$/)
+    await expect(page).toHaveURL(/#\/settings\?tab=gateway$/)
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes:composer-drafts:v3'))['preview-week'])).toBe('Keep this draft after signing out')
     await context.addCookies([{ name: 'athena_test_session', value: 'authenticated', url: origin, httpOnly: true }])
+    await page.goto(`${origin}/#/preview-week`)
     await page.reload()
     await expect(editor(page)).toHaveText('Keep this draft after signing out', { timeout: 30000 })
   })
@@ -120,8 +121,7 @@ test('failed sign-out keeps chat and token credentials available for retry', asy
   await expectSignOutError(page, 'Sign-out failed (503). Try again.')
   await expect(editor(page)).toHaveText('Keep this draft on failure')
   expect(await page.evaluate(() => window.hermesDesktop.getConnectionConfig())).toMatchObject({ remoteAuthMode: 'token', remoteTokenSet: true })
-  await page.getByRole('button', { name: 'Open settings menu', exact: true }).click()
-  await expect(page.getByRole('menuitem', { name: 'Sign out', exact: true })).toBeEnabled()
+  await expect(page.getByRole('region', { name: 'Gateway connection', exact: true }).getByRole('button', { name: 'Sign out', exact: true })).toBeEnabled()
 })
 
 test('sign-out saves text edited while logout is pending', async ({ page, context }) => {
@@ -138,6 +138,7 @@ test('sign-out saves text edited while logout is pending', async ({ page, contex
   const requested = page.waitForRequest(request => request.url().endsWith('/auth/logout'))
   await selectSignOut(page)
   await requested
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
   await editor(page).fill('Edited while signing out')
   releaseLogout()
   await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
@@ -157,6 +158,7 @@ test('sign-out leaves unsent attachments in chat without ending the session', as
   await expect(page.getByRole('button', { name: 'Remove unsent.txt', exact: true })).toBeVisible()
   await selectSignOut(page)
   await expectSignOutError(page, 'Send or remove unsent attachments before reloading.')
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Remove unsent.txt', exact: true })).toBeVisible()
   expect(logouts).toBe(0)
 })

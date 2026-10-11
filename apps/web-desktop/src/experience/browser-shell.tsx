@@ -169,21 +169,6 @@ function BrowserLayout() {
   const conversation = useBrowserConversation()
   const selected = conversation.sessionId
   const sessionActions = useBrowserSessionActions()
-  const archiveShortcut = useRef({ selected, archive: sessionActions.archive })
-  archiveShortcut.current = { selected, archive: sessionActions.archive }
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || !event.shiftKey || event.altKey || event.repeat || event.isComposing || event.key.toLowerCase() !== 'a') return
-      if (event.defaultPrevented || !archiveShortcut.current.selected) return
-      const target = event.target
-      if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"], [role="menu"], [data-browser-action-surface]'))) return
-      event.preventDefault()
-      event.stopImmediatePropagation()
-      void archiveShortcut.current.archive()
-    }
-    window.addEventListener('keydown', onKeyDown, true)
-    return () => window.removeEventListener('keydown', onKeyDown, true)
-  }, [])
   const chatTitle = conversation.displayName || ''
   const panes = useContributions('panes')
   const main = useRef<HTMLElement>(null), menu = useRef<HTMLButtonElement>(null)
@@ -226,7 +211,7 @@ function BrowserLayout() {
             <Codicon name="layout-sidebar-left" />
           </BrowserToolbarButton>
           <div className="browser-actions">
-            {selected && <SessionActionsMenu align="end" browserPanelEntries={panelPanes} onBrowserPanelOpen={() => main.current?.focus()} onArchive={sessionActions.archive} onDelete={sessionActions.delete} onPin={sessionActions.togglePin} onToggleUnread={sessionActions.toggleUnread} pinned={sessionActions.pinned} unread={sessionActions.unread} profile={sessionActions.profile} sessionId={selected} title={chatTitle}>
+            {selected && <SessionActionsMenu keyboardShortcuts align="end" browserPanelEntries={panelPanes} onBrowserPanelOpen={() => main.current?.focus()} onArchive={sessionActions.archive} onDelete={sessionActions.delete} onPin={sessionActions.togglePin} onToggleUnread={sessionActions.toggleUnread} pinned={sessionActions.pinned} unread={sessionActions.unread} profile={sessionActions.profile} sessionId={selected} title={chatTitle}>
               <BrowserToolbarButton tooltip="Chat actions" type="button" className="browser-chat-actions" aria-label="Chat actions"><Codicon name="ellipsis" /></BrowserToolbarButton>
             </SessionActionsMenu>}
           </div>

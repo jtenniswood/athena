@@ -209,17 +209,27 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
     ["useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:model' as SettingsViewId)", "useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:appearance' as SettingsViewId)"],
     [
       '  const subpage = resolveSettingsSubpage(activeView, params)',
-      "  const subpage = ['gateway', 'keybinds', 'sessions', 'config:safety'].includes(activeView) ? undefined : resolveSettingsSubpage(activeView, params)"
+      "  const browserThemeRedirect = activeView === 'config:appearance' && resolveSettingsSubpage(activeView, params) === 'theme'\n  const subpage = ['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance'].includes(activeView) ? undefined : resolveSettingsSubpage(activeView, params)"
+    ],
+    [
+      '  const needsSubpageRedirect = Boolean(subpage && subpage !== requestedSubpage)',
+      '  const needsSubpageRedirect = browserThemeRedirect || Boolean(subpage && subpage !== requestedSubpage)'
+    ],
+    [
+      "  if (subpage) {\n    subpageSearch.set('page', subpage)\n  }",
+      "  if (browserThemeRedirect) {\n    subpageSearch.set('tab', 'config:browser-theme')\n    subpageSearch.delete('page')\n  } else if (subpage) {\n    subpageSearch.set('page', subpage)\n  }"
     ],
     [
       '      const destination = page ?? settingsSubpages(view)[0]?.id',
-      "      const destination = page ?? (['gateway', 'keybinds', 'sessions', 'config:safety'].includes(view) ? undefined : settingsSubpages(view)[0]?.id)"
+      "      const destination = page ?? (['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance'].includes(view) ? undefined : settingsSubpages(view)[0]?.id)"
     ],
+    ["        const children = settingsSubpages(view)", "        const children = view === 'config:appearance' ? [] : settingsSubpages(view)"],
     ["import { SettingsSubpageHeader } from './subpage-navigation'\n", ''],
     ["  const activeGroup = navGroups.find(group => group.active)\n  const activeChild = activeGroup?.children?.find(child => child.active)\n", ''],
   ]
   controlReplacements.push(
-    ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  ...SETTINGS_TOOL_PAGES.map(page => page.id),\n  'config:browser-configuration',"],
+    ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  ...SETTINGS_TOOL_PAGES.map(page => page.id),\n  'config:browser-theme',\n  'config:browser-configuration',"],
+    ["          {\n            active: activeView === 'notifications',", "          {\n            active: activeView === 'config:browser-theme',\n            icon: codiconIcon('color-mode'),\n            id: 'config:browser-theme',\n            label: 'Theme',\n            onSelect: () => setActiveView('config:browser-theme')\n          },\n          {\n            active: activeView === 'notifications',"],
     ["          {\n            active: activeView === 'about',", "          {\n            active: activeView === 'config:browser-configuration',\n            gapBefore: true,\n            icon: Settings2,\n            id: 'config:browser-configuration',\n            label: 'Configuration',\n            onSelect: () => setActiveView('config:browser-configuration')\n          },\n          {\n            active: activeView === 'about',"],
     ['        importInputRef={importInputRef}', '        importInputRef={importInputRef}\n        configurationCommands={configurationCommands}\n        configurationScopeProfile={scopeProfile}'],
     ['getHermesConfigRecord()', 'getHermesConfigRecord(scopeProfile)'],
@@ -307,12 +317,12 @@ export function useBrowserConfigurationSettings(source: string, root: string): s
 
 export function hideBrowserAppearanceOnlySettings(source: string): string {
   const replacements: [string, string][] = [
+    ['              {a.intro}', '              Customize the interface and how messages are displayed.'],
     [
       "  const show = (id: AppearanceSubpageId) => subpage === undefined || subpage === id",
       `  const show = (id: AppearanceSubpageId) => {
-    const combinedBrowserAppearance = window.__HERMES_WEB_BRIDGE__ && ['general', 'typography', 'window-layout'].includes(subpage ?? '')
-    return combinedBrowserAppearance
-      ? ['general', 'typography', 'window-layout'].includes(id)
+    return window.__HERMES_WEB_BRIDGE__
+      ? ['general', 'typography', 'window-layout', 'chat-display'].includes(id)
       : subpage === undefined || subpage === id
   }`
     ],
@@ -603,6 +613,21 @@ export function removeBrowserNewSessionShortcut(source: string): string {
     throw new Error('Browser new-session shortcut target changed')
   }
   return source.replace(importTarget, '').replace(shortcut, '')
+}
+
+export function removeBrowserTopCapabilitiesLink(source: string): string {
+  const replacements = [
+    ["  CAPABILITIES_ROUTE,\n", ''],
+    [
+      "  {\n    id: 'capabilities',\n    label: '',\n    icon: props => <Codicon name=\"symbol-misc\" {...props} />,\n    route: CAPABILITIES_ROUTE,\n    keybindActionId: 'nav.capabilities'\n  },\n",
+      ''
+    ],
+    ["                  (item.id === 'capabilities' && currentView === 'capabilities') ||\n", '']
+  ]
+  for (const [before] of replacements) {
+    if (source.split(before).length !== 2) throw new Error('Browser top Capabilities link target changed')
+  }
+  return replacements.reduce((output, [before, after]) => output.replace(before, after), source)
 }
 
 export function removeBrowserNewBotChatAction(source: string): string {
@@ -1053,7 +1078,7 @@ export function disableBrowserSessionRowTabs(source: string): string {
     .replace(rowTarget, `${rowTarget}        data-web-session-id={session.id}\n        data-web-session-profile={session.profile || 'default'}\n`)
 }
 
-export function disableBrowserSessionOpenActions(source: string): string {
+export function disableBrowserSessionOpenActions(source: string, root: string): string {
   const tabCondition = "...(surface === 'row' && !alreadyTabbed"
   const windowCondition = '...(canOpenSessionWindow()'
   const projectTarget = '        >\n          {node.label}\n        </kit.Item>'
@@ -1071,7 +1096,29 @@ export function disableBrowserSessionOpenActions(source: string): string {
   const copyStart = output.indexOf(contextCopyTarget)
   const projectStart = output.indexOf(contextProjectTarget, copyStart)
   if (copyStart < 0 || projectStart < 0) throw new Error('Browser session context-action boundary changed')
-  return (output.slice(0, copyStart) + output.slice(projectStart)).replace(copyImport, '')
+  const owner = JSON.stringify(path.join(root, 'src/experience/session-shortcuts'))
+  let menu = (output.slice(0, copyStart) + output.slice(projectStart)).replace(copyImport, '')
+  const shortcuts = [
+    ['  onPin?: () => void', '  keyboardShortcuts?: boolean\n  onPin?: () => void'],
+    ['  pinned = false,', '  keyboardShortcuts = false,\n  pinned = false,'],
+    ['        suppressCloseFocusRef.current = true', '        suppressCloseFocusRef.current = Boolean(document.querySelector(\'[role="menu"]\'))'],
+    ['      label: r.rename,', "      key: 'rename',\n      label: browserSessionActionLabel('rename', r.rename.replace(/(?:\\.{3}|…)$/, '')),"],
+    ['      label: pinned ? r.unpin : r.pin,', "      key: 'pin',\n      label: browserSessionActionLabel('pin', pinned ? r.unpin : r.pin),"],
+    ['      label: unread || isUnread ? r.markRead : r.markUnread,', "      key: 'unread',\n      label: browserSessionActionLabel('unread', unread || isUnread ? r.markRead : r.markUnread),"],
+    ['      label: r.archive,', "      key: 'archive',\n      label: browserSessionActionLabel('archive', r.archive),"],
+    ['      label: t.common.delete,', "      key: 'delete',\n      label: browserSessionActionLabel('delete', t.common.delete),"],
+    ['  const renderItems = (kit: MenuKit) => (', `  useBrowserSessionShortcuts(keyboardShortcuts && Boolean(sessionId), {
+    rename: identityItems[0], pin: identityItems[1], unread: identityItems[2],
+    archive: dangerItems[0], delete: dangerItems[1]
+  })
+
+  const renderItems = (kit: MenuKit) => (`]
+  ]
+  for (const [before, after] of shortcuts) {
+    if (menu.split(before).length !== 2) throw new Error('Browser session shortcut contract changed')
+    menu = menu.replace(before, after)
+  }
+  return `import { browserSessionActionLabel, useBrowserSessionShortcuts } from ${owner}\n` + menu
 }
 
 export function addBrowserChatPanelActions(source: string, root: string): string {
@@ -1178,12 +1225,14 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source, entry.module as 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     useBrowserProjectDisclosure,
-    exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut,
+    exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut, removeBrowserTopCapabilitiesLink,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth, filterBrowserSessionMenu,
     showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
-    disableBrowserSessionRowTabs, disableBrowserSessionOpenActions, filterBrowserKeybinds,
+    disableBrowserSessionRowTabs,
+    disableBrowserSessionOpenActions: source => disableBrowserSessionOpenActions(source, root),
     addBrowserChatPanelActions: source => addBrowserChatPanelActions(source, root),
+    filterBrowserKeybinds,
     useBrowserSessionSelection: source => useBrowserSessionSelection(source, root),
     useBrowserBotSelection: source => useBrowserRosterSelection(source, root, 'bot'),
     useBrowserGroupSelection: source => useBrowserRosterSelection(source, root, 'group'),

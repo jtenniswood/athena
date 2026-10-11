@@ -57,6 +57,7 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
     title: 'Preferences',
     pages: [
       { id: 'config:appearance', title: 'Appearance', scope: 'mixed' },
+      { id: 'config:browser-theme', title: 'Theme', aliases: ['Colour themes', 'Color themes'], scope: 'browser' },
       { id: 'notifications', title: 'Notifications', scope: 'browser' },
       { id: 'keybinds', title: 'Keyboard Shortcuts', scope: 'browser' }
     ]
@@ -103,7 +104,7 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
     id: 'service',
     title: 'Service',
     pages: [
-      { id: 'gateway', title: 'Gateway', aliases: ['Gateways', 'Server Connection', 'sign in'], scope: 'connection' },
+      { id: 'gateway', title: 'Gateway', aliases: ['Gateways', 'Server Connection', 'sign in', 'sign out'], scope: 'connection' },
       { id: 'config:command-center', title: 'Command center', aliases: ['system', 'logs', 'usage', 'maintenance'], scope: 'connected-server' },
       {
         id: 'billing', title: 'Billing', aliases: ['Usage & billing'], scope: 'connected-server',
