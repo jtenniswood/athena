@@ -11,6 +11,7 @@ import { BrowserSessionsPane } from './sidebar-sections'
 import { BrowserBotsFallback } from './browser-bots-fallback'
 import { installFollowupBehavior } from './followup-preferences'
 import { installTranscriptPreferences } from './transcript-preferences'
+import { browserPaneComposition } from './browser-pane-composition'
 import { Codicon, ContribWiring, WiredPane, SidebarProvider, ContribRender, ContribBoundary, useContributions, navigateToWorkspacePage, SessionTileCloseConfirm, BrowserWorkspace, SessionActionsMenu } from '../upstream/browser-api'
 import { useBrowserConversation } from '../upstream/conversation'
 import { useBrowserSessionActions } from '../upstream/conversation-actions'
@@ -171,12 +172,13 @@ function BrowserLayout() {
   const sessionActions = useBrowserSessionActions()
   const chatTitle = conversation.displayName || ''
   const panes = useContributions('panes')
+  const paneComposition = browserPaneComposition(panes)
   const main = useRef<HTMLElement>(null), menu = useRef<HTMLButtonElement>(null)
   const navigation = useBrowserNavigation({ selectionKey: conversation.selectionKey, path: location.pathname, main, trigger: menu })
   const { tab } = navigation
   const [updateNotice, setUpdateNotice] = useState<PwaUpdateNotice | null>(() => currentPwaUpdate())
   const [updateDismissed, setUpdateDismissed] = useState(false)
-  const bots = panes.find(pane => pane.id === 'hermes-bots:pane')
+  const bots = paneComposition.bots
   useEffect(() => subscribePwaUpdate(notice => {
     setUpdateNotice(notice)
     if (notice) setUpdateDismissed(false)
@@ -186,7 +188,6 @@ function BrowserLayout() {
     navigateToWorkspacePage(navigate, path)
     navigation.closeDrawer()
   }
-  const panelPanes = panes.filter(pane => !['workspace', 'sessions', 'hermes-bots:pane', 'terminal'].includes(pane.id))
   return <div className="browser-shell" data-browser-shell="" data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined}>
     <BrowserActionError />
     <div className="browser-workspace">
@@ -211,12 +212,12 @@ function BrowserLayout() {
             <Codicon name="layout-sidebar-left" />
           </BrowserToolbarButton>
           <div className="browser-actions">
-            {selected && <SessionActionsMenu keyboardShortcuts align="end" browserPanelEntries={panelPanes} onBrowserPanelOpen={() => main.current?.focus()} onArchive={sessionActions.archive} onDelete={sessionActions.delete} onPin={sessionActions.togglePin} onToggleUnread={sessionActions.toggleUnread} pinned={sessionActions.pinned} unread={sessionActions.unread} profile={sessionActions.profile} sessionId={selected} title={chatTitle}>
+            {selected && <SessionActionsMenu keyboardShortcuts align="end" browserPanelEntries={paneComposition.toolbarPanes} onBrowserPanelOpen={() => main.current?.focus()} onArchive={sessionActions.archive} onDelete={sessionActions.delete} onPin={sessionActions.togglePin} onToggleUnread={sessionActions.toggleUnread} pinned={sessionActions.pinned} unread={sessionActions.unread} profile={sessionActions.profile} sessionId={selected} title={chatTitle}>
               <BrowserToolbarButton tooltip="Chat actions" type="button" className="browser-chat-actions" aria-label="Chat actions"><Codicon name="ellipsis" /></BrowserToolbarButton>
             </SessionActionsMenu>}
           </div>
         </div>
-        <BrowserWorkspace />
+        <BrowserWorkspace panelIds={paneComposition.workspacePanelIds} />
         <div className="browser-status"><WiredPane part="statusbar" /></div>
       </main>
       <BrowserToolModal />
