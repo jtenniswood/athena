@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 26049)
-Total output lines: 2434
-
 [
   {
     "name": "bot-session-cancellation",
@@ -948,7 +945,595 @@ Total output lines: 2434
       }
     ],
     "removal": "Remove after a reviewed nanostores release corrects the annotation and the production-bundling regression passes without the patch.",
-    "sou…6049 tokens truncated…session in the browser conversation view"
+    "sourceRoot": "dependency",
+    "sourceHash": "d821b53d28eee40e810e2a5fc6d714fecc60dacc67796cbde689eadf2dfe9b20"
+  },
+  {
+    "name": "renderer-alias-1",
+    "kind": "alias",
+    "order": 0,
+    "module": null,
+    "reason": "Resolve @/* consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "renderer",
+    "specifier": "@/*",
+    "replacement": "../desktop/src/*",
+    "aliasGroup": "renderer",
+    "fingerprintPolicy": "The exact renderer/dependency locks and the declared alias target are checked; wildcard and wrapper-owned targets have no single upstream source fingerprint."
+  },
+  {
+    "name": "renderer-alias-2",
+    "kind": "alias",
+    "order": 0,
+    "module": null,
+    "reason": "Resolve @/store/titlebar-app-actions consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "renderer",
+    "specifier": "@/store/titlebar-app-actions",
+    "replacement": "./src/overrides/titlebar-app-actions.ts",
+    "aliasGroup": "renderer",
+    "fingerprintPolicy": "The exact renderer/dependency locks and the declared alias target are checked; wildcard and wrapper-owned targets have no single upstream source fingerprint."
+  },
+  {
+    "name": "renderer-alias-3",
+    "kind": "alias",
+    "order": 0,
+    "module": null,
+    "reason": "Resolve @/debug/dev-only consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "renderer",
+    "specifier": "@/debug/dev-only",
+    "replacement": "./src/debug-dev-only.ts",
+    "aliasGroup": "renderer",
+    "fingerprintPolicy": "The exact renderer/dependency locks and the declared alias target are checked; wildcard and wrapper-owned targets have no single upstream source fingerprint."
+  },
+  {
+    "name": "renderer-alias-4",
+    "kind": "alias",
+    "order": 0,
+    "module": null,
+    "reason": "Resolve @/debug/* consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "renderer",
+    "specifier": "@/debug/*",
+    "replacement": "./src/debug-dev-only.ts",
+    "aliasGroup": "renderer",
+    "fingerprintPolicy": "The exact renderer/dependency locks and the declared alias target are checked; wildcard and wrapper-owned targets have no single upstream source fingerprint."
+  },
+  {
+    "name": "renderer-alias-5",
+    "kind": "alias",
+    "order": 0,
+    "module": "sdk/index.ts",
+    "reason": "Resolve @hermes/plugin-sdk consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "renderer",
+    "specifier": "@hermes/plugin-sdk",
+    "replacement": "../desktop/src/sdk/index.ts",
+    "aliasGroup": "renderer",
+    "sourceHash": "6a7cc93172bc7c99c7bd6436fc6b65ab201c5f7ed5a0f337402a9c22e7e888a3"
+  },
+  {
+    "name": "renderer-alias-6",
+    "kind": "alias",
+    "order": 0,
+    "module": "billing-types.ts",
+    "reason": "Resolve @hermes/shared/billing consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "shared",
+    "specifier": "@hermes/shared/billing",
+    "replacement": "../shared/src/billing-types.ts",
+    "aliasGroup": "renderer",
+    "sourceHash": "bc2974e2d5d2259cfa4aa2a99ef2f74d2227312466c8aa6d8dca236587409aaf"
+  },
+  {
+    "name": "renderer-alias-7",
+    "kind": "alias",
+    "order": 0,
+    "module": "billing-policy.ts",
+    "reason": "Resolve @hermes/shared/billing-policy consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "shared",
+    "specifier": "@hermes/shared/billing-policy",
+    "replacement": "../shared/src/billing-policy.ts",
+    "aliasGroup": "renderer",
+    "sourceHash": "491a27b345caf18ae403831d5c43b897f94270b67069e1aa0375df90d447d757"
+  },
+  {
+    "name": "renderer-alias-8",
+    "kind": "alias",
+    "order": 0,
+    "module": "charge-settlement.ts",
+    "reason": "Resolve @hermes/shared/charge-settlement consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "shared",
+    "specifier": "@hermes/shared/charge-settlement",
+    "replacement": "../shared/src/charge-settlement.ts",
+    "aliasGroup": "renderer",
+    "sourceHash": "851ce021ccd139b02696319b9ad977662463fad7a91f91998f6b515f73fcb062"
+  },
+  {
+    "name": "renderer-alias-9",
+    "kind": "alias",
+    "order": 0,
+    "module": "skin.ts",
+    "reason": "Resolve @hermes/shared/skin consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "shared",
+    "specifier": "@hermes/shared/skin",
+    "replacement": "../shared/src/skin.ts",
+    "aliasGroup": "renderer",
+    "sourceHash": "6b5d780ae165113d7a9daf7062e21043b7c08a0e8ba428ea893ba24ed408d64e"
+  },
+  {
+    "name": "renderer-alias-10",
+    "kind": "alias",
+    "order": 0,
+    "module": "index.ts",
+    "reason": "Resolve @hermes/shared consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "shared",
+    "specifier": "@hermes/shared",
+    "replacement": "../shared/src/index.ts",
+    "aliasGroup": "renderer",
+    "sourceHash": "f43ae5dca0c7f9dae43a90aa9d7074a3409890b38eb941c2c81178420474a740"
+  },
+  {
+    "name": "renderer-alias-11",
+    "kind": "alias",
+    "order": 0,
+    "module": null,
+    "reason": "Resolve @hermes/shared/* consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "renderer",
+    "specifier": "@hermes/shared/*",
+    "replacement": "../shared/src/*",
+    "aliasGroup": "renderer",
+    "fingerprintPolicy": "The exact renderer/dependency locks and the declared alias target are checked; wildcard and wrapper-owned targets have no single upstream source fingerprint."
+  },
+  {
+    "name": "react-jsx-dev-singleton",
+    "kind": "alias",
+    "order": 1,
+    "module": "react/package.json",
+    "reason": "Keep JSX development runtime on the same React instance.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "Vite resolves compatibility aliases to one React runtime and the raw tour asset"
+      }
+    ],
+    "removal": "Remove when upstream/workspace module resolution guarantees a single React runtime without aliases.",
+    "sourceRoot": "dependency",
+    "specifier": "react/jsx-dev-runtime",
+    "replacement": "../../node_modules/react/jsx-dev-runtime.js",
+    "aliasGroup": "vite",
+    "sourceHash": "51966ae9c8c377ff592b5d69c980966992101bc6791bf83a1e5c7ad9bcefa7f4"
+  },
+  {
+    "name": "react-jsx-singleton",
+    "kind": "alias",
+    "order": 1,
+    "module": "react/package.json",
+    "reason": "Keep JSX runtime on the same React instance.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "Vite resolves compatibility aliases to one React runtime and the raw tour asset"
+      }
+    ],
+    "removal": "Remove when upstream/workspace module resolution guarantees a single React runtime without aliases.",
+    "sourceRoot": "dependency",
+    "specifier": "react/jsx-runtime",
+    "replacement": "../../node_modules/react/jsx-runtime.js",
+    "aliasGroup": "vite",
+    "sourceHash": "51966ae9c8c377ff592b5d69c980966992101bc6791bf83a1e5c7ad9bcefa7f4"
+  },
+  {
+    "name": "react-dom-singleton",
+    "kind": "alias",
+    "order": 1,
+    "module": "react-dom/package.json",
+    "reason": "Share one React DOM instance across fetched renderer and wrapper.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "Vite resolves compatibility aliases to one React runtime and the raw tour asset"
+      }
+    ],
+    "removal": "Remove when upstream/workspace module resolution guarantees a single React runtime without aliases.",
+    "sourceRoot": "dependency",
+    "specifier": "react-dom",
+    "replacement": "../../node_modules/react-dom",
+    "aliasGroup": "vite",
+    "sourceHash": "447acd72cdb6a966d9db967729e286e7cbb4a09ea61fddd45e12c2a97fd4cfb6"
+  },
+  {
+    "name": "react-singleton",
+    "kind": "alias",
+    "order": 1,
+    "module": "react/package.json",
+    "reason": "Share one React instance across fetched renderer and wrapper.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "Vite resolves compatibility aliases to one React runtime and the raw tour asset"
+      }
+    ],
+    "removal": "Remove when upstream/workspace module resolution guarantees a single React runtime without aliases.",
+    "sourceRoot": "dependency",
+    "specifier": "react",
+    "replacement": "../../node_modules/react",
+    "aliasGroup": "vite",
+    "sourceHash": "51966ae9c8c377ff592b5d69c980966992101bc6791bf83a1e5c7ad9bcefa7f4"
+  },
+  {
+    "name": "driver-raw-iife",
+    "kind": "alias",
+    "order": 1,
+    "module": "driver.js/package.json",
+    "reason": "Resolve the unexported driver.js IIFE requested as raw text by the upstream preview tour.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "Vite resolves compatibility aliases to one React runtime and the raw tour asset"
+      }
+    ],
+    "removal": "Remove when driver.js exports its IIFE or upstream no longer imports that private subpath.",
+    "sourceRoot": "dependency",
+    "pattern": "^driver\\.js/dist/driver\\.js\\.iife\\.js(\\?raw)?$",
+    "replacement": "../../node_modules/driver.js/dist/driver.js.iife.js$1",
+    "aliasGroup": "vite",
+    "sourceHash": "742e7d4ef2610b9c58356e568f4629524c855c376c57aaad69587944e56dcea1"
+  },
+  {
+    "name": "browser-debug-entry",
+    "kind": "alias",
+    "order": -1,
+    "module": "debug/dev-only.noop.ts",
+    "reason": "Disable native development diagnostics by default while retaining the explicit performance-probe switch.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "Vite resolves compatibility aliases to one React runtime and the raw tour asset"
+      }
+    ],
+    "removal": "Remove when upstream development diagnostics support this browser runtime without native dependencies.",
+    "specifier": "@/debug/dev-only",
+    "replacement": "../desktop/src/debug/dev-only.noop.ts",
+    "enabledReplacement": "../desktop/src/debug/dev-only.ts",
+    "environmentFlag": "VITE_PERF_PROBE",
+    "aliasGroup": "vite",
+    "sourceHash": "20ca7ad318b711bdafa390c874c4084df8fad6db868953dcde1092901ac06cde",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "react-router-deduplication",
+    "kind": "dedupe",
+    "order": 1,
+    "module": null,
+    "reason": "Deduplicate React, React DOM, and React Router across the wrapper and fetched renderer.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "Vite resolves compatibility aliases to one React runtime and the raw tour asset"
+      }
+    ],
+    "removal": "Remove when renderer packaging guarantees singleton UI runtimes.",
+    "packages": [
+      "react",
+      "react-dom",
+      "react-router"
+    ],
+    "fingerprintPolicy": "The package lock fixes versions; this resolution policy has no rewritten source."
+  },
+  {
+    "name": "statusbar-item-virtual-module",
+    "kind": "virtual-module",
+    "order": 20,
+    "module": "app/shell/statusbar-controls.tsx",
+    "reason": "Expose the original shared statusbar item renderer without re-entering the wrapper replacement.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "approval mode keeps the selected profile mode and composer icon synchronized"
+      }
+    ],
+    "removal": "Remove when upstream publishes a standalone statusbar item module.",
+    "specifier": "hermes:statusbar-item",
+    "sourceHash": "67e0dbb288eb88458d790f76d88b50d0a384b57b8e39bf5c5bf2b7c08fbea9fa",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "emoji-runtime-assets",
+    "kind": "asset-adapter",
+    "order": 1,
+    "module": "emojibase-data/package.json",
+    "sourceRoot": "dependency",
+    "sourceHash": "71e5b6ef1a414e00f8c2bc6f45c129ad115569636ef01d9789bedec257ac0281",
+    "reason": "Serve and bundle the emoji picker JSON at the paths expected by the renderer.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "handler": "emojibaseAssets",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "bundled emoji data is available to browser pickers"
+      }
+    ],
+    "removal": "Remove when the renderer packages emoji resources through browser module imports."
+  },
+  {
+    "name": "plugin-runtime-assets",
+    "kind": "asset-adapter",
+    "order": 1,
+    "module": null,
+    "fingerprintPolicy": "User-installed plugin payloads vary at runtime; the listing and file transport contract is exercised instead of fingerprinting user data.",
+    "reason": "Adapt desktop plugin discovery and file loading to browser HTTP paths in development and preview.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "handler": "hermesPluginsAssets",
+    "tests": [
+      {
+        "file": "apps/web-desktop/scripts/test-gateway-proxy.mjs",
+        "scenario": "configured remote gateways survive page startup in dev and preview"
+      }
+    ],
+    "removal": "Remove when upstream plugins expose a public browser transport independent of local filesystem paths."
+  },
+  {
+    "name": "browser-group-selection",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "plugins/hermes-bots/roster-pane.tsx",
+    "reason": "Route group selection through the browser command while retaining engine room ownership.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "group selection survives delayed Bot activation and preserves both composers"
+      }
+    ],
+    "removal": "Remove when upstream roster surfaces accept browser-owned selection callbacks.",
+    "handlers": [
+      "useBrowserGroupSelection"
+    ],
+    "sourceHash": "60fa5c8f87bcbc827b8e9d4e5e43028ac2b06f2acb0f76c00fa52947f960052c",
+    "sourceRoot": "renderer",
+    "inputHash": "60fa5c8f87bcbc827b8e9d4e5e43028ac2b06f2acb0f76c00fa52947f960052c",
+    "outputHash": "800209b49bcaf68ac8ce8f5e0f90ecdfc06dd2670f6e0718df7ceb4d873410ba"
+  },
+  {
+    "name": "browser-created-group-selection",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "plugins/hermes-bots/roster-pane-dialogs.tsx",
+    "reason": "Route group selection through the browser command while retaining engine room ownership.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "creating a group selects the new room through the browser command"
+      }
+    ],
+    "removal": "Remove when upstream roster surfaces accept browser-owned selection callbacks.",
+    "handlers": [
+      "useBrowserCreatedGroupSelection"
+    ],
+    "sourceHash": "c5de62644e6e55cb7d4aa947a46cc4c6ef057e28971b3510291bcad21bf47f16",
+    "sourceRoot": "renderer",
+    "inputHash": "c5de62644e6e55cb7d4aa947a46cc4c6ef057e28971b3510291bcad21bf47f16",
+    "outputHash": "dce2b98ebab5bc129a9e83309f069f57df799120de002b2c5c90dc84407fbdf4"
+  },
+  {
+    "name": "ordered-browser-unread-writes",
+    "kind": "replacement",
+    "order": 10,
+    "module": "store/session-unread-remote.ts",
+    "reason": "Serialize persisted unread writes and prevent obsolete failures from rolling back newer browser intent.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "an older unread failure cannot undo newer toggles"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "delayed unread writes preserve the final choice on the gateway"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "unconfirmed unread writes restore the confirmed choice and explain the failure"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "opening a session queues its automatic read behind a pending unread write"
+      }
+    ],
+    "removal": "Remove when upstream unread writes serialize per owner, preserve newer intent, and reject unconfirmed acknowledgments.",
+    "replacement": "src/upstream/browser-unread.ts",
+    "sourceHash": "6bde1275a47ec93d6fe68885536bbfa774bdc3f18883d3a1100dc04fc034d0f6",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "ordered-browser-pin-writes",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/session-pin-sync.ts",
+    "handlers": [
+      "useBrowserPinWrites"
+    ],
+    "reason": "Order pin writes and restore confirmed state with visible failures while preserving engine reconciliation and profile ownership.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a rejected pin restores confirmed state and preserves the draft"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "delayed pin writes preserve the latest choice on the gateway"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "an unconfirmed pin rolls back and explains the failure"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a rejected unpin restores the confirmed pin and can be retried"
+      }
+    ],
+    "removal": "Remove when upstream pin persistence serializes writes, fences pending intent, invalidates old connection work, and reports current failures.",
+    "sourceRoot": "renderer",
+    "sourceHash": "af6c0060e829d3af9910f44e77019a08ec8b9704f00ea7d6635657df827449ac",
+    "inputHash": "af6c0060e829d3af9910f44e77019a08ec8b9704f00ea7d6635657df827449ac",
+    "outputHash": "473c0c651c97acda064a57cc30a2126d344125d2eb59b746a311d62c6d0ef590"
+  },
+  {
+    "name": "browser-session-open-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/open-session.ts",
+    "handlers": [
+      "useBrowserOpenSessionOwner"
+    ],
+    "reason": "Apply browser selection ownership at shared session entry points so older Bot activations cannot replace a newer choice.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "the session picker supersedes a delayed Bot selection"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "the command center opens a session in the browser conversation view"
       }
     ],
     "removal": "Remove when upstream shared session entry points supersede older Bot selections and release group identity.",
