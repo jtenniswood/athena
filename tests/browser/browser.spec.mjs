@@ -1240,12 +1240,18 @@ for (const width of [390, 1440]) {
       'Preferences', 'Assistant', 'Tools', 'Service', 'Maintenance'
     ])
     await expect(page.locator('.browser-settings-category-button:not(.is-child) > span:not(.codicon)')).toHaveText([
-      'Appearance', 'Notifications', 'Keyboard Shortcuts', 'Models', 'AI Connections', 'Chat', 'Voice',
+      'Appearance', 'Theme', 'Notifications', 'Keyboard Shortcuts', 'Models', 'AI Connections', 'Chat', 'Voice',
       'Profiles', 'Agents', 'Memory', 'Workspace', 'Webhooks', 'Permissions',
       'Credentials', 'Gateway', 'Command center', 'Billing', 'System updates', 'Archived Chats', 'Configuration', 'Advanced'
     ])
     await page.screenshot({ path: testInfo.outputPath('settings-groups.png') })
+    await page.getByRole('button', { name: 'Appearance', exact: true }).click()
+    await expect(page.locator('#setting-field-appearance\\.language')).toBeVisible()
+    await expect(page.locator('#setting-field-appearance\\.user-bubble')).toBeVisible()
+    await expect(page.locator('.browser-settings-category-button.is-child')).toHaveCount(0)
+    if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
     for (const [query, result, view, title] of [
+      ['Colour themes', 'Theme', 'config:browser-theme', 'Theme'],
       ['Server Connection', 'Gateway', 'gateway', 'Gateway'],
       ['System updates', 'System updates', 'config:system-updates', 'System updates'],
       ['Profiles', 'Profiles', 'config:profiles', 'Profiles'],

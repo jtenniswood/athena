@@ -209,17 +209,27 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
     ["useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:model' as SettingsViewId)", "useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:appearance' as SettingsViewId)"],
     [
       '  const subpage = resolveSettingsSubpage(activeView, params)',
-      "  const subpage = ['gateway', 'keybinds', 'sessions', 'config:safety'].includes(activeView) ? undefined : resolveSettingsSubpage(activeView, params)"
+      "  const browserThemeRedirect = activeView === 'config:appearance' && resolveSettingsSubpage(activeView, params) === 'theme'\n  const subpage = ['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance'].includes(activeView) ? undefined : resolveSettingsSubpage(activeView, params)"
+    ],
+    [
+      '  const needsSubpageRedirect = Boolean(subpage && subpage !== requestedSubpage)',
+      '  const needsSubpageRedirect = browserThemeRedirect || Boolean(subpage && subpage !== requestedSubpage)'
+    ],
+    [
+      "  if (subpage) {\n    subpageSearch.set('page', subpage)\n  }",
+      "  if (browserThemeRedirect) {\n    subpageSearch.set('tab', 'config:browser-theme')\n    subpageSearch.delete('page')\n  } else if (subpage) {\n    subpageSearch.set('page', subpage)\n  }"
     ],
     [
       '      const destination = page ?? settingsSubpages(view)[0]?.id',
-      "      const destination = page ?? (['gateway', 'keybinds', 'sessions', 'config:safety'].includes(view) ? undefined : settingsSubpages(view)[0]?.id)"
+      "      const destination = page ?? (['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance'].includes(view) ? undefined : settingsSubpages(view)[0]?.id)"
     ],
+    ["        const children = settingsSubpages(view)", "        const children = view === 'config:appearance' ? [] : settingsSubpages(view)"],
     ["import { SettingsSubpageHeader } from './subpage-navigation'\n", ''],
     ["  const activeGroup = navGroups.find(group => group.active)\n  const activeChild = activeGroup?.children?.find(child => child.active)\n", ''],
   ]
   controlReplacements.push(
-    ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  ...SETTINGS_TOOL_PAGES.map(page => page.id),\n  'config:browser-configuration',"],
+    ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  ...SETTINGS_TOOL_PAGES.map(page => page.id),\n  'config:browser-theme',\n  'config:browser-configuration',"],
+    ["          {\n            active: activeView === 'notifications',", "          {\n            active: activeView === 'config:browser-theme',\n            icon: codiconIcon('color-mode'),\n            id: 'config:browser-theme',\n            label: 'Theme',\n            onSelect: () => setActiveView('config:browser-theme')\n          },\n          {\n            active: activeView === 'notifications',"],
     ["          {\n            active: activeView === 'about',", "          {\n            active: activeView === 'config:browser-configuration',\n            gapBefore: true,\n            icon: Settings2,\n            id: 'config:browser-configuration',\n            label: 'Configuration',\n            onSelect: () => setActiveView('config:browser-configuration')\n          },\n          {\n            active: activeView === 'about',"],
     ['        importInputRef={importInputRef}', '        importInputRef={importInputRef}\n        configurationCommands={configurationCommands}\n        configurationScopeProfile={scopeProfile}'],
     ['getHermesConfigRecord()', 'getHermesConfigRecord(scopeProfile)'],
@@ -307,12 +317,12 @@ export function useBrowserConfigurationSettings(source: string, root: string): s
 
 export function hideBrowserAppearanceOnlySettings(source: string): string {
   const replacements: [string, string][] = [
+    ['              {a.intro}', '              Customize the interface and how messages are displayed.'],
     [
       "  const show = (id: AppearanceSubpageId) => subpage === undefined || subpage === id",
       `  const show = (id: AppearanceSubpageId) => {
-    const combinedBrowserAppearance = window.__HERMES_WEB_BRIDGE__ && ['general', 'typography', 'window-layout'].includes(subpage ?? '')
-    return combinedBrowserAppearance
-      ? ['general', 'typography', 'window-layout'].includes(id)
+    return window.__HERMES_WEB_BRIDGE__
+      ? ['general', 'typography', 'window-layout', 'chat-display'].includes(id)
       : subpage === undefined || subpage === id
   }`
     ],
@@ -603,6 +613,21 @@ export function removeBrowserNewSessionShortcut(source: string): string {
     throw new Error('Browser new-session shortcut target changed')
   }
   return source.replace(importTarget, '').replace(shortcut, '')
+}
+
+export function removeBrowserTopCapabilitiesLink(source: string): string {
+  const replacements = [
+    ["  CAPABILITIES_ROUTE,\n", ''],
+    [
+      "  {\n    id: 'capabilities',\n    label: '',\n    icon: props => <Codicon name=\"symbol-misc\" {...props} />,\n    route: CAPABILITIES_ROUTE,\n    keybindActionId: 'nav.capabilities'\n  },\n",
+      ''
+    ],
+    ["                  (item.id === 'capabilities' && currentView === 'capabilities') ||\n", '']
+  ]
+  for (const [before] of replacements) {
+    if (source.split(before).length !== 2) throw new Error('Browser top Capabilities link target changed')
+  }
+  return replacements.reduce((output, [before, after]) => output.replace(before, after), source)
 }
 
 export function removeBrowserNewBotChatAction(source: string): string {
@@ -1178,7 +1203,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source, entry.module as 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     useBrowserProjectDisclosure,
-    exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut,
+    exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut, removeBrowserTopCapabilitiesLink,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth, filterBrowserSessionMenu,
     showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
