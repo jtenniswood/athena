@@ -6,7 +6,9 @@ import ts from 'typescript'
 
 function load(name, globals = {}) {
   const source = readFileSync(new URL(`../apps/web-desktop/src/platform/${name}.ts`, import.meta.url), 'utf8')
-  const context = vm.createContext({ exports: {}, require: specifier => specifier === './draft-safety' ? globals.draftSafety : ({}), ...globals })
+  const context = vm.createContext({ exports: {}, require: specifier => specifier === './draft-safety'
+    ? globals.draftSafety
+    : specifier === './pending-work' ? { flushPendingBrowserWork: async () => ({ ready: true }) } : ({}), ...globals })
   vm.runInContext(ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText, context)
   return context.exports
 }
