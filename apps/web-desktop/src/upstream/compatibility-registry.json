@@ -2430,5 +2430,27 @@
       }
     ],
     "removal": "Remove when Hermes no longer exposes desktop-only pet slash commands or provides browser capability filtering."
+  },
+  {
+    "name": "browser-accepted-composer-submit",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/hooks/use-composer-submit.ts",
+    "reason": "Drive browser submit positioning only after the renderer accepts a user message.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "accepted composer submissions report only successful sends"
+      }
+    ],
+    "removal": "Remove when the renderer exposes an accepted-submit event for browser integrations.",
+    "handlers": [
+      "useBrowserAcceptedSubmit"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "a840b97663311b9af9009bab96f8c5389dbbe41fbde90b80a22041c6ae03f866",
+    "inputHash": "a840b97663311b9af9009bab96f8c5389dbbe41fbde90b80a22041c6ae03f866",
+    "outputHash": "265b56813ec6fde1aea03a3c0f8ba1e01651a22fae5365126e541b165b147cce"
   }
 ]
