@@ -304,6 +304,11 @@
   max-width: calc(100vw - 1rem);
 }
 
+/* Keep the trailing timestamp behind the actions button until its menu closes. */
+.browser-sessions-pane :is([data-web-session-id][data-state='open'], [data-row-actions]:has(> button[data-state='open'])) .session-row-tail {
+  opacity: 0;
+}
+
 .browser-session-shortcut {
   margin-left: auto;
   padding-left: var(--web-space-4);
