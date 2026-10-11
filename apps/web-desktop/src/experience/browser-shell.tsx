@@ -1,10 +1,8 @@
 import { BrowserToolModal } from './tool-modal'
-import { BrowserModal } from './ui/modal'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { useRendererMenuCompatibility } from '../upstream/use-renderer-menu-compatibility'
 import { BrowserNavigationTabs, BrowserNavigationResizer, useBrowserNavigation } from './navigation'
 import { BrowserProfileNavigation } from './profile-navigation'
-import { BrowserGatewayPanel, useBrowserGatewayStatus } from '../upstream/browser-gateway-panel'
 import { BrowserActionError } from './action-errors'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useLocation, useNavigate } from 'react-router'
@@ -18,7 +16,6 @@ import { useBrowserConversation } from '../upstream/conversation'
 import { useBrowserSessionActions } from '../upstream/conversation-actions'
 import { browserDropProjectId, moveBrowserSessionToProject, reportBrowserProjectMoveFailure } from '../upstream/project-actions'
 import { currentPwaUpdate, subscribePwaUpdate, type PwaUpdateNotice } from '../pwa/register'
-import { BackendVersionListener, type StatusbarItem } from '../upstream/browser-api'
 import { installConversationSubmitScroll } from './ui/submit-scroll'
 
 interface SessionProjectDrag {
@@ -168,7 +165,6 @@ function BrowserLayout() {
       targetProjectId: undefined
     }
   }
-  const [backendVersion, setBackendVersion] = useState<StatusbarItem | null>(null)
   const navigate = useNavigate(), location = useLocation()
   const conversation = useBrowserConversation()
   const selected = conversation.sessionId
@@ -188,14 +184,11 @@ function BrowserLayout() {
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [])
-  const gatewayStatus = useBrowserGatewayStatus()
   const chatTitle = conversation.displayName || ''
   const panes = useContributions('panes')
   const main = useRef<HTMLElement>(null), menu = useRef<HTMLButtonElement>(null)
   const navigation = useBrowserNavigation({ selectionKey: conversation.selectionKey, path: location.pathname, main, trigger: menu })
   const { tab } = navigation
-  const [gatewayDialogOpen, setGatewayDialogOpen] = useState(false)
-  const settingsTrigger = useRef<HTMLButtonElement>(null)
   const [updateNotice, setUpdateNotice] = useState<PwaUpdateNotice | null>(() => currentPwaUpdate())
   const [updateDismissed, setUpdateDismissed] = useState(false)
   const bots = panes.find(pane => pane.id === 'hermes-bots:pane')
@@ -209,12 +202,12 @@ function BrowserLayout() {
     navigation.closeDrawer()
   }
   const panelPanes = panes.filter(pane => !['workspace', 'sessions', 'hermes-bots:pane', 'terminal'].includes(pane.id))
-  return <BackendVersionListener value={setBackendVersion}><div className="browser-shell" data-browser-shell="" data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined}>
+  return <div className="browser-shell" data-browser-shell="" data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined}>
     <BrowserActionError />
     <div className="browser-workspace">
       {navigation.compact && !navigation.mobile && navigation.drawerOpen && <button type="button" className="browser-scrim" aria-label="Dismiss navigation" tabIndex={-1} onClick={navigation.dismissDrawer} />}
       <aside id="browser-navigation" ref={navigation.drawer} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={navigation.compact && navigation.drawerOpen ? 'dialog' : undefined} aria-modal={navigation.compact && navigation.drawerOpen ? true : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
-        <BrowserNavigationTabs navigation={navigation} settingsMenu={{ backendVersion, onOpenGateway: () => { navigation.closeDrawer(); setGatewayDialogOpen(true) }, onOpenPanel: () => main.current?.focus(), onOpenRoute: openRoute, panelPanes }} />
+        <BrowserNavigationTabs navigation={navigation} settingsMenu={{ onOpenPanel: () => main.current?.focus(), onOpenRoute: openRoute, panelPanes }} />
         <div className="browser-navigation-body" role="tabpanel" aria-label={tab}>
           <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}><BrowserSidebarNavigation onNavigate={openRoute}><WiredPane part="sidebar" /></BrowserSidebarNavigation></BrowserSessionsPane>
           <div hidden={tab !== 'bots'} className="browser-pane">{surface(bots) || <BrowserBotsFallback />}</div>
@@ -241,10 +234,7 @@ function BrowserLayout() {
         <BrowserWorkspace />
         <div className="browser-status"><WiredPane part="statusbar" /></div>
       </main>
-      <BrowserModal title="Gateway" open={gatewayDialogOpen} onOpenChange={setGatewayDialogOpen} returnFocus={settingsTrigger} className="browser-gateway-dialog">
-        <BrowserGatewayPanel status={gatewayStatus} onClose={() => setGatewayDialogOpen(false)} onOpenSystem={() => { setGatewayDialogOpen(false); openRoute('/command-center?section=system') }} />
-      </BrowserModal>
       <BrowserToolModal />
     </div>
-  </div></BackendVersionListener>
+  </div>
 }

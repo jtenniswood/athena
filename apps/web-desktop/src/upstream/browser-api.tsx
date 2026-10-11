@@ -30,6 +30,5 @@ export type { TitlebarTool } from '@/app/shell/titlebar-controls'
 export type { StatusbarItem } from '@/app/shell/statusbar-controls'
 
 export { BrowserWorkspace } from './browser-workspace'
-export { BackendVersionListener } from './browser-statusbar'
 
 export { BrowserPageRoutes } from './browser-routes'

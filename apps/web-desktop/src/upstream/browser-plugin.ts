@@ -177,9 +177,22 @@ export function useBrowserOverlayFocusOwner(source: string, root: string): strin
   const start = '}: OverlayViewProps) {', element = '    <div\n      className={cn('
   if (source.split(start).length !== 2 || source.split(element).length !== 2) throw new Error('Browser overlay focus owner changed')
   const owner = JSON.stringify(path.join(root, 'src/experience/ui/overlay-focus'))
-  return `import { useBrowserOverlayFocus } from ${owner}\n` + source
+  const embedded = JSON.stringify(path.join(root, 'src/experience/settings/embedded-overlay'))
+  return `import { useSettingsEmbeddedOverlay, BrowserSettingsEmbeddedContent } from ${embedded}\nimport { useBrowserOverlayFocus } from ${owner}\n` + source
+    .replace('export function OverlayView({', 'function BrowserStandaloneOverlayView({')
+    .concat('\nexport function OverlayView(props: OverlayViewProps) {\n  const embedded = useSettingsEmbeddedOverlay()\n  return embedded ? <BrowserSettingsEmbeddedContent>{props.children}</BrowserSettingsEmbeddedContent> : <BrowserStandaloneOverlayView {...props} />\n}\n')
     .replace(start, start + '\n  const browserOverlayRef = useBrowserOverlayFocus()')
     .replace(element, '    <div\n      ref={browserOverlayRef}\n      tabIndex={-1}\n      className={cn(')
+}
+
+export function useBrowserSettingsToolActions(source: string, root: string): string {
+  const target = '<SettingsView\n'
+  const end = '\n        </Suspense>\n      )}\n\n      {currentView'
+  if (source.split(target).length !== 2 || source.split(end).length !== 2) throw new Error('Browser settings tool action boundary changed')
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/embedded-overlay'))
+  return `import { BrowserSettingsToolActions } from ${owner}\n` + source
+    .replace(target, '<BrowserSettingsToolActions.Provider value={{ onDeleteSession: removeSession, onOpenSession: sessionId => openSession(sessionId, navigate) }}>\n          <SettingsView\n')
+    .replace(end, '\n          </BrowserSettingsToolActions.Provider>' + end)
 }
 
 export function useBrowserSettingsPresentation(source: string, root: string): string {
@@ -206,7 +219,7 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
     ["  const activeGroup = navGroups.find(group => group.active)\n  const activeChild = activeGroup?.children?.find(child => child.active)\n", ''],
   ]
   controlReplacements.push(
-    ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  'config:browser-configuration',"],
+    ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  ...SETTINGS_TOOL_PAGES.map(page => page.id),\n  'config:browser-configuration',"],
     ["          {\n            active: activeView === 'about',", "          {\n            active: activeView === 'config:browser-configuration',\n            gapBefore: true,\n            icon: Settings2,\n            id: 'config:browser-configuration',\n            label: 'Configuration',\n            onSelect: () => setActiveView('config:browser-configuration')\n          },\n          {\n            active: activeView === 'about',"],
     ['        importInputRef={importInputRef}', '        importInputRef={importInputRef}\n        configurationCommands={configurationCommands}\n        configurationScopeProfile={scopeProfile}'],
     ['getHermesConfigRecord()', 'getHermesConfigRecord(scopeProfile)'],
@@ -250,7 +263,9 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
         {needsSubpageRedirect ? (
           <Navigate replace to={{ hash, pathname, search: '?' + subpageSearch }} />
         ) : (
-          activeSettingsContent
+          SETTINGS_TOOL_PAGES.some(page => page.id === activeView)
+            ? <BrowserSettingsToolContent view={activeView} onClose={onClose} />
+            : activeSettingsContent
         )}
       </SettingsBreadcrumbContext.Provider>`
   let output = source
@@ -263,7 +278,7 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
   const transformedNavEnd = output.indexOf(activeContentStart, transformedNavStart)
   output = output.slice(0, transformedNavStart) + navFooter + output.slice(transformedNavEnd)
   for (const [before, after] of controlReplacements) output = output.replace(before, after)
-  return `import { BrowserSettingsPresentation } from ${owner}\n` + output
+  return `import { SETTINGS_TOOL_PAGES, BrowserSettingsToolContent } from ${JSON.stringify(path.join(root, 'src/upstream/settings-tools'))}\nimport { BrowserSettingsPresentation } from ${owner}\n` + output
 }
 
 export function useBrowserConfigurationSettings(source: string, root: string): string {
@@ -1129,6 +1144,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     keepBrowserWorkspaceRoute: source => keepBrowserWorkspaceRoute(source, root),
     respectBrowserOverlayFocusReturn: source => respectBrowserOverlayFocusReturn(source, root),
     useBrowserOverlayFocusOwner: source => useBrowserOverlayFocusOwner(source, root),
+    useBrowserSettingsToolActions: source => useBrowserSettingsToolActions(source, root),
     useBrowserSettingsPresentation: source => useBrowserSettingsPresentation(source, root),
     useBrowserConfigurationSettings: source => useBrowserConfigurationSettings(source, root),
     filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
