@@ -168,7 +168,7 @@
     ],
     "removal": "Remove when upstream exposes a public complete draft and attachment snapshot for safe browser updates.",
     "sourceHash": "e11af1577a741907e23c7f373b1953ca246015272448a2102d4fcc7fb9ca74cf",
-    "outputHash": "2862756f8f97789538fe785593c555289bb1f31a1d6f9601e2c0ee7ba6c4e7ff",
+    "outputHash": "4225a1d2b32b2ccc13aa9f8944bc354b3d5e36ac05eb0a5a42251ea2af93e93d",
     "handler": "browser-draft-snapshot",
     "sourceRoot": "renderer"
   },
@@ -187,7 +187,7 @@
     ],
     "removal": "Remove when upstream exposes a public flush-all-composers operation with queue/history refusal.",
     "sourceHash": "08453158cd8bbbc2f54ba135a64d375c20a5ad31f653ff3c41747ac14cf51bfd",
-    "outputHash": "2e0129a22bbc2979a6ed4bbc0658173b1dc526b1d9701767a2e1b6116584723e",
+    "outputHash": "5ef1f5948bec65a86457277c2adc79395d27f958674b3417b4afcec9c2b9e296",
     "handler": "browser-flush-all-composers",
     "sourceRoot": "renderer"
   },
@@ -1612,8 +1612,8 @@
     "removal": "Remove when upstream avoids automatic composer focus on mobile and respects focus restored by closing browser overlays.",
     "sourceRoot": "renderer",
     "sourceHash": "08453158cd8bbbc2f54ba135a64d375c20a5ad31f653ff3c41747ac14cf51bfd",
-    "inputHash": "4ee5ce5a4d0925b860f17a5c933d8d59848d582d2496fd6b427d3f498336c637",
-    "outputHash": "ade8a428386fedfb75ee9c1eeb09f8bafd6d298a55b7184574f4c8fe52806885"
+    "inputHash": "a0713f0914603b735ed7d7f0ba5776d19e1bc51abf2d7a49ecbdd07713ecdcf0",
+    "outputHash": "881b98fe68774147b1d5dc6c7639869a180b48817549e861629a118b97ab5cb1"
   },
   {
     "name": "browser-workspace-route-lifetime",
@@ -2452,5 +2452,25 @@
     "sourceHash": "a840b97663311b9af9009bab96f8c5389dbbe41fbde90b80a22041c6ae03f866",
     "inputHash": "a840b97663311b9af9009bab96f8c5389dbbe41fbde90b80a22041c6ae03f866",
     "outputHash": "265b56813ec6fde1aea03a3c0f8ba1e01651a22fae5365126e541b165b147cce"
+  },
+  {
+    "name": "browser-draft-safety-alias",
+    "kind": "alias",
+    "order": 0,
+    "module": null,
+    "reason": "Route the renderer draft boundary through a typed browser adapter instead of ambient window globals.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      }
+    ],
+    "removal": "Remove when upstream provides a typed browser draft-safety integration point.",
+    "sourceRoot": "renderer",
+    "specifier": "hermes:web-draft-safety",
+    "replacement": "./src/platform/draft-safety.ts",
+    "aliasGroup": "renderer",
+    "fingerprintPolicy": "The wrapper adapter is covered by update-safety and renderer transform tests."
   }
 ]
