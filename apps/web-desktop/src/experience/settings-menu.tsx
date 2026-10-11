@@ -1,6 +1,5 @@
 import { useEffect, useState, type RefObject } from 'react'
-import { Codicon, notifyError } from '../upstream/browser-api'
-import { signOut } from '../platform/sign-out'
+import { Codicon } from '../upstream/browser-api'
 import { useBrowserSettings } from '../upstream/settings'
 import { BrowserActionSurface, type BrowserActionAnchor, type BrowserActionGroup } from './ui/action-surface'
 import { BrowserToolbarButton } from './ui/toolbar-button'
@@ -26,7 +25,6 @@ type SettingsMenuProps = {
 export function SettingsMenu({ triggerRef, onOpenPanel, onOpenRoute, panelPanes, additionalGroups = [], triggerClassName, triggerTooltip = 'Settings', navigationOpen }: SettingsMenuProps) {
   const compact = useMobileBrowser()
   const [anchor, setAnchor] = useState<BrowserActionAnchor | null>(null)
-  const [signingOut, setSigningOut] = useState(false)
   useEffect(() => { if (navigationOpen === false) setAnchor(null) }, [navigationOpen])
   const model = useBrowserSettings(panelPanes.map(pane => ({ id: pane.id, collapsible: Boolean((pane.data as { collapsible?: boolean } | undefined)?.collapsible) })))
   const groups: BrowserActionGroup[] = [
@@ -34,14 +32,10 @@ export function SettingsMenu({ triggerRef, onOpenPanel, onOpenRoute, panelPanes,
       const title = String(panelPanes.find(pane => pane.id === panel.id)?.title || panel.id)
       return { key: panel.id, label: sentenceCase(title), ariaLabel: title, checked: panel.checked, icon: <Codicon name={panel.id === 'review' ? 'git-compare' : 'files'} size="1rem" />, afterClose: true, run: () => { if (panel.select()) onOpenPanel() } }
     }) },
+    ...additionalGroups,
     { key: 'systems', label: 'Systems', actions: [
       { key: 'settings', label: 'Settings', icon: <Codicon name="settings-gear" size="1rem" />, afterClose: true, run: () => onOpenRoute('/settings') },
-    ] },
-    ...additionalGroups,
-    { key: 'account', actions: [{ key: 'sign-out', label: signingOut ? 'Signing out…' : 'Sign out', icon: <Codicon name="sign-out" size="1rem" />, disabled: signingOut, afterClose: true, run: () => {
-      setSigningOut(true)
-      void signOut().catch(error => notifyError(error, 'Could not sign out')).finally(() => setSigningOut(false))
-    } }] }
+    ] }
   ]
   return <>
     <BrowserToolbarButton ref={triggerRef} tooltip={triggerTooltip} className={triggerClassName} aria-label="Navigation tabs" aria-haspopup={compact ? 'dialog' : 'menu'} aria-expanded={Boolean(anchor)} onClick={event => {

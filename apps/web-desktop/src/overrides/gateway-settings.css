@@ -31,7 +31,8 @@
   font: inherit;
 }
 .browser-gateway-settings-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--web-space-2); }
-.browser-gateway-settings-actions > button {
+.browser-gateway-settings-actions > button,
+.browser-gateway-settings-sign-out > button {
   min-height: 2.5rem;
   padding: var(--web-space-2) var(--web-space-4);
   border-radius: var(--web-radius-control);
@@ -40,7 +41,9 @@
   letter-spacing: normal;
   box-shadow: none;
 }
-.browser-gateway-settings-actions > button:not(:first-child) { border: 1px solid var(--web-border-subtle); }
+.browser-gateway-settings-actions > button:not(:first-child),
+.browser-gateway-settings-sign-out > button { border: 1px solid var(--web-border-subtle); }
+.browser-gateway-settings-sign-out { padding-top: var(--web-space-4); border-top: 1px solid var(--web-border-subtle); }
 .browser-gateway-settings > [role='status'] { margin: 0; color: var(--web-text-muted); font-size: .8125rem; overflow-wrap: anywhere; }
 
 @media (max-width: 36rem) {
@@ -50,6 +53,7 @@
 }
 @media (pointer: coarse) {
   .browser-gateway-settings-field > :is([data-slot='select-trigger'], input),
-  .browser-gateway-settings-actions > button { min-height: max(2.5rem, var(--web-touch-min)); }
+  .browser-gateway-settings-actions > button,
+  .browser-gateway-settings-sign-out > button { min-height: max(2.5rem, var(--web-touch-min)); }
   .browser-gateway-settings-field > :is([data-slot='select-trigger'], input) { font-size: max(1rem, calc(16px / var(--web-ui-scale, 1))); }
 }
