@@ -740,7 +740,7 @@ export function useBrowserTouchHooks(source: string, root: string): string {
   const labels = ['c.queueMessage', 'showStop ? c.stop : c.send', 'state.tools.label', 'copy.openModelPicker', 'triggerLabel', 'label', 'title']
   const targets = labels.map(label => `aria-label={${label}}`).filter(target => source.includes(target))
   if (!targets.length) throw new Error('Browser composer touch controls changed')
-  let output = replaceBrowserContract(source, targets.map(target => [target, `${target === sendTarget ? 'data-browser-send-action="" ' : ''}data-browser-composer-action="" ${target}`]))
+  let output = replaceBrowserContract(source, targets.map(target => [target, `${target === sendTarget ? 'data-browser-send-action="" ' : ''}${target === 'aria-label={c.queueMessage}' ? 'data-browser-queue-action="" ' : ''}data-browser-composer-action="" ${target}`]))
   if (source.includes("const tourMarker = useTourMarker('model-pill')")) {
     const marker = 'data-tour={tourMarker}'
     const matches = output.split(marker).length - 1

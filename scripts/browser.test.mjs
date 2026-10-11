@@ -27,7 +27,14 @@ function load(file, globals = {}, moduleCache = new Map()) {
   vm.runInContext(ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, context)
   return context.exports
 }
-const { browserPlugin, scopeBrowserStorage } = load('src/upstream/browser-plugin.ts')
+const { browserPlugin, scopeBrowserStorage, useBrowserTouchHooks } = load('src/upstream/browser-plugin.ts')
+test('composer queue action receives an explicit browser identity', () => {
+  const source = '<button aria-label={c.queueMessage}><Layers3 /></button>\n<button aria-label={showStop ? c.stop : c.send}><Send /></button>'
+  const output = useBrowserTouchHooks(source, '/workspace/apps/web-desktop')
+  assert.match(output, /data-browser-queue-action="" data-browser-composer-action="" aria-label=\{c\.queueMessage\}/)
+  assert.match(output, /data-browser-send-action="" data-browser-composer-action="" aria-label=\{showStop \? c\.stop : c\.send\}/)
+  assert.doesNotMatch(readFileSync(path.join(root, 'src/experience/followup-preferences.ts'), 'utf8'), /lucide-layers-3/)
+})
 test('profile switch hook ignores repeated mount effects but handles real profile changes', () => {
   const source = readFileSync(path.join(root, '../desktop/src/app/hooks/use-on-profile-switch.ts'), 'utf8')
   let profile = 'default', reference, effect
