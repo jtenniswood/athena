@@ -184,9 +184,47 @@ body > [data-slot='fan-menu'] {
   font-size: 0.75rem !important;
 }
 
+/* Composer selectors contain their full icon/label/chevron group. Toolbar
+   square-button geometry must not constrain these content-sized controls. */
+[data-slot='composer-root'] :is([data-browser-model-pill], [data-testid='reasoning-pill'], [data-browser-approval-control]) {
+  box-sizing: border-box;
+  height: var(--composer-control-size);
+  gap: var(--web-space-1);
+  padding: 0 .375rem;
+  border-radius: var(--web-radius-control);
+  line-height: var(--web-line-compact);
+}
+
+[data-slot='composer-root'] :is([data-browser-model-pill], [data-testid='reasoning-pill'], [data-browser-approval-control]):is(:hover, :focus-visible, [aria-expanded='true']):not(:disabled) {
+  background: var(--chrome-action-hover);
+  color: var(--web-text);
+}
+
+[data-slot='composer-root'] :is([data-browser-model-pill], [data-testid='reasoning-pill'], [data-browser-approval-control]):focus-visible {
+  outline: var(--web-focus-ring);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+[data-slot='composer-root'] [data-browser-approval-control] > svg,
+[data-slot='composer-root'] [data-slot='fan-menu-anchor'] > button > :is(svg, .codicon) {
+  width: .75rem;
+  height: .75rem;
+  font-size: .75rem !important;
+  flex: 0 0 .75rem;
+}
+
+[data-slot='composer-root'] :is([data-browser-model-pill], [data-testid='reasoning-pill'], [data-browser-approval-control]) > :is(svg:last-child, .codicon) {
+  width: .625rem;
+  height: .625rem;
+  font-size: .625rem !important;
+  flex: 0 0 .625rem;
+}
+
 /* Align the voice menu hint beside the mic like the other composer dropdowns. */
 [data-slot='composer-root'] [data-slot='fan-menu-anchor'] {
   align-items: center;
+  gap: var(--web-space-1);
 }
 
 [data-slot='composer-root'] [data-slot='fan-menu-anchor'] > .codicon-chevron-up {
@@ -274,7 +312,7 @@ body > [data-slot='fan-menu'] {
   }
 
   /* Keep frequent composer actions large enough to tap after app zoom. */
-  [data-slot='composer-dock']:not([data-popped-out]) [data-browser-composer-action] {
+  [data-slot='composer-dock']:not([data-popped-out]) :is([data-browser-composer-action], [data-browser-approval-control]) {
     box-sizing: border-box;
     min-width: var(--web-touch-min);
     min-height: var(--web-touch-min);
