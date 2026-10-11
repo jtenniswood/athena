@@ -200,6 +200,16 @@ test('browser sidebar hides the new-session keyboard shortcut hint', () => {
   assert.throws(() => removeBrowserNewSessionShortcut(source.replace('<KbdGroup', '<KbdHint')), /target changed/)
 })
 
+test('browser sidebar keeps Capabilities only in More controls', () => {
+  const { removeBrowserTopCapabilitiesLink } = load('src/upstream/browser-plugin.ts')
+  const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/index.tsx'), 'utf8')
+  const output = removeBrowserTopCapabilitiesLink(source)
+  assert.doesNotMatch(output, /id: 'capabilities'/)
+  assert.doesNotMatch(output, /CAPABILITIES_ROUTE/)
+  assert.match(readFileSync(path.join(root, 'src/experience/tool-routes.ts'), 'utf8'), /path: '\/skills', label: 'Capabilities'/)
+  assert.throws(() => removeBrowserTopCapabilitiesLink(source.replace("id: 'capabilities'", "id: 'skills'")), /target changed/)
+})
+
 test('browser moves hidden Bots into the normal roster when the filter option is enabled', () => {
   const { browserPlugin, showHiddenBotsInBrowserRoster } = load('src/upstream/browser-plugin.ts')
   const filename = path.join(root, '../desktop/src/plugins/hermes-bots/roster-pane-derivation.ts')
