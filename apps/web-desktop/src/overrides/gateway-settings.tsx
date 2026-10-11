@@ -52,7 +52,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
     </label>}
     <div className="browser-gateway-settings-actions">
       <Button disabled={busy} onClick={() => void run(async () => {
-        assertSafeConnectionChange()
+        await assertSafeConnectionChange()
         updateGateway(gateway.id, { authMode: mode, ...(mode === 'oauth' ? { token: '' } : token ? { token } : {}) })
         if (mode === 'oauth') {
           const result = await window.hermesDesktop.oauthLoginConnectionConfig(window.location.origin)
