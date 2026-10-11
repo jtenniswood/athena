@@ -126,6 +126,17 @@ export function observeServerCapability(id: string): CapabilityObservation {
   }
 }
 
+export function observeRuntimeCapabilities(hosting?: {
+  gatewaySelection?: boolean
+  pluginAssets?: boolean
+}): CapabilityObservation[] {
+  return [
+    ...observeBrowserCapabilities(),
+    ...observeHostingCapabilities(hosting),
+    observeServerCapability('real-browser-profile')
+  ]
+}
+
 /** A capability requiring several layers is unsupported if any layer refuses it. */
 export function resolveCapability(
   id: string,
