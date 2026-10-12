@@ -414,6 +414,41 @@ export function filterBrowserSettingsFields(source: string, root: string): strin
   return `import { isSettingsFieldVisible } from ${owner}\n` + output
 }
 
+export function keepBrowserProfileTabFocus(source: string): string {
+  const target = '    view.focus()\n\n    return () => {'
+  if (source.split(target).length !== 2) throw new Error('Browser profile editor focus boundary changed')
+  return source.replace(target, `    if (!host.closest('[data-browser-profile-settings]')) view.focus()
+
+    return () => {`)
+}
+
+export function useBrowserProfileSettingsTabs(source: string, root: string): string {
+  const start = '          <PanelHeader subtitle={p.count(profiles.length)} title={p.title} />'
+  const end = '            </PanelList>'
+  const from = source.indexOf(start)
+  const to = source.indexOf(end, from)
+  const query = "  const [query, setQuery] = useState('')\n"
+  const filterStart = '  const visibleProfiles = useMemo(() => {'
+  const filterEnd = '  }, [profiles, query])\n'
+  if (source.split(start).length !== 2 || source.split(end).length !== 2 || source.split('</PanelBody>').length !== 2
+    || source.split(query).length !== 2 || source.split(filterStart).length !== 2 || source.split(filterEnd).length !== 2 || to < from) {
+    throw new Error('Browser profile settings tab boundary changed')
+  }
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/profile-tabs'))
+  const output = source.slice(0, from) + `          <BrowserProfileSettings
+            profiles={profiles}
+            selectedName={selected?.name}
+            onSelect={setSelectedName}
+            onCreate={() => setCreateOpen(true)}
+            onRename={setPendingRename}
+            onDelete={setPendingDelete}
+          >` + source.slice(to + end.length)
+  const filterFrom = output.indexOf(filterStart)
+  const filterTo = output.indexOf(filterEnd, filterFrom) + filterEnd.length
+  return `import { BrowserProfileSettings } from ${owner}\n` + (output.slice(0, filterFrom) + output.slice(filterTo))
+    .replace(query, '').replace('</PanelBody>', '</BrowserProfileSettings>')
+}
+
 export function useBrowserProfileScopeTabs(source: string): string {
   const replacements: [string, string][] = [
     [
@@ -1278,6 +1313,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
     useBrowserConnectingVisual,
     useBrowserProfileScopeTabs,
+    keepBrowserProfileTabFocus,
+    useBrowserProfileSettingsTabs: source => useBrowserProfileSettingsTabs(source, root),
     hideBrowserAppearanceOnlySettings,
     hideBrowserLocalProjectDirectory,
     removeBrowserPetAvatarTab,

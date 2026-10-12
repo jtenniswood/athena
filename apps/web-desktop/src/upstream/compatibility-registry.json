@@ -2536,5 +2536,49 @@
       }
     ],
     "removal": "Remove when upstream offers a browser loading presentation matching the cached HTML shell."
+  },
+  {
+    "name": "browser-profile-settings-tabs",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/profiles/index.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "6f21bad3236da3240ffe248aa98ce326e712292618e2a9b16bdf389b74a6fc12",
+    "inputHash": "6f21bad3236da3240ffe248aa98ce326e712292618e2a9b16bdf389b74a6fc12",
+    "outputHash": "e8a621d241da6f3fa4c58932b297bee607909e4015908d19d4ed172ba6b79c97",
+    "handlers": [
+      "useBrowserProfileSettingsTabs"
+    ],
+    "reason": "Present Profiles settings with horizontal tabs instead of the heading, search, and vertical list, while retaining upstream selection, details, and profile management actions.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace controls live inside settings and preserve the conversation"
+      }
+    ],
+    "removal": "Remove when upstream Profiles provides a tab presentation that can be used by the browser settings wrapper."
+  },
+  {
+    "name": "browser-profile-editor-focus",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/chat/code-editor.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "bb11e52f0bf02c11a64ee698b7c45d144a02a3ccbbb41450c2031d5b2e3e4c57",
+    "inputHash": "bb11e52f0bf02c11a64ee698b7c45d144a02a3ccbbb41450c2031d5b2e3e4c57",
+    "outputHash": "d60fa2e5006f316514395c3cf9f4e19e79c90c042fbcbe58e1f45f9ad07c4b70",
+    "handlers": [
+      "keepBrowserProfileTabFocus"
+    ],
+    "reason": "Keep keyboard focus on profile tabs when the selected SOUL editor loads; other editor surfaces retain mount autofocus.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace controls live inside settings and preserve the conversation"
+      }
+    ],
+    "removal": "Remove when upstream CodeEditor exposes an autofocus option that Profiles settings can disable."
   }
 ]
