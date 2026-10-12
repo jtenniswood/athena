@@ -794,6 +794,12 @@ export function useBrowserTouchHooks(source: string, root: string): string {
     const importTarget = "import { ModelPill } from './model-pill'\n"
     const reasoningTarget = '              {compactModelPill ? null : <ReasoningPill disabled={disabled} model={state.model} />}\n'
     if (output.split(importTarget).length !== 2 || output.split(reasoningTarget).length !== 2) throw new Error('Browser approval composer insertion point changed')
+    // Follow-up routing uses the queue control as the running-turn signal.
+    // Upstream also renders it while idle, where onQueue intentionally does nothing.
+    output = replaceBrowserContract(output, [[
+      "const showQueueButton = busyAction !== 'stop' && hasComposerPayload",
+      "const showQueueButton = busy && busyAction !== 'stop' && hasComposerPayload"
+    ]])
     output = output.replace(importTarget, `${importTarget}import { BrowserApprovalComposerControl } from ${JSON.stringify(`${root}/src/experience/browser-approval-composer-control`)}\n`)
       .replace(reasoningTarget, reasoningTarget + '              <BrowserApprovalComposerControl />\n')
   }

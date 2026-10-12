@@ -83,6 +83,60 @@ narrowDesktopChecks(test, open)
 
 const touchTest = test.extend({ hasTouch: true })
 
+for (const preference of ['queue', 'steer']) {
+  for (const method of ['Enter', 'Send']) {
+    test(`idle messages send and running follow-ups queue: ${preference}, ${method}`, async ({ page }) => {
+      await page.setViewportSize({ width: method === 'Send' ? 390 : 1440, height: 900 })
+      await page.addInitScript(value => localStorage.setItem('hermes-web.browser.followup-behavior', value), preference)
+      const submits = []
+      const held = []
+      let holdCompletion = true
+      await page.routeWebSocket(/\/api\/ws/, socket => {
+        const server = socket.connectToServer()
+        socket.onMessage(message => {
+          const frame = JSON.parse(String(message))
+          if (frame.method === 'prompt.submit') submits.push(frame.params)
+          server.send(message)
+        })
+        server.onMessage(message => {
+          const frame = JSON.parse(String(message))
+          if (holdCompletion && frame.params?.type === 'message.complete') held.push(() => socket.send(message))
+          else socket.send(message)
+        })
+      })
+      const send = async () => {
+        if (method === 'Enter') await editor(page).press('Enter')
+        else await page.getByRole('button', { name: 'Send', exact: true }).click()
+      }
+      await open(page)
+      await editor(page).fill(`Idle message via ${method}`)
+      await expect(page.locator('[data-browser-queue-action]')).toHaveCount(0)
+      await send()
+      await expect.poll(() => submits.length).toBe(1)
+      expect(submits[0]).toMatchObject({ session_id: 'preview-week', text: `Idle message via ${method}` })
+      await expect(editor(page)).toHaveText('')
+      await expect(page.locator('[data-slot="composer-root"]').getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
+
+      if (preference === 'queue') {
+        await editor(page).fill(`Queued follow-up via ${method}`)
+        await expect(page.locator('[data-browser-queue-action]')).toBeVisible()
+        await send()
+        await expect(editor(page)).toHaveText('')
+        await expect(page.getByRole('button', { name: '1 Queued', exact: true })).toBeVisible()
+        expect(submits).toHaveLength(1)
+      }
+      await expect.poll(() => held.length).toBe(1)
+      holdCompletion = false
+      held.forEach(release => release())
+      if (preference === 'queue') {
+        await expect.poll(() => submits.length).toBe(2)
+        expect(submits[1]).toMatchObject({ session_id: 'preview-week', text: `Queued follow-up via ${method}` })
+      }
+      await expect(page.locator('[data-slot="composer-root"]').getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0)
+    })
+  }
+}
+
 test('response links open a browser tab without losing the conversation or draft', async ({ page, context }) => {
   const destination = 'https://example.com/response-link'
   // Exercise the actual transcript renderer with both Markdown and HTML anchors.
@@ -354,7 +408,6 @@ touchTest('phone navigation and contextual sheets stay tappable at 320px and 200
   await editor(page).fill('Check the phone composer controls')
   for (const [name, control] of [
     ['Add context', page.getByRole('button', { name: 'Add context', exact: true })],
-    ['Queue message', page.getByRole('button', { name: 'Queue message', exact: true })],
     ['Send', page.getByRole('button', { name: 'Send', exact: true })]
   ]) {
     const bounds = await control.boundingBox()
@@ -374,7 +427,8 @@ touchTest('phone navigation and contextual sheets stay tappable at 320px and 200
   await expect(page.locator('.browser-main')).toBeHidden()
   expect((await page.locator('.browser-navigation').boundingBox()).width).toBe(320)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320)
-  await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await expect(editor(page)).toHaveText('Check the phone composer controls')
   await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
   const sheet = page.locator('[data-slot="dropdown-menu-content"]:visible').last()
   await expect(sheet).toBeVisible()

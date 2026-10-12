@@ -2004,7 +2004,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/composer/controls.tsx",
-    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout. Show Queue only while busy so the default follow-up preference cannot intercept idle sends.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -2014,6 +2014,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "browser touch hooks survive control label and icon changes"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "idle messages send and running follow-ups queue"
       }
     ],
     "removal": "Remove when upstream exposes equivalent stable browser hooks.",
@@ -2023,7 +2027,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "035a1e8b4d9f4b8416664e3b93f8f160484d885fd09d912821a7f80ecbc4fe33",
     "inputHash": "035a1e8b4d9f4b8416664e3b93f8f160484d885fd09d912821a7f80ecbc4fe33",
-    "outputHash": "d5b52c04f0770bb60852f636d21e2a020dfafb099540bd59de3a291b858133fe"
+    "outputHash": "5f6806ad0d61b1cf69ac3550b768c08ee6976848f887178f348457ea3c164926"
   },
   {
     "name": "browser-semantic-context-menu",
