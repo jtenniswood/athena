@@ -227,7 +227,7 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
     ["useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:model' as SettingsViewId)", "useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:appearance' as SettingsViewId)"],
     [
       '  const subpage = resolveSettingsSubpage(activeView, params)',
-      "  const browserThemeRedirect = activeView === 'config:appearance' && resolveSettingsSubpage(activeView, params) === 'theme'\n  const subpage = ['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance'].includes(activeView) ? undefined : resolveSettingsSubpage(activeView, params)"
+      "  const browserThemeRedirect = activeView === 'config:appearance' && resolveSettingsSubpage(activeView, params) === 'theme'\n  const subpage = ['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance', 'config:chat'].includes(activeView) ? undefined : resolveSettingsSubpage(activeView, params)"
     ],
     [
       '  const needsSubpageRedirect = Boolean(subpage && subpage !== requestedSubpage)',
@@ -239,9 +239,9 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
     ],
     [
       '      const destination = page ?? settingsSubpages(view)[0]?.id',
-      "      const destination = page ?? (['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance'].includes(view) ? undefined : settingsSubpages(view)[0]?.id)"
+      "      const destination = page ?? (['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance', 'config:chat'].includes(view) ? undefined : settingsSubpages(view)[0]?.id)"
     ],
-    ["        const children = settingsSubpages(view)", "        const children = view === 'config:appearance' ? [] : settingsSubpages(view)"],
+    ["        const children = settingsSubpages(view)", "        const children = ['config:appearance', 'config:chat'].includes(view) ? [] : settingsSubpages(view)"],
     ["import { SettingsSubpageHeader } from './subpage-navigation'\n", ''],
     ["  const activeGroup = navGroups.find(group => group.active)\n  const activeChild = activeGroup?.children?.find(child => child.active)\n", ''],
   ]

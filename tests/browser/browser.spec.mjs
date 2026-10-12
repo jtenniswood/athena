@@ -1485,6 +1485,16 @@ for (const width of [390, 1440]) {
 for (const width of [390, 1440]) {
   test.extend({ hasTouch: width === 390 })(`settings groups and renamed search preserve destinations at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
+    await page.route(/\/api\/config(?:\?|$)/, async route => {
+      if (route.request().method() !== 'GET') return route.continue()
+      const response = await route.fetch()
+      const data = await response.json()
+      const config = data.config ?? data
+      config.display = { ...config.display, personality: 'friendly', show_reasoning: true }
+      config.timezone = 'UTC'
+      config.agent = { ...config.agent, image_input_mode: 'auto' }
+      await route.fulfill({ json: config })
+    })
     await open(page)
     await editor(page).fill('Keep my draft while finding renamed settings')
     const trigger = await settingsTrigger(page)
@@ -1504,6 +1514,13 @@ for (const width of [390, 1440]) {
     await page.getByRole('button', { name: 'Appearance', exact: true }).click()
     await expect(page.locator('#setting-field-appearance\\.language')).toBeVisible()
     await expect(page.locator('#setting-field-appearance\\.user-bubble')).toBeVisible()
+    await expect(page.locator('.browser-settings-category-button.is-child')).toHaveCount(0)
+    if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await page.getByRole('button', { name: 'Chat', exact: true }).click()
+    const chatSettings = page.getByRole('main', { name: 'Chat', exact: true })
+    for (const key of ['display.personality', 'timezone', 'display.show_reasoning', 'agent.image_input_mode']) {
+      await expect(chatSettings.locator(`[id="setting-field-${key}"]`)).toBeVisible()
+    }
     await expect(page.locator('.browser-settings-category-button.is-child')).toHaveCount(0)
     if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
     for (const [query, result, view, title] of [
