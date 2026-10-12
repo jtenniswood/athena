@@ -19,6 +19,6 @@
   "packageManager": "pnpm@11.28.5",
   "devDependencies": {
     "@playwright/test": "1.64.0",
-    "ws": "8.21.3"
+    "ws": "8.22.0"
   }
 }
