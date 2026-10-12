@@ -5,6 +5,9 @@
 packages:
   - apps/web-desktop
 
+# Keep installs aligned with Renovate's npm release cooldown.
+minimumReleaseAge: 1440
+
 # pnpm 11 blocks postinstall build scripts by default; approve the ones the
 # web closure needs.
 onlyBuiltDependencies:
