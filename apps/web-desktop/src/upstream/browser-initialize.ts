@@ -6,21 +6,23 @@ import '../../../desktop/src/app/contrib/controller'
 import { $projectScope, ALL_PROJECTS, exitProjectScope } from '@/store/projects'
 import { setHideThreadTimeline } from '@/store/thread-timeline'
 
-// The browser keeps sessions in the home Projects overview. Clear a saved
-// drill-in scope before the first render and refuse later scope changes too.
-function keepProjectsOverview(): void {
-  if ($projectScope.get() !== ALL_PROJECTS) exitProjectScope()
-}
-
-keepProjectsOverview()
-$projectScope.listen(keepProjectsOverview)
-
-// The web UI does not expose this preference; keep timeline bars visible
-// even when a browser has a previously saved desktop value.
-setHideThreadTimeline(false)
+let initialized = false
 
 export function initializeBrowserShell(): void {
-  // The import above is intentionally side-effect-only. BrowserShell mounts
-  // the single ContribWiring instance; mounting ContribController here would
-  // create a second wiring tree and duplicate overlays.
+  if (initialized) return
+  initialized = true
+
+  // The browser keeps sessions in the home Projects overview. Clear a saved
+  // drill-in scope before the first render and refuse later scope changes too.
+  const keepProjectsOverview = (): void => {
+    if ($projectScope.get() !== ALL_PROJECTS) exitProjectScope()
+  }
+  keepProjectsOverview()
+  $projectScope.listen(keepProjectsOverview)
+
+  // The web UI does not expose this preference; keep timeline bars visible
+  // even when a browser has a previously saved desktop value.
+  setHideThreadTimeline(false)
+  // Importing the upstream controller registers panes and layout presets.
+  // BrowserShell owns the single ContribWiring instance at render time.
 }
