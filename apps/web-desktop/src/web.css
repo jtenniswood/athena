@@ -25,3 +25,9 @@
 .hermes-startup-recovery-meta { font-size: 0.8rem; }
 .hermes-startup-recovery-actions { display: flex; gap: 0.6rem; }
 .hermes-startup-recovery-actions button { border: 1px solid #52617c; border-radius: 0.45rem; padding: 0.45rem 0.8rem; color: inherit; background: #171b24; cursor: pointer; }
+
+/* Use the same centered logo/spinner from the HTML shell through gateway boot. */
+.athena-connecting-overlay {
+  z-index: var(--z-connecting, 1000);
+  zoom: calc(1 / var(--web-ui-scale, 1));
+}

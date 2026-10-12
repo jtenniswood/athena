@@ -15,6 +15,24 @@ function assertBrowserRoot(root: string): void {
     throw new Error('Browser build root is not the browser-only shell')
   }
 }
+/** Keep upstream boot/error/reconnect ownership; only adapt its loading visual. */
+export function useBrowserConnectingVisual(source: string): string {
+  const start = source.indexOf('  const leaving = phase')
+  if (start < 0 || !source.includes('<DecodeText')) throw new Error('Gateway connecting presentation changed')
+  return source.slice(0, start)
+    .replace("import { DecodeText } from '@/components/ui/decode-text'\n", '')
+    .replace("import { cn } from '@/lib/utils'\n", '')
+    .replace("const TEXT = 'CONNECTING'\n", '') + `  return (
+    <div className="hermes-startup-loading athena-connecting-overlay" role="status" data-glass-opaque="">
+      <img className="hermes-startup-logo" src="/athena.svg" width="64" height="64" alt="" aria-hidden="true" />
+      <span className="hermes-startup-spinner" aria-hidden="true" />
+      <span className="hermes-startup-label">Connecting to Hermes…</span>
+    </div>
+  )
+}
+`
+}
+
 export function useBrowserPinWrites(source: string, root: string): string {
   const start = source.indexOf('function writePin(')
   const end = source.indexOf('\n/**', start)
@@ -923,10 +941,23 @@ export function useBrowserSearchLabel(source: string, root: string): string {
     .replace(placeholderTarget, "placeholder={'Search'}")
 }
 
-function filterBrowserSessionMenu(source: string): string {
+export function filterBrowserSessionMenu(source: string, root: string): string {
   const target = 'function OptionCheckbox({ checked, onCheck, option }: { checked: boolean; onCheck: () => void; option: Option }) {'
   if (source.split(target).length !== 2) throw new Error('Browser session filter menu target changed')
   const replacements: [string, string][] = [
+    ['  const groupingLabel = groupings.find(option => option.id === grouping)?.label\n', ''],
+    [
+      "      {option.label}\n    </DropdownMenuCheckboxItem>",
+      "      {option.id === 'archived' ? browserSidebarActionLabel('archived', option.label) : option.label}\n    </DropdownMenuCheckboxItem>"
+    ],
+    [
+      '  const unreadIds = useStore($unreadFinishedSessionIds)',
+      `  const unreadIds = useStore($unreadFinishedSessionIds)
+  useBrowserSidebarShortcuts({
+    archived: { run: () => setSidebarShowArchived(!showArchived) },
+    read: { disabled: unreadIds.length === 0, run: markAllSessionsRead }
+  })`
+    ],
     [
       'function OptionGlyph({ option }: { option: Option }) {',
       `const OPTION_ICONS: Record<string, string> = { 'all-profiles': 'account', archived: 'archive' }
@@ -937,7 +968,16 @@ function OptionGlyph({ option }: { option: Option }) {`
       "  return option.icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={option.icon} size=\"0.8125rem\" /> : null",
       "  const icon = option.icon || OPTION_ICONS[option.id]\n  return icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={icon} size=\"0.8125rem\" /> : null"
     ],
-    ['<DropdownMenuSubTrigger hideChevron>\n              {f.grouping}', '<DropdownMenuSubTrigger hideChevron>\n              <Codicon name="list-tree" size="0.8125rem" />\n              {f.grouping}'],
+    [
+      `<DropdownMenuSubTrigger hideChevron>
+              {f.grouping}
+              <span className="ml-auto flex items-center gap-1 pl-4 text-(--ui-text-tertiary)">
+                {groupingLabel}
+                <Codicon name="chevron-right" size="1rem" />
+              </span>
+            </DropdownMenuSubTrigger>`,
+      '<DropdownMenuSubTrigger><Codicon name="list-tree" size="0.8125rem" />{f.grouping}</DropdownMenuSubTrigger>'
+    ],
     ['<DropdownMenuSubTrigger>{f.ordering}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="list-ordered" size="0.8125rem" />{f.ordering}</DropdownMenuSubTrigger>'],
     ['<DropdownMenuSubTrigger>{f.show}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="eye" size="0.8125rem" />{f.show}</DropdownMenuSubTrigger>'],
     ['<DropdownMenuSubTrigger>{f.status}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="pulse" size="0.8125rem" />{f.status}</DropdownMenuSubTrigger>'],
@@ -948,7 +988,7 @@ function OptionGlyph({ option }: { option: Option }) {`
     ['<DropdownMenuItem onSelect={() => void runImportProfileFlow()}>\n                {t.profiles.importProfile}', '<DropdownMenuItem onSelect={() => void runImportProfileFlow()}>\n                <Codicon name="cloud-download" size="0.8125rem" />\n                {t.profiles.importProfile}'],
     ['<DropdownMenuItem onSelect={resetSidebarView}>{f.resetToDefaults}</DropdownMenuItem>', '<DropdownMenuItem onSelect={resetSidebarView}><Codicon name="refresh" size="0.8125rem" />{f.resetToDefaults}</DropdownMenuItem>'],
     ['            {foldCollapsed ? f.expandAll : f.collapseAll}', '            <Codicon name={foldCollapsed ? "expand-all" : "collapse-all"} size="0.8125rem" />\n            {foldCollapsed ? f.expandAll : f.collapseAll}'],
-    ['          {t.sidebar.markAllRead}\n', '          <Codicon name="check-all" size="0.8125rem" />\n          {t.sidebar.markAllRead}\n']
+    ['          {t.sidebar.markAllRead}\n', '          <Codicon name="check-all" size="0.8125rem" />\n          {browserSidebarActionLabel(\'read\', t.sidebar.markAllRead)}\n']
   ]
   let output = source
   for (const [before, after] of replacements) {
@@ -959,7 +999,8 @@ function OptionGlyph({ option }: { option: Option }) {`
   const manualOrdering = "      return ordering === 'manual'"
   if (output.split(manualOrdering).length !== 2) throw new Error('Browser manual ordering option contract changed')
   output = output.replace(manualOrdering, '      return true')
-  return output.replace(target, target + hideDesktopOnlyRows)
+  const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-shortcuts'))
+  return `import { browserSidebarActionLabel, useBrowserSidebarShortcuts } from ${owner}\n` + output.replace(target, target + hideDesktopOnlyRows)
 }
 
 export function showHiddenBotsInBrowserRoster(source: string): string {
@@ -1139,9 +1180,21 @@ export function addBrowserChatPanelActions(source: string, root: string): string
   const importTarget = "import type { SessionTitleResponse } from '../../types'\n"
   const actionInterface = '  onHideTabBar?: () => void\n'
   const actionDestructure = '  onHideTabBar,\n  surface = \'row\',\n  tabPaneId\n}: SessionActions) {'
-  const actionItemsTarget = '      {dangerItems.map(item => renderActionItem(kit, item))}'
-  if (source.split(importTarget).length !== 2 || source.split(actionInterface).length !== 2 || source.split(actionDestructure).length !== 2 || source.split(actionItemsTarget).length !== 2) {
+  const actionItemsTarget = '      <kit.Separator />\n      {dangerItems.map(item => renderActionItem(kit, item))}'
+  const appearanceStart = '      <kit.Sub>\n        <kit.SubTrigger disabled={!sessionId}>\n          <Codicon name="symbol-color"'
+  const projectStart = '      <kit.Sub>\n        <kit.SubTrigger disabled={!sessionId}>\n          <Codicon name="folder"'
+  const submenuEnd = '      </kit.Sub>'
+  if (source.split(importTarget).length !== 2 || source.split(actionInterface).length !== 2 || source.split(actionDestructure).length !== 2 || source.split(actionItemsTarget).length !== 2 || source.split(appearanceStart).length !== 2 || source.split(projectStart).length !== 2) {
     throw new Error('Browser chat panel menu contract changed')
+  }
+  // Keep project and appearance actions on sidebar rows, while the chat
+  // toolbar exposes only conversation actions and workspace panel toggles.
+  for (const start of [appearanceStart, projectStart]) {
+    const from = source.indexOf(start)
+    const to = source.indexOf(submenuEnd, from) + submenuEnd.length
+    if (to < from) throw new Error('Browser chat submenu boundary changed')
+    const submenu = source.slice(from, to)
+    source = source.replace(submenu, `      {browserPanelEntries === undefined && (\n${submenu}\n      )}`)
   }
   return source.replace(importTarget, `${importTarget}import { BrowserChatPanelActions } from ${JSON.stringify(path.join(root, 'src/experience/chat-panel-actions.tsx'))}\n`)
     .replace(actionInterface, `${actionInterface}  browserPanelEntries?: readonly { id: string; title?: unknown; data?: unknown }[]\n  onBrowserPanelOpen?: () => void\n`)
@@ -1223,6 +1276,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserSettingsPresentation: source => useBrowserSettingsPresentation(source, root),
     useBrowserConfigurationSettings: source => useBrowserConfigurationSettings(source, root),
     filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
+    useBrowserConnectingVisual,
     useBrowserProfileScopeTabs,
     hideBrowserAppearanceOnlySettings,
     hideBrowserLocalProjectDirectory,
@@ -1241,7 +1295,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserProjectDisclosure,
     exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut, removeBrowserTopCapabilitiesLink,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
-    useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth, filterBrowserSessionMenu,
+    useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth,
+    filterBrowserSessionMenu: source => filterBrowserSessionMenu(source, root),
     showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
     disableBrowserSessionRowTabs,
     disableBrowserSessionOpenActions: source => disableBrowserSessionOpenActions(source, root),
