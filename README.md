@@ -65,6 +65,19 @@ docker stop athena
 For microphone access from another device, open Athena over HTTPS (for example,
 through Tailscale Serve).
 
+### Browser notifications
+
+Open **Settings → Notifications → Allow browser notifications**, then accept
+the browser prompt. Keep **Enable notifications** and **Response ready** on to
+receive an alert when a reply finishes in your current chat while Athena is in
+the background. Use **Send test notification** to check delivery. Clicking a
+response notification returns to its conversation.
+
+Notifications require HTTPS or localhost. On iPhone and iPad, add Athena to the
+Home Screen and open the installed app. Keep Athena open: alerts pause if the
+browser suspends or closes it. If permission is blocked, allow notifications
+in the browser’s site settings.
+
 ### Sign in
 
 Athena checks the configured Hermes server before opening chat. If authentication

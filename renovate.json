@@ -2,5 +2,13 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "internalChecksFilter": "strict",
+  "packageRules": [
+    {
+      "description": "Align npm updates with pnpm's one-day release-age policy.",
+      "matchDatasources": ["npm"],
+      "minimumReleaseAge": "1 day"
+    }
   ]
 }

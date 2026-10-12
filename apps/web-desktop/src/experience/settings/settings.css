@@ -85,7 +85,8 @@
   color: var(--web-text-muted) !important;
   background: transparent !important;
 }
-[data-browser-profile-tabs] .browser-settings-profile-tab[aria-pressed="true"] {
+[data-browser-profile-tabs] .browser-settings-profile-tab[aria-pressed="true"],
+[data-browser-profile-tabs] .browser-settings-profile-tab[aria-selected="true"] {
   border-bottom-color: var(--web-accent) !important;
   color: var(--web-text) !important;
   font-weight: 600;
@@ -239,6 +240,11 @@
 .browser-settings-detail > * { box-sizing: border-box; width: min(100%, 54rem); max-width: 54rem; margin-inline: 0; }
 .browser-settings-content-slot { display: flex; min-height: 0; flex: 1; flex-direction: column; }
 .browser-settings-content-slot[hidden] { display: none; }
+.browser-notification-settings { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.browser-notification-permission { gap: var(--web-space-3); margin-bottom: var(--web-space-6); }
+.browser-notification-permission > button { justify-self: start; }
+.browser-notification-settings > section.min-h-0.overflow-hidden { overflow: visible; }
+.browser-notification-settings > section.min-h-0.overflow-hidden > .h-full.min-h-0.overflow-y-auto { height: auto; overflow: visible; padding-inline: var(--web-space-1); }
 .browser-settings-page-notice { max-width: 54rem; margin: 0 auto var(--web-space-3); color: var(--web-text-muted); font-size: var(--web-text-caption); }
 .browser-settings-content-slot > section.min-h-0.overflow-hidden { width: 100%; min-height: 0; flex: 1; }
 .browser-settings-content-slot > section.min-h-0.overflow-hidden > .h-full.min-h-0.overflow-y-auto { overscroll-behavior: contain; padding-inline: var(--web-space-1); }
@@ -507,3 +513,16 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
 .browser-updates-log summary { cursor: pointer; }
 .browser-updates-log pre { max-height: 14rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--web-text-caption); color: var(--web-text-muted); }
 .browser-updates-page progress { width: 100%; accent-color: var(--web-accent); }
+
+.browser-profile-settings { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 1rem; }
+.browser-profile-settings-toolbar { display: flex; min-width: 0; flex-shrink: 0; align-items: center; gap: 0.75rem; }
+.browser-profile-settings-tabs { display: flex; min-width: 0; flex: 1; overflow-x: auto; overscroll-behavior-x: contain; }
+.browser-profile-settings-tab { display: flex; flex-shrink: 0; align-items: center; }
+.browser-profile-settings-tab .browser-settings-profile-tab { white-space: nowrap; cursor: pointer; font-size: inherit; }
+.browser-profile-settings-tab[data-selected="true"] button[aria-haspopup="menu"] { opacity: 1; }
+.browser-profile-settings-detail { display: flex; min-height: 0; flex: 1; outline: none; }
+.browser-profile-settings-detail:focus-visible { outline: var(--web-focus-ring); outline-offset: -2px; }
+@media (width < 30rem) {
+  .browser-profile-settings-toolbar { flex-wrap: wrap; }
+  .browser-profile-settings-tabs { flex-basis: 100%; }
+}
