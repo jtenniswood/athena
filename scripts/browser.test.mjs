@@ -35,6 +35,14 @@ test('composer queue action receives an explicit browser identity', () => {
   assert.match(output, /data-browser-send-action="" data-browser-composer-action="" aria-label=\{showStop \? c\.stop : c\.send\}/)
   assert.doesNotMatch(readFileSync(path.join(root, 'src/experience/followup-preferences.ts'), 'utf8'), /lucide-layers-3/)
 })
+test('accepted composer submissions report only successful sends', () => {
+  const source = readFileSync(path.join(root, '../desktop/src/app/chat/composer/hooks/use-composer-submit.ts'), 'utf8')
+  const { useBrowserAcceptedSubmit } = load('src/upstream/browser-plugin.ts')
+  const output = useBrowserAcceptedSubmit(source, root)
+  assert.match(output, /if \(accepted === false\) \{\s*rejected\(\)\s*\} else \{\s*announceBrowserAcceptedSubmit\(\{ text, sessionId \}\)/)
+  assert.match(output, /if \(!accepted\) \{\s*keep\(\)\s*\} else \{\s*announceBrowserAcceptedSubmit\(\{ text, sessionId \}\)/)
+  assert.match(output, /accepted-submit/)
+})
 test('profile switch hook ignores repeated mount effects but handles real profile changes', () => {
   const source = readFileSync(path.join(root, '../desktop/src/app/hooks/use-on-profile-switch.ts'), 'utf8')
   let profile = 'default', reference, effect
