@@ -2325,16 +2325,20 @@
     "sourceRoot": "renderer",
     "sourceHash": "a4e3cffa5216b823f5c583919bc5fe3c719201d3362ba457c25e1e0240fee222",
     "inputHash": "a4e3cffa5216b823f5c583919bc5fe3c719201d3362ba457c25e1e0240fee222",
-    "outputHash": "8d1fb09c61d72c965e58cdc04898cb440fd43c7971b64de5ef1e0ff2ab8bffbb",
+    "outputHash": "8d194358a934e69f9ff82e66a90f2011cd72636fd5ef589ba49ba0a9ac37e51c",
     "handlers": [
       "useBrowserProfileScopeTabs"
     ],
-    "reason": "Present the shared settings profile selector as a browser tab strip while preserving its scope selection behavior.",
+    "reason": "Present the shared settings profile selector as a browser tab strip while preserving its scope selection behavior. Omit the visible Applies to label and profile scope notes across browser pages.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "apps/desktop/src/app/settings/profile-scope.test.tsx",
         "scenario": "selecting another profile sets the shared override"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "configuration page retains import export and reset behavior"
       }
     ],
     "removal": "Remove when upstream exposes a browser-specific settings scope control."
