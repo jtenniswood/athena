@@ -8,7 +8,7 @@ import ts from 'typescript'
 const root = path.resolve('apps/web-desktop/src')
 
 function startupHarness({ configurationError, rendererError, existingBridge, signInReady = Promise.resolve() } = {}) {
-  const state = { configured: false, tracking: false, tokenConsumed: false, signedIn: false, rendererLoaded: false }
+  const state = { configured: false, tracking: false, tokenConsumed: false, signedIn: false, shellInitialized: false, rendererLoaded: false }
   const listeners = new Map()
   const storage = new Map([['hermes-web.comparison.profile', 'saved-profile']])
   const window = {
@@ -41,8 +41,13 @@ function startupHarness({ configurationError, rendererError, existingBridge, sig
       assert.equal(storage.get('hermes-web.browser.profile'), 'saved-profile')
       return { createWebBridge: () => ({ getConnection: async profile => ({ profile }), profile: {} }) }
     },
+    'upstream/browser-initialize.ts': { initializeBrowserShell() {
+      assert.ok(window.hermesDesktop)
+      state.shellInitialized = true
+    } },
     '../../desktop/src/main.ts': () => {
       state.rendererLoaded = true
+      assert.equal(state.shellInitialized, true)
       assert.ok(window.hermesDesktop)
       assert.ok(listeners.has('contextmenu'))
       assert.ok(listeners.has('click'))

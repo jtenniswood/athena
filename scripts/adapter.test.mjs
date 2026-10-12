@@ -35,9 +35,6 @@ declare interface ImportMeta { env: Record<string, string | undefined>; hot?: un
 declare interface Window {
   __HERMES_WEB_BRIDGE__?: unknown
   __HERMES_WEB_ACTIVE_PROFILE__?: string
-  __HERMES_WEB_DRAFT_SNAPSHOT__?: unknown
-  __HERMES_WEB_DRAFT_BLOCKED__?: boolean
-  __HERMES_WEB_FLUSH_DRAFTS__?: () => Promise<void>
 }
 declare module '*.css' { const value: string; export default value }
 `
@@ -118,6 +115,7 @@ test('renderer aliases preserve explicit mappings before wildcards', () => {
   }
   assert.equal(resolve('@hermes/shared/billing'), path.join(root, '../shared/src/billing-types.ts'))
   assert.equal(resolve('@hermes/shared/i18n'), path.join(root, '../shared/src/i18n'))
+  assert.equal(resolve('hermes:web-draft-safety'), path.join(root, 'src/platform/draft-safety.ts'))
   assert.equal(resolve('@/store/titlebar-app-actions'), path.join(root, 'src/overrides/titlebar-app-actions.ts'))
 })
 

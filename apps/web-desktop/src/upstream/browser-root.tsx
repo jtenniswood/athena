@@ -4,7 +4,6 @@ import { restoreBrowserProfile } from './profiles'
 import { setReasoningCollapsedByDefault } from '@/store/reasoning-disclosure'
 import { setTipsEnabled } from '@/store/tips'
 import { setToursEnabled } from '@/store/tours'
-import './browser-initialize'
 import '../experience/browser.css'
 export default function BrowserRoot() {
   useEffect(() => {

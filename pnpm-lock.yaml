@@ -114,8 +114,8 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       blobatar:
-        specifier: 2.0.0
-        version: 2.0.0(react@19.2.7)
+        specifier: 2.7.0
+        version: 2.7.0(react@19.2.7)
       class-variance-authority:
         specifier: 0.7.1
         version: 0.7.1
@@ -135,8 +135,8 @@ importers:
         specifier: 3.4.16
         version: 3.4.16
       driver.js:
-        specifier: 1.8.0
-        version: 1.8.0
+        specifier: 1.9.0
+        version: 1.9.0
       emojibase-data:
         specifier: 16.0.3
         version: 16.0.3(emojibase@17.0.0)
@@ -2748,12 +2748,15 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
-  blobatar@2.0.0:
-    resolution: {integrity: sha512-46STsjELfKv5hnnRYsWKgN1vlWFkaewSkwnqRRnptCD+LwxejfyXs1lYwek4fkwAtGrXabmJHP4fpzDxjnqAEg==}
+  blobatar@2.7.0:
+    resolution: {integrity: sha512-tL1p2J3dXE/Z9U/ITwHqU7HBHmTH+Am+hif1J1hWAhvFT1VYC2HG+eXtN7081yuY+L2lrp9bs/VaF7dVH3S2jw==}
     peerDependencies:
       react: '>=18'
+      vue: '>=3'
     peerDependenciesMeta:
       react:
+        optional: true
+      vue:
         optional: true
 
   brace-expansion@1.1.18:
@@ -3153,8 +3156,8 @@ packages:
     resolution: {integrity: sha512-qI4JLRKnSzqFqr7hAlS5xQDusBCjKSEG4t4+7aNrIQMHBcsC2TGEhuyABJdYkgSewL57PNLYEiibY2iPKhKpaA==}
     engines: {node: '>=20.19.0'}
 
-  driver.js@1.8.0:
-    resolution: {integrity: sha512-+8/IO7h1v14IzWh2GP60N7T3PFZweXwdn5e5POuxRSBoCYUojsBxzqawPeXh3YZIibRy7EehYNEyxe7slwwtdg==}
+  driver.js@1.9.0:
+    resolution: {integrity: sha512-+YWVdNVUrY1/2spszQshohWYY4soIjNBnMFS6lfmousT8igos2lmswhlqyuuNMhr+qbV0EjJ+L6i2FECPr6Ygg==}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -8165,7 +8168,7 @@ snapshots:
 
   baseline-browser-mapping@2.11.13: {}
 
-  blobatar@2.0.0(react@19.2.7):
+  blobatar@2.7.0(react@19.2.7):
     optionalDependencies:
       react: 19.2.7
 
@@ -8602,7 +8605,7 @@ snapshots:
       domelementtype: 3.0.0
       domhandler: 6.0.1
 
-  driver.js@1.8.0: {}
+  driver.js@1.9.0: {}
 
   dunder-proto@1.0.1:
     dependencies:

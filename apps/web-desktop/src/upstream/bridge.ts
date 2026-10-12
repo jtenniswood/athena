@@ -1,4 +1,5 @@
 import { assertSafeConnectionChange, setActiveWork } from '../platform/reload-safety'
+import { browserCapabilities } from '../platform/capabilities'
 import { browserSignInTarget } from '../platform/sign-in-target'
 import type { DesktopBootProgress, DesktopCloudAgentSignInResult, DesktopCloudDiscoverResult, DesktopCloudStatus, QuickEntryStatus, QuickEntrySubmitPayload } from '../upstream/types'
 import {
@@ -45,6 +46,7 @@ type WebBridge = Omit<Window['hermesDesktop'], 'terminal' | 'git'> & { agentPlug
 
 export function createWebBridge(): Window['hermesDesktop'] {
   window.__HERMES_WEB_BRIDGE__ = true
+  const capabilities = browserCapabilities()
 
   const defaultProfileRoute = createBrowserDefaultProfileRoute(
     () => window.localStorage,
@@ -82,8 +84,8 @@ export function createWebBridge(): Window['hermesDesktop'] {
     openBrowserWindow: async () => ({ ok: false, error: 'no browser pop-out in the web app' }),
     onBrowserPopoutClosed: unsubscribed,
     // No OS keychain in the browser; secrets encryption stays off.
-    getSecretStorageEncryption: async () => ({ on: false }),
-    setSecretStorageEncryption: async () => ({ on: false }),
+    getSecretStorageEncryption: async () => ({ on: capabilities.secureTokenStorage }),
+    setSecretStorageEncryption: async () => ({ on: capabilities.secureTokenStorage }),
     revalidateConnection: async () => ({ ok: true, rebuilt: false }),
     touchBackend: async () => ({ ok: true }),
     // Single window in the browser: always the first to claim a cue.
@@ -132,7 +134,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
     // the gateway connection it was served from, so the registry is read-only
     // empty (mutation attempts fail cleanly instead of pretending to persist).
     connections: {
-      list: async () => ({ version: 1, primary: '', secureTokenStorage: false, connections: [] }),
+      list: async () => ({ version: 1, primary: '', secureTokenStorage: capabilities.secureTokenStorage, connections: [] }),
       save: async payload => ({
         ok: false,
         connection: {
@@ -151,10 +153,10 @@ export function createWebBridge(): Window['hermesDesktop'] {
           tokenSet: false,
           tokenPreview: null
         },
-        registry: { version: 1, primary: '', secureTokenStorage: false, connections: [] }
+        registry: { version: 1, primary: '', secureTokenStorage: capabilities.secureTokenStorage, connections: [] }
       }),
-      remove: async () => ({ ok: false, registry: { version: 1, primary: '', secureTokenStorage: false, connections: [] } }),
-      setPrimary: async () => ({ ok: false, registry: { version: 1, primary: '', secureTokenStorage: false, connections: [] } }),
+      remove: async () => ({ ok: false, registry: { version: 1, primary: '', secureTokenStorage: capabilities.secureTokenStorage, connections: [] } }),
+      setPrimary: async () => ({ ok: false, registry: { version: 1, primary: '', secureTokenStorage: capabilities.secureTokenStorage, connections: [] } }),
       test: async () => ({ ok: false, error: 'connections are managed by the desktop app' }),
       updateAll: async () => ({ ok: false, results: [] })
     },
@@ -187,7 +189,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
     getConnectionConfig: async () => toConnectionConfig(loadStoredConnection()),
     saveConnectionConfig: async input => toConnectionConfig(persistConnection(input)),
     applyConnectionConfig: async input => {
-      assertSafeConnectionChange()
+      await assertSafeConnectionChange()
       const next = persistConnection(input)
       // Use upstream's normal soft reconnect, preserving in-memory credentials.
       queueMicrotask(() => { for (const callback of connectionListeners) callback() })

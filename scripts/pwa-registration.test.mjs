@@ -12,6 +12,8 @@ function registration(network = { pause: async () => true, resume() {} }) {
   const root = { inert: false }
   let drafts = { blocked: false, storageKey: 'drafts', texts: { first: 'one', second: 'two' }, attachments: 0 }
   let persisted = JSON.stringify(drafts.texts)
+  let flushDrafts = async () => {}
+  const draftSafety = { browserDraftSnapshot: () => drafts, flushBrowserDrafts: () => flushDrafts() }
   let expire
   let reloads = 0
   const context = vm.createContext({
@@ -26,8 +28,7 @@ function registration(network = { pause: async () => true, resume() {} }) {
       addEventListener: (name, listener) => windowListeners.set(name, listener),
       dispatchEvent() {},
       setInterval: (callback, delay) => { poll = callback; pollInterval = delay },
-      localStorage: { getItem: () => persisted },
-      __HERMES_WEB_DRAFT_SNAPSHOT__: () => drafts
+      localStorage: { getItem: () => persisted }
     },
     document: { readyState: 'complete', visibilityState: 'visible', getElementById: () => root,
       addEventListener: (name, listener) => documentListeners.set(name, listener) },
@@ -42,6 +43,7 @@ function registration(network = { pause: async () => true, resume() {} }) {
   }
   context.require = name => {
     if (name === './pending-work') return { flushPendingBrowserWork: async () => ({ ready: true }) }
+    if (name === './draft-safety') return draftSafety
     if (name === './update-network') return { installUpdateNetworkBarrier: () => network }
     return context.exports
   }
@@ -66,7 +68,7 @@ function registration(network = { pause: async () => true, resume() {} }) {
       persisted = JSON.stringify(texts)
     },
     losePersistedDraft() { persisted = '{}' },
-    saveWith(flush) { context.window.__HERMES_WEB_FLUSH_DRAFTS__ = flush },
+    saveWith(flush) { flushDrafts = flush },
     expire() { expire() },
     controllerChange() { return listeners.get('controllerchange')() },
     reloads: () => reloads,

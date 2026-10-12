@@ -1,18 +1,7 @@
 import { flushPendingBrowserWork } from './pending-work'
+import { browserDraftSnapshot, flushBrowserDrafts, type DraftSnapshot } from './draft-safety'
 
-export interface DraftSnapshot {
-  blocked: boolean
-  storageKey: string
-  texts: Record<string, string>
-  attachments: number
-}
-declare global {
-  interface Window {
-    __HERMES_WEB_DRAFT_SNAPSHOT__?: () => DraftSnapshot
-    __HERMES_WEB_DRAFT_BLOCKED__?: boolean
-    __HERMES_WEB_FLUSH_DRAFTS__?: () => Promise<void>
-  }
-}
+export type { DraftSnapshot } from './draft-safety'
 
 let activeWork: number | undefined
 let operations = 0
@@ -41,13 +30,14 @@ export function trackMediaRequests(): void {
 }
 
 export function reloadReadiness(requirePersisted = true): { ready: boolean; reason?: string; drafts?: DraftSnapshot } {
-  if (activeWork === undefined || !window.__HERMES_WEB_DRAFT_SNAPSHOT__) return { ready: false, reason: 'Wait for the app to finish connecting.' }
+  if (activeWork === undefined) return { ready: false, reason: 'Wait for the app to finish connecting.' }
   if (activeWork > 0) return { ready: false, reason: 'Wait for the active response to finish, or cancel it.' }
   if (operations > 0) return { ready: false, reason: 'Finish selecting or uploading files first.' }
   for (const track of tracks) if (track.readyState === 'ended') tracks.delete(track)
   if (pendingMedia || tracks.size) return { ready: false, reason: 'Finish recording first.' }
   try {
-    const drafts = window.__HERMES_WEB_DRAFT_SNAPSHOT__()
+    const drafts = browserDraftSnapshot()
+    if (!drafts) return { ready: false, reason: 'Wait for the app to finish connecting.' }
     if (drafts.blocked) return { ready: false, reason: 'Finish editing the queued message or leave message history first.' }
     if (drafts.attachments) return { ready: false, reason: 'Send or remove unsent attachments before reloading.' }
     if (!requirePersisted) return { ready: true, drafts }
@@ -70,13 +60,14 @@ export async function reloadReadinessAfterSaving(): Promise<ReturnType<typeof re
   if (!state.ready) return state
   const pendingWork = await flushPendingBrowserWork()
   if (!pendingWork.ready) return { ready: false, reason: pendingWork.reason }
-  try { await window.__HERMES_WEB_FLUSH_DRAFTS__?.() }
+  try { await flushBrowserDrafts() }
   catch { return { ready: false, reason: 'Your text draft could not be saved. Copy it before reloading.' } }
   // Capture again after the await: activity or composer content may have changed.
   return reloadReadiness()
 }
 
-export function assertSafeConnectionChange(): void {
-  const state = reloadReadiness(false)
+/** Flush cross-tab draft writes before changing the active gateway or credentials. */
+export async function assertSafeConnectionChange(): Promise<void> {
+  const state = await reloadReadinessAfterSaving()
   if (!state.ready) throw new Error(state.reason)
 }
