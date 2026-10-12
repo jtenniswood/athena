@@ -66,8 +66,8 @@ importers:
         specifier: 1.1.0
         version: 1.1.0(nanostores@1.4.0)(react@19.2.7)
       '@nous-research/ui':
-        specifier: 0.18.2
-        version: 0.18.2(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: 0.19.1
+        version: 0.19.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@novnc/novnc':
         specifier: 1.7.0
         version: 1.7.0
@@ -1135,8 +1135,8 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@nous-research/ui@0.18.2':
-    resolution: {integrity: sha512-xe//1PjCapafXu5onqnJW50MhAK41LXuHw2KvfHDLiI3TBeqtX4QEm4mTrWZaZ2PRqM6koY/o19fdgisB67LGA==}
+  '@nous-research/ui@0.19.1':
+    resolution: {integrity: sha512-GIPNJQrOyFesjRZSjR/wqXdSJHzX5OW7a5ioTzI6CGeFG/l8gpajNZaY82R5n14wncQD+GyswY0rPrTxAamNcQ==}
     peerDependencies:
       '@observablehq/plot': ^0.6.17
       '@react-three/fiber': ^9.4.0
@@ -6577,7 +6577,7 @@ snapshots:
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
 
-  '@nous-research/ui@0.18.2(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@nous-research/ui@0.19.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@nanostores/react': 1.1.0(nanostores@1.4.0)(react@19.2.7)
       class-variance-authority: 0.7.1
