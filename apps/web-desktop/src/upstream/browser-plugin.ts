@@ -417,6 +417,18 @@ export function filterBrowserSettingsFields(source: string, root: string): strin
 export function useBrowserProfileScopeTabs(source: string): string {
   const replacements: [string, string][] = [
     [
+      '      <div className="text-[length:var(--conversation-caption-font-size)] font-medium text-(--ui-text-secondary)">\n        {scope.appliesTo}\n      </div>\n',
+      ''
+    ],
+    [
+      '      {override !== null || editingNonDefault ? (',
+      '      {!window.__HERMES_WEB_BRIDGE__ && (override !== null || editingNonDefault) ? ('
+    ],
+    [
+      'export function ActiveProfileNote({ className }: { className?: string }) {',
+      'export function ActiveProfileNote({ className }: { className?: string }) {\n  if (window.__HERMES_WEB_BRIDGE__) return null'
+    ],
+    [
       "<div className={cn('grid gap-2', className)}>",
       "<div className={cn('grid gap-2', className)} data-browser-profile-scope=\"\">"
     ],
