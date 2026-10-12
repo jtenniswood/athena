@@ -42,7 +42,7 @@ async function geometry(page) {
 }
 
 for (const [width, height, scale] of [[1100, 800, 1], [390, 844, 1.25]]) {
-  test(`submitted prompt reserves space and follows growing replies at ${width}px`, async ({ page }) => {
+  test(`submitted prompt follows the browser layout policy at ${width}px`, async ({ page }) => {
     const errors = []
     page.on('pageerror', error => errors.push(error.message))
     await page.setViewportSize({ width, height })
@@ -56,6 +56,17 @@ for (const [width, height, scale] of [[1100, 800, 1], [390, 844, 1.25]]) {
       await editor.fill(`A new question via ${method}`)
       if (method === 'Enter') await editor.press('Enter')
       else await page.getByRole('button', { name: 'Send', exact: true }).click()
+
+      if (width < 768) {
+        const prompt = page.locator('[data-slot="aui_user-message-root"]').last()
+        await expect(prompt).toBeInViewport()
+        await expect(page.locator('[data-slot="aui_turn-pair"]').last()).toHaveCSS('min-height', 'auto')
+        await page.evaluate(() => window.growReply(140))
+        await expect(page.locator('[data-reply]').last()).toContainText('Generated response')
+        await page.evaluate(() => window.completeReply())
+        await expect(prompt).toBeVisible()
+        continue
+      }
 
       await expect.poll(async () => Math.abs((await geometry(page)).gap - 12)).toBeLessThan(2)
       const initial = await geometry(page)
@@ -81,6 +92,14 @@ for (const [width, height, scale] of [[1100, 800, 1], [390, 844, 1.25]]) {
       await page.evaluate(() => window.growReply(1400))
       await expect.poll(async () => (await geometry(page)).empty).toBeLessThan(2)
       await expect.poll(async () => (await geometry(page)).distanceFromBottom).toBeLessThan(3)
+    }
+
+    if (width < 768) {
+      await page.evaluate(() => window.switchConversation())
+      await expect(page.locator('[data-slot="aui_turn-pair"]')).toHaveCount(1)
+      expect(await page.locator('[data-slot="aui_turn-pair"]').evaluate(turn => turn.style.minHeight)).toBe('')
+      expect(errors).toEqual([])
+      return
     }
 
     await page.mouse.move(width / 2, 200)

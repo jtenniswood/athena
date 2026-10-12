@@ -1,4 +1,4 @@
-import { getBaseColors, useTheme } from '@/themes/context'
+import { getBaseColors, useTheme } from '../../upstream/browser-api'
 
 export function BrowserColorThemesPage() {
   const { availableThemes, mode, resolvedMode, setMode, setTheme, themeName } = useTheme()

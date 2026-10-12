@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { comboFromEvent, formatCombo } from '@/lib/keybinds/combo'
+import { comboFromEvent, formatCombo } from '../upstream/browser-api'
 
 const shortcuts = { archived: 'mod+alt+a', read: 'mod+alt+r' } as const
 type SidebarAction = keyof typeof shortcuts

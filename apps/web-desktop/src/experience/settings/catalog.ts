@@ -1,17 +1,15 @@
+import { observeBrowserCapabilities, observeServerCapability, resolveCapability, type CapabilityState, type ResolvedCapability } from '../../platform/capabilities'
+
 /**
  * Browser settings presentation metadata.
  *
  * The renderer remains the source of setting schemas and values. This catalog
  * only describes how the wrapper presents upstream pages and controls.
  */
-export type SettingsCapabilityState = 'supported' | 'unsupported' | 'unknown'
+export type SettingsCapabilityState = CapabilityState
 export type SettingsScope = 'browser' | 'connected-server' | 'connection' | 'mixed'
 
-export type SettingsCapability = {
-  id: string
-  state: SettingsCapabilityState
-  evidence: string
-}
+export type SettingsCapability = ResolvedCapability
 
 export type SettingsPageDefinition = {
   id: string
@@ -44,11 +42,7 @@ export type SettingsFieldDefinition = {
  * as evidence that an upstream option is unsupported.
  */
 export const settingsCapabilities: readonly SettingsCapability[] = [
-  {
-    id: 'server.real-browser-profile',
-    state: 'unknown',
-    evidence: 'The browser settings bridge does not advertise whether the connected Hermes host has a supported Chromium profile.'
-  }
+  resolveCapability('server.real-browser-profile', ['server'], [observeServerCapability('real-browser-profile')])
 ]
 
 export const settingsCatalog: readonly SettingsGroupDefinition[] = [
@@ -138,8 +132,8 @@ export const settingsFields: readonly SettingsFieldDefinition[] = [
   { id: 'appearance.composer-popout', visibility: 'hidden', reason: 'Hidden from browser settings.' },
   { id: 'appearance.theme', visibility: 'hidden', reason: 'Theme selection is provided by the browser Colour themes page.' },
   { id: 'appearance.app-actions', visibility: 'hidden', supportState: 'unsupported', reason: 'The web toolbar owns its fixed action layout.' },
-  { id: 'appearance.translucency', visibility: 'hidden', supportState: 'unsupported', reason: 'Window translucency requires native window support.' },
-  { id: 'terminal.font_family', visibility: 'hidden', supportState: 'unsupported', reason: 'This browser interface has no native terminal pane.' },
+  { id: 'appearance.translucency', visibility: 'hidden', capability: 'browser.desktopOverlay', supportState: resolveCapability('browser.desktopOverlay', ['browser'], observeBrowserCapabilities()).state, reason: 'Window translucency requires native window support.' },
+  { id: 'terminal.font_family', visibility: 'hidden', capability: 'browser.nativeTerminal', supportState: resolveCapability('browser.nativeTerminal', ['browser'], observeBrowserCapabilities()).state, reason: 'This browser interface has no native terminal pane.' },
   { id: 'updates.non_interactive_local_changes', visibility: 'hidden', supportState: 'unknown', reason: 'This host update control is not exposed as a browser preference.' },
   { id: 'voice.client_direct', visibility: 'hidden', supportState: 'unknown', reason: 'Direct provider voice has not been verified for this browser-to-Hermes connection.' },
   { id: 'voice.record_key', visibility: 'hidden', supportState: 'unsupported', reason: 'The terminal voice shortcut is separate from browser keyboard shortcuts.' },

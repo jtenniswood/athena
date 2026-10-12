@@ -1,4 +1,5 @@
 import type { HermesNotification } from '../upstream/types'
+import { browserCapabilities } from './capabilities'
 
 const WEB_NOTIFICATION_READY_TIMEOUT_MS = 750
 
@@ -18,7 +19,7 @@ async function readyServiceWorkerRegistration(): Promise<ServiceWorkerRegistrati
 }
 
 export async function webNotify(payload: HermesNotification): Promise<boolean> {
-  if (!('Notification' in window)) {return false}
+  if (!browserCapabilities().notifications) {return false}
 
   if (Notification.permission === 'default') {
     try {

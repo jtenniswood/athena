@@ -24,6 +24,7 @@ export function useBrowserApproval(profile: string, requestGateway: BrowserAppro
     return () => { current = false }
   }, [gateway, gatewayState, profile, requestGateway])
   return {
+    ready: gatewayState === 'open' && Boolean(gateway),
     mode: modes[profile.trim() || 'default'] ?? 'smart',
     async setMode(mode) {
       try { await setApprovalModeForProfile(requestGateway, profile, mode) }

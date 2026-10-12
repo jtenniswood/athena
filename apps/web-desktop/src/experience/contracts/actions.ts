@@ -12,6 +12,7 @@ export interface BrowserSessionActions {
 export type BrowserApprovalMode = 'manual' | 'smart' | 'off'
 export type BrowserApprovalRequester = (method: string, params?: Record<string, unknown>) => Promise<unknown>
 export interface BrowserApproval {
+  ready: boolean
   mode: BrowserApprovalMode
   setMode(mode: BrowserApprovalMode): Promise<void>
 }
