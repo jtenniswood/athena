@@ -1539,6 +1539,16 @@ for (const width of [390, 1440]) {
 for (const width of [390, 1440]) {
   test.extend({ hasTouch: width === 390 })(`settings groups and renamed search preserve destinations at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
+    await page.route(/\/api\/config(?:\?|$)/, async route => {
+      if (route.request().method() !== 'GET') return route.continue()
+      const response = await route.fetch()
+      const data = await response.json()
+      const config = data.config ?? data
+      config.display = { ...config.display, personality: 'friendly', show_reasoning: true }
+      config.timezone = 'UTC'
+      config.agent = { ...config.agent, image_input_mode: 'auto' }
+      await route.fulfill({ json: config })
+    })
     await page.addInitScript(() => localStorage.setItem('hermes.desktop.user-bubble-transparency.v1', '75'))
     await open(page)
     expect(await page.evaluate(() => localStorage.getItem('hermes.desktop.user-bubble-transparency.v1'))).toBeNull()
@@ -1561,6 +1571,13 @@ for (const width of [390, 1440]) {
     await page.getByRole('button', { name: 'Appearance', exact: true }).click()
     await expect(page.locator('#setting-field-appearance\\.language')).toBeVisible()
     await expect(page.locator('#setting-field-appearance\\.user-bubble')).toHaveCount(0)
+    await expect(page.locator('.browser-settings-category-button.is-child')).toHaveCount(0)
+    if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await page.getByRole('button', { name: 'Chat', exact: true }).click()
+    const chatSettings = page.getByRole('main', { name: 'Chat', exact: true })
+    for (const key of ['display.personality', 'timezone', 'display.show_reasoning', 'agent.image_input_mode']) {
+      await expect(chatSettings.locator(`[id="setting-field-${key}"]`)).toBeVisible()
+    }
     await expect(page.locator('.browser-settings-category-button.is-child')).toHaveCount(0)
     if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
     await page.getByRole('button', { name: 'Notifications', exact: true }).click()
@@ -1884,6 +1901,22 @@ for (const width of [390, 1440]) {
       await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)
       await expect(page).toHaveURL(new RegExp('tab=' + tab.replace(':', '(?:%3A|:)')))
       if (label === 'Profiles') {
+        const tabs = frame.getByRole('tablist', { name: 'Profiles', exact: true })
+        await expect(tabs.getByRole('tab')).toHaveText(['Hermes', 'Research', 'Writer'])
+        await expect(frame.getByRole('textbox', { name: 'Search profiles...', exact: true })).toHaveCount(0)
+        await expect(tabs.getByRole('tab', { name: 'Hermes', exact: true })).toHaveAttribute('aria-selected', 'true')
+        await tabs.getByRole('tab', { name: 'Hermes', exact: true }).focus()
+        await page.keyboard.press('ArrowRight')
+        await expect(tabs.getByRole('tab', { name: 'Research', exact: true })).toHaveAttribute('aria-selected', 'true')
+        await expect(frame.getByRole('tabpanel').getByRole('heading', { name: 'Research', exact: true })).toBeVisible()
+        await expect(frame.getByRole('tabpanel').locator('.cm-content')).toBeVisible()
+        await expect(tabs.getByRole('tab', { name: 'Research', exact: true })).toBeFocused()
+        await tabs.getByRole('button', { name: 'Research', exact: true }).click()
+        await page.getByRole('menuitem', { name: 'Rename…', exact: true }).click()
+        const rename = page.getByRole('dialog', { name: 'Rename profile', exact: true })
+        await expect(rename).toBeVisible()
+        await page.keyboard.press('Escape')
+        await expect(rename).toBeHidden()
         await expect(frame.getByRole('button', { name: 'New profile', exact: true })).toBeVisible()
         await frame.getByRole('button', { name: 'New profile', exact: true }).click()
         const create = page.getByRole('dialog', { name: 'New profile', exact: true })

@@ -227,7 +227,7 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
     ["useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:model' as SettingsViewId)", "useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:appearance' as SettingsViewId)"],
     [
       '  const subpage = resolveSettingsSubpage(activeView, params)',
-      "  const browserThemeRedirect = activeView === 'config:appearance' && resolveSettingsSubpage(activeView, params) === 'theme'\n  const browserSoundsRedirect = activeView === 'notifications' && resolveSettingsSubpage(activeView, params) === 'sounds'\n  const subpage = ['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance'].includes(activeView) ? undefined : resolveSettingsSubpage(activeView, params)"
+      "  const browserThemeRedirect = activeView === 'config:appearance' && resolveSettingsSubpage(activeView, params) === 'theme'\n  const browserSoundsRedirect = activeView === 'notifications' && resolveSettingsSubpage(activeView, params) === 'sounds'\n  const subpage = ['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance', 'config:chat'].includes(activeView) ? undefined : resolveSettingsSubpage(activeView, params)"
     ],
     [
       '  const needsSubpageRedirect = Boolean(subpage && subpage !== requestedSubpage)',
@@ -239,9 +239,9 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
     ],
     [
       '      const destination = page ?? settingsSubpages(view)[0]?.id',
-      "      const destination = page ?? (['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance'].includes(view) ? undefined : settingsSubpages(view)[0]?.id)"
+      "      const destination = page ?? (['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance', 'config:chat'].includes(view) ? undefined : settingsSubpages(view)[0]?.id)"
     ],
-    ["        const children = settingsSubpages(view)", "        const children = ['config:appearance', 'notifications'].includes(view) ? [] : settingsSubpages(view)"],
+    ["        const children = settingsSubpages(view)", "        const children = ['config:appearance', 'config:chat', 'notifications'].includes(view) ? [] : settingsSubpages(view)"],
     ["import { SettingsSubpageHeader } from './subpage-navigation'\n", ''],
     ["  const activeGroup = navGroups.find(group => group.active)\n  const activeChild = activeGroup?.children?.find(child => child.active)\n", ''],
   ]
@@ -425,6 +425,41 @@ export function filterBrowserSettingsFields(source: string, root: string): strin
     output = output.replace(before, after)
   }
   return `import { isSettingsFieldVisible } from ${owner}\n` + output
+}
+
+export function keepBrowserProfileTabFocus(source: string): string {
+  const target = '    view.focus()\n\n    return () => {'
+  if (source.split(target).length !== 2) throw new Error('Browser profile editor focus boundary changed')
+  return source.replace(target, `    if (!host.closest('[data-browser-profile-settings]')) view.focus()
+
+    return () => {`)
+}
+
+export function useBrowserProfileSettingsTabs(source: string, root: string): string {
+  const start = '          <PanelHeader subtitle={p.count(profiles.length)} title={p.title} />'
+  const end = '            </PanelList>'
+  const from = source.indexOf(start)
+  const to = source.indexOf(end, from)
+  const query = "  const [query, setQuery] = useState('')\n"
+  const filterStart = '  const visibleProfiles = useMemo(() => {'
+  const filterEnd = '  }, [profiles, query])\n'
+  if (source.split(start).length !== 2 || source.split(end).length !== 2 || source.split('</PanelBody>').length !== 2
+    || source.split(query).length !== 2 || source.split(filterStart).length !== 2 || source.split(filterEnd).length !== 2 || to < from) {
+    throw new Error('Browser profile settings tab boundary changed')
+  }
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/profile-tabs'))
+  const output = source.slice(0, from) + `          <BrowserProfileSettings
+            profiles={profiles}
+            selectedName={selected?.name}
+            onSelect={setSelectedName}
+            onCreate={() => setCreateOpen(true)}
+            onRename={setPendingRename}
+            onDelete={setPendingDelete}
+          >` + source.slice(to + end.length)
+  const filterFrom = output.indexOf(filterStart)
+  const filterTo = output.indexOf(filterEnd, filterFrom) + filterEnd.length
+  return `import { BrowserProfileSettings } from ${owner}\n` + (output.slice(0, filterFrom) + output.slice(filterTo))
+    .replace(query, '').replace('</PanelBody>', '</BrowserProfileSettings>')
 }
 
 export function useBrowserProfileScopeTabs(source: string): string {
@@ -1309,6 +1344,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
     useBrowserConnectingVisual,
     useBrowserProfileScopeTabs,
+    keepBrowserProfileTabFocus,
+    useBrowserProfileSettingsTabs: source => useBrowserProfileSettingsTabs(source, root),
     hideBrowserAppearanceOnlySettings,
     keepBrowserMessageBubblesSolid,
     hideBrowserLocalProjectDirectory,

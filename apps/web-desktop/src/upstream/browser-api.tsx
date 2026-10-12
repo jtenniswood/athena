@@ -48,4 +48,8 @@ export { BrowserWorkspace } from './browser-workspace'
 
 export { BrowserPageRoutes } from './browser-routes'
 
+export { PanelRowMenu, type PanelMenuItem } from '@/app/overlays/panel'
+export { profileLabel } from '@/store/profile'
+export { renderActionItem } from '@/components/ui/actions-menu'
+export type { ProfileInfo } from '@/hermes'
 export { NotificationsSettings } from '@/app/settings/notifications-settings'
