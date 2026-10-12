@@ -2235,11 +2235,11 @@
     "sourceRoot": "renderer",
     "sourceHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
     "inputHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
-    "outputHash": "9bddd29f10f93cc30fd0e636e8495b1480f029030b4b10c2340560702799f5b1",
+    "outputHash": "c3143e93b8e46dbdf3ba0f4308ed4f105872f84d3c47bf1ffb8d851871f5800f",
     "handlers": [
       "useBrowserSettingsPresentation"
     ],
-    "reason": "Keep the responsive settings layout, configuration management page, and visibility policy in the wrapper while upstream owns settings content and persistence. Present Appearance and permission controls without subpage filtering, and provide a top-level Theme destination with legacy link redirects.",
+    "reason": "Keep the responsive settings layout, configuration management page, and visibility policy in the wrapper while upstream owns settings content and persistence. Present Appearance and permission controls without subpage filtering, and provide a top-level Theme destination with legacy link redirects. Promote Sounds to its own top-level page and keep all desktop alerts in Notifications, preserving legacy sound links. Combine Chat behavior and attachment options on the parent Chat page.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -2257,6 +2257,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "workspace controls live inside settings and preserve the conversation"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings groups and renamed search preserve destinations"
       }
     ],
     "removal": "Remove when upstream SettingsView provides an equivalent responsive browser presentation seam while retaining upstream settings pages and actions."
@@ -2321,16 +2325,20 @@
     "sourceRoot": "renderer",
     "sourceHash": "a4e3cffa5216b823f5c583919bc5fe3c719201d3362ba457c25e1e0240fee222",
     "inputHash": "a4e3cffa5216b823f5c583919bc5fe3c719201d3362ba457c25e1e0240fee222",
-    "outputHash": "8d1fb09c61d72c965e58cdc04898cb440fd43c7971b64de5ef1e0ff2ab8bffbb",
+    "outputHash": "8d194358a934e69f9ff82e66a90f2011cd72636fd5ef589ba49ba0a9ac37e51c",
     "handlers": [
       "useBrowserProfileScopeTabs"
     ],
-    "reason": "Present the shared settings profile selector as a browser tab strip while preserving its scope selection behavior.",
+    "reason": "Present the shared settings profile selector as a browser tab strip while preserving its scope selection behavior. Omit the visible Applies to label and profile scope notes across browser pages.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "apps/desktop/src/app/settings/profile-scope.test.tsx",
         "scenario": "selecting another profile sets the shared override"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "configuration page retains import export and reset behavior"
       }
     ],
     "removal": "Remove when upstream exposes a browser-specific settings scope control."
@@ -2343,16 +2351,20 @@
     "sourceRoot": "renderer",
     "sourceHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
     "inputHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
-    "outputHash": "8f24536db1c7aedf5059f310b1fdfbd27a5c24c59178ae5a9a70451f6703a5b6",
+    "outputHash": "536eb6362bbfdd7b6be65c651cc81345502c73c3f5d50d10364ea0370dfba05e",
     "handlers": [
       "hideBrowserAppearanceOnlySettings"
     ],
-    "reason": "Combine General, Typography, Window & layout, and Chat display into one Appearance page; hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls. Theme selection lives on the separate browser Theme page. The shared browser settings layout owns the Appearance title and description.",
+    "reason": "Combine General, Typography, Window & layout, and Chat display into one Appearance page; hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls. Theme selection lives on the separate browser Theme page. Message Bubble transparency is fixed at 0% and its control is hidden. The shared browser settings layout owns the Appearance title and description.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+        "scenario": "settings groups and renamed search preserve destinations"
+      },
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser message bubbles stay solid despite saved transparency and later writes"
       }
     ],
     "removal": "Remove once upstream exposes browser capability flags for terminal surfaces and theme marketplace support."
@@ -2536,5 +2548,71 @@
       }
     ],
     "removal": "Remove when upstream offers a browser loading presentation matching the cached HTML shell."
+  },
+  {
+    "name": "browser-solid-message-bubbles",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/user-bubble-transparency.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "f49a166d199d784a7c586ef085eaa2fa34ec2840b8fc98e930636446f327327e",
+    "inputHash": "f49a166d199d784a7c586ef085eaa2fa34ec2840b8fc98e930636446f327327e",
+    "outputHash": "bd70643741ae5e64c5e308bc9dc4a6494ca1a1cfa16da92ca3e00855cf2098e1",
+    "handlers": [
+      "keepBrowserMessageBubblesSolid"
+    ],
+    "reason": "Keep message bubble transparency at 0% in the browser, clearing saved transparency through the upstream persistence owner.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser message bubbles stay solid despite saved transparency and later writes"
+      }
+    ],
+    "removal": "Remove when upstream supports a browser policy that fixes message bubble transparency at 0%."
+  },
+  {
+    "name": "browser-profile-settings-tabs",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/profiles/index.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "6f21bad3236da3240ffe248aa98ce326e712292618e2a9b16bdf389b74a6fc12",
+    "inputHash": "6f21bad3236da3240ffe248aa98ce326e712292618e2a9b16bdf389b74a6fc12",
+    "outputHash": "e8a621d241da6f3fa4c58932b297bee607909e4015908d19d4ed172ba6b79c97",
+    "handlers": [
+      "useBrowserProfileSettingsTabs"
+    ],
+    "reason": "Present Profiles settings with horizontal tabs instead of the heading, search, and vertical list, while retaining upstream selection, details, and profile management actions.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace controls live inside settings and preserve the conversation"
+      }
+    ],
+    "removal": "Remove when upstream Profiles provides a tab presentation that can be used by the browser settings wrapper."
+  },
+  {
+    "name": "browser-profile-editor-focus",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/chat/code-editor.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "bb11e52f0bf02c11a64ee698b7c45d144a02a3ccbbb41450c2031d5b2e3e4c57",
+    "inputHash": "bb11e52f0bf02c11a64ee698b7c45d144a02a3ccbbb41450c2031d5b2e3e4c57",
+    "outputHash": "d60fa2e5006f316514395c3cf9f4e19e79c90c042fbcbe58e1f45f9ad07c4b70",
+    "handlers": [
+      "keepBrowserProfileTabFocus"
+    ],
+    "reason": "Keep keyboard focus on profile tabs when the selected SOUL editor loads; other editor surfaces retain mount autofocus.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace controls live inside settings and preserve the conversation"
+      }
+    ],
+    "removal": "Remove when upstream CodeEditor exposes an autofocus option that Profiles settings can disable."
   }
 ]

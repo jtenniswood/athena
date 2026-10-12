@@ -26,12 +26,11 @@ export function BrowserConfigurationAction({ command }: { command: BrowserConfig
   </button>
 }
 
-export function BrowserConfigurationPage({ commands, scopeProfile }: { commands: BrowserConfigurationCommands; scopeProfile?: string }) {
+export function BrowserConfigurationPage({ commands }: { commands: BrowserConfigurationCommands; scopeProfile?: string }) {
   const followupBehavior = useFollowupBehavior()
   const showAuxiliaryTranscriptContent = useShowAuxiliaryTranscriptContent()
   return <section className="browser-settings-page browser-configuration-page" aria-label="Configuration management">
     <h2 className="browser-settings-page-title">{settingsPageLabel('config:browser-configuration', 'Configuration')}</h2>
-    <p className="browser-settings-page-notice" role="note">Applies to profile: <strong>{scopeProfile || 'Active profile'}</strong></p>
     <section className="browser-followup-setting" aria-labelledby="browser-followup-setting-title">
       <h3 id="browser-followup-setting-title">Follow-up behavior</h3>
       <p>Choose what happens when you submit a message while the assistant is running. Use Cmd/Ctrl+Enter for the other action for one message.</p>

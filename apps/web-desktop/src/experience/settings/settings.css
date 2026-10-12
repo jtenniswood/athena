@@ -85,7 +85,8 @@
   color: var(--web-text-muted) !important;
   background: transparent !important;
 }
-[data-browser-profile-tabs] .browser-settings-profile-tab[aria-pressed="true"] {
+[data-browser-profile-tabs] .browser-settings-profile-tab[aria-pressed="true"],
+[data-browser-profile-tabs] .browser-settings-profile-tab[aria-selected="true"] {
   border-bottom-color: var(--web-accent) !important;
   color: var(--web-text) !important;
   font-weight: 600;
@@ -518,3 +519,16 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
 .browser-settings-content-slot .browser-configuration-page > .browser-settings-page-title,
 .browser-settings-content-slot[data-settings-page="config:profiles"] .browser-settings-embedded-content > header,
 .browser-settings-content-slot[data-settings-page="config:agents"] .browser-settings-embedded-content > header { display: none; }
+
+.browser-profile-settings { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 1rem; }
+.browser-profile-settings-toolbar { display: flex; min-width: 0; flex-shrink: 0; align-items: center; gap: 0.75rem; }
+.browser-profile-settings-tabs { display: flex; min-width: 0; flex: 1; overflow-x: auto; overscroll-behavior-x: contain; }
+.browser-profile-settings-tab { display: flex; flex-shrink: 0; align-items: center; }
+.browser-profile-settings-tab .browser-settings-profile-tab { white-space: nowrap; cursor: pointer; font-size: inherit; }
+.browser-profile-settings-tab[data-selected="true"] button[aria-haspopup="menu"] { opacity: 1; }
+.browser-profile-settings-detail { display: flex; min-height: 0; flex: 1; outline: none; }
+.browser-profile-settings-detail:focus-visible { outline: var(--web-focus-ring); outline-offset: -2px; }
+@media (width < 30rem) {
+  .browser-profile-settings-toolbar { flex-wrap: wrap; }
+  .browser-profile-settings-tabs { flex-basis: 100%; }
+}
