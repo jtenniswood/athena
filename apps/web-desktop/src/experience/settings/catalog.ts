@@ -1,17 +1,15 @@
+import { observeServerCapability, resolveCapability, type CapabilityState, type ResolvedCapability } from '../../platform/capabilities'
+
 /**
  * Browser settings presentation metadata.
  *
  * The renderer remains the source of setting schemas and values. This catalog
  * only describes how the wrapper presents upstream pages and controls.
  */
-export type SettingsCapabilityState = 'supported' | 'unsupported' | 'unknown'
+export type SettingsCapabilityState = CapabilityState
 export type SettingsScope = 'browser' | 'connected-server' | 'connection' | 'mixed'
 
-export type SettingsCapability = {
-  id: string
-  state: SettingsCapabilityState
-  evidence: string
-}
+export type SettingsCapability = ResolvedCapability
 
 export type SettingsPageDefinition = {
   id: string
@@ -44,11 +42,7 @@ export type SettingsFieldDefinition = {
  * as evidence that an upstream option is unsupported.
  */
 export const settingsCapabilities: readonly SettingsCapability[] = [
-  {
-    id: 'server.real-browser-profile',
-    state: 'unknown',
-    evidence: 'The browser settings bridge does not advertise whether the connected Hermes host has a supported Chromium profile.'
-  }
+  resolveCapability('server.real-browser-profile', ['server'], [observeServerCapability('real-browser-profile')])
 ]
 
 export const settingsCatalog: readonly SettingsGroupDefinition[] = [
