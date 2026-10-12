@@ -134,6 +134,7 @@ test('settings groups retain new upstream pages and search keeps old names and d
   const { groupSettingsSections, presentSettingsPalette, presentSettingsSearchEntry } = load('src/experience/settings/policy.ts', { URLSearchParams })
   const groups = groupSettingsSections([
     { id: 'future', label: 'New upstream page' },
+    { id: 'config:agents', label: 'Agents' },
     { id: 'config:model', label: 'Model' },
     { id: 'about', label: 'About' },
     { id: 'config:appearance', label: 'Appearance' }
@@ -141,6 +142,7 @@ test('settings groups retain new upstream pages and search keeps old names and d
   assert.deepEqual(Array.from(groups, group => group.label), ['Preferences', 'Assistant', 'Other Settings'])
   assert.equal(groups.at(-1).items[0].id, 'future')
   assert.equal(groups[1].items[0].label, 'Models')
+  assert.ok(!groups.some(group => group.items.some(item => item.id === 'config:agents')))
   const run = () => 'original-action'
   const entries = presentSettingsPalette([
     { id: 'sp-gateway', label: 'Gateways', run },
