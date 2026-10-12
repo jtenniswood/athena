@@ -57,8 +57,8 @@ importers:
         specifier: 3.2.2
         version: 3.2.2(react@19.2.7)
       '@icons-pack/react-simple-icons':
-        specifier: 13.11.1
-        version: 13.11.1(react@19.2.7)
+        specifier: 13.15.1
+        version: 13.15.1(react@19.2.7)
       '@lezer/highlight':
         specifier: 1.2.5
         version: 1.2.5
@@ -1061,8 +1061,8 @@ packages:
   '@iconify/utils@3.1.4':
     resolution: {integrity: sha512-b1S7B1k9ohZ+iNTi2ATxbRYG9fTrJmUT0rc46bvVnNxqNRGW7dyo/vRREwyniI5IRN2RSJHDcm+s3BjWrSAjHw==}
 
-  '@icons-pack/react-simple-icons@13.11.1':
-    resolution: {integrity: sha512-WbwN/o7dUHEjDCJh2p3RvDZ4kZ8nhfUSkUSm0bWuPTXIsoKgDJpwD5UkMCG22R/5kZH6lHAZXwuHWsKNtX7fYA==}
+  '@icons-pack/react-simple-icons@13.15.1':
+    resolution: {integrity: sha512-S35E7vJlJzMeoqjwwI7ZmQUJ2W+2KspnB6bc49KdoDGwp5mCgAy9L3sscfWMewQSMgBdPU8KWWwpSGq5DJyAFw==}
     peerDependencies:
       react: ^16.13 || ^17 || ^18 || ^19
 
@@ -6497,7 +6497,7 @@ snapshots:
       '@iconify/types': 2.0.0
       import-meta-resolve: 4.2.0
 
-  '@icons-pack/react-simple-icons@13.11.1(react@19.2.7)':
+  '@icons-pack/react-simple-icons@13.15.1(react@19.2.7)':
     dependencies:
       react: 19.2.7
 
