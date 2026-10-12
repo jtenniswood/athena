@@ -52,7 +52,8 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
     pages: [
       { id: 'config:appearance', title: 'Appearance', scope: 'mixed' },
       { id: 'config:browser-theme', title: 'Theme', aliases: ['Colour themes', 'Color themes'], scope: 'browser' },
-      { id: 'notifications', title: 'Notifications', scope: 'browser' },
+      { id: 'notifications', title: 'Notifications', aliases: ['Desktop alerts'], scope: 'browser' },
+      { id: 'config:browser-sounds', title: 'Sounds', scope: 'browser' },
       { id: 'keybinds', title: 'Keyboard Shortcuts', scope: 'browser' }
     ]
   },

@@ -47,3 +47,5 @@ export type { StatusbarItem } from '@/app/shell/statusbar-controls'
 export { BrowserWorkspace } from './browser-workspace'
 
 export { BrowserPageRoutes } from './browser-routes'
+
+export { NotificationsSettings } from '@/app/settings/notifications-settings'
