@@ -21,6 +21,7 @@
   import React, { useState, useEffect } from 'react'
   import { createRoot } from 'react-dom/client'
   import { useStickToBottom } from 'use-stick-to-bottom'
+  import { announceBrowserAcceptedSubmit } from '../../../apps/web-desktop/src/experience/ui/accepted-submit.ts'
   import { installConversationSubmitScroll } from '../../../apps/web-desktop/src/experience/ui/submit-scroll.ts'
 
   const h = React.createElement
@@ -36,6 +37,7 @@
       const text = input.textContent
       setTurns(previous => [...previous, { id: previous.at(-1).id + 1, text, height: 0 }])
       input.textContent = ''
+      requestAnimationFrame(() => announceBrowserAcceptedSubmit({ text, sessionId: conversation }))
       void scrollToBottom()
     }
     window.growReply = height => setTurns(previous => previous.map((turn, i) => i === previous.length - 1 ? { ...turn, height } : turn))

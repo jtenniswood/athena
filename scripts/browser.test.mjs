@@ -39,8 +39,8 @@ test('accepted composer submissions report only successful sends', () => {
   const source = readFileSync(path.join(root, '../desktop/src/app/chat/composer/hooks/use-composer-submit.ts'), 'utf8')
   const { useBrowserAcceptedSubmit } = load('src/upstream/browser-plugin.ts')
   const output = useBrowserAcceptedSubmit(source, root)
-  assert.match(output, /if \\(accepted === false\\) \\{\\s*rejected\\(\\)\\s*\\} else \\{\\s*announceBrowserAcceptedSubmit\\(\\{ text, sessionId \\}\\)/)
-  assert.match(output, /if \\(!accepted\\) \\{\\s*keep\\(\\)\\s*\\} else \\{\\s*announceBrowserAcceptedSubmit\\(\\{ text, sessionId \\}\\)/)
+  assert.match(output, /if \(accepted === false\) \{\s*rejected\(\)\s*\} else \{\s*announceBrowserAcceptedSubmit\(\{ text, sessionId \}\)/)
+  assert.match(output, /if \(!accepted\) \{\s*keep\(\)\s*\} else \{\s*announceBrowserAcceptedSubmit\(\{ text, sessionId \}\)/)
   assert.match(output, /accepted-submit/)
 })
 test('profile switch hook ignores repeated mount effects but handles real profile changes', () => {
@@ -263,14 +263,14 @@ test('browser bot menus omit the open-chat shortcut', () => {
   assert.throws(() => removeBrowserOpenBotChatAction(source.replace('<ContextMenuItem onSelect={() => void openRosterBot(bot)}>', '<ContextMenuItem onSelect={() => void openRosterBot(otherBot)}>')), /target changed/)
 })
 
-test('browser approval modes have distinct menu and toolbar icons', () => {
+test('browser approval modes have distinct menu icons and a static toolbar shield', () => {
   const { browserPlugin } = load('src/upstream/browser-plugin.ts')
   const filename = path.join(root, '../desktop/src/app/shell/approval-mode-menu.tsx')
   const source = readFileSync(filename, 'utf8')
   assert.equal(browserPlugin(root).transform(source, filename), null)
   const output = readFileSync(path.join(root, 'src/experience/browser-approval-mode-menu.tsx'), 'utf8')
   assert.match(output, /Brain.*Power.*ShieldLock.*from '..\/upstream\/browser-api'/)
-  assert.match(output, /<ApprovalModeIcon mode=\{mode\} \/>/)
+  assert.match(output, /icon: <ShieldLock className="size-3\.5" \/>/)
   assert.match(output, /smart: 'Ask when needed'/)
   assert.doesNotMatch(output, /DropdownMenuSeparator/)
 })
