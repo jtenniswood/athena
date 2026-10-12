@@ -90,6 +90,46 @@ test('settings customization hides known sections and fields while inheriting ne
     hiddenFields.length = 0
   }
 })
+test('browser message bubbles stay solid despite saved transparency and later writes', () => {
+  const { keepBrowserMessageBubblesSolid, hideBrowserAppearanceOnlySettings } = load('src/upstream/browser-plugin.ts')
+  const source = readFileSync(path.join(root, '../desktop/src/store/user-bubble-transparency.ts'), 'utf8')
+  const output = keepBrowserMessageBubblesSolid(source)
+  for (const browser of [true, false]) {
+    const persisted = new Map([['hermes.desktop.user-bubble-transparency.v1', '75']])
+    const styles = new Map([['--user-bubble-keep', '25%']])
+    const context = vm.createContext({ exports: {}, window: { __HERMES_WEB_BRIDGE__: browser },
+      document: { documentElement: { style: {
+        removeProperty: key => styles.delete(key),
+        setProperty: (key, value) => styles.set(key, value)
+      } } },
+      require: name => {
+        if (name === '@hermes/shared/translucency') return { TRANSLUCENCY_MIN: 0, TRANSLUCENCY_MAX: 100, clampIntensity: value => Math.min(100, Math.max(0, Number(value))) }
+        if (name === 'nanostores') return { atom: initial => {
+          let value = initial
+          const subscribers = []
+          return { get: () => value, set: next => { value = next; subscribers.forEach(callback => callback(value)) },
+            subscribe: callback => { subscribers.push(callback); callback(value) } }
+        } }
+        if (name === '@/lib/storage') return { storedString: key => persisted.get(key),
+          persistString: (key, value) => value === null ? persisted.delete(key) : persisted.set(key, value) }
+        throw new Error(`Unexpected import: ${name}`)
+      }
+    })
+    vm.runInContext(ts.transpileModule(output, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context)
+    const { $userBubbleTransparency, setUserBubbleTransparency } = context.exports
+    assert.equal($userBubbleTransparency.get(), browser ? 0 : 75)
+    assert.equal(styles.get('--user-bubble-keep'), browser ? undefined : '25%')
+    assert.equal(persisted.has('hermes.desktop.user-bubble-transparency.v1'), !browser)
+    setUserBubbleTransparency(100)
+    assert.equal($userBubbleTransparency.get(), browser ? 0 : 100)
+    assert.equal(styles.get('--user-bubble-keep'), browser ? undefined : '0%')
+  }
+  assert.throws(() => keepBrowserMessageBubblesSolid(source.replace('clampIntensity(storedString(KEY))', '0')), /transparency boundary changed/)
+  const appearance = readFileSync(path.join(root, '../desktop/src/app/settings/appearance-settings.tsx'), 'utf8')
+  assert.match(hideBrowserAppearanceOnlySettings(appearance), /!window\.__HERMES_WEB_BRIDGE__ && \(\s*<ListRow[\s\S]*title=\{a\.userBubbleTitle\}/)
+  const { isSettingsFieldVisible } = load('src/experience/settings/policy.ts')
+  assert.equal(isSettingsFieldVisible('appearance.user-bubble'), false)
+})
 test('settings groups retain new upstream pages and search keeps old names and destinations', () => {
   const { groupSettingsSections, presentSettingsPalette, presentSettingsSearchEntry } = load('src/experience/settings/policy.ts', { URLSearchParams })
   const groups = groupSettingsSections([

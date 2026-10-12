@@ -371,7 +371,7 @@ export function hideBrowserAppearanceOnlySettings(source: string): string {
     if (start < 0) throw new Error(`Browser appearance setting boundary changed: ${title}`)
     output = `${output.slice(0, start)}{show('window-layout') && !window.__HERMES_WEB_BRIDGE__ && (${output.slice(start + visibility.length)}`
   }
-  for (const title of ['tipsTitle', 'toursTitle']) {
+  for (const title of ['tipsTitle', 'toursTitle', 'userBubbleTitle']) {
     const marker = `label={a.${title}}`
     const markerPosition = output.indexOf(marker)
     const conditionStart = output.lastIndexOf('{show(', markerPosition)
@@ -381,6 +381,19 @@ export function hideBrowserAppearanceOnlySettings(source: string): string {
     }
     const guardEnd = conditionEnd + '&&'.length
     output = output.slice(0, guardEnd) + ' !window.__HERMES_WEB_BRIDGE__ &&' + output.slice(guardEnd)
+  }
+  return output
+}
+
+export function keepBrowserMessageBubblesSolid(source: string): string {
+  const replacements: [string, string][] = [
+    ['clampIntensity(storedString(KEY))', '(window.__HERMES_WEB_BRIDGE__ ? TRANSLUCENCY_MIN : clampIntensity(storedString(KEY)))'],
+    ['$userBubbleTransparency.set(clampIntensity(value))', '$userBubbleTransparency.set(window.__HERMES_WEB_BRIDGE__ ? TRANSLUCENCY_MIN : clampIntensity(value))']
+  ]
+  let output = source
+  for (const [before, after] of replacements) {
+    if (output.split(before).length !== 2) throw new Error('Browser message bubble transparency boundary changed')
+    output = output.replace(before, after)
   }
   return output
 }
@@ -1279,6 +1292,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserConnectingVisual,
     useBrowserProfileScopeTabs,
     hideBrowserAppearanceOnlySettings,
+    keepBrowserMessageBubblesSolid,
     hideBrowserLocalProjectDirectory,
     removeBrowserPetAvatarTab,
     removeBrowserPetSlashCommands,

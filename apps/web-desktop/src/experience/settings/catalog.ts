@@ -124,6 +124,7 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
 
 /** Local visibility choices never delete upstream configuration values. */
 export const settingsFields: readonly SettingsFieldDefinition[] = [
+  { id: 'appearance.user-bubble', visibility: 'hidden', reason: 'Message bubble transparency is fixed at 0% in the browser.' },
   { id: 'appearance.backdrop', visibility: 'hidden', reason: 'Hidden from browser settings.' },
   { id: 'appearance.intro-splash', visibility: 'hidden', reason: 'Hidden from browser settings.' },
   { id: 'appearance.resume-last-session', visibility: 'hidden', reason: 'Hidden from browser settings.' },
