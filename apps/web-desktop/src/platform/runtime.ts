@@ -1,8 +1,16 @@
+import { observeRuntimeCapabilities, resolveCapability, type CapabilitySource } from './capabilities'
+
 export interface RuntimeConfigV1 {
   version: 1
   auth?: { mode: 'auto' | 'hermes' | 'oidc' }
   gateway: { id: string; name: string; legacyUrls: string[] }
   capabilities: { gatewaySelection: false; pluginAssets: true }
+}
+
+/** Resolve current browser and host facts while leaving unreported server facts unknown. */
+export function runtimeCapability(id: string, requiredSources: readonly CapabilitySource[]) {
+  const config = runtimeConfig()
+  return resolveCapability(id, requiredSources, observeRuntimeCapabilities(config.capabilities))
 }
 
 declare global {

@@ -758,7 +758,7 @@ export function useBrowserTouchHooks(source: string, root: string): string {
   const labels = ['c.queueMessage', 'showStop ? c.stop : c.send', 'state.tools.label', 'copy.openModelPicker', 'triggerLabel', 'label', 'title']
   const targets = labels.map(label => `aria-label={${label}}`).filter(target => source.includes(target))
   if (!targets.length) throw new Error('Browser composer touch controls changed')
-  let output = replaceBrowserContract(source, targets.map(target => [target, `${target === sendTarget ? 'data-browser-send-action="" ' : ''}data-browser-composer-action="" ${target}`]))
+  let output = replaceBrowserContract(source, targets.map(target => [target, `${target === sendTarget ? 'data-browser-send-action="" ' : ''}${target === 'aria-label={c.queueMessage}' ? 'data-browser-queue-action="" ' : ''}data-browser-composer-action="" ${target}`]))
   if (source.includes("const tourMarker = useTourMarker('model-pill')")) {
     const marker = 'data-tour={tourMarker}'
     const matches = output.split(marker).length - 1
@@ -774,6 +774,20 @@ export function useBrowserTouchHooks(source: string, root: string): string {
   }
   return output
 }
+
+export function useBrowserAcceptedSubmit(source: string, root: string): string {
+  const importTarget = 'import '
+  const submitAccepted = '.then(accepted => void (accepted === false ? rejected() : clearSessionDraft(submittedScope)))'
+  const steerAccepted = '.then(accepted => {\n        if (!accepted) {\n          keep()\n        }'
+  if (!source.startsWith(importTarget) || source.split(submitAccepted).length !== 2 || source.split(steerAccepted).length !== 2) {
+    throw new Error('Browser accepted-submit boundary changed')
+  }
+  const owner = JSON.stringify(path.join(root, 'src/experience/ui/accepted-submit'))
+  return `import { announceBrowserAcceptedSubmit } from ${owner}\n` + source
+    .replace(submitAccepted, `.then(accepted => {\n        if (accepted === false) {\n          rejected()\n        } else {\n          announceBrowserAcceptedSubmit({ text, sessionId })\n          clearSessionDraft(submittedScope)\n        }\n      })`)
+    .replace(steerAccepted, `.then(accepted => {\n        if (!accepted) {\n          keep()\n        } else {\n          announceBrowserAcceptedSubmit({ text, sessionId })\n        }`)
+}
+
 
 export function removeBrowserConversationalVoiceEntry(source: string, module: 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'): string {
   if (module.endsWith('voice-menu.tsx')) {
@@ -1275,7 +1289,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserFreshSessionOwner: source => useBrowserFreshSessionOwner(source, root),
     useBrowserDirectResumeOwner: source => useBrowserDirectResumeOwner(source),
     useBrowserSectionIdentity: source => useBrowserSectionIdentity(source, root),
-    useBrowserTouchHooks: source => useBrowserTouchHooks(source, root), useBrowserCodingActionHooks, useBrowserSectionIds, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
+    useBrowserTouchHooks: source => useBrowserTouchHooks(source, root), useBrowserAcceptedSubmit: source => useBrowserAcceptedSubmit(source, root), useBrowserCodingActionHooks, useBrowserSectionIds, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source, entry.module as 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     useBrowserProjectDisclosure,

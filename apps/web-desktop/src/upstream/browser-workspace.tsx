@@ -8,7 +8,6 @@ import { TreeNode } from '@/components/pane-shell/tree/renderer/tree-node'
 import { FloatingPanes } from '@/components/pane-shell/tree/renderer/floating-panes'
 import { NarrowOverlays } from '@/components/pane-shell/tree/renderer/narrow-overlays'
 import { browserWorkspaceTree } from './workspace-tree'
-import { useContributions } from '@/contrib/react/use-contributions'
 
 function sessionTileIds(node: unknown): string[] {
   const ids: string[] = []
@@ -24,7 +23,7 @@ function sessionTileIds(node: unknown): string[] {
   return ids
 }
 
-export function BrowserWorkspace() {
+export function BrowserWorkspace({ panelIds }: { panelIds: ReadonlySet<string> }) {
   const covered = browserRouteCoversWorkspace(useLocation().pathname)
   const tree = useStore($layoutTree)
   const pinnedSessionIds = useStore($pinnedSessionIds), pinsOpen = useStore($sidebarPinsOpen)
@@ -36,12 +35,7 @@ export function BrowserWorkspace() {
   useEffect(() => {
     if (pinnedSessionIds.length === 0 && pinsOpen) setSidebarPinsOpen(false)
   }, [pinnedSessionIds, pinsOpen])
-  const panes = useContributions('panes')
   useEffect(trackActiveTreeGroup, [])
-  const panelIds = new Set(panes.filter(pane =>
-    !['workspace', 'sessions', 'hermes-bots:pane', 'terminal'].includes(pane.id) &&
-    (pane.data as { placement?: string } | undefined)?.placement !== 'main'
-  ).map(pane => pane.id))
   const workspace = tree && browserWorkspaceTree(tree, panelIds)
   return <div className="browser-upstream-workspace" inert={covered} aria-hidden={covered || undefined}>
     {workspace && <TreeNode node={workspace} root rootRow={workspace.type === 'split' && workspace.orientation === 'row'} />}

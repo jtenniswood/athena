@@ -27,7 +27,22 @@ function load(file, globals = {}, moduleCache = new Map()) {
   vm.runInContext(ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, context)
   return context.exports
 }
-const { browserPlugin, scopeBrowserStorage } = load('src/upstream/browser-plugin.ts')
+const { browserPlugin, scopeBrowserStorage, useBrowserTouchHooks } = load('src/upstream/browser-plugin.ts')
+test('composer queue action receives an explicit browser identity', () => {
+  const source = '<button aria-label={c.queueMessage}><Layers3 /></button>\n<button aria-label={showStop ? c.stop : c.send}><Send /></button>'
+  const output = useBrowserTouchHooks(source, '/workspace/apps/web-desktop')
+  assert.match(output, /data-browser-queue-action="" data-browser-composer-action="" aria-label=\{c\.queueMessage\}/)
+  assert.match(output, /data-browser-send-action="" data-browser-composer-action="" aria-label=\{showStop \? c\.stop : c\.send\}/)
+  assert.doesNotMatch(readFileSync(path.join(root, 'src/experience/followup-preferences.ts'), 'utf8'), /lucide-layers-3/)
+})
+test('accepted composer submissions report only successful sends', () => {
+  const source = readFileSync(path.join(root, '../desktop/src/app/chat/composer/hooks/use-composer-submit.ts'), 'utf8')
+  const { useBrowserAcceptedSubmit } = load('src/upstream/browser-plugin.ts')
+  const output = useBrowserAcceptedSubmit(source, root)
+  assert.match(output, /if \(accepted === false\) \{\s*rejected\(\)\s*\} else \{\s*announceBrowserAcceptedSubmit\(\{ text, sessionId \}\)/)
+  assert.match(output, /if \(!accepted\) \{\s*keep\(\)\s*\} else \{\s*announceBrowserAcceptedSubmit\(\{ text, sessionId \}\)/)
+  assert.match(output, /accepted-submit/)
+})
 test('profile switch hook ignores repeated mount effects but handles real profile changes', () => {
   const source = readFileSync(path.join(root, '../desktop/src/app/hooks/use-on-profile-switch.ts'), 'utf8')
   let profile = 'default', reference, effect
@@ -354,9 +369,11 @@ test('browser shell does not register chat tab creation actions', () => {
 
 test('browser startup keeps shared controller registration without rendering desktop UI', () => {
   const initializer = readFileSync(path.join(root, 'src/upstream/browser-initialize.ts'), 'utf8')
+  const entry = readFileSync(path.join(root, 'src/upstream/entry.ts'), 'utf8')
   const browserRoot = readFileSync(path.join(root, 'src/upstream/browser-root.tsx'), 'utf8')
   assert.match(initializer, /import ['"]\.\.\/\.\.\/\.\.\/desktop\/src\/app\/contrib\/controller['"];?/)
-  assert.match(browserRoot, /import ['"]\.\/browser-initialize['"];?/)
+  assert.ok(entry.indexOf("await import('./browser-initialize')") < entry.indexOf("await import('../../../desktop/src/main')"))
+  assert.doesNotMatch(browserRoot, /browser-initialize/)
   assert.doesNotMatch(browserRoot, /ContribController/)
 })
 
@@ -414,6 +431,18 @@ test('browser workspace removes chat tabs while retaining tool groups', () => {
   assert.equal(withPanels.children[1].tabStrip, 'always', 'Contributed panels must retain a close handle')
   assert.equal(withPanels.children[0].tabStrip, 'never', 'The browser chat group must not expose tabs')
   assert.equal(tree.children[2].tabStrip, undefined, 'Close handles must not rewrite the saved layout')
+})
+test('browser pane composition shares the toolbar and workspace ownership rules', () => {
+  const { browserPaneComposition } = load('src/experience/browser-pane-composition.ts')
+  const bots = { id: 'hermes-bots:pane' }
+  const panes = browserPaneComposition([
+    { id: 'workspace' }, { id: 'sessions' }, bots, { id: 'terminal' },
+    { id: 'plugin:side', data: { placement: 'side' } },
+    { id: 'plugin:main', data: { placement: 'main' } }
+  ])
+  assert.equal(panes.bots, bots)
+  assert.deepEqual(Array.from(panes.toolbarPanes, pane => pane.id), ['plugin:side', 'plugin:main'])
+  assert.deepEqual(Array.from(panes.workspacePanelIds), ['plugin:side'])
 })
 test('narrow tool overlays retain upstream behavior without duplicating browser navigation', () => {
   const { filterBrowserNarrowNavigation } = load('src/upstream/browser-plugin.ts')

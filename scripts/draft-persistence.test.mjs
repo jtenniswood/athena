@@ -102,6 +102,7 @@ test('actual composer flushes preserve stale-tab drafts and ordinary saves remai
   vm.runInContext(ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText, transformContext)
   const composerFile = new URL('../apps/desktop/src/store/composer.ts', import.meta.url)
   const composer = transformContext.exports.transformRenderer(readFileSync(composerFile, 'utf8'), composerFile.pathname).code
+  const draftSafetySource = readFileSync(new URL('../apps/web-desktop/src/platform/draft-safety.ts', import.meta.url), 'utf8')
   const store = shared({})
   const tab = () => {
     const listeners = new Map()
@@ -113,28 +114,32 @@ test('actual composer flushes preserve stale-tab drafts and ordinary saves remai
     const realm = vm.createContext({ exports: {}, window, navigator: { locks: store.locks }, CustomEvent: class {
       constructor(type, options) { this.type = type; this.detail = options.detail }
     } })
+    const safetyRealm = vm.createContext({ exports: {} })
+    vm.runInContext(ts.transpileModule(draftSafetySource, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, safetyRealm)
+    const draftSafety = safetyRealm.exports
     vm.runInContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, realm)
     const persistence = realm.exports
     realm.exports = {}
     realm.require = name => {
       if (name === 'hermes:web-draft-persistence') return persistence
+      if (name === 'hermes:web-draft-safety') return draftSafety
       if (name === 'nanostores') return { atom: initial => { let value = initial; return { get: () => value, set: next => { value = next } } } }
       if (name === '@/lib/draft-title') return { deriveDraftTitle: text => text }
       if (name === '@/lib/haptics') return { triggerHaptic() {} }
       throw Error(`Unexpected import ${name}`)
     }
     vm.runInContext(ts.transpileModule(composer, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText, realm)
-    return { window, composer: realm.exports }
+    return { window, composer: realm.exports, draftSafety }
   }
   // Neither tab receives the other's storage events before the flush requests.
   const first = tab(), second = tab()
   first.composer.onComposerDraftSyncRequest(() => first.composer.stashSessionDraft('a', 'first live composer', []))
   second.composer.onComposerDraftSyncRequest(() => second.composer.stashSessionDraft('b', 'second live composer', []))
-  first.window.__HERMES_WEB_DRAFT_SNAPSHOT__()
-  second.window.__HERMES_WEB_DRAFT_SNAPSHOT__()
+  first.draftSafety.browserDraftSnapshot()
+  second.draftSafety.browserDraftSnapshot()
   first.composer.reloadPersistedDrafts()
   assert.equal(first.composer.takeSessionDraft('a').text, 'first live composer')
-  await Promise.all([first.window.__HERMES_WEB_FLUSH_DRAFTS__?.(), second.window.__HERMES_WEB_FLUSH_DRAFTS__?.()])
+  await Promise.all([first.draftSafety.flushBrowserDrafts(), second.draftSafety.flushBrowserDrafts()])
   assert.deepEqual(store.read(), { a: 'first live composer', b: 'second live composer' })
   first.composer.stashSessionDraft('a', 'pagehide draft', [])
   assert.equal(store.read().a, 'pagehide draft')

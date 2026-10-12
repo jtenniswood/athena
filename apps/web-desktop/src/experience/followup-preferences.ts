@@ -6,8 +6,7 @@ const KEY = 'hermes-web.browser.followup-behavior'
 const CHANGE_EVENT = 'hermes-web:followup-behavior-change'
 
 function queueButton(composer: Element): HTMLButtonElement | null {
-  return [...composer.querySelectorAll<HTMLButtonElement>('button[data-browser-composer-action]')]
-    .find(button => button.querySelector('svg.lucide-layers-3')) ?? null
+  return composer.querySelector<HTMLButtonElement>('button[data-browser-queue-action]')
 }
 
 export function readFollowupBehavior(): FollowupBehavior {
