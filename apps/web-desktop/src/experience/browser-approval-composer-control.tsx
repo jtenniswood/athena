@@ -33,7 +33,7 @@ export function BrowserApprovalComposerControl() {
             type="button"
             variant="ghost"
           >
-            <ApprovalModeIcon mode={mode} />
+            <ShieldLock className="size-3.5" />
             <span data-mode-name="">{labels[mode]}</span>
             <Codicon className="size-2.5 shrink-0 opacity-50" name="chevron-down" />
           </Button>
