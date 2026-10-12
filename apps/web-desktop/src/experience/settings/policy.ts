@@ -24,6 +24,7 @@ export {
   settingsGroups,
   settingsPageAliases,
   settingsPageDefinition,
+  settingsPageDescription,
   settingsPageId,
   settingsPageIsVisible,
   isDesktopStartupSettingsPage,

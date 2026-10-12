@@ -514,6 +514,12 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
 .browser-updates-log pre { max-height: 14rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--web-text-caption); color: var(--web-text-muted); }
 .browser-updates-page progress { width: 100%; accent-color: var(--web-accent); }
 
+.browser-settings-detail-header { flex-shrink: 0; margin-bottom: var(--web-space-6); padding-inline: var(--web-space-1); }
+.browser-settings-content-slot :is(.browser-color-themes, .browser-updates-page, .browser-gateway-settings) > .browser-settings-page-header,
+.browser-settings-content-slot .browser-configuration-page > .browser-settings-page-title,
+.browser-settings-content-slot[data-settings-page="config:profiles"] .browser-settings-embedded-content > header,
+.browser-settings-content-slot[data-settings-page="config:agents"] .browser-settings-embedded-content > header { display: none; }
+
 .browser-profile-settings { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 1rem; }
 .browser-profile-settings-toolbar { display: flex; min-width: 0; flex-shrink: 0; align-items: center; gap: 0.75rem; }
 .browser-profile-settings-tabs { display: flex; min-width: 0; flex: 1; overflow-x: auto; overscroll-behavior-x: contain; }

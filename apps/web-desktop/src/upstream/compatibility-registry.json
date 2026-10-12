@@ -2355,11 +2355,11 @@
     "sourceRoot": "renderer",
     "sourceHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
     "inputHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
-    "outputHash": "dab60a047d4d389bdd3b872d89ef89e514a1d6b3fd586aa6d221eb9ad5af866b",
+    "outputHash": "536eb6362bbfdd7b6be65c651cc81345502c73c3f5d50d10364ea0370dfba05e",
     "handlers": [
       "hideBrowserAppearanceOnlySettings"
     ],
-    "reason": "Combine General, Typography, Window & layout, and Chat display into one Appearance page; hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls. Theme selection lives on the separate browser Theme page. Message Bubble transparency is fixed at 0% and its control is hidden.",
+    "reason": "Combine General, Typography, Window & layout, and Chat display into one Appearance page; hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls. Theme selection lives on the separate browser Theme page. Message Bubble transparency is fixed at 0% and its control is hidden. The shared browser settings layout owns the Appearance title and description.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
