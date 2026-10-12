@@ -2235,11 +2235,11 @@
     "sourceRoot": "renderer",
     "sourceHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
     "inputHash": "53da615d84833c0476bd4893f80db1de96b06bb5d22ee90d0a580a91984403c4",
-    "outputHash": "9bddd29f10f93cc30fd0e636e8495b1480f029030b4b10c2340560702799f5b1",
+    "outputHash": "99a06cba6b8d880a27ba12243d14f36b0e78257e79866e9112e3264a0749e94b",
     "handlers": [
       "useBrowserSettingsPresentation"
     ],
-    "reason": "Keep the responsive settings layout, configuration management page, and visibility policy in the wrapper while upstream owns settings content and persistence. Present Appearance and permission controls without subpage filtering, and provide a top-level Theme destination with legacy link redirects.",
+    "reason": "Keep the responsive settings layout, configuration management page, and visibility policy in the wrapper while upstream owns settings content and persistence. Present Appearance and permission controls without subpage filtering, and provide a top-level Theme destination with legacy link redirects. Promote Sounds to its own top-level page and keep all desktop alerts in Notifications, preserving legacy sound links.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -2257,6 +2257,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "workspace controls live inside settings and preserve the conversation"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings groups and renamed search preserve destinations"
       }
     ],
     "removal": "Remove when upstream SettingsView provides an equivalent responsive browser presentation seam while retaining upstream settings pages and actions."

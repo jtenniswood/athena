@@ -227,27 +227,27 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
     ["useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:model' as SettingsViewId)", "useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:appearance' as SettingsViewId)"],
     [
       '  const subpage = resolveSettingsSubpage(activeView, params)',
-      "  const browserThemeRedirect = activeView === 'config:appearance' && resolveSettingsSubpage(activeView, params) === 'theme'\n  const subpage = ['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance'].includes(activeView) ? undefined : resolveSettingsSubpage(activeView, params)"
+      "  const browserThemeRedirect = activeView === 'config:appearance' && resolveSettingsSubpage(activeView, params) === 'theme'\n  const browserSoundsRedirect = activeView === 'notifications' && resolveSettingsSubpage(activeView, params) === 'sounds'\n  const subpage = ['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance'].includes(activeView) ? undefined : resolveSettingsSubpage(activeView, params)"
     ],
     [
       '  const needsSubpageRedirect = Boolean(subpage && subpage !== requestedSubpage)',
-      '  const needsSubpageRedirect = browserThemeRedirect || Boolean(subpage && subpage !== requestedSubpage)'
+      '  const needsSubpageRedirect = browserThemeRedirect || browserSoundsRedirect || Boolean(subpage && subpage !== requestedSubpage)'
     ],
     [
       "  if (subpage) {\n    subpageSearch.set('page', subpage)\n  }",
-      "  if (browserThemeRedirect) {\n    subpageSearch.set('tab', 'config:browser-theme')\n    subpageSearch.delete('page')\n  } else if (subpage) {\n    subpageSearch.set('page', subpage)\n  }"
+      "  if (browserThemeRedirect) {\n    subpageSearch.set('tab', 'config:browser-theme')\n    subpageSearch.delete('page')\n  } else if (browserSoundsRedirect) {\n    subpageSearch.set('tab', 'config:browser-sounds')\n    subpageSearch.delete('page')\n  } else if (subpage) {\n    subpageSearch.set('page', subpage)\n  }"
     ],
     [
       '      const destination = page ?? settingsSubpages(view)[0]?.id',
       "      const destination = page ?? (['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance'].includes(view) ? undefined : settingsSubpages(view)[0]?.id)"
     ],
-    ["        const children = settingsSubpages(view)", "        const children = view === 'config:appearance' ? [] : settingsSubpages(view)"],
+    ["        const children = settingsSubpages(view)", "        const children = ['config:appearance', 'notifications'].includes(view) ? [] : settingsSubpages(view)"],
     ["import { SettingsSubpageHeader } from './subpage-navigation'\n", ''],
     ["  const activeGroup = navGroups.find(group => group.active)\n  const activeChild = activeGroup?.children?.find(child => child.active)\n", ''],
   ]
   controlReplacements.push(
-    ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  ...SETTINGS_TOOL_PAGES.map(page => page.id),\n  'config:browser-theme',\n  'config:browser-configuration',"],
-    ["          {\n            active: activeView === 'notifications',", "          {\n            active: activeView === 'config:browser-theme',\n            icon: codiconIcon('color-mode'),\n            id: 'config:browser-theme',\n            label: 'Theme',\n            onSelect: () => setActiveView('config:browser-theme')\n          },\n          {\n            active: activeView === 'notifications',"],
+    ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  ...SETTINGS_TOOL_PAGES.map(page => page.id),\n  'config:browser-theme',\n  'config:browser-sounds',\n  'config:browser-configuration',"],
+    ["          {\n            active: activeView === 'notifications',", "          {\n            active: activeView === 'config:browser-theme',\n            icon: codiconIcon('color-mode'),\n            id: 'config:browser-theme',\n            label: 'Theme',\n            onSelect: () => setActiveView('config:browser-theme')\n          },\n          {\n            active: activeView === 'config:browser-sounds',\n            icon: codiconIcon('unmute'),\n            id: 'config:browser-sounds',\n            label: 'Sounds',\n            onSelect: () => setActiveView('config:browser-sounds')\n          },\n          {\n            active: activeView === 'notifications',"],
     ["          {\n            active: activeView === 'about',", "          {\n            active: activeView === 'config:browser-configuration',\n            gapBefore: true,\n            icon: Settings2,\n            id: 'config:browser-configuration',\n            label: 'Configuration',\n            onSelect: () => setActiveView('config:browser-configuration')\n          },\n          {\n            active: activeView === 'about',"],
     ['        importInputRef={importInputRef}', '        importInputRef={importInputRef}\n        configurationCommands={configurationCommands}\n        configurationScopeProfile={scopeProfile}'],
     ['getHermesConfigRecord()', 'getHermesConfigRecord(scopeProfile)'],

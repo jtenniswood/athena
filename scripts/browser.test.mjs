@@ -169,6 +169,12 @@ test('settings groups retain new upstream pages and search keeps old names and d
   assert.equal(field.context, 'Browser Automation')
   assert.ok(field.keywords.includes('Browser'))
   assert.equal(field.target, target)
+  for (const soundTarget of [{ view: 'notifications', subpage: 'sounds' }, { view: 'notifications', setting: 'notifications.completion-sound' }]) {
+    const sound = presentSettingsSearchEntry({ context: 'Notifications', keywords: ['sound'], target: soundTarget })
+    assert.equal(sound.context, 'Sounds')
+    assert.equal(sound.target.view, 'config:browser-sounds')
+    assert.ok(sound.keywords.includes('Notifications'))
+  }
 })
 test('settings catalog records capability evidence and validates its authored destinations', () => {
   const { settingsCapability, settingsFields, validateSettingsCatalog } = load('src/experience/settings/policy.ts')

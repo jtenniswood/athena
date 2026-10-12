@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router'
-import { Codicon, OverlayView } from '../../upstream/browser-api'
+import { Codicon, NotificationsSettings, OverlayView } from '../../upstream/browser-api'
 import { groupSettingsSections, isSettingsSectionVisible, orderSettingsSections, settingsPageLabel, settingsScopeDescription } from './policy'
 import { BrowserToolbarButton } from '../ui/toolbar-button'
 import { BrowserColorThemesPage } from './themes-page'
@@ -172,6 +172,8 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
             {pageVisible && pageNotice && <p className="browser-settings-page-notice" role="note">{pageNotice}</p>}
             {pageVisible && activeView === 'config:browser-theme'
               ? <BrowserColorThemesPage />
+              : pageVisible && activeView === 'config:browser-sounds'
+                ? <NotificationsSettings subpage="sounds" />
               : pageVisible && activeView === 'notifications'
                 ? <div className="browser-notification-settings"><BrowserNotificationPermissionSetting />{children}</div>
                 : children}
