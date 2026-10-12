@@ -1485,7 +1485,10 @@ for (const width of [390, 1440]) {
 for (const width of [390, 1440]) {
   test.extend({ hasTouch: width === 390 })(`settings groups and renamed search preserve destinations at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
+    await page.addInitScript(() => localStorage.setItem('hermes.desktop.user-bubble-transparency.v1', '75'))
     await open(page)
+    expect(await page.evaluate(() => localStorage.getItem('hermes.desktop.user-bubble-transparency.v1'))).toBeNull()
+    expect(await page.evaluate(() => document.documentElement.style.getPropertyValue('--user-bubble-keep'))).toBe('')
     await editor(page).fill('Keep my draft while finding renamed settings')
     const trigger = await settingsTrigger(page)
     const role = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
@@ -1496,23 +1499,34 @@ for (const width of [390, 1440]) {
       'Preferences', 'Assistant', 'Tools', 'Service', 'Maintenance'
     ])
     await expect(page.locator('.browser-settings-category-button:not(.is-child) > span:not(.codicon)')).toHaveText([
-      'Appearance', 'Theme', 'Notifications', 'Keyboard Shortcuts', 'Models', 'AI Connections', 'Chat', 'Voice',
-      'Profiles', 'Agents', 'Memory', 'Workspace', 'Webhooks', 'Permissions',
+      'Appearance', 'Theme', 'Notifications', 'Sounds', 'Keyboard Shortcuts', 'Models', 'AI Connections', 'Chat', 'Voice',
+      'Profiles', 'Memory', 'Workspace', 'Webhooks', 'Permissions',
       'Credentials', 'Gateway', 'Command center', 'Billing', 'System updates', 'Archived Chats', 'Configuration', 'Advanced'
     ])
     await page.screenshot({ path: testInfo.outputPath('settings-groups.png') })
     await page.getByRole('button', { name: 'Appearance', exact: true }).click()
     await expect(page.locator('#setting-field-appearance\\.language')).toBeVisible()
-    await expect(page.locator('#setting-field-appearance\\.user-bubble')).toBeVisible()
+    await expect(page.locator('#setting-field-appearance\\.user-bubble')).toHaveCount(0)
     await expect(page.locator('.browser-settings-category-button.is-child')).toHaveCount(0)
     if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await page.getByRole('button', { name: 'Notifications', exact: true }).click()
+    await expect(page.locator('.browser-settings-category-button.is-child')).toHaveCount(0)
+    await expect(page.getByRole('main', { name: 'Notifications', exact: true }).getByText('Response ready', { exact: true })).toBeVisible()
+    await expect(page.locator('.browser-notification-permission')).toBeVisible()
+    await expect(page.locator('#setting-field-notifications\\.completion-sound')).toHaveCount(0)
+    if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await page.locator('.browser-settings-search > button').click()
+    const agentsPalette = page.locator('[data-browser-command-palette]')
+    await agentsPalette.locator('input[role="combobox"]').fill('Agents')
+    await expect(agentsPalette.getByRole('group', { name: 'Settings', exact: true }).getByRole('option', { name: 'Agents', exact: true })).toHaveCount(0)
+    await page.keyboard.press('Escape')
     for (const [query, result, view, title] of [
+      ['Sounds', 'Sounds', 'config:browser-sounds', 'Sounds'],
       ['Colour themes', 'Theme', 'config:browser-theme', 'Theme'],
       ['Server Connection', 'Gateway', 'gateway', 'Gateway'],
       ['System updates', 'System updates', 'config:system-updates', 'System updates'],
       ['Profiles', 'Profiles', 'config:profiles', 'Profiles'],
       ['Webhooks', 'Webhooks', 'config:webhooks', 'Webhooks'],
-      ['Agents', 'Agents', 'config:agents', 'Agents'],
       ['Command center', 'Command center', 'config:command-center', 'Command center'],
       ['Backup & reset', 'Configuration', 'config:browser-configuration', 'Configuration'],
       ['Providers', 'AI Connections — Accounts', 'providers', 'AI Connections'],
@@ -1527,7 +1541,7 @@ for (const width of [390, 1440]) {
       expect(bounds.x).toBeGreaterThanOrEqual(0)
       expect(bounds.x + bounds.width).toBeLessThanOrEqual(width)
       if (query === 'Gateway') await page.screenshot({ path: testInfo.outputPath('settings-search.png') })
-      const results = ['config:profiles', 'config:webhooks', 'config:agents', 'config:command-center'].includes(view)
+      const results = ['config:profiles', 'config:webhooks', 'config:command-center'].includes(view)
         ? palette.getByRole('group', { name: 'Settings', exact: true }) : palette
       const option = results.getByRole('option', { name: result, exact: true })
       if (width === 390) await option.tap()
@@ -1539,6 +1553,11 @@ for (const width of [390, 1440]) {
       await expect(page.getByRole('main', { name: title, exact: true })).toBeVisible()
       await expect(page.locator('.browser-settings-heading h1')).toHaveText(width < 896 ? title : 'Settings')
       expect(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('tab')).toBe(view)
+      if (view === 'config:browser-sounds') {
+        await expect(page.getByRole('combobox')).toBeVisible()
+        await expect(page.locator('.browser-notification-permission')).toHaveCount(0)
+        await expect(page.getByRole('button', { name: 'Send test notification', exact: true })).toHaveCount(0)
+      }
       if (view === 'keys') {
         expect(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('kview')).toBe('settings')
       }
@@ -1715,21 +1734,24 @@ for (const width of [390, 1440]) {
     })
     await open(page)
     await editor(page).fill('Keep this draft while managing configuration')
-    const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+    const trigger = await settingsTrigger(page)
     await trigger.click()
     const menuRole = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
     await page.getByRole(menuRole, { name: 'Settings and workspace', exact: true })
       .getByRole(menuRole === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Export config', exact: true })).toHaveCount(0)
-    if (width < 896) await page.getByRole('button', { name: 'Models', exact: true }).click()
-    await page.getByRole('main', { name: 'Models', exact: true }).getByRole('button', { name: 'research', exact: true }).click()
+    await page.getByRole('button', { name: 'Models', exact: true }).click()
+    const modelSettings = page.getByRole('main', { name: 'Models', exact: true })
+    await expect(modelSettings.getByText('Applies to', { exact: true })).toHaveCount(0)
+    await modelSettings.getByRole('button', { name: /^research$/i }).click()
+    await expect(modelSettings.getByText(/Changes on this page apply/)).toHaveCount(0)
     if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
     await page.getByRole('button', { name: 'Configuration', exact: true }).click()
     await expect(page).toHaveURL(/tab=config%3Abrowser-configuration/)
     const management = page.getByRole('region', { name: 'Configuration management' })
     await expect(management).toBeVisible()
     await expect(page.getByRole('main', { name: 'Configuration', exact: true }).getByText('Applies to', { exact: true })).toHaveCount(0)
-    await expect(management.getByText('Applies to profile: research', { exact: true })).toBeVisible()
+    await expect(management.getByText(/Applies to profile:/)).toHaveCount(0)
 
     const exportRequest = page.waitForRequest(request => request.method() === 'GET' && /\/api\/config\?/.test(request.url()) && new URL(request.url()).searchParams.get('profile') === 'research')
     const downloadPromise = page.waitForEvent('download')
@@ -1802,7 +1824,7 @@ for (const width of [390, 1440]) {
     await menu.getByRole(actionRole, { name: 'Settings', exact: true }).click()
     const frame = page.locator('[data-browser-settings-frame]')
     const navigation = frame.getByRole('navigation', { name: 'Settings categories', exact: true })
-    for (const [label, tab] of [['Profiles', 'config:profiles'], ['Webhooks', 'config:webhooks'], ['Agents', 'config:agents'], ['Command center', 'config:command-center'], ['Gateway', 'gateway']]) {
+    for (const [label, tab] of [['Profiles', 'config:profiles'], ['Webhooks', 'config:webhooks'], ['Command center', 'config:command-center'], ['Gateway', 'gateway']]) {
       await navigation.getByRole('button', { name: label, exact: true }).click()
       await expect(frame.getByRole('main', { name: label, exact: true })).toBeVisible()
       await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)

@@ -52,7 +52,8 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
     pages: [
       { id: 'config:appearance', title: 'Appearance', scope: 'mixed' },
       { id: 'config:browser-theme', title: 'Theme', aliases: ['Colour themes', 'Color themes'], scope: 'browser' },
-      { id: 'notifications', title: 'Notifications', scope: 'browser' },
+      { id: 'notifications', title: 'Notifications', aliases: ['Desktop alerts'], scope: 'browser' },
+      { id: 'config:browser-sounds', title: 'Sounds', scope: 'browser' },
       { id: 'keybinds', title: 'Keyboard Shortcuts', scope: 'browser' }
     ]
   },
@@ -65,7 +66,6 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
       { id: 'config:chat', title: 'Chat', scope: 'mixed' },
       { id: 'config:voice', title: 'Voice', scope: 'mixed' },
       { id: 'config:profiles', title: 'Profiles', scope: 'connected-server' },
-      { id: 'config:agents', title: 'Agents', scope: 'connected-server' },
       { id: 'config:memory', title: 'Memory', aliases: ['Memory & context'], scope: 'connected-server' }
     ]
   },
@@ -123,6 +123,7 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
 
 /** Local visibility choices never delete upstream configuration values. */
 export const settingsFields: readonly SettingsFieldDefinition[] = [
+  { id: 'appearance.user-bubble', visibility: 'hidden', reason: 'Message bubble transparency is fixed at 0% in the browser.' },
   { id: 'appearance.backdrop', visibility: 'hidden', reason: 'Hidden from browser settings.' },
   { id: 'appearance.intro-splash', visibility: 'hidden', reason: 'Hidden from browser settings.' },
   { id: 'appearance.resume-last-session', visibility: 'hidden', reason: 'Hidden from browser settings.' },
@@ -143,6 +144,7 @@ export const settingsFields: readonly SettingsFieldDefinition[] = [
 ]
 
 export const hiddenPageDefinitions: readonly SettingsPageDefinition[] = [
+  { id: 'config:agents', title: 'Agents', scope: 'connected-server', visibility: 'hidden' },
   { id: 'about', title: 'About', visibility: 'hidden' },
   { id: 'pets', title: 'Pets', visibility: 'hidden' },
   { id: 'hud', title: 'HUD', visibility: 'hidden' },
