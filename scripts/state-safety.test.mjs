@@ -6,7 +6,7 @@ import ts from 'typescript'
 
 function load(name, globals = {}) {
   const source = readFileSync(new URL(`../apps/web-desktop/src/platform/${name}.ts`, import.meta.url), 'utf8')
-  const context = vm.createContext({ exports: {}, require: () => ({}), ...globals })
+  const context = vm.createContext({ exports: {}, require: specifier => specifier === './draft-safety' ? globals.draftSafety : ({}), ...globals })
   vm.runInContext(ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText, context)
   return context.exports
 }
@@ -76,7 +76,8 @@ test('reload readiness flushes and verifies text and blocks turns, uploads, file
   let persisted = JSON.stringify(draft.texts)
   const track = { readyState: 'live' }
   const navigator = { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [track] }) } }
-  const safety = load('reload-safety', { navigator, window: { __HERMES_WEB_DRAFT_SNAPSHOT__: () => draft, localStorage: { getItem: () => persisted } } })
+  const draftSafety = { browserDraftSnapshot: () => draft, flushBrowserDrafts: async () => {} }
+  const safety = load('reload-safety', { navigator, draftSafety, window: { localStorage: { getItem: () => persisted } } })
   assert.equal(safety.reloadReadiness().ready, false)
   safety.setActiveWork({ count: 0 }); assert.equal(safety.reloadReadiness().ready, true)
   safety.setActiveWork({ count: 1 }); assert.match(safety.reloadReadiness().reason, /response/)
