@@ -239,6 +239,11 @@
 .browser-settings-detail > * { box-sizing: border-box; width: min(100%, 54rem); max-width: 54rem; margin-inline: 0; }
 .browser-settings-content-slot { display: flex; min-height: 0; flex: 1; flex-direction: column; }
 .browser-settings-content-slot[hidden] { display: none; }
+.browser-notification-settings { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.browser-notification-permission { gap: var(--web-space-3); margin-bottom: var(--web-space-6); }
+.browser-notification-permission > button { justify-self: start; }
+.browser-notification-settings > section.min-h-0.overflow-hidden { overflow: visible; }
+.browser-notification-settings > section.min-h-0.overflow-hidden > .h-full.min-h-0.overflow-y-auto { height: auto; overflow: visible; padding-inline: var(--web-space-1); }
 .browser-settings-page-notice { max-width: 54rem; margin: 0 auto var(--web-space-3); color: var(--web-text-muted); font-size: var(--web-text-caption); }
 .browser-settings-content-slot > section.min-h-0.overflow-hidden { width: 100%; min-height: 0; flex: 1; }
 .browser-settings-content-slot > section.min-h-0.overflow-hidden > .h-full.min-h-0.overflow-y-auto { overscroll-behavior: contain; padding-inline: var(--web-space-1); }

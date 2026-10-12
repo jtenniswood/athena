@@ -4,6 +4,7 @@ import { Codicon, OverlayView } from '../../upstream/browser-api'
 import { groupSettingsSections, isSettingsSectionVisible, orderSettingsSections, settingsPageLabel, settingsScopeDescription } from './policy'
 import { BrowserToolbarButton } from '../ui/toolbar-button'
 import { BrowserColorThemesPage } from './themes-page'
+import { BrowserNotificationPermissionSetting } from './notification-permission'
 import { SETTINGS_TOOL_PAGES } from '../../upstream/settings-tools'
 import './settings.css'
 
@@ -170,7 +171,10 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
           <div className="browser-settings-content-slot" hidden={!showDetail} inert={!showDetail}>
             {pageVisible && pageNotice && <p className="browser-settings-page-notice" role="note">{pageNotice}</p>}
             {pageVisible && activeView === 'config:browser-theme'
-              ? <BrowserColorThemesPage /> : children}
+              ? <BrowserColorThemesPage />
+              : pageVisible && activeView === 'notifications'
+                ? <div className="browser-notification-settings"><BrowserNotificationPermissionSetting />{children}</div>
+                : children}
           </div>
         </main>
       </div>
