@@ -256,12 +256,16 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
-    "reason": "Hide desktop profile/card controls, expose None grouping, and add leading icons to filter menu actions.",
+    "reason": "Hide desktop profile/card controls and the grouping summary, expose None grouping, and add leading icons and sidebar action shortcuts.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "None grouping shows all sessions without subheaders and survives reload"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "sidebar action shortcuts preserve the selected chat and draft on"
       }
     ],
     "removal": "The browser owns the filter menu or upstream offers composition flags.",
@@ -272,7 +276,7 @@
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
     "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
-    "outputHash": "8dea3e425734a69081b926deecdb2de1bb8e36d56a2e1c514d17a79897acf4b2"
+    "outputHash": "f8a048c5cbbbc394770968f79ad6515968467c2b9a55d4bb207e7952ac3205bd"
   },
   {
     "name": "hidden-bot-roster",
@@ -485,7 +489,7 @@
     "sourceHash": "235143c976b1d6b777dd2f13ad1f1ddadd6d0a3ff2b5bb83034d8fc9b630dc71",
     "sourceRoot": "renderer",
     "inputHash": "235143c976b1d6b777dd2f13ad1f1ddadd6d0a3ff2b5bb83034d8fc9b630dc71",
-    "outputHash": "ac35f71e77011a791b234ecdd32e691aae99144ed0d2f6cb84a678b7b924d76e"
+    "outputHash": "ef0bf7f8a6072914c272e4f33ace23c758991dc9db88351bc77ce1a43619f373"
   },
   {
     "name": "canonical-bot-row-actions",
@@ -2430,5 +2434,27 @@
       }
     ],
     "removal": "Remove when Hermes no longer exposes desktop-only pet slash commands or provides browser capability filtering."
+  },
+  {
+    "name": "browser-connecting-visual",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/gateway-connecting-overlay.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "7c24020a8537cf6a19972b8c2d75819395b2f77e55436a82ef1746f2742e23ae",
+    "inputHash": "7c24020a8537cf6a19972b8c2d75819395b2f77e55436a82ef1746f2742e23ae",
+    "outputHash": "9eb2ca86c00a63cc3de68636103b5c97e4837ea540acc6a0446a27959ae1379d",
+    "handlers": [
+      "useBrowserConnectingVisual"
+    ],
+    "reason": "Keep the centered browser logo and spinner through gateway boot without desktop blue text or exit movement.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/sign-in.spec.mjs",
+        "scenario": "existing session keeps the startup loader while checking authentication"
+      }
+    ],
+    "removal": "Remove when upstream offers a browser loading presentation matching the cached HTML shell."
   }
 ]
