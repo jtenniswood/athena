@@ -230,6 +230,44 @@
     "sourceRoot": "renderer"
   },
   {
+    "name": "browser-external-links",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "lib/external-link.tsx",
+    "reason": "Open response links in a browser tab because Athena has no desktop browser pane",
+    "owner": "apps/web-desktop/src/upstream/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "response links open a browser tab without losing the conversation or draft"
+      }
+    ],
+    "removal": "Remove when upstream external links support browser-tab routing without a desktop preview pane.",
+    "sourceHash": "96940c0748cc9676fdf1098571bf642d96a60d88b203c348297d2f1642190725",
+    "outputHash": "2224f25817d7c812e0b13b391326e434eb47f13462a7b2c2bd79a8d6bb5d5ffd",
+    "handler": "browser-external-links",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-html-link-attributes",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "lib/markdown-preprocess.ts",
+    "reason": "Preserve HTML href/src attributes while autolinking bare response URLs",
+    "owner": "apps/web-desktop/src/upstream/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "response links open a browser tab without losing the conversation or draft"
+      }
+    ],
+    "removal": "Remove when upstream bare-URL preprocessing preserves HTML tag attributes.",
+    "sourceHash": "6bc4dc99660125aee3c1b384f85bed7dd18a91074452fba728f6d041d9e12dca",
+    "outputHash": "cb73b944565dab7d416921a7ffe6e912e696cdfcf2fb5002ddedc8c23b2e11b0",
+    "handler": "browser-html-link-attributes",
+    "sourceRoot": "renderer"
+  },
+  {
     "name": "ungrouped-session-state",
     "kind": "browser-transform",
     "order": 20,

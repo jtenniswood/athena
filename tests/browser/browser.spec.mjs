@@ -83,6 +83,62 @@ narrowDesktopChecks(test, open)
 
 const touchTest = test.extend({ hasTouch: true })
 
+test('response links open a browser tab without losing the conversation or draft', async ({ page, context }) => {
+  const destination = 'https://example.com/response-link'
+  // Exercise the actual transcript renderer with both Markdown and HTML anchors.
+  const response = `[Markdown reference](${destination})\n\n<a href="${destination}">HTML reference</a>`
+  await page.routeWebSocket(/\/api\/ws/, socket => {
+    const server = socket.connectToServer()
+    server.onMessage(message => {
+      const frame = JSON.parse(String(message))
+      if (Array.isArray(frame.result?.messages)) {
+        for (const row of frame.result.messages) if (row.role === 'assistant') row.content = response
+      }
+      socket.send(JSON.stringify(frame))
+    })
+  })
+  await page.route(/\/api\/sessions\/preview-week\/messages/, async route => {
+    const upstream = await route.fetch()
+    const body = await upstream.json()
+    for (const row of body.messages || []) if (row.role === 'assistant') row.content = response
+    await route.fulfill({ response: upstream, json: body })
+  })
+  await context.route(destination, route => route.fulfill({ contentType: 'text/html', body: '<h1>Reference destination</h1>' }))
+  // The desktop preference must not send browser clicks to its absent pane.
+  await page.addInitScript(() => localStorage.setItem('hermes.desktop.alwaysExternalLinks.v1', 'false'))
+  await open(page)
+  await expect(page.locator('.athena-connecting-overlay')).toBeHidden({ timeout: 30000 })
+  for (const dismiss of await page.getByRole('button', { name: 'Dismiss notification', exact: true }).all()) await dismiss.click()
+  await editor(page).fill('Keep my response-link draft')
+  for (const [label, gesture] of [
+    ['Markdown reference', 'keyboard'],
+    ['Markdown reference', 'click'],
+    ['HTML reference', 'click'],
+    ['Markdown reference', 'modifier'],
+    ['HTML reference', 'middle']
+  ]) {
+    const link = page.getByRole('link', { name: label, exact: true })
+    await page.bringToFront()
+    if (gesture === 'keyboard') {
+      // Use real Tab navigation; the renderer redirects programmatic focus to the composer.
+      for (let step = 0; step < 40 && !await link.evaluate(element => element === document.activeElement); step++) {
+        await page.keyboard.press('Shift+Tab')
+      }
+      await expect(link).toBeFocused()
+    }
+    const popupPromise = page.waitForEvent('popup', { timeout: 15000 })
+    if (gesture === 'keyboard') await link.press('Enter')
+    else await link.click(gesture === 'modifier' ? { modifiers: ['ControlOrMeta'] } : gesture === 'middle' ? { button: 'middle' } : {})
+    const popup = await popupPromise
+    await expect(popup).toHaveURL(destination)
+    await expect(popup.getByRole('heading', { name: 'Reference destination' })).toBeVisible()
+    expect(await popup.evaluate(() => window.opener)).toBeNull()
+    await popup.close()
+    await expect(page).toHaveURL(/#\/preview-week$/)
+    await expect(editor(page)).toHaveText('Keep my response-link draft')
+  }
+})
+
 test.describe('browser microphone', () => {
   test('records once permission is granted and releases the mic after transcription', async ({ page }) => {
     let audio
