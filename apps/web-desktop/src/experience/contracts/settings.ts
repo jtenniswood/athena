@@ -9,6 +9,6 @@ export interface BrowserSettings {
     id: string
     checked: boolean | undefined
     /** True when opening; false when closing an already visible desktop pane. */
-    select: () => boolean
+    select: (mode?: 'open' | 'toggle') => boolean
   }[]
 }
