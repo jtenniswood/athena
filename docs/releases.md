@@ -7,17 +7,24 @@ not required for routine changes.
 
 ## Build and deploy
 
-`release.yml` publishes a native `linux/amd64` image on version tags and manual
-dispatch. Merges to `main` do not start a build or deployment. Docker verifies
-the pinned renderer, runs typechecking, and builds the frontend. Every successful
-publication updates `latest` and `sha-<revision>`; runs on `main` also update
-`main`, and version tags publish their version. The renderer revision comes from
-`flake.lock`.
+`.github/workflows/release.yml` runs for version tags and manual dispatches. It
+builds and publishes a native `linux/amd64` image after checking the pinned
+renderer, typechecking, and building the frontend. Every run publishes `latest`
+and `sha-<revision>`; version tags also publish their version tag. The renderer
+revision comes from `flake.lock`.
 
-Manual dispatches on `main` deploy that run's exact image digest through Docker
-Compose. The deployment waits for the nginx health check and restores the previous
-image if it fails. Version-tag builds do not deploy. The health check proves that
-nginx responds; manually try the changed feature to check its behavior.
+A manual dispatch on `main` also sends a signed deploy request to the configured
+Komodo stack listener. A manual dispatch on another branch and a version-tag run
+only build and publish. Merges to `main` do not trigger this workflow. GitHub
+Actions records whether the listener accepted the request; acceptance does not
+prove that the stack finished deploying or that the application workflow works.
+
+The deployment stack configuration is maintained outside this repository. Its
+image reference, health checks, deployment completion, and rollback behavior
+must be verified in Komodo. Do not assume that the retained
+`deploy/production/compose.yml` scripts describe the active deployment.
+After deployment, confirm the running image revision and exercise the changed
+workflow. Use the stack's configured recovery procedure if its health check fails.
 
 ### Versioned image release
 
@@ -29,8 +36,8 @@ workflow and publishes `ghcr.io/jtenniswood/athena:1.4.0`, along with the
 prefix in the image registry.
 
 The skill requires `main` to match `origin/main` and refuses an existing
-version tag. Version-tag builds do not deploy production; manual dispatches on
-`main` deploy the selected image through the production deployment job.
+version tag. Version-tag builds publish the image but do not request a production
+deployment.
 
 ### Ad hoc development image
 
@@ -53,51 +60,37 @@ host before pulling.
 
 ## Deployment setup
 
-Configure these repository Actions secrets:
+The release workflow expects these repository Actions values for its signed,
+Cloudflare Access protected Komodo request:
 
-- `TS_OAUTH_CLIENT_ID` and `TS_OAUTH_SECRET`: a Tailscale OAuth client with
-  `auth_keys` write scope and permission to create `tag:ci` nodes. Tailnet ACLs
-  must allow `tag:ci` to reach the deployment host on SSH.
-- `PRODUCTION_SSH_HOST`, `PRODUCTION_SSH_USER`, `PRODUCTION_SSH_PRIVATE_KEY`,
-  and `PRODUCTION_SSH_KNOWN_HOSTS`: the tailnet host, a dedicated deploy account,
-  its private key, and the pinned SSH host key. The account needs permission to
-  use Docker and Docker Compose.
+- Variable `KOMODO_WEBHOOK_URL`, using the Komodo stack deploy listener route.
+- Secrets `KOMODO_WEBHOOK_SECRET`, `CF_ACCESS_CLIENT_ID`, and
+  `CF_ACCESS_CLIENT_SECRET`.
 
-Set the repository Actions variable `PRODUCTION_DEPLOY_PATH` to an absolute
-path without spaces, for example `/opt/hermes-web`. On the VPS, create that
-directory and place these untracked files in it:
+The workflow checks that these values are present and that the listener URL is
+HTTPS with the expected route shape. The actual Komodo stack definition and its
+runtime configuration are outside this repository. Verify the configured stack
+uses the intended Athena image and preserves the existing Hermes data mount,
+gateway settings, published port, and reverse-proxy connection before changing
+deployment configuration.
 
-- `.env.hermes-web`: the container runtime settings, based on
-  `apps/web-desktop/.env.example`.
-- `.deploy.env`: set `HERMES_HOME_HOST` to the existing host Hermes data
-  directory and optionally `HERMES_WEB_PORT` to the port used by the reverse
-  proxy (default `4174`). Set `HERMES_WEB_BIND` if the existing container binds
-  only to a specific host interface. Preserve the same data directory and port
-  used by the current container so user data and the reverse proxy remain
-  connected.
-
-The workflow copies the Compose definition and deployment script on each run.
-The first deployment replaces an unmanaged `hermes-web` container with the
-Compose-managed one; subsequent main merges pull and roll out the new digest.
-Publishing still happens in GitHub Actions; the VPS only pulls and runs the
-image.
+The older SSH/Compose assets remain in `deploy/production/`. Their presence
+does not mean the current GitHub workflow uses them. Confirm the active Komodo
+stack's deployment and recovery procedure before relying on those scripts.
 
 ## Roll back
 
-For a functional regression after deployment, select the previous image digest
-from the GitHub Actions build output or registry. On the deployment host, run the
-same deployment script with that digest (replace the example image reference):
+For a functional regression, identify the last known-good immutable image from
+the Actions build output or GHCR (`sha-<revision>` or its digest). Use the
+recovery procedure configured for the active Komodo stack to redeploy that
+image. Do not use the moving `latest` tag to identify a rollback target. The
+exact stack edit and rollback command cannot be documented here because the
+active Komodo stack definition is not tracked in this repository.
 
-```sh
-bash /opt/hermes-web/deploy.sh /opt/hermes-web \
-  ghcr.io/OWNER/REPOSITORY@sha256:PREVIOUS_DIGEST
-```
-
-Use the configured deployment directory if it differs from `/opt/hermes-web`.
-For a private image, sign in to GHCR first. The script uses the existing runtime
-configuration and volumes. Do not clear browser storage or rebuild an old commit
-to recover a previous release. Installed PWAs still coordinate activation with
-open tabs so drafts and active work remain protected.
+Keep the existing runtime configuration and data volumes during recovery. Do
+not clear browser storage or rebuild an old commit to recover a previous
+release. Installed PWAs still coordinate activation with open tabs so drafts
+and active work remain protected.
 
 ## Focused checks when useful
 
