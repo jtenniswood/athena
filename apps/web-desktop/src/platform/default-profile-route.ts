@@ -3,7 +3,7 @@ export interface BrowserProfileRoute {
   profile: string
 }
 
-type StorageLike = Pick<Storage, 'getItem' | 'setItem'>
+type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 type StorageChanges = {
   subscribe: (listener: (key: null | string, value: null | string) => void) => () => void
 }
@@ -31,12 +31,19 @@ export function createBrowserDefaultProfileRoute(
 ) {
   const listeners = new Set<(route: BrowserProfileRoute | null) => void>()
 
-  const getDefault = async (): Promise<BrowserProfileRoute | null> => {
+  const getSnapshot = (): BrowserProfileRoute | null => {
     try {
       return decode(getStorage().getItem(storageKey), connectionId)
     } catch {
       return null
     }
+  }
+
+  const getDefault = async (): Promise<BrowserProfileRoute | null> => getSnapshot()
+
+  const clearDefault = async (): Promise<void> => {
+    getStorage().removeItem(storageKey)
+    for (const listener of listeners) listener(null)
   }
 
   const setDefault = async (route: BrowserProfileRoute): Promise<BrowserProfileRoute> => {
@@ -65,5 +72,5 @@ export function createBrowserDefaultProfileRoute(
     }
   }
 
-  return { getDefault, setDefault, onDefaultChanged }
+  return { getSnapshot, getDefault, setDefault, clearDefault, onDefaultChanged }
 }

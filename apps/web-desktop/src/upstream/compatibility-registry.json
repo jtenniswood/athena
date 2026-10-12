@@ -443,6 +443,14 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "workspace controls live inside settings and preserve the conversation"
+      },
+      {
+        "file": "scripts/default-session-profile.test.mjs",
+        "scenario": "new sessions in All profiles capture the saved owner before activating its gateway"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "the default new-session profile persists and routes All profiles drafts without changing scope"
       }
     ],
     "removal": "Upstream wiring accepts a single-conversation capability.",
@@ -451,12 +459,13 @@
       "disableBrowserOnboardingTips",
       "useBrowserSessionSelection",
       "useBrowserDirectResumeOwner",
-      "useBrowserSettingsToolActions"
+      "useBrowserSettingsToolActions",
+      "useBrowserDefaultSessionProfile"
     ],
     "sourceHash": "244e5e9bb4a0a36b634f6942b5c7d88a2b27c43b1716120b3c417b63d2ebd473",
     "sourceRoot": "renderer",
     "inputHash": "244e5e9bb4a0a36b634f6942b5c7d88a2b27c43b1716120b3c417b63d2ebd473",
-    "outputHash": "7524651784571550df0a3dd87144fc1e122dfd2803c677b6366ef66974f2de7e"
+    "outputHash": "3142f4de398508f1b09b24862c4087d7d99196c030b0be743a24e4e5be4bd152"
   },
   {
     "name": "single-conversation-controller",
@@ -2618,5 +2627,27 @@
       }
     ],
     "removal": "Remove when upstream CodeEditor exposes an autofocus option that Profiles settings can disable."
+  },
+  {
+    "name": "browser-default-session-profile",
+    "kind": "replacement",
+    "order": 20,
+    "module": "app/session/new-session-route.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "7d883ce1f76acce6895eafea5c0b99a17115d0709fec85d3be1fd3d1e009a66d",
+    "replacement": "src/upstream/default-session-profile.ts",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "reason": "Use the browser preference for generic new sessions in All profiles while preserving explicit profile targets and single-profile scope.",
+    "tests": [
+      {
+        "file": "scripts/default-session-profile.test.mjs",
+        "scenario": "new sessions in All profiles capture the saved owner before activating its gateway"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "the default new-session profile persists and routes All profiles drafts without changing scope"
+      }
+    ],
+    "removal": "Remove when upstream default session routing supports an All profiles preference scope."
   }
 ]
