@@ -335,7 +335,8 @@ export function useBrowserConfigurationSettings(source: string, root: string): s
 
 export function hideBrowserAppearanceOnlySettings(source: string): string {
   const replacements: [string, string][] = [
-    ['              {a.intro}', '              Customize the interface and how messages are displayed.'],
+    ['              {a.intro}', '              {!window.__HERMES_WEB_BRIDGE__ && a.intro}'],
+    ['<SectionHeading icon={Palette} title={a.title} />', '{!window.__HERMES_WEB_BRIDGE__ && <SectionHeading icon={Palette} title={a.title} />}'],
     [
       "  const show = (id: AppearanceSubpageId) => subpage === undefined || subpage === id",
       `  const show = (id: AppearanceSubpageId) => {

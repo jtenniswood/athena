@@ -512,3 +512,9 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
 .browser-updates-log summary { cursor: pointer; }
 .browser-updates-log pre { max-height: 14rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--web-text-caption); color: var(--web-text-muted); }
 .browser-updates-page progress { width: 100%; accent-color: var(--web-accent); }
+
+.browser-settings-detail-header { flex-shrink: 0; margin-bottom: var(--web-space-6); padding-inline: var(--web-space-1); }
+.browser-settings-content-slot :is(.browser-color-themes, .browser-updates-page, .browser-gateway-settings) > .browser-settings-page-header,
+.browser-settings-content-slot .browser-configuration-page > .browser-settings-page-title,
+.browser-settings-content-slot[data-settings-page="config:profiles"] .browser-settings-embedded-content > header,
+.browser-settings-content-slot[data-settings-page="config:agents"] .browser-settings-embedded-content > header { display: none; }

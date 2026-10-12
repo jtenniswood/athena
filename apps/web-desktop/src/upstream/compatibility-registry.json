@@ -2343,11 +2343,11 @@
     "sourceRoot": "renderer",
     "sourceHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
     "inputHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
-    "outputHash": "cc457471889546a94b218ea66170a074628d4d686a9087e095f690ab8a244c82",
+    "outputHash": "8f24536db1c7aedf5059f310b1fdfbd27a5c24c59178ae5a9a70451f6703a5b6",
     "handlers": [
       "hideBrowserAppearanceOnlySettings"
     ],
-    "reason": "Combine General, Typography, Window & layout, and Chat display into one Appearance page; hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls. Theme selection lives on the separate browser Theme page.",
+    "reason": "Combine General, Typography, Window & layout, and Chat display into one Appearance page; hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls. Theme selection lives on the separate browser Theme page. The shared browser settings layout owns the Appearance title and description.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
