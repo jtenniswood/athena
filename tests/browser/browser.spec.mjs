@@ -1500,7 +1500,7 @@ for (const width of [390, 1440]) {
     ])
     await expect(page.locator('.browser-settings-category-button:not(.is-child) > span:not(.codicon)')).toHaveText([
       'Appearance', 'Theme', 'Notifications', 'Sounds', 'Keyboard Shortcuts', 'Models', 'AI Connections', 'Chat', 'Voice',
-      'Profiles', 'Agents', 'Memory', 'Workspace', 'Webhooks', 'Permissions',
+      'Profiles', 'Memory', 'Workspace', 'Webhooks', 'Permissions',
       'Credentials', 'Gateway', 'Command center', 'Billing', 'System updates', 'Archived Chats', 'Configuration', 'Advanced'
     ])
     await page.screenshot({ path: testInfo.outputPath('settings-groups.png') })
@@ -1515,6 +1515,11 @@ for (const width of [390, 1440]) {
     await expect(page.locator('.browser-notification-permission')).toBeVisible()
     await expect(page.locator('#setting-field-notifications\\.completion-sound')).toHaveCount(0)
     if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await page.locator('.browser-settings-search > button').click()
+    const agentsPalette = page.locator('[data-browser-command-palette]')
+    await agentsPalette.locator('input[role="combobox"]').fill('Agents')
+    await expect(agentsPalette.getByRole('group', { name: 'Settings', exact: true }).getByRole('option', { name: 'Agents', exact: true })).toHaveCount(0)
+    await page.keyboard.press('Escape')
     for (const [query, result, view, title] of [
       ['Sounds', 'Sounds', 'config:browser-sounds', 'Sounds'],
       ['Colour themes', 'Theme', 'config:browser-theme', 'Theme'],
@@ -1522,7 +1527,6 @@ for (const width of [390, 1440]) {
       ['System updates', 'System updates', 'config:system-updates', 'System updates'],
       ['Profiles', 'Profiles', 'config:profiles', 'Profiles'],
       ['Webhooks', 'Webhooks', 'config:webhooks', 'Webhooks'],
-      ['Agents', 'Agents', 'config:agents', 'Agents'],
       ['Command center', 'Command center', 'config:command-center', 'Command center'],
       ['Backup & reset', 'Configuration', 'config:browser-configuration', 'Configuration'],
       ['Providers', 'AI Connections — Accounts', 'providers', 'AI Connections'],
@@ -1537,7 +1541,7 @@ for (const width of [390, 1440]) {
       expect(bounds.x).toBeGreaterThanOrEqual(0)
       expect(bounds.x + bounds.width).toBeLessThanOrEqual(width)
       if (query === 'Gateway') await page.screenshot({ path: testInfo.outputPath('settings-search.png') })
-      const results = ['config:profiles', 'config:webhooks', 'config:agents', 'config:command-center'].includes(view)
+      const results = ['config:profiles', 'config:webhooks', 'config:command-center'].includes(view)
         ? palette.getByRole('group', { name: 'Settings', exact: true }) : palette
       const option = results.getByRole('option', { name: result, exact: true })
       if (width === 390) await option.tap()
@@ -1820,7 +1824,7 @@ for (const width of [390, 1440]) {
     await menu.getByRole(actionRole, { name: 'Settings', exact: true }).click()
     const frame = page.locator('[data-browser-settings-frame]')
     const navigation = frame.getByRole('navigation', { name: 'Settings categories', exact: true })
-    for (const [label, tab] of [['Profiles', 'config:profiles'], ['Webhooks', 'config:webhooks'], ['Agents', 'config:agents'], ['Command center', 'config:command-center'], ['Gateway', 'gateway']]) {
+    for (const [label, tab] of [['Profiles', 'config:profiles'], ['Webhooks', 'config:webhooks'], ['Command center', 'config:command-center'], ['Gateway', 'gateway']]) {
       await navigation.getByRole('button', { name: label, exact: true }).click()
       await expect(frame.getByRole('main', { name: label, exact: true })).toBeVisible()
       await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)

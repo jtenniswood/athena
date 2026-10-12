@@ -66,7 +66,6 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
       { id: 'config:chat', title: 'Chat', scope: 'mixed' },
       { id: 'config:voice', title: 'Voice', scope: 'mixed' },
       { id: 'config:profiles', title: 'Profiles', scope: 'connected-server' },
-      { id: 'config:agents', title: 'Agents', scope: 'connected-server' },
       { id: 'config:memory', title: 'Memory', aliases: ['Memory & context'], scope: 'connected-server' }
     ]
   },
@@ -145,6 +144,7 @@ export const settingsFields: readonly SettingsFieldDefinition[] = [
 ]
 
 export const hiddenPageDefinitions: readonly SettingsPageDefinition[] = [
+  { id: 'config:agents', title: 'Agents', scope: 'connected-server', visibility: 'hidden' },
   { id: 'about', title: 'About', visibility: 'hidden' },
   { id: 'pets', title: 'Pets', visibility: 'hidden' },
   { id: 'hud', title: 'HUD', visibility: 'hidden' },
