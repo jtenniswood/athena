@@ -432,6 +432,18 @@ test('browser workspace removes chat tabs while retaining tool groups', () => {
   assert.equal(withPanels.children[0].tabStrip, 'never', 'The browser chat group must not expose tabs')
   assert.equal(tree.children[2].tabStrip, undefined, 'Close handles must not rewrite the saved layout')
 })
+test('browser pane composition shares the toolbar and workspace ownership rules', () => {
+  const { browserPaneComposition } = load('src/experience/browser-pane-composition.ts')
+  const bots = { id: 'hermes-bots:pane' }
+  const panes = browserPaneComposition([
+    { id: 'workspace' }, { id: 'sessions' }, bots, { id: 'terminal' },
+    { id: 'plugin:side', data: { placement: 'side' } },
+    { id: 'plugin:main', data: { placement: 'main' } }
+  ])
+  assert.equal(panes.bots, bots)
+  assert.deepEqual(Array.from(panes.toolbarPanes, pane => pane.id), ['plugin:side', 'plugin:main'])
+  assert.deepEqual(Array.from(panes.workspacePanelIds), ['plugin:side'])
+})
 test('narrow tool overlays retain upstream behavior without duplicating browser navigation', () => {
   const { filterBrowserNarrowNavigation } = load('src/upstream/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/components/pane-shell/tree/renderer/narrow-overlays.tsx'), 'utf8')
