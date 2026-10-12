@@ -430,3 +430,33 @@ for (const authMode of ['hermes', 'oidc']) {
     await popup.close()
   })
 }
+
+test('existing session keeps the startup loader while checking authentication', async ({ page, context }, testInfo) => {
+  await hermesAuth(context, { signedIn: true })
+  let releaseStatus
+  const statusGate = new Promise(resolve => { releaseStatus = resolve })
+  await page.route('**/api/status', async route => {
+    await statusGate
+    await route.fulfill({ json: { auth_required: true } })
+  })
+  let socket
+  await page.routeWebSocket(/\/api\/ws/, ws => { socket = ws })
+  await page.goto(origin)
+  const loader = page.locator('.hermes-startup-loading')
+  await expect(loader).toBeVisible()
+  const before = await loader.locator('img').boundingBox()
+  await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toHaveCount(0)
+  releaseStatus()
+  const connecting = page.locator('.athena-connecting-overlay')
+  await expect(connecting).toBeVisible()
+  const after = await connecting.locator('img').boundingBox()
+  expect(after.x).toBeCloseTo(before.x, 0)
+  expect(after.y).toBeCloseTo(before.y, 0)
+  await expect(connecting.locator('.hermes-startup-spinner')).toBeVisible()
+  await expect(connecting.getByText('CONNECTING', { exact: true })).toHaveCount(0)
+  await page.screenshot({ path: testInfo.outputPath('connecting.png') })
+  await expect.poll(() => Boolean(socket)).toBe(true)
+  socket.connectToServer()
+  await expect(connecting).toHaveCount(0)
+  await expect(editor(page)).toBeVisible()
+})
