@@ -136,7 +136,6 @@ export function observeRuntimeCapabilities(hosting?: {
     observeServerCapability('real-browser-profile')
   ]
 }
-
 /** A capability requiring several layers is unsupported if any layer refuses it. */
 export function resolveCapability(
   id: string,
