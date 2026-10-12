@@ -117,6 +117,19 @@ export function useBrowserFreshSessionOwner(source: string, root: string): strin
     .replace(end, end.replace('    },', '    }),'))
 }
 
+export function useBrowserDefaultSessionProfile(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/upstream/default-session-profile'))
+  const targets = [
+    ['    startFreshSession: startFreshSessionDraft,', '    startFreshSession: () => { prepareDefaultNewSession(); startFreshSessionDraft() },'],
+    ['    onNewSessionInWorkspace: path => startSessionInWorkspace(path),', '    onNewSessionInWorkspace: path => { prepareDefaultNewSession(); startSessionInWorkspace(path) },']
+  ]
+  for (const [target, replacement] of targets) {
+    if (source.split(target).length !== 2) throw new Error('Browser default new-session profile entry point changed')
+    source = source.replace(target, replacement)
+  }
+  return `import { prepareDefaultNewSession } from ${owner}\n` + source
+}
+
 export function useBrowserRosterDialogFocus(source: string, root: string): string {
   const owner = JSON.stringify(path.join(root, 'src/experience/ui/dialog-focus'))
   const targets = [
@@ -1357,6 +1370,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserPinWrites: source => useBrowserPinWrites(source, root),
     useBrowserOpenSessionOwner: source => useBrowserOpenSessionOwner(source, root),
     useBrowserFreshSessionOwner: source => useBrowserFreshSessionOwner(source, root),
+    useBrowserDefaultSessionProfile: source => useBrowserDefaultSessionProfile(source, root),
     useBrowserDirectResumeOwner: source => useBrowserDirectResumeOwner(source),
     useBrowserSectionIdentity: source => useBrowserSectionIdentity(source, root),
     useBrowserTouchHooks: source => useBrowserTouchHooks(source, root), useBrowserAcceptedSubmit: source => useBrowserAcceptedSubmit(source, root), useBrowserCodingActionHooks, useBrowserSectionIds, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,

@@ -8,8 +8,10 @@ export interface BrowserProfile {
 export interface BrowserProfiles {
   active: string
   all: boolean
+  defaultNewSessionProfile: string | null
   items: readonly BrowserProfile[]
   fallback: BrowserProfile | null
   select(profile: string | null): void
+  setDefaultNewSessionProfile(profile: string | null): void
   reorder(source: string, target: string, after: boolean): void
 }

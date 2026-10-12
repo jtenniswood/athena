@@ -130,6 +130,14 @@ Hermes instance; it does not create separate user workspaces.
 For step-by-step client registration, backend settings, Docker configuration,
 and troubleshooting, see [Set up OIDC in the wiki](https://github.com/jtenniswood/athena/wiki/Set-up-OIDC).
 
+### New sessions in All profiles
+
+Open **Profile actions → Default for new sessions** below the session list to
+choose which profile receives new sessions while **All profiles** is selected.
+The choice is saved in this browser. Choose **Last active profile** to restore
+the previous behavior. When viewing a single profile, new sessions use that
+profile; starting a session explicitly for a profile keeps that choice.
+
 ### Acknowledgment
 
 Athena is an original project based on the work of

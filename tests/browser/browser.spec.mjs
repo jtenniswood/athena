@@ -83,6 +83,75 @@ narrowDesktopChecks(test, open)
 
 const touchTest = test.extend({ hasTouch: true })
 
+test('the default new-session profile persists and routes All profiles drafts without changing scope', async ({ page }) => {
+  const creates = []
+  await page.routeWebSocket(/\/api\/ws/, socket => {
+    const server = socket.connectToServer()
+    socket.onMessage(message => {
+      const frame = JSON.parse(String(message))
+      if (frame.method === 'session.create') creates.push(frame.params)
+      server.send(message)
+    })
+    server.onMessage(message => socket.send(message))
+  })
+  await open(page)
+  await editor(page).fill('Keep this conversation draft while choosing a default')
+  await page.getByRole('button', { name: 'Profile actions', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Default for new sessions', exact: true }).hover()
+  await page.getByRole('menuitemradio', { name: 'Research', exact: true }).click()
+  await expect(editor(page)).toHaveText('Keep this conversation draft while choosing a default')
+  await page.reload()
+  await expect(editor(page)).toBeVisible({ timeout: 30000 })
+  const all = page.getByRole('button', { name: 'All profiles', exact: true })
+  await all.click()
+  await page.getByRole('button', { name: 'New session', exact: true }).first().click()
+  await editor(page).fill('Create this session in research')
+  await editor(page).press('Enter')
+  await expect.poll(() => creates.length).toBe(1)
+  expect(creates[0].profile).toBe('research')
+  await expect(all).toHaveAttribute('aria-pressed', 'true')
+
+  const writer = page.locator('[data-profile-key="writer"]')
+  await writer.click()
+  await expect(writer).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'New session', exact: true }).first().click()
+  await editor(page).fill('Create this session in writer')
+  await editor(page).press('Enter')
+  await expect.poll(() => creates.length).toBe(2)
+  expect(creates[1].profile).toBe('writer')
+
+  await all.click()
+  await page.keyboard.press('ControlOrMeta+n')
+  await expect(page).toHaveURL(/#\/$/)
+  await editor(page).fill('Create this keyboard session in research')
+  await editor(page).press('Enter')
+  await expect.poll(() => creates.length).toBe(3)
+  expect(creates[2].profile).toBe('research')
+  await expect(all).toHaveAttribute('aria-pressed', 'true')
+})
+
+touchTest('the phone profile actions can choose and clear a default without changing the conversation draft', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await open(page)
+  await editor(page).fill('Keep the draft while choosing a phone default')
+  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  await page.getByRole('button', { name: 'Profile actions', exact: true }).click()
+  await page.getByRole('button', { name: 'Default for new sessions', exact: true }).click()
+  await page.getByRole('radio', { name: 'Research', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('hermes-web.default-profile-route.v1'))?.profile)).toBe('research')
+  await page.keyboard.press('Escape')
+  await expect(editor(page)).toHaveText('Keep the draft while choosing a phone default')
+
+  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  await page.getByRole('button', { name: 'Profile actions', exact: true }).click()
+  await page.getByRole('button', { name: 'Default for new sessions', exact: true }).click()
+  await expect(page.getByRole('radio', { name: 'Research', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await page.getByRole('radio', { name: 'Last active profile', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('hermes-web.default-profile-route.v1'))).toBeNull()
+  await page.keyboard.press('Escape')
+  await expect(editor(page)).toHaveText('Keep the draft while choosing a phone default')
+})
+
 for (const preference of ['queue', 'steer']) {
   for (const method of ['Enter', 'Send']) {
     test(`idle messages send and running follow-ups queue: ${preference}, ${method}`, async ({ page }) => {
