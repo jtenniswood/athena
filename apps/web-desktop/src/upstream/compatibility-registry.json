@@ -1314,7 +1314,7 @@
     "pattern": "^driver\\.js/dist/driver\\.js\\.iife\\.js(\\?raw)?$",
     "replacement": "../../node_modules/driver.js/dist/driver.js.iife.js$1",
     "aliasGroup": "vite",
-    "sourceHash": "742e7d4ef2610b9c58356e568f4629524c855c376c57aaad69587944e56dcea1"
+    "sourceHash": "d10a3d44a56fbb1650e073f003b1701d716327b9f10c653f44a1ebdbc86d2ee1"
   },
   {
     "name": "browser-debug-entry",
