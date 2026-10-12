@@ -63,7 +63,7 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
     pages: [
       { id: 'config:model', title: 'Models', scope: 'connected-server' },
       { id: 'providers', title: 'AI Connections', aliases: ['Providers', 'accounts', 'API keys', 'endpoints'], scope: 'connected-server' },
-      { id: 'config:chat', title: 'Chat', scope: 'mixed' },
+      { id: 'config:chat', title: 'Chat', aliases: ['Behavior', 'Behaviour', 'Attachments'], scope: 'mixed' },
       { id: 'config:voice', title: 'Voice', scope: 'mixed' },
       { id: 'config:profiles', title: 'Profiles', scope: 'connected-server' },
       { id: 'config:memory', title: 'Memory', aliases: ['Memory & context'], scope: 'connected-server' }
