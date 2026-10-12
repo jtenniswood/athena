@@ -45,7 +45,6 @@ export async function waitForSignIn(): Promise<void> {
   const retry = find<HTMLButtonElement>('.athena-sign-in-retry')
   const advanced = find<HTMLDetailsElement>('details')
   const tokenInput = find<HTMLInputElement>('input')
-  root.replaceChildren(section)
 
   return new Promise(resolve => {
     let finished = false
@@ -72,7 +71,13 @@ export async function waitForSignIn(): Promise<void> {
       window.removeEventListener('focus', onFocus)
       document.removeEventListener('visibilitychange', onVisible)
       actions.hidden = retry.hidden = advanced.hidden = true
-      setStatus('Connecting to Hermes…')
+      // Keep the original loader for an existing session. After interactive
+      // sign-in, restore that same visual while the renderer starts.
+      if (section.isConnected) root!.innerHTML = `<div class="hermes-startup-loading" role="status">
+        <img class="hermes-startup-logo" src="/athena.svg" width="64" height="64" alt="" aria-hidden="true" />
+        <span class="hermes-startup-spinner" aria-hidden="true"></span>
+        <span class="hermes-startup-label">Connecting to Hermes…</span>
+      </div>`
       resolve()
     }
 
@@ -96,9 +101,11 @@ export async function waitForSignIn(): Promise<void> {
         signIn.textContent = target.label
         setStatus('Sign in to start chatting with Hermes Agent.')
         actions.hidden = advanced.hidden = false
+        if (!section.isConnected) root!.replaceChildren(section)
       } catch (error) {
         setStatus(error instanceof SignInConfigurationError ? error.message : 'Could not reach your Hermes server. Check your connection and try again.')
         retry.hidden = false
+        if (!section.isConnected) root!.replaceChildren(section)
       } finally { if (!finished) setBusy(false) }
     }
 
