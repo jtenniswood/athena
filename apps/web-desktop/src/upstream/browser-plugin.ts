@@ -15,6 +15,24 @@ function assertBrowserRoot(root: string): void {
     throw new Error('Browser build root is not the browser-only shell')
   }
 }
+/** Keep upstream boot/error/reconnect ownership; only adapt its loading visual. */
+export function useBrowserConnectingVisual(source: string): string {
+  const start = source.indexOf('  const leaving = phase')
+  if (start < 0 || !source.includes('<DecodeText')) throw new Error('Gateway connecting presentation changed')
+  return source.slice(0, start)
+    .replace("import { DecodeText } from '@/components/ui/decode-text'\n", '')
+    .replace("import { cn } from '@/lib/utils'\n", '')
+    .replace("const TEXT = 'CONNECTING'\n", '') + `  return (
+    <div className="hermes-startup-loading athena-connecting-overlay" role="status" data-glass-opaque="">
+      <img className="hermes-startup-logo" src="/athena.svg" width="64" height="64" alt="" aria-hidden="true" />
+      <span className="hermes-startup-spinner" aria-hidden="true" />
+      <span className="hermes-startup-label">Connecting to Hermes…</span>
+    </div>
+  )
+}
+`
+}
+
 export function useBrowserPinWrites(source: string, root: string): string {
   const start = source.indexOf('function writePin(')
   const end = source.indexOf('\n/**', start)
@@ -1244,6 +1262,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserSettingsPresentation: source => useBrowserSettingsPresentation(source, root),
     useBrowserConfigurationSettings: source => useBrowserConfigurationSettings(source, root),
     filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
+    useBrowserConnectingVisual,
     useBrowserProfileScopeTabs,
     hideBrowserAppearanceOnlySettings,
     hideBrowserLocalProjectDirectory,

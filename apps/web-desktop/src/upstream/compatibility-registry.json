@@ -2434,5 +2434,27 @@
       }
     ],
     "removal": "Remove when Hermes no longer exposes desktop-only pet slash commands or provides browser capability filtering."
+  },
+  {
+    "name": "browser-connecting-visual",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/gateway-connecting-overlay.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "7c24020a8537cf6a19972b8c2d75819395b2f77e55436a82ef1746f2742e23ae",
+    "inputHash": "7c24020a8537cf6a19972b8c2d75819395b2f77e55436a82ef1746f2742e23ae",
+    "outputHash": "9eb2ca86c00a63cc3de68636103b5c97e4837ea540acc6a0446a27959ae1379d",
+    "handlers": [
+      "useBrowserConnectingVisual"
+    ],
+    "reason": "Keep the centered browser logo and spinner through gateway boot without desktop blue text or exit movement.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/sign-in.spec.mjs",
+        "scenario": "existing session keeps the startup loader while checking authentication"
+      }
+    ],
+    "removal": "Remove when upstream offers a browser loading presentation matching the cached HTML shell."
   }
 ]
