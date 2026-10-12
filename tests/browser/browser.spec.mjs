@@ -1485,7 +1485,10 @@ for (const width of [390, 1440]) {
 for (const width of [390, 1440]) {
   test.extend({ hasTouch: width === 390 })(`settings groups and renamed search preserve destinations at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
+    await page.addInitScript(() => localStorage.setItem('hermes.desktop.user-bubble-transparency.v1', '75'))
     await open(page)
+    expect(await page.evaluate(() => localStorage.getItem('hermes.desktop.user-bubble-transparency.v1'))).toBeNull()
+    expect(await page.evaluate(() => document.documentElement.style.getPropertyValue('--user-bubble-keep'))).toBe('')
     await editor(page).fill('Keep my draft while finding renamed settings')
     const trigger = await settingsTrigger(page)
     const role = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
@@ -1503,7 +1506,7 @@ for (const width of [390, 1440]) {
     await page.screenshot({ path: testInfo.outputPath('settings-groups.png') })
     await page.getByRole('button', { name: 'Appearance', exact: true }).click()
     await expect(page.locator('#setting-field-appearance\\.language')).toBeVisible()
-    await expect(page.locator('#setting-field-appearance\\.user-bubble')).toBeVisible()
+    await expect(page.locator('#setting-field-appearance\\.user-bubble')).toHaveCount(0)
     await expect(page.locator('.browser-settings-category-button.is-child')).toHaveCount(0)
     if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
     await page.locator('.browser-settings-search > button').click()

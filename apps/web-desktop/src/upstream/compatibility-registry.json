@@ -2343,16 +2343,20 @@
     "sourceRoot": "renderer",
     "sourceHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
     "inputHash": "e11630739eb30583efccf3c0d3190dec70a396983667479251084c95e2dd9a2f",
-    "outputHash": "cc457471889546a94b218ea66170a074628d4d686a9087e095f690ab8a244c82",
+    "outputHash": "dab60a047d4d389bdd3b872d89ef89e514a1d6b3fd586aa6d221eb9ad5af866b",
     "handlers": [
       "hideBrowserAppearanceOnlySettings"
     ],
-    "reason": "Combine General, Typography, Window & layout, and Chat display into one Appearance page; hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls. Theme selection lives on the separate browser Theme page.",
+    "reason": "Combine General, Typography, Window & layout, and Chat display into one Appearance page; hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls. Theme selection lives on the separate browser Theme page. Message Bubble transparency is fixed at 0% and its control is hidden.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+        "scenario": "settings groups and renamed search preserve destinations"
+      },
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser message bubbles stay solid despite saved transparency and later writes"
       }
     ],
     "removal": "Remove once upstream exposes browser capability flags for terminal surfaces and theme marketplace support."
@@ -2536,5 +2540,27 @@
       }
     ],
     "removal": "Remove when upstream offers a browser loading presentation matching the cached HTML shell."
+  },
+  {
+    "name": "browser-solid-message-bubbles",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/user-bubble-transparency.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "f49a166d199d784a7c586ef085eaa2fa34ec2840b8fc98e930636446f327327e",
+    "inputHash": "f49a166d199d784a7c586ef085eaa2fa34ec2840b8fc98e930636446f327327e",
+    "outputHash": "bd70643741ae5e64c5e308bc9dc4a6494ca1a1cfa16da92ca3e00855cf2098e1",
+    "handlers": [
+      "keepBrowserMessageBubblesSolid"
+    ],
+    "reason": "Keep message bubble transparency at 0% in the browser, clearing saved transparency through the upstream persistence owner.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser message bubbles stay solid despite saved transparency and later writes"
+      }
+    ],
+    "removal": "Remove when upstream supports a browser policy that fixes message bubble transparency at 0%."
   }
 ]
