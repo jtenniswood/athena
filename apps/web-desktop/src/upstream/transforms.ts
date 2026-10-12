@@ -8,6 +8,21 @@ const fixtures = registry.filter(entry => entry.kind === 'renderer-transform')
 function rewrite(code: string, id: string): { code: string; map: null } | null {
 
     const normalizedId = id.replaceAll('\\', '/').split('?')[0]
+    if (normalizedId.endsWith('/desktop/src/lib/markdown-preprocess.ts')) {
+      // HTML attributes already own their URLs. Keep bare-URL autolinking
+      // from inserting angle brackets inside href/src attribute values.
+      const target = '  `(${['
+      if (code.split(target).length !== 2) throw new Error('Browser HTML link preprocessing no longer matches the renderer source')
+      const htmlTag = '    String.raw`' + /<\/?[a-zA-Z][a-zA-Z0-9-]*(?:"[^"]*"|'[^']*'|[^>"'])*>/.source + '`, '
+      return { code: code.replace(target, target + '\n' + htmlTag), map: null }
+    }
+    if (normalizedId.endsWith('/desktop/src/lib/external-link.tsx')) {
+      // Athena has no desktop browser pane. Open synchronously through the
+      // browser bridge while the click still grants popup permission.
+      const target = '    options.native ||'
+      if (code.split(target).length !== 2) throw new Error('Browser external link routing no longer matches the renderer source')
+      return { code: code.replace(target, '    window.__HERMES_WEB_BRIDGE__ ||\n' + target), map: null }
+    }
     if (normalizedId.endsWith('/desktop/src/app/gateway/hooks/use-gateway-boot.ts')) {
       // Browser profile selection scopes the sidebar; a background Bot socket
       // becoming ready must not replace an explicit user choice.
