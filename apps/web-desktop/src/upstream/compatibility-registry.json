@@ -1985,7 +1985,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "035a1e8b4d9f4b8416664e3b93f8f160484d885fd09d912821a7f80ecbc4fe33",
     "inputHash": "035a1e8b4d9f4b8416664e3b93f8f160484d885fd09d912821a7f80ecbc4fe33",
-    "outputHash": "baa916e0867fcae0d6c7bf722d87e9d97fbe77e9a7cf05e5cc4bfe2309e73105"
+    "outputHash": "d5b52c04f0770bb60852f636d21e2a020dfafb099540bd59de3a291b858133fe"
   },
   {
     "name": "browser-semantic-context-menu",

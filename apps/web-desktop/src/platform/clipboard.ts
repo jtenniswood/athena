@@ -1,8 +1,10 @@
+import { browserCapabilities } from './capabilities'
+
 /** Read the first image off the clipboard, if any (modern Chromium Clipboard
  *  API). Returns null when there is none or permission is denied. */
 export async function clipboardImageAsFile(): Promise<null | Blob> {
   try {
-    if (!navigator.clipboard?.read) {
+    if (!browserCapabilities().clipboard || !navigator.clipboard?.read) {
       return null
     }
 
@@ -27,12 +29,15 @@ export async function clipboardImageAsFile(): Promise<null | Blob> {
 }
 
 export async function readClipboard(): Promise<string> {
-  try { return await navigator.clipboard.readText() } catch { return '' }
+  try {
+    if (!browserCapabilities().clipboard) return ''
+    return await navigator.clipboard.readText()
+  } catch { return '' }
 }
 
 export async function writeClipboard(text: string): Promise<boolean> {
   try {
-    if (navigator.clipboard?.writeText) {
+    if (browserCapabilities().clipboard && navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(text)
       return true
     }
