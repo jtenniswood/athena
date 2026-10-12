@@ -1300,7 +1300,7 @@
     "name": "driver-raw-iife",
     "kind": "alias",
     "order": 1,
-    "module": "driver.js/package.json",
+    "module": "driver.js/dist/driver.js.iife.js",
     "reason": "Resolve the unexported driver.js IIFE requested as raw text by the upstream preview tour.",
     "owner": "apps/web-desktop/vite.config.ts",
     "tests": [
@@ -1314,7 +1314,7 @@
     "pattern": "^driver\\.js/dist/driver\\.js\\.iife\\.js(\\?raw)?$",
     "replacement": "../../node_modules/driver.js/dist/driver.js.iife.js$1",
     "aliasGroup": "vite",
-    "sourceHash": "d10a3d44a56fbb1650e073f003b1701d716327b9f10c653f44a1ebdbc86d2ee1"
+    "sourceHash": "e52b65c66f23cbcdae8a0b68e378bfd7f6e29a664445fe4240067335e11f6843"
   },
   {
     "name": "browser-debug-entry",
