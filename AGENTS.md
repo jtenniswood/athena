@@ -86,9 +86,11 @@ explicitly requested. Do not alter repository settings as part of routine work.
 ## Fixing problems
 
 Diagnose the reported symptom, make the smallest useful fix, and check the
-affected workflow. Images build in GitHub Actions; a push to `main` publishes
-and deploys the image with container-health rollback. Keep feature work on a
-branch and open a PR on `origin`. Do not merge or deploy unless requested.
+affected workflow. Images build in GitHub Actions. A manual dispatch on `main`
+publishes an image and sends a signed deployment request to Komodo; version-tag
+builds publish without deploying. The active Komodo health-check and rollback
+configuration is external to this repository. Keep feature work on a branch and
+open a PR on `origin`. Do not merge or deploy unless requested.
 
 Use the previous immutable image digest for rollback if a deployed change breaks
 behavior. Keep browser storage, runtime configuration, and data volumes intact.
