@@ -138,6 +138,12 @@ The choice is saved in this browser. Choose **Last active profile** to restore
 the previous behavior. When viewing a single profile, new sessions use that
 profile; starting a session explicitly for a profile keeps that choice.
 
+### Development
+
+See the [tooling index](docs/tooling.md) for the local development loop, focused
+checks, and the distinction between active workflows and historical scripts.
+The [release guide](docs/releases.md) describes publication and rollback.
+
 ### Acknowledgment
 
 Athena is an original project based on the work of

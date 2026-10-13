@@ -1,5 +1,10 @@
 # Browser startup regression: diagnosis and repair plan
 
+> Historical design/delivery record. Current ownership is described in
+> [browser architecture](browser-architecture.md); current commands are in the
+> [tooling index](tooling.md) and [release guide](releases.md). Status statements
+> and checklists below describe earlier work, not additional acceptance gates.
+
 Status: implementation and deployment applied. The browser-only startup,
 overlay, connection, settings, fixture, and behavior repair is built into the
 Tailscale-facing 4174 container and verified through the rebuilt nginx image.

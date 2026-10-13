@@ -19,8 +19,8 @@ renderer remains responsible for conversation state and upstream features.
   cross-tab update handshake.
 
 Renderer modules are loaded only after startup installs the bridge and runs
-browser initialization. Browser pane ownership is derived once by the wrapper
-and passed into the workspace adapter. The adapter projects the existing
+browser initialization. Browser pane ownership follows one wrapper policy,
+used by the host's panel commands and workspace surface. The adapter projects the existing
 renderer layout without changing its saved state.
 
 `upstream/entry.ts` starts the browser host after authentication and profile

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import vm from 'node:vm'
 import ts from 'typescript'
-import * as policy from './release-policy.mjs'
+import * as policy from '../release-policy.mjs'
 
 const wrapper = 'a'.repeat(40), renderer = 'b'.repeat(40), digest = 'sha256:' + 'c'.repeat(64)
 const source = ts.transpileModule(readFileSync(new URL('./promote-image.mjs', import.meta.url), 'utf8'), {
@@ -20,8 +20,8 @@ function publish({ enabled = false, current = wrapper, mismatchedTag = false, mi
       exports: {}, console: { log() {} },
       process: { env: { GITHUB_REPOSITORY: 'example/hermes-web', GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '2', GITHUB_REF: 'refs/heads/main', GITHUB_STEP_SUMMARY: '/tmp/summary', HERMES_PROMOTION_ENABLED: String(enabled) }, exit: () => { throw stopped } },
       require(name) {
-        if (name === './release-policy.mjs') return policy
-        if (name === './renderer.mjs') return { rendererLock: () => ({ rev: renderer }) }
+        if (name === '../release-policy.mjs') return policy
+        if (name === '../renderer.mjs') return { rendererLock: () => ({ rev: renderer }) }
         if (name === 'node:fs') return {
           readdirSync: () => (missingCandidate ? [] : ['candidate-amd64.json']),
           readFileSync: file => JSON.stringify(evidence.find(item => file.includes(item.arch))),

@@ -1,5 +1,10 @@
 # Mobile experience plan
 
+> Historical design/delivery record. Current ownership is described in
+> [browser architecture](browser-architecture.md); current commands are in the
+> [tooling index](tooling.md) and [release guide](releases.md). Status statements
+> and checklists below describe earlier work, not additional acceptance gates.
+
 Status: proposed; no application changes or deployment are part of this review.
 
 ## Direction

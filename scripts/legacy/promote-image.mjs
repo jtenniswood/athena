@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { readdirSync, readFileSync, appendFileSync, writeFileSync } from 'node:fs'
-import { assertCandidateEvidence, assertRendererOnlyChange, promotionTags } from './release-policy.mjs'
-import { rendererLock } from './renderer.mjs'
+import { assertCandidateEvidence, assertRendererOnlyChange, promotionTags } from '../release-policy.mjs'
+import { rendererLock } from '../renderer.mjs'
 const run = (command, args) => execFileSync(command, args, { encoding: 'utf8' }).trim()
 const repository = process.env.GITHUB_REPOSITORY
 const image = `ghcr.io/${repository.toLowerCase()}`
