@@ -1185,7 +1185,7 @@ test('settings fills the viewport and uses compact list and detail navigation', 
   await surface.getByRole('button', { name: 'Back', exact: true }).click()
   await expect(surface.locator('.browser-settings-navigation')).toBeVisible()
   await expect(surface.locator('.browser-settings-content-slot')).toBeHidden()
-  await surface.getByRole('button', { name: 'Close settings', exact: true }).click()
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
   await expect(chat).toHaveText('Keep this draft while changing settings layout')
 })
 
