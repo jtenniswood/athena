@@ -64,7 +64,7 @@ importers:
         version: 1.2.5
       '@nanostores/react':
         specifier: 1.1.0
-        version: 1.1.0(nanostores@1.4.0)(react@19.2.7)
+        version: 1.1.0(nanostores@1.5.5)(react@19.2.7)
       '@nous-research/ui':
         specifier: 0.19.1
         version: 0.19.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(motion@12.43.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -171,8 +171,8 @@ importers:
         specifier: 12.43.0
         version: 12.43.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       nanostores:
-        specifier: 1.4.0
-        version: 1.4.0
+        specifier: 1.5.5
+        version: 1.5.5
       node-pty:
         specifier: 1.1.0
         version: 1.1.0
@@ -4293,10 +4293,6 @@ packages:
     engines: {node: ^22 || ^24 || >=26}
     hasBin: true
 
-  nanostores@1.4.0:
-    resolution: {integrity: sha512-i0tloweeudshAEuddpDxcg9Ik6pkPfVsHIgKyf143JrgG7/MOh0+q7BypdLXZPoOP7fOYt1eTcwGkyiVmhJFkA==}
-    engines: {node: ^20.0.0 || >=22.0.0}
-
   nanostores@1.5.5:
     resolution: {integrity: sha512-FixtE239Gl6Gz0ZGCK0WzvNwObNCIwVT+L7zQcf1QgcA6AzBxblzqe9OT88qiucNkhsjSOqiogSaF5jVbJiqSA==}
     engines: {node: ^20.0.0 || >=22.0.0}
@@ -6658,11 +6654,6 @@ snapshots:
   '@mermaid-js/parser@1.2.1':
     dependencies:
       '@chevrotain/types': 11.1.2
-
-  '@nanostores/react@1.1.0(nanostores@1.4.0)(react@19.2.7)':
-    dependencies:
-      nanostores: 1.4.0
-      react: 19.2.7
 
   '@nanostores/react@1.1.0(nanostores@1.5.5)(react@19.2.7)':
     dependencies:
@@ -10121,8 +10112,6 @@ snapshots:
   nanoid@5.1.16: {}
 
   nanoid@6.0.2: {}
-
-  nanostores@1.4.0: {}
 
   nanostores@1.5.5: {}
 
