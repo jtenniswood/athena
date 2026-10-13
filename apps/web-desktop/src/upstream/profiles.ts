@@ -8,6 +8,7 @@ import type { BrowserProfile, BrowserProfiles } from '../experience/contracts/pr
 import { browserDefaultProfile } from '../platform/browser-default-profile'
 import { WEB_CONNECTION_ID } from '../platform/connection'
 import { reportActionFailure } from '../experience/action-errors'
+import { readHiddenProfiles } from '../experience/browser-preferences'
 
 function label(value: string) {
   const text = value.replaceAll('-', ' ').trim()
@@ -32,9 +33,39 @@ export function restoreBrowserProfile(): () => void {
     window.__HERMES_WEB_ACTIVE_PROFILE__ = null
     setShowAllProfiles(true)
   }
-  return $activeGatewayProfile.subscribe(profile => {
+  const hiddenProfiles = readHiddenProfiles()
+  let stopSelectingDefault: (() => void) | undefined
+  const chooseVisibleDefault = (profiles: ReturnType<typeof $profiles.get>) => {
+    const defaultProfile = profiles.find(profile => profile.is_default)
+    if (!defaultProfile) return
+    if (!hiddenProfiles.includes(defaultProfile.name)) {
+      stopSelectingDefault?.()
+      return
+    }
+    if (!$showAllProfiles.get() && $activeGatewayProfile.get() !== defaultProfile.name) {
+      stopSelectingDefault?.()
+      return
+    }
+    const order = $profileOrder.get()
+    const ordered = sortByProfileOrder(
+      [...profiles],
+      !order.includes(defaultProfile.name) ? [defaultProfile.name, ...order] : order
+    )
+    const next = ordered.find(profile => !hiddenProfiles.includes(profile.name))
+    if (!next) return
+    window.__HERMES_WEB_ACTIVE_PROFILE__ = next.name
+    selectProfile(next.name)
+    stopSelectingDefault?.()
+  }
+  stopSelectingDefault = $profiles.listen(profiles => chooseVisibleDefault([...profiles]))
+  chooseVisibleDefault($profiles.get())
+  const stopSavingProfile = $activeGatewayProfile.subscribe(profile => {
     try { sessionStorage.setItem('hermes-web.browser.profile', profile) } catch { /* Optional tab state. */ }
   })
+  return () => {
+    stopSelectingDefault?.()
+    stopSavingProfile()
+  }
 }
 
 /** A read-only profile projection with commands delegated to upstream owners. */
