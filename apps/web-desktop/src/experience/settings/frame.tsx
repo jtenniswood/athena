@@ -1,9 +1,10 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router'
-import { Codicon, OverlayView } from '../../upstream/browser-api'
-import { groupSettingsSections, isSettingsSectionVisible, orderSettingsSections, settingsPageLabel, settingsScopeDescription } from './policy'
+import { Codicon, NotificationsSettings, OverlayView } from '../../upstream/browser-api'
+import { groupSettingsSections, isSettingsSectionVisible, orderSettingsSections, settingsPageLabel, settingsPageDescription, settingsScopeDescription } from './policy'
 import { BrowserToolbarButton } from '../ui/toolbar-button'
 import { BrowserColorThemesPage } from './themes-page'
+import { BrowserNotificationPermissionSetting } from './notification-permission'
 import { SETTINGS_TOOL_PAGES } from '../../upstream/settings-tools'
 import './settings.css'
 
@@ -72,6 +73,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   }))])
   const visibleGroups = navigationGroups.flatMap(group => group.items)
   const activeGroup = visibleGroups.find(group => group.active)
+  const pageDescription = settingsPageDescription(activeView) ?? `Manage ${activeGroup?.label.toLowerCase() ?? 'these'} settings.`
   const pageNotice = settingsScopeDescription(activeView)
   const activeVisible = Boolean(activeGroup)
   const pageVisible = isSettingsSectionVisible(activeView)
@@ -167,10 +169,19 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
             <h2>{title}</h2>
             <p>{activeVisible ? 'Choose a category to view and change its options.' : 'This settings category is hidden. Choose another category or close settings.'}</p>
           </div>}
-          <div className="browser-settings-content-slot" hidden={!showDetail} inert={!showDetail}>
+          <div className="browser-settings-content-slot" data-settings-page={activeView} hidden={!showDetail} inert={!showDetail}>
+            {pageVisible && activeGroup && <header className="browser-settings-page-header browser-settings-detail-header">
+              <h2 className="browser-settings-page-title">{activeGroup.label}</h2>
+              <p className="browser-settings-page-description">{pageDescription}</p>
+            </header>}
             {pageVisible && pageNotice && <p className="browser-settings-page-notice" role="note">{pageNotice}</p>}
             {pageVisible && activeView === 'config:browser-theme'
-              ? <BrowserColorThemesPage /> : children}
+              ? <BrowserColorThemesPage />
+              : pageVisible && activeView === 'config:browser-sounds'
+                ? <NotificationsSettings subpage="sounds" />
+              : pageVisible && activeView === 'notifications'
+                ? <div className="browser-notification-settings"><BrowserNotificationPermissionSetting />{children}</div>
+                : children}
           </div>
         </main>
       </div>

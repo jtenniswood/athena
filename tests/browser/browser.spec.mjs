@@ -83,6 +83,185 @@ narrowDesktopChecks(test, open)
 
 const touchTest = test.extend({ hasTouch: true })
 
+test('the default new-session profile persists and routes All profiles drafts without changing scope', async ({ page }) => {
+  const creates = []
+  await page.routeWebSocket(/\/api\/ws/, socket => {
+    const server = socket.connectToServer()
+    socket.onMessage(message => {
+      const frame = JSON.parse(String(message))
+      if (frame.method === 'session.create') creates.push(frame.params)
+      server.send(message)
+    })
+    server.onMessage(message => socket.send(message))
+  })
+  await open(page)
+  await editor(page).fill('Keep this conversation draft while choosing a default')
+  await page.getByRole('button', { name: 'Profile actions', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Default for new sessions', exact: true }).hover()
+  await page.getByRole('menuitemradio', { name: 'Research', exact: true }).click()
+  await expect(editor(page)).toHaveText('Keep this conversation draft while choosing a default')
+  await page.reload()
+  await expect(editor(page)).toBeVisible({ timeout: 30000 })
+  const all = page.getByRole('button', { name: 'All profiles', exact: true })
+  await all.click()
+  await page.getByRole('button', { name: 'New session', exact: true }).first().click()
+  await editor(page).fill('Create this session in research')
+  await editor(page).press('Enter')
+  await expect.poll(() => creates.length).toBe(1)
+  expect(creates[0].profile).toBe('research')
+  await expect(all).toHaveAttribute('aria-pressed', 'true')
+
+  const writer = page.locator('[data-profile-key="writer"]')
+  await writer.click()
+  await expect(writer).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'New session', exact: true }).first().click()
+  await editor(page).fill('Create this session in writer')
+  await editor(page).press('Enter')
+  await expect.poll(() => creates.length).toBe(2)
+  expect(creates[1].profile).toBe('writer')
+
+  await all.click()
+  await page.keyboard.press('ControlOrMeta+n')
+  await expect(page).toHaveURL(/#\/$/)
+  await editor(page).fill('Create this keyboard session in research')
+  await editor(page).press('Enter')
+  await expect.poll(() => creates.length).toBe(3)
+  expect(creates[2].profile).toBe('research')
+  await expect(all).toHaveAttribute('aria-pressed', 'true')
+})
+
+touchTest('the phone profile actions can choose and clear a default without changing the conversation draft', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await open(page)
+  await editor(page).fill('Keep the draft while choosing a phone default')
+  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  await page.getByRole('button', { name: 'Profile actions', exact: true }).click()
+  await page.getByRole('button', { name: 'Default for new sessions', exact: true }).click()
+  await page.getByRole('radio', { name: 'Research', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('hermes-web.default-profile-route.v1'))?.profile)).toBe('research')
+  await page.keyboard.press('Escape')
+  await expect(editor(page)).toHaveText('Keep the draft while choosing a phone default')
+
+  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  await page.getByRole('button', { name: 'Profile actions', exact: true }).click()
+  await page.getByRole('button', { name: 'Default for new sessions', exact: true }).click()
+  await expect(page.getByRole('radio', { name: 'Research', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await page.getByRole('radio', { name: 'Last active profile', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('hermes-web.default-profile-route.v1'))).toBeNull()
+  await page.keyboard.press('Escape')
+  await expect(editor(page)).toHaveText('Keep the draft while choosing a phone default')
+})
+
+for (const preference of ['queue', 'steer']) {
+  for (const method of ['Enter', 'Send']) {
+    test(`idle messages send and running follow-ups queue: ${preference}, ${method}`, async ({ page }) => {
+      await page.setViewportSize({ width: method === 'Send' ? 390 : 1440, height: 900 })
+      await page.addInitScript(value => localStorage.setItem('hermes-web.browser.followup-behavior', value), preference)
+      const submits = []
+      const held = []
+      let holdCompletion = true
+      await page.routeWebSocket(/\/api\/ws/, socket => {
+        const server = socket.connectToServer()
+        socket.onMessage(message => {
+          const frame = JSON.parse(String(message))
+          if (frame.method === 'prompt.submit') submits.push(frame.params)
+          server.send(message)
+        })
+        server.onMessage(message => {
+          const frame = JSON.parse(String(message))
+          if (holdCompletion && frame.params?.type === 'message.complete') held.push(() => socket.send(message))
+          else socket.send(message)
+        })
+      })
+      const send = async () => {
+        if (method === 'Enter') await editor(page).press('Enter')
+        else await page.getByRole('button', { name: 'Send', exact: true }).click()
+      }
+      await open(page)
+      await editor(page).fill(`Idle message via ${method}`)
+      await expect(page.locator('[data-browser-queue-action]')).toHaveCount(0)
+      await send()
+      await expect.poll(() => submits.length).toBe(1)
+      expect(submits[0]).toMatchObject({ session_id: 'preview-week', text: `Idle message via ${method}` })
+      await expect(editor(page)).toHaveText('')
+      await expect(page.locator('[data-slot="composer-root"]').getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
+
+      if (preference === 'queue') {
+        await editor(page).fill(`Queued follow-up via ${method}`)
+        await expect(page.locator('[data-browser-queue-action]')).toBeVisible()
+        await send()
+        await expect(editor(page)).toHaveText('')
+        await expect(page.getByRole('button', { name: '1 Queued', exact: true })).toBeVisible()
+        expect(submits).toHaveLength(1)
+      }
+      await expect.poll(() => held.length).toBe(1)
+      holdCompletion = false
+      held.forEach(release => release())
+      if (preference === 'queue') {
+        await expect.poll(() => submits.length).toBe(2)
+        expect(submits[1]).toMatchObject({ session_id: 'preview-week', text: `Queued follow-up via ${method}` })
+      }
+      await expect(page.locator('[data-slot="composer-root"]').getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0)
+    })
+  }
+}
+
+test('response links open a browser tab without losing the conversation or draft', async ({ page, context }) => {
+  const destination = 'https://example.com/response-link'
+  // Exercise the actual transcript renderer with both Markdown and HTML anchors.
+  const response = `[Markdown reference](${destination})\n\n<a href="${destination}">HTML reference</a>`
+  await page.routeWebSocket(/\/api\/ws/, socket => {
+    const server = socket.connectToServer()
+    server.onMessage(message => {
+      const frame = JSON.parse(String(message))
+      if (Array.isArray(frame.result?.messages)) {
+        for (const row of frame.result.messages) if (row.role === 'assistant') row.content = response
+      }
+      socket.send(JSON.stringify(frame))
+    })
+  })
+  await page.route(/\/api\/sessions\/preview-week\/messages/, async route => {
+    const upstream = await route.fetch()
+    const body = await upstream.json()
+    for (const row of body.messages || []) if (row.role === 'assistant') row.content = response
+    await route.fulfill({ response: upstream, json: body })
+  })
+  await context.route(destination, route => route.fulfill({ contentType: 'text/html', body: '<h1>Reference destination</h1>' }))
+  // The desktop preference must not send browser clicks to its absent pane.
+  await page.addInitScript(() => localStorage.setItem('hermes.desktop.alwaysExternalLinks.v1', 'false'))
+  await open(page)
+  await expect(page.locator('.athena-connecting-overlay')).toBeHidden({ timeout: 30000 })
+  for (const dismiss of await page.getByRole('button', { name: 'Dismiss notification', exact: true }).all()) await dismiss.click()
+  await editor(page).fill('Keep my response-link draft')
+  for (const [label, gesture] of [
+    ['Markdown reference', 'keyboard'],
+    ['Markdown reference', 'click'],
+    ['HTML reference', 'click'],
+    ['Markdown reference', 'modifier'],
+    ['HTML reference', 'middle']
+  ]) {
+    const link = page.getByRole('link', { name: label, exact: true })
+    await page.bringToFront()
+    if (gesture === 'keyboard') {
+      // Use real Tab navigation; the renderer redirects programmatic focus to the composer.
+      for (let step = 0; step < 40 && !await link.evaluate(element => element === document.activeElement); step++) {
+        await page.keyboard.press('Shift+Tab')
+      }
+      await expect(link).toBeFocused()
+    }
+    const popupPromise = page.waitForEvent('popup', { timeout: 15000 })
+    if (gesture === 'keyboard') await link.press('Enter')
+    else await link.click(gesture === 'modifier' ? { modifiers: ['ControlOrMeta'] } : gesture === 'middle' ? { button: 'middle' } : {})
+    const popup = await popupPromise
+    await expect(popup).toHaveURL(destination)
+    await expect(popup.getByRole('heading', { name: 'Reference destination' })).toBeVisible()
+    expect(await popup.evaluate(() => window.opener)).toBeNull()
+    await popup.close()
+    await expect(page).toHaveURL(/#\/preview-week$/)
+    await expect(editor(page)).toHaveText('Keep my response-link draft')
+  }
+})
+
 test.describe('browser microphone', () => {
   test('records once permission is granted and releases the mic after transcription', async ({ page }) => {
     let audio
@@ -298,7 +477,6 @@ touchTest('phone navigation and contextual sheets stay tappable at 320px and 200
   await editor(page).fill('Check the phone composer controls')
   for (const [name, control] of [
     ['Add context', page.getByRole('button', { name: 'Add context', exact: true })],
-    ['Queue message', page.getByRole('button', { name: 'Queue message', exact: true })],
     ['Send', page.getByRole('button', { name: 'Send', exact: true })]
   ]) {
     const bounds = await control.boundingBox()
@@ -318,7 +496,8 @@ touchTest('phone navigation and contextual sheets stay tappable at 320px and 200
   await expect(page.locator('.browser-main')).toBeHidden()
   expect((await page.locator('.browser-navigation').boundingBox()).width).toBe(320)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320)
-  await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await expect(editor(page)).toHaveText('Check the phone composer controls')
   await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
   const sheet = page.locator('[data-slot="dropdown-menu-content"]:visible').last()
   await expect(sheet).toBeVisible()
@@ -1429,7 +1608,20 @@ for (const width of [390, 1440]) {
 for (const width of [390, 1440]) {
   test.extend({ hasTouch: width === 390 })(`settings groups and renamed search preserve destinations at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
+    await page.route(/\/api\/config(?:\?|$)/, async route => {
+      if (route.request().method() !== 'GET') return route.continue()
+      const response = await route.fetch()
+      const data = await response.json()
+      const config = data.config ?? data
+      config.display = { ...config.display, personality: 'friendly', show_reasoning: true }
+      config.timezone = 'UTC'
+      config.agent = { ...config.agent, image_input_mode: 'auto' }
+      await route.fulfill({ json: config })
+    })
+    await page.addInitScript(() => localStorage.setItem('hermes.desktop.user-bubble-transparency.v1', '75'))
     await open(page)
+    expect(await page.evaluate(() => localStorage.getItem('hermes.desktop.user-bubble-transparency.v1'))).toBeNull()
+    expect(await page.evaluate(() => document.documentElement.style.getPropertyValue('--user-bubble-keep'))).toBe('')
     await editor(page).fill('Keep my draft while finding renamed settings')
     const trigger = await settingsTrigger(page)
     const role = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
@@ -1440,23 +1632,41 @@ for (const width of [390, 1440]) {
       'Preferences', 'Assistant', 'Tools', 'Service', 'Maintenance'
     ])
     await expect(page.locator('.browser-settings-category-button:not(.is-child) > span:not(.codicon)')).toHaveText([
-      'Appearance', 'Theme', 'Notifications', 'Keyboard Shortcuts', 'Models', 'AI Connections', 'Chat', 'Voice',
-      'Profiles', 'Agents', 'Memory', 'Workspace', 'Webhooks', 'Permissions',
+      'Appearance', 'Theme', 'Notifications', 'Sounds', 'Keyboard Shortcuts', 'Models', 'AI Connections', 'Chat', 'Voice',
+      'Profiles', 'Memory', 'Workspace', 'Webhooks', 'Permissions',
       'Credentials', 'Gateway', 'Command center', 'Billing', 'System updates', 'Archived Chats', 'Configuration', 'Advanced'
     ])
     await page.screenshot({ path: testInfo.outputPath('settings-groups.png') })
     await page.getByRole('button', { name: 'Appearance', exact: true }).click()
     await expect(page.locator('#setting-field-appearance\\.language')).toBeVisible()
-    await expect(page.locator('#setting-field-appearance\\.user-bubble')).toBeVisible()
+    await expect(page.locator('#setting-field-appearance\\.user-bubble')).toHaveCount(0)
     await expect(page.locator('.browser-settings-category-button.is-child')).toHaveCount(0)
     if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await page.getByRole('button', { name: 'Chat', exact: true }).click()
+    const chatSettings = page.getByRole('main', { name: 'Chat', exact: true })
+    for (const key of ['display.personality', 'timezone', 'display.show_reasoning', 'agent.image_input_mode']) {
+      await expect(chatSettings.locator(`[id="setting-field-${key}"]`)).toBeVisible()
+    }
+    await expect(page.locator('.browser-settings-category-button.is-child')).toHaveCount(0)
+    if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await page.getByRole('button', { name: 'Notifications', exact: true }).click()
+    await expect(page.locator('.browser-settings-category-button.is-child')).toHaveCount(0)
+    await expect(page.getByRole('main', { name: 'Notifications', exact: true }).getByText('Response ready', { exact: true })).toBeVisible()
+    await expect(page.locator('.browser-notification-permission')).toBeVisible()
+    await expect(page.locator('#setting-field-notifications\\.completion-sound')).toHaveCount(0)
+    if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await page.locator('.browser-settings-search > button').click()
+    const agentsPalette = page.locator('[data-browser-command-palette]')
+    await agentsPalette.locator('input[role="combobox"]').fill('Agents')
+    await expect(agentsPalette.getByRole('group', { name: 'Settings', exact: true }).getByRole('option', { name: 'Agents', exact: true })).toHaveCount(0)
+    await page.keyboard.press('Escape')
     for (const [query, result, view, title] of [
+      ['Sounds', 'Sounds', 'config:browser-sounds', 'Sounds'],
       ['Colour themes', 'Theme', 'config:browser-theme', 'Theme'],
       ['Server Connection', 'Gateway', 'gateway', 'Gateway'],
       ['System updates', 'System updates', 'config:system-updates', 'System updates'],
       ['Profiles', 'Profiles', 'config:profiles', 'Profiles'],
       ['Webhooks', 'Webhooks', 'config:webhooks', 'Webhooks'],
-      ['Agents', 'Agents', 'config:agents', 'Agents'],
       ['Command center', 'Command center', 'config:command-center', 'Command center'],
       ['Backup & reset', 'Configuration', 'config:browser-configuration', 'Configuration'],
       ['Providers', 'AI Connections — Accounts', 'providers', 'AI Connections'],
@@ -1471,7 +1681,7 @@ for (const width of [390, 1440]) {
       expect(bounds.x).toBeGreaterThanOrEqual(0)
       expect(bounds.x + bounds.width).toBeLessThanOrEqual(width)
       if (query === 'Gateway') await page.screenshot({ path: testInfo.outputPath('settings-search.png') })
-      const results = ['config:profiles', 'config:webhooks', 'config:agents', 'config:command-center'].includes(view)
+      const results = ['config:profiles', 'config:webhooks', 'config:command-center'].includes(view)
         ? palette.getByRole('group', { name: 'Settings', exact: true }) : palette
       const option = results.getByRole('option', { name: result, exact: true })
       if (width === 390) await option.tap()
@@ -1483,6 +1693,11 @@ for (const width of [390, 1440]) {
       await expect(page.getByRole('main', { name: title, exact: true })).toBeVisible()
       await expect(page.locator('.browser-settings-heading h1')).toHaveText(width < 896 ? title : 'Settings')
       expect(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('tab')).toBe(view)
+      if (view === 'config:browser-sounds') {
+        await expect(page.getByRole('combobox')).toBeVisible()
+        await expect(page.locator('.browser-notification-permission')).toHaveCount(0)
+        await expect(page.getByRole('button', { name: 'Send test notification', exact: true })).toHaveCount(0)
+      }
       if (view === 'keys') {
         expect(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('kview')).toBe('settings')
       }
@@ -1659,21 +1874,24 @@ for (const width of [390, 1440]) {
     })
     await open(page)
     await editor(page).fill('Keep this draft while managing configuration')
-    const trigger = page.getByRole('button', { name: 'Open settings menu', exact: true })
+    const trigger = await settingsTrigger(page)
     await trigger.click()
     const menuRole = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
     await page.getByRole(menuRole, { name: 'Settings and workspace', exact: true })
       .getByRole(menuRole === 'dialog' ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Export config', exact: true })).toHaveCount(0)
-    if (width < 896) await page.getByRole('button', { name: 'Models', exact: true }).click()
-    await page.getByRole('main', { name: 'Models', exact: true }).getByRole('button', { name: 'research', exact: true }).click()
+    await page.getByRole('button', { name: 'Models', exact: true }).click()
+    const modelSettings = page.getByRole('main', { name: 'Models', exact: true })
+    await expect(modelSettings.getByText('Applies to', { exact: true })).toHaveCount(0)
+    await modelSettings.getByRole('button', { name: /^research$/i }).click()
+    await expect(modelSettings.getByText(/Changes on this page apply/)).toHaveCount(0)
     if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
     await page.getByRole('button', { name: 'Configuration', exact: true }).click()
     await expect(page).toHaveURL(/tab=config%3Abrowser-configuration/)
     const management = page.getByRole('region', { name: 'Configuration management' })
     await expect(management).toBeVisible()
     await expect(page.getByRole('main', { name: 'Configuration', exact: true }).getByText('Applies to', { exact: true })).toHaveCount(0)
-    await expect(management.getByText('Applies to profile: research', { exact: true })).toBeVisible()
+    await expect(management.getByText(/Applies to profile:/)).toHaveCount(0)
 
     const exportRequest = page.waitForRequest(request => request.method() === 'GET' && /\/api\/config\?/.test(request.url()) && new URL(request.url()).searchParams.get('profile') === 'research')
     const downloadPromise = page.waitForEvent('download')
@@ -1746,12 +1964,28 @@ for (const width of [390, 1440]) {
     await menu.getByRole(actionRole, { name: 'Settings', exact: true }).click()
     const frame = page.locator('[data-browser-settings-frame]')
     const navigation = frame.getByRole('navigation', { name: 'Settings categories', exact: true })
-    for (const [label, tab] of [['Profiles', 'config:profiles'], ['Webhooks', 'config:webhooks'], ['Agents', 'config:agents'], ['Command center', 'config:command-center'], ['Gateway', 'gateway']]) {
+    for (const [label, tab] of [['Profiles', 'config:profiles'], ['Webhooks', 'config:webhooks'], ['Command center', 'config:command-center'], ['Gateway', 'gateway']]) {
       await navigation.getByRole('button', { name: label, exact: true }).click()
       await expect(frame.getByRole('main', { name: label, exact: true })).toBeVisible()
       await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)
       await expect(page).toHaveURL(new RegExp('tab=' + tab.replace(':', '(?:%3A|:)')))
       if (label === 'Profiles') {
+        const tabs = frame.getByRole('tablist', { name: 'Profiles', exact: true })
+        await expect(tabs.getByRole('tab')).toHaveText(['Hermes', 'Research', 'Writer'])
+        await expect(frame.getByRole('textbox', { name: 'Search profiles...', exact: true })).toHaveCount(0)
+        await expect(tabs.getByRole('tab', { name: 'Hermes', exact: true })).toHaveAttribute('aria-selected', 'true')
+        await tabs.getByRole('tab', { name: 'Hermes', exact: true }).focus()
+        await page.keyboard.press('ArrowRight')
+        await expect(tabs.getByRole('tab', { name: 'Research', exact: true })).toHaveAttribute('aria-selected', 'true')
+        await expect(frame.getByRole('tabpanel').getByRole('heading', { name: 'Research', exact: true })).toBeVisible()
+        await expect(frame.getByRole('tabpanel').locator('.cm-content')).toBeVisible()
+        await expect(tabs.getByRole('tab', { name: 'Research', exact: true })).toBeFocused()
+        await tabs.getByRole('button', { name: 'Research', exact: true }).click()
+        await page.getByRole('menuitem', { name: 'Rename…', exact: true }).click()
+        const rename = page.getByRole('dialog', { name: 'Rename profile', exact: true })
+        await expect(rename).toBeVisible()
+        await page.keyboard.press('Escape')
+        await expect(rename).toBeHidden()
         await expect(frame.getByRole('button', { name: 'New profile', exact: true })).toBeVisible()
         await frame.getByRole('button', { name: 'New profile', exact: true }).click()
         const create = page.getByRole('dialog', { name: 'New profile', exact: true })

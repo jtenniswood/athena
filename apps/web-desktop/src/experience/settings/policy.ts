@@ -24,6 +24,7 @@ export {
   settingsGroups,
   settingsPageAliases,
   settingsPageDefinition,
+  settingsPageDescription,
   settingsPageId,
   settingsPageIsVisible,
   isDesktopStartupSettingsPage,
@@ -102,12 +103,15 @@ export function presentSettingsPalette<T extends { id: string; label: string; ke
   })).map(({ item }) => item)
 }
 
-export function presentSettingsSearchEntry<T extends { context: string; keywords: string[]; target: { view: string; keysView?: string } }>(entry: T): T {
-  const page = entry.target.view
+export function presentSettingsSearchEntry<T extends { context: string; keywords: string[]; target: { view: string; keysView?: string; subpage?: string; setting?: string } }>(entry: T): T {
+  const sounds = entry.target.view === 'notifications'
+    && (entry.target.subpage === 'sounds' || entry.target.setting === 'notifications.completion-sound')
+  const target = sounds ? { ...entry.target, view: 'config:browser-sounds' } : entry.target
+  const page = target.view
   const label = settingsPageLabel(page, entry.context)
   const context = entry.target.keysView
     ? `${label} — ${settingsPageLabel(`kview:${entry.target.keysView}`, entry.context)}` : label
-  return { ...entry, context, keywords: [...entry.keywords, entry.context, ...settingsPageAliases(page)] }
+  return { ...entry, target, context, keywords: [...entry.keywords, entry.context, ...settingsPageAliases(page)] }
 }
 
 export function isSettingsFieldVisible(key: string): boolean {

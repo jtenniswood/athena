@@ -15,7 +15,7 @@ import {
 } from '../web-bridge/gateways'
 
 import { buildInfo } from '../build-info'
-import { createBrowserDefaultProfileRoute } from '../platform/default-profile-route'
+import { browserDefaultProfile as defaultProfileRoute } from '../platform/browser-default-profile'
 import { createWebZoomBridge } from '../platform/display'
 import { clipboardImageAsFile, readClipboard, writeClipboard } from '../platform/clipboard'
 import { isUnderPluginRoot, isWebFileHandle, registerWebFile, webFileAsDataUrl, ensureFileInput, pickWithInput, acceptsFor } from '../platform/files'
@@ -47,18 +47,6 @@ type WebBridge = Omit<Window['hermesDesktop'], 'terminal' | 'git'> & { agentPlug
 export function createWebBridge(): Window['hermesDesktop'] {
   window.__HERMES_WEB_BRIDGE__ = true
   const capabilities = browserCapabilities()
-
-  const defaultProfileRoute = createBrowserDefaultProfileRoute(
-    () => window.localStorage,
-    WEB_CONNECTION_ID,
-    {
-      subscribe: listener => {
-        const onStorage = (event: StorageEvent) => listener(event.key, event.newValue)
-        window.addEventListener('storage', onStorage)
-        return () => window.removeEventListener('storage', onStorage)
-      }
-    }
-  )
 
   const connectionListeners = new Set<() => void>()
   const bridge: WebBridge = {
