@@ -1,5 +1,10 @@
 # Settings architecture: execution plan
 
+> Historical design/delivery record. Current ownership is described in
+> [browser architecture](browser-architecture.md); current commands are in the
+> [tooling index](tooling.md) and [release guide](releases.md). Status statements
+> and checklists below describe earlier work, not additional acceptance gates.
+
 Status: implemented at the available upstream adapter boundary. The catalog,
 capability/scope projection, compact navigation state, and typed Configuration
 actions are in place. The pinned upstream controller remains the checked

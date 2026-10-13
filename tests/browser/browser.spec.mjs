@@ -206,6 +206,53 @@ for (const preference of ['queue', 'steer']) {
   }
 }
 
+for (const preference of ['queue', 'steer']) for (const alternate of [false, true]) {
+  test(`busy composer uses the selected follow-up intent: ${preference}, alternate ${alternate}`, async ({ page }) => {
+    await page.addInitScript(value => localStorage.setItem('hermes-web.browser.followup-behavior', value), preference)
+    const submits = [], redirects = [], held = []
+    let holdCompletion = true
+    await page.routeWebSocket(/\/api\/ws/, socket => {
+      const server = socket.connectToServer()
+      socket.onMessage(message => {
+        const frame = JSON.parse(String(message))
+        if (frame.method === 'prompt.submit') submits.push(frame.params)
+        if (frame.method === 'session.redirect') redirects.push(frame.params)
+        server.send(message)
+      })
+      server.onMessage(message => {
+        const frame = JSON.parse(String(message))
+        if (holdCompletion && frame.params?.type === 'message.complete') held.push(() => socket.send(message))
+        else socket.send(message)
+      })
+    })
+    await open(page)
+    await editor(page).fill('Begin the follow-up policy check')
+    await editor(page).press('Enter')
+    await expect.poll(() => submits.length).toBe(1)
+    await expect(page.locator('[data-slot="composer-root"]').getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
+    const followup = `Follow-up ${preference} ${alternate}`
+    await editor(page).fill(followup)
+    const modifier = await page.evaluate(() => /Mac/i.test(navigator.platform) ? 'Meta' : 'Control')
+    await editor(page).press(alternate ? `${modifier}+Enter` : 'Enter')
+    await expect(editor(page)).toHaveText('')
+    const queue = preference === 'queue' ? !alternate : alternate
+    if (queue) {
+      await expect(page.getByRole('button', { name: '1 Queued', exact: true })).toBeVisible()
+      expect(redirects).toEqual([])
+      expect(submits).toHaveLength(1)
+    } else {
+      await expect.poll(() => redirects.length).toBe(1)
+      expect(redirects[0]).toMatchObject({ session_id: 'preview-week', text: followup })
+      await expect(page.getByRole('button', { name: '1 Queued', exact: true })).toHaveCount(0)
+    }
+    await expect.poll(() => held.length).toBe(1)
+    holdCompletion = false
+    held.forEach(release => release())
+    if (queue) await expect.poll(() => submits.length).toBe(2)
+    await expect(page.locator('[data-slot="composer-root"]').getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0)
+  })
+}
+
 test('response links open a browser tab without losing the conversation or draft', async ({ page, context }) => {
   const destination = 'https://example.com/response-link'
   // Exercise the actual transcript renderer with both Markdown and HTML anchors.
@@ -934,6 +981,53 @@ for (const width of [390, 1440]) {
   })
 }
 
+test('chat action dialogs retain their conversation owner when navigation changes', async ({ page }) => {
+  const renamed = []
+  const nextTitle = `Captured conversation ${Date.now()}`
+  page.on('request', request => {
+    if (request.method() === 'PATCH' && new URL(request.url()).pathname === '/api/sessions/preview-week') renamed.push(request.postDataJSON())
+  })
+  await open(page)
+  await editor(page).fill('Keep the original chat draft')
+  await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Rename', exact: true }).click()
+  const rename = page.getByRole('dialog', { name: 'Rename session', exact: true })
+  await expect(rename.getByRole('textbox')).toBeFocused()
+  await rename.getByRole('textbox').fill(nextTitle)
+  await page.evaluate(() => { window.location.hash = '/preview-idea' })
+  await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
+  await rename.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(rename).toBeHidden()
+  await expect.poll(() => renamed.some(body => body.title === nextTitle)).toBe(true)
+  await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
+  await page.goto(`${origin}/#/preview-week`)
+  await expect(editor(page)).toHaveText('Keep the original chat draft')
+})
+
+test('chat delete confirmation retains its conversation owner when navigation changes', async ({ page }) => {
+  const deleted = []
+  await page.route(/\/api\/sessions\/[^/?]+(?:\?|$)/, async route => {
+    if (route.request().method() !== 'DELETE') return route.continue()
+    deleted.push(new URL(route.request().url()).pathname)
+    await route.fulfill({ status: 503, json: { error: 'Synthetic deletion rejected' } })
+  })
+  await open(page)
+  await editor(page).fill('Keep the original delete draft')
+  await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click()
+  const confirm = page.getByRole('dialog', { name: 'Delete session?', exact: true })
+  await expect(confirm).toBeVisible()
+  expect(deleted).toEqual([])
+  await page.evaluate(() => { window.location.hash = '/preview-idea' })
+  await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
+  await confirm.getByRole('button', { name: 'Delete', exact: true }).click()
+  await expect.poll(() => deleted).toEqual(['/api/sessions/preview-week'])
+  await expect(page.getByRole('alert')).toContainText('Could not delete conversation.')
+  await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
+  await page.goto(`${origin}/#/preview-week`)
+  await expect(editor(page)).toHaveText('Keep the original delete draft')
+})
+
 test('chat actions open from the title toolbar with panel controls', async ({ page }) => {
   await open(page)
   const trigger = page.getByRole('button', { name: 'Chat actions', exact: true })
@@ -942,16 +1036,16 @@ test('chat actions open from the title toolbar with panel controls', async ({ pa
   await trigger.click()
   const menu = page.locator('[role="menu"]:visible').last()
   await expect(menu.getByText('Panels', { exact: true })).toHaveCount(0)
-  await expect(menu.getByRole('menuitem', { name: 'Files', exact: true })).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: 'Review', exact: true })).toBeVisible()
+  await expect(menu.getByRole('menuitemcheckbox', { name: 'Files', exact: true })).toBeVisible()
+  await expect(menu.getByRole('menuitemcheckbox', { name: 'Review', exact: true })).toBeVisible()
   await expect(menu.getByText(/Rename/)).toBeVisible()
   await expect(menu.getByText(/Open in new tab/)).toHaveCount(0)
   await expect(menu.getByText(/New window/)).toHaveCount(0)
   await expect(menu.getByText('Appearance', { exact: true })).toHaveCount(0)
   await expect(menu.getByText('Move to project', { exact: true })).toHaveCount(0)
-  expect(await menu.evaluate(element => Array.from(element.children).map(child =>
-    child.getAttribute('role') === 'separator' ? 'separator' : child.querySelector('span')?.textContent
-  ).filter(Boolean))).toEqual(['Rename', 'Pin', 'Mark as unread', 'Files', 'Review', 'separator', 'Archive', 'Delete'])
+  expect(await menu.locator('[role^="menuitem"]').evaluateAll(items => items.map(item =>
+    item.querySelector('.browser-action-label > span')?.textContent
+  ))).toEqual(['Rename', 'Pin', 'Mark as unread', 'Files', 'Review', 'Archive', 'Delete'])
   await page.keyboard.press('Escape')
   await page.locator('[data-web-session-id="preview-week"]').first().click({ button: 'right' })
   await expect(page.getByRole('menuitem', { name: 'Appearance', exact: true })).toBeVisible()
@@ -975,7 +1069,7 @@ for (const platform of ['MacIntel', 'Linux x86_64']) {
       await editor(page).fill('Keep my panel shortcut draft')
       for (const [id, label, key] of [['files', 'Files', 'E'], ['review', 'Review', 'G']]) {
         await trigger.click()
-        await expect(page.getByRole('menuitem', { name: label, exact: true }).locator('.browser-session-shortcut')).toHaveText(prefix + key)
+        await expect(page.getByRole('menuitemcheckbox', { name: label, exact: true }).or(page.getByRole('menuitem', { name: label, exact: true })).locator('.browser-session-shortcut')).toHaveText(prefix + key)
         await page.keyboard.press('Escape')
         await main.focus()
         // Start closed even when an upstream panel is restored by default.
@@ -989,7 +1083,7 @@ for (const platform of ['MacIntel', 'Linux x86_64']) {
         await expect(panel(id)).toBeHidden()
         // Menu clicks and shortcuts share the same visibility owner.
         await trigger.click()
-        await page.getByRole('menuitem', { name: label, exact: true }).click()
+        await page.getByRole('menuitemcheckbox', { name: label, exact: true }).or(page.getByRole('menuitem', { name: label, exact: true })).click()
         await expect(panel(id)).toBeVisible()
         await main.focus()
         await page.keyboard.press(`${modifier}+Shift+${key}`)
@@ -1726,6 +1820,48 @@ for (const width of [390, 1440]) {
     await expect(editor(page)).toHaveText('Keep my draft while finding renamed settings')
   })
 }
+
+test('connection preparation flushes a settings edit with timers paused and waits for gateway confirmation', async ({ page }) => {
+  const config = { security: { redact_secrets: true } }
+  const writes = []
+  let confirmSave
+  const confirmation = new Promise(resolve => { confirmSave = resolve })
+  await page.route(/\/api\/config(?:\?|$)/, async route => {
+    if (route.request().method() !== 'PUT') return route.fulfill({ json: config })
+    writes.push(route.request().postDataJSON().config)
+    await confirmation
+    await route.fulfill({ json: { ok: true } })
+  })
+  await page.route(/\/api\/config\/schema(?:\?|$)/, route => route.fulfill({ json: {
+    fields: { 'security.redact_secrets': { type: 'boolean', description: 'Redact saved secrets' } }
+  } }))
+  try {
+    await open(page)
+    await editor(page).fill('Keep this draft while saving settings')
+    await page.goto(`${origin}/#/settings?tab=config%3Asafety`)
+    const setting = page.locator('[id="setting-field-security.redact_secrets"]').getByRole('switch')
+    await expect(setting).toBeChecked()
+    await page.clock.install()
+    await page.clock.pauseAt(Date.now())
+    await setting.evaluate(button => button.click())
+    await expect(setting).not.toBeChecked()
+    await page.getByRole('button', { name: 'Close settings', exact: true }).evaluate(button => button.click())
+    await expect(editor(page)).toHaveText('Keep this draft while saving settings')
+    await page.evaluate(() => {
+      window.settingsTransition = { done: false, error: null }
+      void window.hermesDesktop.applyConnectionConfig({}).then(() => { window.settingsTransition.done = true })
+        .catch(error => { window.settingsTransition.error = error.message })
+    })
+    await expect.poll(() => writes.length).toBe(1)
+    expect(writes[0]).toMatchObject({ security: { redact_secrets: false } })
+    expect(await page.evaluate(() => window.settingsTransition)).toEqual({ done: false, error: null })
+    confirmSave()
+    await expect.poll(() => page.evaluate(() => window.settingsTransition)).toEqual({ done: true, error: null })
+    await page.clock.resume()
+    await page.goto(`${origin}/#/preview-week`)
+    await expect(editor(page)).toHaveText('Keep this draft while saving settings')
+  } finally { confirmSave(); await page.clock.resume().catch(() => {}) }
+})
 
 for (const width of [390, 1440]) {
   test.extend({ hasTouch: width === 390 })(`Permissions combines all controls and preserves legacy field links at ${width}px`, async ({ page }, testInfo) => {
@@ -2831,19 +2967,19 @@ for (const scenario of [
         const bounds = button.getBoundingClientRect(), glyph = icon?.getBoundingClientRect()
         return { width: bounds.width, height: bounds.height, icon: glyph?.width, centered: glyph ? Math.abs(glyph.x + glyph.width / 2 - bounds.x - bounds.width / 2) < 1 && Math.abs(glyph.y + glyph.height / 2 - bounds.y - bounds.height / 2) < 1 : false }
       }))
-      expect(controls).toHaveLength(4)
+      expect(controls).toHaveLength(2)
       for (const control of controls) {
         expect(control.width).toBeCloseTo(Math.max(36 * scale / 100, hasTouch ? 44 : 0), 0)
         expect(control.height).toBeCloseTo(control.width, 0)
         expect(control.icon).toBeCloseTo(16 * scale / 100, 0)
         expect(control.centered).toBe(true)
       }
-      const settings = page.getByRole('button', { name: 'Open settings menu', exact: true })
+      const settings = page.getByRole('button', { name: 'Chat actions', exact: true })
       await page.keyboard.press('Tab')
       await settings.focus()
       await expect(settings).toHaveCSS('outline-style', 'solid')
       await page.keyboard.press('Enter')
-      const actions = page.getByRole(compact && hasTouch ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
+      const actions = page.getByRole(compact && hasTouch ? 'dialog' : 'menu', { name: 'Chat actions', exact: true })
       await expect(actions).toBeVisible()
       const appearance = await actions.evaluate(el => {
         const style = getComputedStyle(el)
@@ -2860,7 +2996,7 @@ for (const scenario of [
       if (compact && hasTouch) {
         expect(bounds.width).toBeCloseTo(width, 0)
         expect(bounds.y + bounds.height).toBeCloseTo(height, 0)
-        const last = actions.getByRole('button', { name: 'Agents', exact: true })
+        const last = actions.getByRole('button', { name: 'Delete', exact: true })
         await last.scrollIntoViewIfNeeded()
         const lastBox = await last.boundingBox()
         expect(lastBox.y + lastBox.height).toBeLessThanOrEqual(height + 1)

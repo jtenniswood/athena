@@ -19,9 +19,34 @@ renderer remains responsible for conversation state and upstream features.
   cross-tab update handshake.
 
 Renderer modules are loaded only after startup installs the bridge and runs
-browser initialization. Browser pane ownership is derived once by the wrapper
-and passed into the workspace adapter. The adapter projects the existing
+browser initialization. Browser pane ownership follows one wrapper policy,
+used by the host's panel commands and workspace surface. The adapter projects the existing
 renderer layout without changing its saved state.
+
+`upstream/entry.ts` starts the browser host after authentication and profile
+migration. `upstream/browser-host.tsx` mounts the engine's contribution wiring
+and exposes browser surfaces and plain panel commands. The shell does not consume
+renderer contribution objects or the engine's menu components. Conversation,
+selection, profile and action adapters project the authoritative stores; they do
+not create a second conversation store. `upstream/browser-api.tsx` remains the
+explicit visual primitive boundary.
+
+The chat action menu and its keyboard shortcuts use the same browser commands.
+Rename and delete dialogs retain the conversation they were opened for even if
+selection changes before a request completes. Sidebar row menus still use a
+guarded renderer adapter for project and appearance actions.
+
+Hidden canonical Bot chats may be absent from sidebar session slices. Their
+identity projection also reads the exact current engine workspace owner and
+requires its canonical session ID to match the selected chat. It never falls
+back to the last selected Bot, and it does not insert hidden chats into the
+sidebar or create another conversation store.
+
+Follow-up policy is resolved inside the renderer's existing composer submit
+command. The browser preference chooses Queue or Steer; Cmd/Ctrl+Enter requests
+the alternate action while busy. Queue editing, IME handling, disabled controls,
+attachment fallback and rejected-submit restoration remain engine-owned. No
+document listener finds or clicks composer buttons to apply this preference.
 
 ## Capability and lifecycle boundaries
 
@@ -34,7 +59,29 @@ Update and connection transitions use that typed boundary to flush cross-tab
 writes and verify persisted text before they proceed. Ordinary draft saves keep
 their synchronous behavior.
 
+Settings edits register an explicit save callback with
+`platform/settings-save.ts` when the edit is made. Ordinary saves remain
+debounced; transition preparation starts the latest callback immediately and
+waits for the renderer's serialized write queue and gateway confirmation. Closing
+the settings route retains its pending callback. Active-profile changes cancel
+unsent edits and drain requests already in flight; a completed request from the
+old profile cannot seed the new profile's configuration cache. Failed writes
+continue to block readiness instead of being treated as durable.
+
 ## Compatibility ownership
+
+Renderer-sensitive dependency versions are checked by
+`pnpm check:renderer-dependencies`. They inherit the fetched renderer's manifest;
+`scripts/renderer-dependencies.json` records deliberate version overrides and the
+upstream version each override was reviewed against. A changed upstream version
+requires another review. `pnpm report:renderer-dependencies` prints sensitive
+versions and other manifest differences without accepting changes. Keep the
+actual versions in the application manifest and lockfile; run typecheck, build,
+and focused workflow checks when changing the baseline. Renovate groups these
+libraries for review. Security fixes can still be reviewed separately with an
+explicit override and the same checks.
+
+`package.json` owns the pnpm version used by Docker and GitHub Actions.
 
 Every renderer replacement or transform is recorded in
 `upstream/compatibility-registry.json` with its owner, reviewed source and output

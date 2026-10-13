@@ -7,6 +7,7 @@ import { DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from 
 export type BrowserAction = {
   key: string
   label: string
+  labelContent?: ReactNode
   ariaLabel?: string
   icon?: ReactNode
   afterClose?: boolean
@@ -101,7 +102,7 @@ export function BrowserActionSurface({ title, hideTitle = false, actions = [], g
     event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('button[role="radio"]:not(:disabled)')[next]?.focus()
     run(enabled[next])
   }
-  const label = (action: BrowserAction) => <>{action.icon && <span className="browser-action-icon" aria-hidden="true">{action.icon}</span>}<span className="browser-action-label">{action.label}{action.description && <small>{action.description}</small>}</span>{action.children && <span className="browser-action-chevron" aria-hidden="true">›</span>}</>
+  const label = (action: BrowserAction) => <>{action.icon && <span className="browser-action-icon" aria-hidden="true">{action.icon}</span>}<span className="browser-action-label">{action.labelContent ?? action.label}{action.description && <small>{action.description}</small>}</span>{action.children && <span className="browser-action-chevron" aria-hidden="true">›</span>}</>
   if (compact) return <Dialog.Root open onOpenChange={open => { if (!open) onClose() }}>
     <Dialog.Portal>
       <Dialog.Overlay className="browser-action-backdrop" />

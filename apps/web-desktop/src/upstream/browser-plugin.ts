@@ -868,6 +868,26 @@ export function useBrowserAcceptedSubmit(source: string, root: string): string {
     .replace(steerAccepted, `.then(accepted => {\n        if (!accepted) {\n          keep()\n        } else {\n          announceBrowserAcceptedSubmit({ text, sessionId })\n        }`)
 }
 
+/** Keep the renderer's submit/restore engine; supply the browser's follow-up policy. */
+export function useBrowserFollowupSubmit(source: string, root: string): string {
+  const start = '  const submitDraft = () => {'
+  const payload = '    const payloadPresent = text.trim().length > 0 || attachments.length > 0'
+  const policy = JSON.stringify(path.join(root, 'src/experience/followup-preferences'))
+  return `import { browserFollowupMode } from ${policy}\n` + replaceBrowserContract(source, [
+    [start, '  const submitDraft = (browserAlternate = false) => {'],
+    [payload, `${payload}\n\n    if (busy && !queueEdit && payloadPresent && browserFollowupMode(browserAlternate) === 'queue') {\n      queueCurrentDraft()\n      focusInput()\n      return\n    }`]
+  ])
+}
+
+export function useBrowserAlternateSubmit(source: string): string {
+  const start = source.indexOf("    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {")
+  const end = source.indexOf("    if (event.key === 'Enter' && !event.shiftKey) {", start)
+  if (start < 0 || end < 0) throw new Error('Browser alternate composer submit boundary changed')
+  const keyboard = source.slice(start, end)
+  if (keyboard.split('        queueDraft()').length !== 2) throw new Error('Browser alternate composer command changed')
+  return source.slice(0, start) + keyboard.replace('        queueDraft()', '        submitDraft(true)') + source.slice(end)
+}
+
 
 export function removeBrowserConversationalVoiceEntry(source: string, module: 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'): string {
   if (module.endsWith('voice-menu.tsx')) {
@@ -913,32 +933,41 @@ export function useBrowserSectionStyleHooks(source: string): string {
 }
 
 export function trackBrowserSettingsSaves(source: string, root: string): string {
-  const reactImport = "import { useEffect, useMemo, useRef, useState } from 'react'"
-  const reactBrowserImport = "import { useEffect, useId, useMemo, useRef, useState } from 'react'"
-  const queue = '  const saveQueueRef = useRef<Promise<void>>(Promise.resolve())'
-  const trackedQueue = `${queue}\n  const browserWorkId = useId()\n  const browserSavePendingRef = useRef(false)\n  const browserSaveFailureRef = useRef<string | null>(null)\n  const browserSaveWaitersRef = useRef(new Set<() => void>())\n  const browserWorkReleaseRef = useRef<(() => void) | null>(null)`
-  const cacheWrite = '          writeConfigCache(snapshot)'
-  const confirmedWrite = `${cacheWrite}\n\n          if (saveVersionRef.current === v) {\n            browserSavePendingRef.current = false\n            browserSaveFailureRef.current = null\n            for (const wake of browserSaveWaitersRef.current) wake()\n            browserSaveWaitersRef.current.clear()\n            browserWorkReleaseRef.current?.()\n            browserWorkReleaseRef.current = null\n          }`
-  const apply = `  const applyConfig = (next: HermesConfigRecord) => {\n    saveVersionRef.current += 1\n    setConfig(next)\n    setSaveVersion(saveVersionRef.current)\n  }`
-  const trackedApply = `  const applyConfig = (next: HermesConfigRecord) => {\n    saveVersionRef.current += 1\n    browserSavePendingRef.current = true\n    browserSaveFailureRef.current = null\n    if (!browserWorkReleaseRef.current) {\n      browserWorkReleaseRef.current = registerPendingBrowserWork({\n        id: \`settings-config:\${browserWorkId}\`,\n        async prepare() {\n          // The renderer's existing autosave is debounced by 550ms. Give its\n          // effect time to enqueue the latest edit before waiting on its queue.\n          await new Promise(resolve => window.setTimeout(resolve, 600))\n          if (browserSaveFailureRef.current) return { ready: false, reason: browserSaveFailureRef.current }\n          if (browserSavePendingRef.current) {\n            await new Promise<void>(resolve => browserSaveWaitersRef.current.add(resolve))\n          }\n          return browserSaveFailureRef.current\n            ? { ready: false, reason: browserSaveFailureRef.current }\n            : browserSavePendingRef.current\n              ? { ready: false, reason: 'A settings change is still being saved. Try the update again.' }\n              : { ready: true }\n        }\n      })\n    }\n    setConfig(next)\n    setSaveVersion(saveVersionRef.current)\n  }`
-  const cleanup = '    return () => window.clearTimeout(t)'
-  const retainedCleanup = `    return () => {\n      // A route close must not cancel the last debounced save. A newer edit\n      // or profile switch changes the version and still cancels this timer.\n      if (saveVersionRef.current !== v) window.clearTimeout(t)\n    }`
-  const failedSave = `          if (saveVersionRef.current === v) {\n            notifyError(err, c.autosaveFailed)\n          }`
-  const reportedFailure = `          if (saveVersionRef.current === v) {\n            browserSaveFailureRef.current = 'A settings change could not be saved. Reopen Settings and save it before updating.'\n            for (const wake of browserSaveWaitersRef.current) wake()\n            browserSaveWaitersRef.current.clear()\n            notifyError(err, c.autosaveFailed)\n          }`
-  let output = source
-  for (const [before, after] of [
-    [reactImport, reactBrowserImport],
-    [queue, trackedQueue],
-    [cacheWrite, confirmedWrite],
-    [cleanup, retainedCleanup],
-    [failedSave, reportedFailure],
-    [apply, trackedApply]
-  ]) {
-    if (output.split(before).length !== 2) throw new Error('Browser settings save lifecycle contract changed')
-    output = output.replace(before, after)
+  const effectStart = '  // eslint-disable-next-line no-restricted-syntax -- autosave bookkeeping refs, not an atom mirror\n  useEffect(() => {'
+  const effectEnd = '  }, [config, onConfigSaved, saveVersion, writeScope, scopeProfile])'
+  const queueStart = '      saveQueueRef.current = saveQueueRef.current.then(async () => {'
+  const queueEnd = '\n      })\n    }, 550)'
+  const from = source.indexOf(effectStart)
+  const to = source.indexOf(effectEnd, from)
+  const bodyFrom = source.indexOf(queueStart, from)
+  const bodyTo = source.indexOf(queueEnd, bodyFrom)
+  if (from < 0 || to < 0 || bodyFrom < from || bodyTo < bodyFrom || bodyTo > to) {
+    throw new Error('Browser settings autosave command boundary changed')
   }
-  const service = JSON.stringify(path.join(root, 'src/platform/pending-work'))
-  return `import { registerPendingBrowserWork } from ${service}\n${output}`
+  let body = source.slice(bodyFrom + queueStart.length, bodyTo)
+  body = replaceBrowserContract(body, [
+    ["          // The saved snapshot becomes the new baseline", "          // An older active-profile request must not seed the new profile's cache.\n          if (browserSettingsSave.scope !== browserSaveScope) return\n\n          // The saved snapshot becomes the new baseline"],
+    ["            notifyError(err, c.autosaveFailed)\n          }", "            notifyError(err, c.autosaveFailed)\n          }\n          throw err"]
+  ])
+  const command = `  const saveBrowserSettingsSnapshot = (snapshot: HermesConfigRecord, v: number, browserSaveScope: number): Promise<void> => {
+    saveQueueRef.current = saveQueueRef.current.catch(() => {}).then(async () => {${body}
+    })
+    return saveQueueRef.current
+  }`
+  let output = source.slice(0, from) + command + source.slice(to + effectEnd.length)
+  output = replaceBrowserContract(output, [
+    ['  // The editable draft is local (debounced autosave watches it), but it\'s seeded', '  // The editable draft is local (browser saves debounce its edits), but it\'s seeded'],
+    ['  // B. Drop the seed + draft (re-seeds from B\'s refetch) and zero saveVersion so\n  // the pending debounced autosave is cancelled by its effect cleanup.', '  // B. Drop the seed + draft (re-seeds from B\'s refetch) and cancel unsent\n  // browser saves. Requests already in flight remain part of readiness.'],
+    ["import { useEffect, useMemo, useRef, useState } from 'react'", "import { useEffect, useId, useMemo, useRef, useState } from 'react'"],
+    ['  const saveQueueRef = useRef<Promise<void>>(Promise.resolve())', `  const saveQueueRef = useRef<Promise<void>>(Promise.resolve())
+  const browserWorkId = useId()
+  const browserSettingsSave = useMemo(() => createBrowserSettingsSaveOwner(\`settings-config:\${browserWorkId}\`), [browserWorkId])`],
+    ['  const [saveVersion, setSaveVersion] = useState(0)\n', ''],
+    ['    setSaveVersion(0)\n    saveQueueRef.current = Promise.resolve()', '    browserSettingsSave.resetScope()\n    saveQueueRef.current = Promise.resolve()'],
+    ['    setSaveVersion(saveVersionRef.current)', '    const v = saveVersionRef.current\n    const browserSaveScope = browserSettingsSave.scope\n    browserSettingsSave.schedule(() => saveBrowserSettingsSnapshot(next, v, browserSaveScope))']
+  ])
+  const service = JSON.stringify(path.join(root, 'src/platform/settings-save'))
+  return `import { createBrowserSettingsSaveOwner } from ${service}\n${output}`
 }
 
 export function useBrowserSettingsFrame(source: string, root: string): string {
@@ -1234,52 +1263,18 @@ export function disableBrowserSessionOpenActions(source: string, root: string): 
   const owner = JSON.stringify(path.join(root, 'src/experience/session-shortcuts'))
   let menu = (output.slice(0, copyStart) + output.slice(projectStart)).replace(copyImport, '')
   const shortcuts = [
-    ['  onPin?: () => void', '  keyboardShortcuts?: boolean\n  onPin?: () => void'],
-    ['  pinned = false,', '  keyboardShortcuts = false,\n  pinned = false,'],
     ['        suppressCloseFocusRef.current = true', '        suppressCloseFocusRef.current = Boolean(document.querySelector(\'[role="menu"]\'))'],
     ['      label: r.rename,', "      key: 'rename',\n      label: browserSessionActionLabel('rename', r.rename.replace(/(?:\\.{3}|…)$/, '')),"],
     ['      label: pinned ? r.unpin : r.pin,', "      key: 'pin',\n      label: browserSessionActionLabel('pin', pinned ? r.unpin : r.pin),"],
     ['      label: unread || isUnread ? r.markRead : r.markUnread,', "      key: 'unread',\n      label: browserSessionActionLabel('unread', unread || isUnread ? r.markRead : r.markUnread),"],
     ['      label: r.archive,', "      key: 'archive',\n      label: browserSessionActionLabel('archive', r.archive),"],
     ['      label: t.common.delete,', "      key: 'delete',\n      label: browserSessionActionLabel('delete', t.common.delete),"],
-    ['  const renderItems = (kit: MenuKit) => (', `  useBrowserSessionShortcuts(keyboardShortcuts && Boolean(sessionId), {
-    rename: identityItems[0], pin: identityItems[1], unread: identityItems[2],
-    archive: dangerItems[0], delete: dangerItems[1]
-  })
-
-  const renderItems = (kit: MenuKit) => (`]
   ]
   for (const [before, after] of shortcuts) {
     if (menu.split(before).length !== 2) throw new Error('Browser session shortcut contract changed')
     menu = menu.replace(before, after)
   }
-  return `import { browserSessionActionLabel, useBrowserSessionShortcuts } from ${owner}\n` + menu
-}
-
-export function addBrowserChatPanelActions(source: string, root: string): string {
-  const importTarget = "import type { SessionTitleResponse } from '../../types'\n"
-  const actionInterface = '  onHideTabBar?: () => void\n'
-  const actionDestructure = '  onHideTabBar,\n  surface = \'row\',\n  tabPaneId\n}: SessionActions) {'
-  const actionItemsTarget = '      <kit.Separator />\n      {dangerItems.map(item => renderActionItem(kit, item))}'
-  const appearanceStart = '      <kit.Sub>\n        <kit.SubTrigger disabled={!sessionId}>\n          <Codicon name="symbol-color"'
-  const projectStart = '      <kit.Sub>\n        <kit.SubTrigger disabled={!sessionId}>\n          <Codicon name="folder"'
-  const submenuEnd = '      </kit.Sub>'
-  if (source.split(importTarget).length !== 2 || source.split(actionInterface).length !== 2 || source.split(actionDestructure).length !== 2 || source.split(actionItemsTarget).length !== 2 || source.split(appearanceStart).length !== 2 || source.split(projectStart).length !== 2) {
-    throw new Error('Browser chat panel menu contract changed')
-  }
-  // Keep project and appearance actions on sidebar rows, while the chat
-  // toolbar exposes only conversation actions and workspace panel toggles.
-  for (const start of [appearanceStart, projectStart]) {
-    const from = source.indexOf(start)
-    const to = source.indexOf(submenuEnd, from) + submenuEnd.length
-    if (to < from) throw new Error('Browser chat submenu boundary changed')
-    const submenu = source.slice(from, to)
-    source = source.replace(submenu, `      {browserPanelEntries === undefined && (\n${submenu}\n      )}`)
-  }
-  return source.replace(importTarget, `${importTarget}import { BrowserChatPanelActions } from ${JSON.stringify(path.join(root, 'src/experience/chat-panel-actions.tsx'))}\n`)
-    .replace(actionInterface, `${actionInterface}  browserPanelEntries?: readonly { id: string; title?: unknown; data?: unknown }[]\n  onBrowserPanelOpen?: () => void\n`)
-    .replace(actionDestructure, '  onHideTabBar,\n  surface = \'row\',\n  tabPaneId,\n  browserPanelEntries,\n  onBrowserPanelOpen\n}: SessionActions) {')
-    .replace(actionItemsTarget, `      <BrowserChatPanelActions kit={kit} entries={browserPanelEntries} onOpen={onBrowserPanelOpen} />\n${actionItemsTarget}`)
+  return `import { browserSessionActionLabel } from ${owner}\n` + menu
 }
 
 export function filterBrowserKeybinds(source: string): string {
@@ -1373,7 +1368,9 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserDefaultSessionProfile: source => useBrowserDefaultSessionProfile(source, root),
     useBrowserDirectResumeOwner: source => useBrowserDirectResumeOwner(source),
     useBrowserSectionIdentity: source => useBrowserSectionIdentity(source, root),
-    useBrowserTouchHooks: source => useBrowserTouchHooks(source, root), useBrowserAcceptedSubmit: source => useBrowserAcceptedSubmit(source, root), useBrowserCodingActionHooks, useBrowserSectionIds, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
+    useBrowserTouchHooks: source => useBrowserTouchHooks(source, root), useBrowserAcceptedSubmit: source => useBrowserAcceptedSubmit(source, root),
+    useBrowserFollowupSubmit: source => useBrowserFollowupSubmit(source, root), useBrowserAlternateSubmit,
+    useBrowserCodingActionHooks, useBrowserSectionIds, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source, entry.module as 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     useBrowserProjectDisclosure,
@@ -1384,7 +1381,6 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
     disableBrowserSessionRowTabs,
     disableBrowserSessionOpenActions: source => disableBrowserSessionOpenActions(source, root),
-    addBrowserChatPanelActions: source => addBrowserChatPanelActions(source, root),
     filterBrowserKeybinds,
     useBrowserSessionSelection: source => useBrowserSessionSelection(source, root),
     useBrowserBotSelection: source => useBrowserRosterSelection(source, root, 'bot'),

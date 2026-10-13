@@ -5,6 +5,7 @@ services. Upstream files are fetched at the exact revision in the root
 `flake.lock`; they are never edited here.
 
 See the root [README](../../README.md) for setup and hosting commands.
+See the [tooling index](../../docs/tooling.md) for development and diagnostics.
 
 ## Ownership
 

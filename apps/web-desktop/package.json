@@ -6,7 +6,7 @@
   "description": "Athena for Hermes Agent as a plain Vite web app, built from the pinned Hermes Desktop renderer.",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node ../../scripts/renderer-dependencies.mjs && vite build",
     "preview": "vite preview",
     "test:gateway": "node --test scripts/test-gateway-proxy.mjs",
     "typecheck": "node ../../scripts/typecheck.mjs"

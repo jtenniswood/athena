@@ -452,9 +452,9 @@ test('browser session rows resume chats instead of opening tabs or windows', () 
 })
 
 test('browser session menus omit tab and window actions while preserving hide-tab-bar props', () => {
-  const { disableBrowserSessionOpenActions, addBrowserChatPanelActions } = load('src/upstream/browser-plugin.ts')
+  const { disableBrowserSessionOpenActions } = load('src/upstream/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/session-actions-menu.tsx'), 'utf8')
-  const output = addBrowserChatPanelActions(disableBrowserSessionOpenActions(source, root), root)
+  const output = disableBrowserSessionOpenActions(source, root)
   assert.doesNotMatch(output, /surface === 'row' && !alreadyTabbed/)
   assert.doesNotMatch(output, /canOpenSessionWindow\(\)/)
   assert.match(output, /canOpenSessionInTerminal\(\)/)
