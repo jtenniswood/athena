@@ -53,6 +53,15 @@ Update and connection transitions use that typed boundary to flush cross-tab
 writes and verify persisted text before they proceed. Ordinary draft saves keep
 their synchronous behavior.
 
+Settings edits register an explicit save callback with
+`platform/settings-save.ts` when the edit is made. Ordinary saves remain
+debounced; transition preparation starts the latest callback immediately and
+waits for the renderer's serialized write queue and gateway confirmation. Closing
+the settings route retains its pending callback. Active-profile changes cancel
+unsent edits and drain requests already in flight; a completed request from the
+old profile cannot seed the new profile's configuration cache. Failed writes
+continue to block readiness instead of being treated as durable.
+
 ## Compatibility ownership
 
 Renderer-sensitive dependency versions are checked by

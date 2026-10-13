@@ -2430,7 +2430,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/settings/config-settings.tsx",
-    "reason": "Keep pending settings saves alive across page exit and update activation while showing all supported configuration fields by default and applying wrapper-owned visibility policy.",
+    "reason": "Register explicit debounced save commands with browser readiness, flush immediately on transitions, and retain the renderer write queue and profile scope.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -2440,13 +2440,21 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "settings actions retain drafts and transfer modal focus"
+      },
+      {
+        "file": "scripts/settings-save.test.mjs",
+        "scenario": "settings preparation starts the latest save without waiting for a debounce timer"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "connection preparation flushes a settings edit with timers paused"
       }
     ],
     "removal": "Remove when upstream settings provides equivalent browser save lifecycle and browser-aware field visibility defaults.",
     "sourceRoot": "renderer",
     "sourceHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
     "inputHash": "09c07a8147e5736513d10a6086320ffa3394eef9f9c1f6e3d2318d9db7c9e247",
-    "outputHash": "4a98dce54342d95c22610987c03fb0461f6547c6df22eda3227603d8bf0a1605",
+    "outputHash": "732c33c7ade9245ce396e8cc97e6de7e352c5b362e960b5b3a490c75f09ae344",
     "handlers": [
       "trackBrowserSettingsSaves",
       "filterBrowserSettingsFields",

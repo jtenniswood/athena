@@ -1821,6 +1821,48 @@ for (const width of [390, 1440]) {
   })
 }
 
+test('connection preparation flushes a settings edit with timers paused and waits for gateway confirmation', async ({ page }) => {
+  const config = { security: { redact_secrets: true } }
+  const writes = []
+  let confirmSave
+  const confirmation = new Promise(resolve => { confirmSave = resolve })
+  await page.route(/\/api\/config(?:\?|$)/, async route => {
+    if (route.request().method() !== 'PUT') return route.fulfill({ json: config })
+    writes.push(route.request().postDataJSON().config)
+    await confirmation
+    await route.fulfill({ json: { ok: true } })
+  })
+  await page.route(/\/api\/config\/schema(?:\?|$)/, route => route.fulfill({ json: {
+    fields: { 'security.redact_secrets': { type: 'boolean', description: 'Redact saved secrets' } }
+  } }))
+  try {
+    await open(page)
+    await editor(page).fill('Keep this draft while saving settings')
+    await page.goto(`${origin}/#/settings?tab=config%3Asafety`)
+    const setting = page.locator('[id="setting-field-security.redact_secrets"]').getByRole('switch')
+    await expect(setting).toBeChecked()
+    await page.clock.install()
+    await page.clock.pauseAt(Date.now())
+    await setting.evaluate(button => button.click())
+    await expect(setting).not.toBeChecked()
+    await page.getByRole('button', { name: 'Close settings', exact: true }).evaluate(button => button.click())
+    await expect(editor(page)).toHaveText('Keep this draft while saving settings')
+    await page.evaluate(() => {
+      window.settingsTransition = { done: false, error: null }
+      void window.hermesDesktop.applyConnectionConfig({}).then(() => { window.settingsTransition.done = true })
+        .catch(error => { window.settingsTransition.error = error.message })
+    })
+    await expect.poll(() => writes.length).toBe(1)
+    expect(writes[0]).toMatchObject({ security: { redact_secrets: false } })
+    expect(await page.evaluate(() => window.settingsTransition)).toEqual({ done: false, error: null })
+    confirmSave()
+    await expect.poll(() => page.evaluate(() => window.settingsTransition)).toEqual({ done: true, error: null })
+    await page.clock.resume()
+    await page.goto(`${origin}/#/preview-week`)
+    await expect(editor(page)).toHaveText('Keep this draft while saving settings')
+  } finally { confirmSave(); await page.clock.resume().catch(() => {}) }
+})
+
 for (const width of [390, 1440]) {
   test.extend({ hasTouch: width === 390 })(`Permissions combines all controls and preserves legacy field links at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
