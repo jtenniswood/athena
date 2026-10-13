@@ -36,6 +36,19 @@ their synchronous behavior.
 
 ## Compatibility ownership
 
+Renderer-sensitive dependency versions are checked by
+`pnpm check:renderer-dependencies`. They inherit the fetched renderer's manifest;
+`scripts/renderer-dependencies.json` records deliberate version overrides and the
+upstream version each override was reviewed against. A changed upstream version
+requires another review. `pnpm report:renderer-dependencies` prints sensitive
+versions and other manifest differences without accepting changes. Keep the
+actual versions in the application manifest and lockfile; run typecheck, build,
+and focused workflow checks when changing the baseline. Renovate groups these
+libraries for review. Security fixes can still be reviewed separately with an
+explicit override and the same checks.
+
+`package.json` owns the pnpm version used by Docker and GitHub Actions.
+
 Every renderer replacement or transform is recorded in
 `upstream/compatibility-registry.json` with its owner, reviewed source and output
 fingerprints, behavioral verification references, and removal condition. The
