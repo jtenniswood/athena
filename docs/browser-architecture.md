@@ -36,6 +36,12 @@ Rename and delete dialogs retain the conversation they were opened for even if
 selection changes before a request completes. Sidebar row menus still use a
 guarded renderer adapter for project and appearance actions.
 
+Follow-up policy is resolved inside the renderer's existing composer submit
+command. The browser preference chooses Queue or Steer; Cmd/Ctrl+Enter requests
+the alternate action while busy. Queue editing, IME handling, disabled controls,
+attachment fallback and rejected-submit restoration remain engine-owned. No
+document listener finds or clicks composer buttons to apply this preference.
+
 ## Capability and lifecycle boundaries
 
 Browser, hosting, and connected-server support facts are described in
