@@ -64,7 +64,7 @@ importers:
         version: 1.2.5
       '@nanostores/react':
         specifier: 1.1.0
-        version: 1.1.0(nanostores@1.4.0)(react@19.2.7)
+        version: 1.1.0(nanostores@1.5.5)(react@19.2.7)
       '@nous-research/ui':
         specifier: 0.19.1
         version: 0.19.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(motion@12.43.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -171,8 +171,8 @@ importers:
         specifier: 12.43.0
         version: 12.43.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       nanostores:
-        specifier: 1.4.0
-        version: 1.4.0
+        specifier: 1.5.5
+        version: 1.5.5
       node-pty:
         specifier: 1.1.0
         version: 1.1.0
@@ -4833,8 +4833,8 @@ packages:
     engines: {node: ^22 || ^24 || >=26}
     hasBin: true
 
-  nanostores@1.4.0:
-    resolution: {integrity: sha512-i0tloweeudshAEuddpDxcg9Ik6pkPfVsHIgKyf143JrgG7/MOh0+q7BypdLXZPoOP7fOYt1eTcwGkyiVmhJFkA==}
+  nanostores@1.5.5:
+    resolution: {integrity: sha512-FixtE239Gl6Gz0ZGCK0WzvNwObNCIwVT+L7zQcf1QgcA6AzBxblzqe9OT88qiucNkhsjSOqiogSaF5jVbJiqSA==}
     engines: {node: ^20.0.0 || >=22.0.0}
 
   negotiator@0.6.4:
@@ -7231,9 +7231,9 @@ snapshots:
     dependencies:
       '@chevrotain/types': 11.1.2
 
-  '@nanostores/react@1.1.0(nanostores@1.4.0)(react@19.2.7)':
+  '@nanostores/react@1.1.0(nanostores@1.5.5)(react@19.2.7)':
     dependencies:
-      nanostores: 1.4.0
+      nanostores: 1.5.5
       react: 19.2.7
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
@@ -7241,11 +7241,11 @@ snapshots:
 
   '@nous-research/ui@0.19.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(motion@12.43.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@nanostores/react': 1.1.0(nanostores@1.4.0)(react@19.2.7)
+      '@nanostores/react': 1.1.0(nanostores@1.5.5)(react@19.2.7)
       class-variance-authority: 0.7.1
       clsx: 2.1.1
       motion: 12.43.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      nanostores: 1.4.0
+      nanostores: 1.5.5
       radix-ui: 1.6.7(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
@@ -11291,7 +11291,7 @@ snapshots:
 
   nanoid@6.0.2: {}
 
-  nanostores@1.4.0: {}
+  nanostores@1.5.5: {}
 
   negotiator@0.6.4:
     optional: true
