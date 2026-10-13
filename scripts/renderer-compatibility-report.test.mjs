@@ -23,7 +23,9 @@ test('preflight reports all changed and missing contracts without accepting new 
 })
 
 test('invalid contracts and unreadable files fail rather than produce passing evidence', () => {
-  for (const module of ['../secret', '/absolute', 'file|table']) {
+  const scoped = inspectContracts([{ module: '@scope/package/dist/file.js', sourceHash: hash('reviewed') }], () => 'reviewed')
+  assert.equal(scoped[0].status, 'unchanged')
+  for (const module of ['../secret', '/absolute', 'file|table', '@scope/package/../../secret']) {
     assert.throws(() => inspectContracts([{ module, sourceHash: hash('') }], () => ''), /Invalid/)
   }
   assert.throws(() => inspectContracts([{ module: 'valid.ts', sourceHash: 'invalid' }], () => ''), /Invalid/)

@@ -7,7 +7,7 @@ import { loadRegistry, registryContracts, sourceRoots, coverageReport, checkGene
 
 export function inspectContracts(contracts, readSource, { deferDependencies = false } = {}) {
   return contracts.map(contract => {
-    if (!/^[\w./-]+$/.test(contract.module) || contract.module.split('/').includes('..') || contract.module.startsWith('/') || !/^[a-f0-9]{64}$/.test(contract.sourceHash)) throw new Error('Invalid compatibility contract')
+    if (!/^[@\w./-]+$/.test(contract.module) || contract.module.split('/').includes('..') || contract.module.startsWith('/') || !/^[a-f0-9]{64}$/.test(contract.sourceHash)) throw new Error('Invalid compatibility contract')
     let actualHash = null
     try { actualHash = createHash('sha256').update(readSource(contract.module, contract)).digest('hex') }
     catch (error) { if (error.code !== 'ENOENT') throw error }
