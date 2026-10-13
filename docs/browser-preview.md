@@ -30,16 +30,19 @@ update still marks the relevant update control.
 
 ## Run the isolated preview
 
-Add the `preview-image` label to a same-repository PR to run the
-`browser-preview` workflow. It builds and tests the actual nginx image, then
-publishes an immutable amd64 PR image and its synthetic gateway. This optional
-job is separate from the required compatibility checks so ordinary edit/test
-iterations do not wait for an image publication.
-Download the `browser-preview-images-<commit>` artifact for the exact image names.
-From this branch, start a separate Docker Compose project:
+Use **Actions → Build development image → Run workflow** and select the branch
+to review. The workflow publishes `dev-latest` and `dev-sha-<revision>` without
+deploying them. It builds the UI but does not execute the browser tests below.
+The old `preview-image` label workflow and image-list artifact are no longer
+available. See [releases and rollback](releases.md) for development-image details.
+
+Build the synthetic gateway locally when needed, then run the development image
+in a separate Compose project:
 
 ```sh
-docker compose --env-file browser-preview-images.env -f compose.browser-preview.yml up -d
+docker build --target preview-gateway -t athena:browser-preview-gateway .
+HERMES_BROWSER_PREVIEW_IMAGE="ghcr.io/jtenniswood/athena:dev-sha-<revision>" \
+  docker compose -f compose.browser-preview.yml up -d
 ```
 
 Open `http://localhost:4186/`. The preview always uses the browser-focused shell.
@@ -60,7 +63,9 @@ Build locally when CI images are not needed:
 docker build --build-arg HERMES_WRAPPER_REV="$(git rev-parse HEAD)" \
   --build-arg HERMES_RELEASE_CHANNEL=browser-preview -t hermes-web:browser-preview .
 docker build --target preview-gateway -t hermes-web:browser-preview-gateway .
-docker compose -f compose.browser-preview.yml up -d
+HERMES_BROWSER_PREVIEW_IMAGE=hermes-web:browser-preview \
+HERMES_PREVIEW_GATEWAY_IMAGE=hermes-web:browser-preview-gateway \
+  docker compose -f compose.browser-preview.yml up -d
 ```
 
 Stop only this preview with:

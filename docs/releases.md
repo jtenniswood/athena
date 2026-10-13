@@ -5,6 +5,12 @@ make a small change, typecheck and build, try the affected workflow, then merge.
 A full browser suite, staged image promotion, and release evidence records are
 not required for routine changes.
 
+The [tooling index](tooling.md) separates active commands, optional diagnostics,
+parked automation and historical executables. The old staged publisher and its
+evidence recorder are retained under `scripts/legacy/`; no current workflow calls
+them. `pnpm legacy:stage-static-artifact` names the earlier static-artifact helper
+explicitly and does not deploy the current Docker/Komodo stack.
+
 ## Build and deploy
 
 `.github/workflows/release.yml` runs for version tags and manual dispatches. It

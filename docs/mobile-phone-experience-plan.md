@@ -1,5 +1,10 @@
 # Mobile phone experience plan
 
+> Historical design/delivery record. Current ownership is described in
+> [browser architecture](browser-architecture.md); current commands are in the
+> [tooling index](tooling.md) and [release guide](releases.md). Status statements
+> and checklists below describe earlier work, not additional acceptance gates.
+
 ## Goal
 
 Make Hermes Web comfortable for frequent chat use on narrow touch screens, including installed PWAs, while keeping the same core capabilities available on desktop. Optimize around the main phone workflow: open or resume a conversation, read and navigate a long response, compose and send a message, and reach secondary tools without losing context.

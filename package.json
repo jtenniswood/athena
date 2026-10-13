@@ -7,7 +7,7 @@
     "dev": "pnpm --filter web-desktop run dev",
     "build": "pnpm --filter web-desktop run build",
     "typecheck": "node scripts/typecheck.mjs",
-    "deploy": "bash apps/web-desktop/scripts/deploy.sh",
+    "legacy:stage-static-artifact": "bash apps/web-desktop/scripts/deploy.sh",
     "prepare:renderer": "node scripts/renderer.mjs",
     "check:renderer": "node scripts/renderer.mjs --check",
     "check:renderer-dependencies": "node scripts/renderer-dependencies.mjs",
