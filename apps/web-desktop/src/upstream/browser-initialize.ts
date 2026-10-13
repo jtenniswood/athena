@@ -3,7 +3,7 @@
 // its module-level setup registers panes, layout presets, bundled plugins,
 // session routing, and the overlay bindings consumed by BrowserShell.
 import '../../../desktop/src/app/contrib/controller'
-import { $projectScope, ALL_PROJECTS, exitProjectScope } from '@/store/projects'
+import { $projectScope, ALL_PROJECTS, exitProjectScope } from '@/store/project-scope'
 import { setHideThreadTimeline } from '@/store/thread-timeline'
 
 let initialized = false

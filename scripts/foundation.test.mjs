@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
 import { rendererLock, prepareRenderer, verifyRenderer } from './renderer.mjs'
-import { classifyDiagnostics } from './typecheck.mjs'
+import { classifyDiagnostics, rendererTypeDeclaration } from './typecheck.mjs'
 import { buildInfo } from './build-info.mjs'
 
 test('renderer preparation verifies clean sources and never replaces a mismatch', t => {
@@ -51,4 +51,13 @@ test('build identity includes both revisions and the dependency lock', () => {
   assert.equal(info.rendererRevision, rendererLock().rev)
   assert.match(info.dependencyLockHash, /^[a-f0-9]{64}$/)
   assert.equal(info.builtAt, '1970-01-01T00:00:01.000Z')
+})
+
+test('renderer type checking keeps native contracts without importing Electron implementations', () => {
+  const challenge = "import { app } from 'electron'\nexport type ChallengeOutcome = 'done' | 'failed'\napp.quit()"
+  assert.equal(rendererTypeDeclaration('/renderer/electron/challenge-window.ts', challenge), "export type ChallengeOutcome = 'done' | 'failed'")
+  const machine = "import { app } from 'electron'\nexport interface MachineProfile { username: string; platform: NodeJS.Platform }\napp.quit()"
+  assert.equal(rendererTypeDeclaration('/renderer/electron/machine-profile.ts', machine), 'export interface MachineProfile { username: string; platform: NodeJS.Platform }')
+  assert.equal(rendererTypeDeclaration('/renderer/src/component.ts', machine), machine)
+  assert.throws(() => rendererTypeDeclaration('/renderer/electron/machine-profile.ts', 'export interface Other {}'), /Missing renderer type contract/)
 })

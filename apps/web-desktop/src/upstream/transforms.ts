@@ -132,9 +132,9 @@ registerBrowserDraftSafety({
       (window.__HERMES_WEB_BRIDGE__ && options.workspaceMode === 'bots'
         ? botGeneration === getBotOpenGeneration()
         : options.workspaceMode !== 'bots' ||`)
-      const profileCommit = '      if (explicitRoute) {\n        setShowAllProfiles(true)'
+      const profileCommit = '      } else if (explicitRoute) {\n        setShowAllProfiles(true)'
       if (scoped.split(profileCommit).length !== 2) throw new Error('Browser Bot profile scope commit changed')
-      const webPatched = scoped.replace(profileCommit, `      if (window.__HERMES_WEB_BRIDGE__ && window.__HERMES_WEB_ACTIVE_PROFILE__) {
+      const webPatched = scoped.replace(profileCommit, `      } else if (window.__HERMES_WEB_BRIDGE__ && window.__HERMES_WEB_ACTIVE_PROFILE__) {
         setShowAllProfiles(false)
       } else if (explicitRoute) {
         setShowAllProfiles(true)`)
@@ -306,11 +306,11 @@ ${withoutStaleFront.slice(lineStart)}`
     }
     const webCanonicalLookup = webScopedBotCode
       .replace(
-        'awaitHydration: true,',
-        'awaitHydration: window.__HERMES_WEB_BRIDGE__ ? false : true,'
+        'awaitHydration: !background,',
+        'awaitHydration: window.__HERMES_WEB_BRIDGE__ ? false : !background,'
       )
       .replace(
-        /res = await requestForBot\(bot, ['"]session\.list['"], \{\s*profile: backendTargetProfile\(route, name\),\s*title: CANONICAL_CHAT_TITLE,\s*limit: PROFILE_SESSION_LIST_LIMIT,\s*include_hidden: true\s*\}\)/,
+        /res = await requestForBot<\{ sessions\?: CanonicalChatRow\[\] \}>\(\s*bot,\s*['"]session\.list['"],\s*\{\s*profile: backendTargetProfile\(route, name\),\s*title: CANONICAL_CHAT_TITLE,\s*limit: PROFILE_SESSION_LIST_LIMIT,\s*include_hidden: true\s*\},\s*\{ spawnPriority: 'foreground' \}\s*\)/,
         `res = await (async () => {
           const desktop = typeof window !== 'undefined' ? window.hermesDesktop : null
           const api = desktop?.api
@@ -351,7 +351,7 @@ ${withoutStaleFront.slice(lineStart)}`
     const functionSource = webCanonicalLookup
       .slice(start, end)
       .replace(/(?:export\s+)?async function openBotCanonicalChat\s*\(/, 'async function openBotCanonicalChatImpl(')
-    const wrapper = `${functionSource}\n\nexport async function openBotCanonicalChat(owner, openingStillCurrent = null) {\n  const { key } = botOwner(owner)\n  const pending = canonicalChatOpens.get(key)\n\n  if (pending) {\n    return pending\n  }\n\n  const run = openBotCanonicalChatImpl(owner, null)\n  canonicalChatOpens.set(key, run)\n  const clear = () => {\n    if (canonicalChatOpens.get(key) === run) {\n      canonicalChatOpens.delete(key)\n    }\n  }\n  run.then(clear, clear)\n\n  return run\n}\n`
+    const wrapper = `${functionSource}\n\nexport async function openBotCanonicalChat(owner: RosterRow | string, options: OpenCanonicalChatOptions = {}) {\n  const { background = false, openingStillCurrent = null } = options\n  const { key: ownerKey } = botOwner(owner)\n  const key = ownerKey + (background ? ':background' : ':foreground')\n  const pending = canonicalChatOpens.get(key)\n\n  if (pending) {\n    return pending\n  }\n\n  const run = openBotCanonicalChatImpl(owner, options)\n  canonicalChatOpens.set(key, run)\n  const clear = () => {\n    if (canonicalChatOpens.get(key) === run) {\n      canonicalChatOpens.delete(key)\n    }\n  }\n  run.then(clear, clear)\n\n  return run\n}\n`
     const transformed = `${webCanonicalLookup.slice(0, start)}const canonicalChatOpens = new Map()\n\n${wrapper}${webCanonicalLookup.slice(end)}`
 
     const guarded = transformed.replace(
@@ -374,16 +374,16 @@ ${withoutStaleFront.slice(lineStart)}`
     )
 
     const retried = guarded.replace(
-      `  const run = openBotCanonicalChatImpl(owner, null)
+      `  const run = openBotCanonicalChatImpl(owner, options)
   canonicalChatOpens.set(key, run)`,
-      `  const run = openBotCanonicalChatImpl(owner, openingStillCurrent).catch(async error => {
+      `  const run = openBotCanonicalChatImpl(owner, options).catch(async error => {
     const superseded = /superseded by a newer selection/i.test(String(error?.message || error))
 
     if (!superseded || !openingStillCurrent?.()) {
       throw error
     }
 
-    return openBotCanonicalChatImpl(owner, openingStillCurrent)
+    return openBotCanonicalChatImpl(owner, options)
   })
   canonicalChatOpens.set(key, run)`
     )

@@ -468,8 +468,15 @@ export function createWebBridge(): Window['hermesDesktop'] {
       startedAt: null,
       completedAt: null,
       setupChoice: null,
-      unsupportedPlatform: null
+      unsupportedPlatform: null,
+      bundled: false
     }),
+    updateHold: {
+      recheck: async () => ({ ok: false }),
+      quit: async () => ({ ok: false }),
+      startAnyway: async () => ({ ok: false })
+    },
+    getSyncStatus: async () => null,
     resetBootstrap: async () => ({ ok: true }),
     repairBootstrap: async () => ({ ok: true }),
     cancelBootstrap: async () => ({ ok: true, cancelled: true }),
@@ -501,8 +508,6 @@ export function createWebBridge(): Window['hermesDesktop'] {
     updates: {
       check: async () => ({ supported: false }),
       apply: async () => ({ ok: false }),
-      getBranch: async () => ({ branch: '' }),
-      setBranch: async () => ({ branch: '' }),
       onProgress: unsubscribed
     },
     uninstall: {
@@ -511,6 +516,9 @@ export function createWebBridge(): Window['hermesDesktop'] {
       },
       run: async () => {
         throw new Error('uninstall is unavailable in the web app')
+      },
+      openAppsSettings: async () => {
+        throw new Error('native app settings are unavailable in the web app')
       }
     },
     themes: {
@@ -524,12 +532,14 @@ export function createWebBridge(): Window['hermesDesktop'] {
     quickEntry: {
       getSettings: async (): Promise<QuickEntryStatus> => ({ enabled: false, error: null, registered: false, shortcut: '' }),
       setSettings: async (): Promise<QuickEntryStatus> => ({ enabled: false, error: null, registered: false, shortcut: '' }),
-      submit: (_payload: QuickEntrySubmitPayload): void => {},
+      submit: async (_payload: QuickEntrySubmitPayload) => ({ ok: false, code: 'unavailable', message: 'Quick Entry is unavailable in the web app' }),
+      ackSubmit: noop,
       dismiss: noop,
       pushState: noop,
       onState: unsubscribed,
       onSubmit: unsubscribed,
-      onShown: unsubscribed
+      onShown: unsubscribed,
+      onLateResult: unsubscribed
     },
     findInPage: async () => ({ count: 0 }),
     stopFindInPage: async () => {},

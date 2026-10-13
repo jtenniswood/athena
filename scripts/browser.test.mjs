@@ -332,7 +332,7 @@ test('browser microphone capture distinguishes insecure origins and lets getUser
   const context = vm.createContext({
     exports: {}, DOMException,
     window: { isSecureContext: false }, navigator: {},
-    require: () => ({ useState: value => [value, () => {}], useRef: current => ({ current }), useEffect: () => {} })
+    require: () => ({ useState: value => [value, () => {}], useRef: current => ({ current }), useEffect: () => {}, meterContextsClosed: async () => {} })
   })
   vm.runInContext(ts.transpileModule(output, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, context)
   const copy = { microphoneUnsupported: 'Unsupported', microphoneAccessDenied: 'Access denied', microphonePermissionDenied: 'Permission denied', noMicrophone: 'No microphone' }
@@ -458,7 +458,7 @@ test('browser session menus omit tab and window actions while preserving hide-ta
   assert.doesNotMatch(output, /surface === 'row' && !alreadyTabbed/)
   assert.doesNotMatch(output, /canOpenSessionWindow\(\)/)
   assert.match(output, /canOpenSessionInTerminal\(\)/)
-  assert.match(output, /onHideTabBar,\s*surface = 'row'/)
+  assert.match(output, /onHideTabBar,\s*renameable = true,\s*surface = 'row'/)
 })
 
 test('browser workspace removes chat tabs while retaining tool groups', () => {

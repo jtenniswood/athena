@@ -5,6 +5,19 @@ import { fileURLToPath } from 'node:url'
 import { repositoryRoot } from './renderer.mjs'
 
 const fatalCodes = new Set([2307, 2688, 6053, 7016])
+// These renderer-facing types live beside Electron implementations upstream.
+// Read their original declarations without checking the native process bodies.
+export function rendererTypeDeclaration(fileName, text) {
+  const contract = fileName.replaceAll('\\', '/').endsWith('/electron/challenge-window.ts') ? 'ChallengeOutcome'
+    : fileName.replaceAll('\\', '/').endsWith('/electron/machine-profile.ts') ? 'MachineProfile' : null
+  if (!contract) return text
+  const source = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true)
+  const declaration = source.statements.find(statement =>
+    (ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement)) && statement.name.text === contract &&
+    statement.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword))
+  if (!declaration) throw new Error(`Missing renderer type contract: ${contract}`)
+  return declaration.getText(source)
+}
 export function classifyDiagnostics(diagnostics, baseline) {
   const remaining = [...baseline]
   const unexpected = []
@@ -22,7 +35,15 @@ function check() {
   const config = ts.readConfigFile(configPath, ts.sys.readFile)
   if (config.error) throw new Error(ts.flattenDiagnosticMessageText(config.error.messageText, '\n'))
   const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, path.dirname(configPath))
-  const program = ts.createProgram(parsed.fileNames, parsed.options)
+  const host = ts.createCompilerHost(parsed.options)
+  const getSourceFile = host.getSourceFile.bind(host)
+  host.getSourceFile = (fileName, languageVersion, onError, shouldCreateNewSourceFile) => {
+    const source = getSourceFile(fileName, languageVersion, onError, shouldCreateNewSourceFile)
+    if (!source) return source
+    const declaration = rendererTypeDeclaration(fileName, source.text)
+    return declaration === source.text ? source : ts.createSourceFile(fileName, declaration, languageVersion, true)
+  }
+  const program = ts.createProgram(parsed.fileNames, parsed.options, host)
   const aliases = ['desktop', 'shared'].map(name => ({ actual: realpathSync(path.join(repositoryRoot, 'apps', name)), logical: `apps/${name}` }))
   const diagnostics = [...parsed.errors, ...ts.getPreEmitDiagnostics(program)].map(d => {
     let file = d.file ? path.relative(repositoryRoot, d.file.fileName).replaceAll('\\', '/') : '<compiler>'
