@@ -36,6 +36,12 @@ Rename and delete dialogs retain the conversation they were opened for even if
 selection changes before a request completes. Sidebar row menus still use a
 guarded renderer adapter for project and appearance actions.
 
+Hidden canonical Bot chats may be absent from sidebar session slices. Their
+identity projection also reads the exact current engine workspace owner and
+requires its canonical session ID to match the selected chat. It never falls
+back to the last selected Bot, and it does not insert hidden chats into the
+sidebar or create another conversation store.
+
 Follow-up policy is resolved inside the renderer's existing composer submit
 command. The browser preference chooses Queue or Steer; Cmd/Ctrl+Enter requests
 the alternate action while busy. Queue editing, IME handling, disabled controls,
