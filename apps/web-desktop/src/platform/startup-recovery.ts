@@ -45,13 +45,7 @@ export function showStartupRecovery(error: unknown, revision: string): void {
       if (url.href === window.location.href) window.location.reload()
       else window.location.assign(url.href)
     }
-    const help = document.createElement('details')
-    help.className = 'athena-sign-in-advanced'
-    help.innerHTML = `<summary>Connection help</summary>
-      <p>If signing in does not reconnect you, check your internet connection or ask your server administrator to check Athena’s configuration.</p>
-      <p class="athena-sign-in-build">Build ${wrapperRevision}</p>`
-    help.append(diagnosticsButton(stage, wrapperRevision))
-    card.append(signIn, help)
+    card.append(signIn)
     root.replaceChildren(section)
     return
   }
