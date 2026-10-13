@@ -5,7 +5,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends git ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@11.20.0 --activate
+RUN corepack enable && corepack prepare pnpm@12.11.2 --activate
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml flake.lock ./
 COPY scripts ./scripts
 COPY apps/web-desktop/package.json apps/web-desktop/package.json
