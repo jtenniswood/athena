@@ -65,6 +65,19 @@ docker stop athena
 For microphone access from another device, open Athena over HTTPS (for example,
 through Tailscale Serve).
 
+### Browser notifications
+
+Open **Settings → Notifications → Allow browser notifications**, then accept
+the browser prompt. Keep **Enable notifications** and **Response ready** on to
+receive an alert when a reply finishes in your current chat while Athena is in
+the background. Use **Send test notification** to check delivery. Clicking a
+response notification returns to its conversation.
+
+Notifications require HTTPS or localhost. On iPhone and iPad, add Athena to the
+Home Screen and open the installed app. Keep Athena open: alerts pause if the
+browser suspends or closes it. If permission is blocked, allow notifications
+in the browser’s site settings.
+
 ### Sign in
 
 Athena checks the configured Hermes server before opening chat. If authentication
@@ -116,6 +129,14 @@ Hermes instance; it does not create separate user workspaces.
 
 For step-by-step client registration, backend settings, Docker configuration,
 and troubleshooting, see [Set up OIDC in the wiki](https://github.com/jtenniswood/athena/wiki/Set-up-OIDC).
+
+### New sessions in All profiles
+
+Open **Profile actions → Default for new sessions** below the session list to
+choose which profile receives new sessions while **All profiles** is selected.
+The choice is saved in this browser. Choose **Last active profile** to restore
+the previous behavior. When viewing a single profile, new sessions use that
+profile; starting a session explicitly for a profile keeps that choice.
 
 ### Acknowledgment
 

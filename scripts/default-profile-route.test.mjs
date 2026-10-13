@@ -14,7 +14,8 @@ function setup(initial = null) {
   const subscribers = new Set()
   const storage = {
     getItem: key => values.get(key) ?? null,
-    setItem: (key, value) => values.set(key, value)
+    setItem: (key, value) => values.set(key, value),
+    removeItem: key => values.delete(key)
   }
   const route = createBrowserDefaultProfileRoute(() => storage, 'web-single', {
     subscribe: listener => {
@@ -71,4 +72,14 @@ test('browser default profile route treats malformed saved values as unset and r
   storage.setItem = () => { throw new Error('storage unavailable') }
 
   await assert.rejects(route.setDefault({ connectionId: 'web-single', profile: 'research' }), /storage unavailable/)
+})
+
+test('clearing the default restores last-active behavior and notifies subscribers', async () => {
+  const { route } = setup({ connectionId: 'web-single', profile: 'research' })
+  const changes = []
+  route.onDefaultChanged(value => changes.push(value))
+  equalJson(route.getSnapshot(), { connectionId: 'web-single', profile: 'research' })
+  await route.clearDefault()
+  assert.equal(route.getSnapshot(), null)
+  equalJson(changes, [null])
 })
