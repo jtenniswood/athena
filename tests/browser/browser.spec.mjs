@@ -934,6 +934,53 @@ for (const width of [390, 1440]) {
   })
 }
 
+test('chat action dialogs retain their conversation owner when navigation changes', async ({ page }) => {
+  const renamed = []
+  const nextTitle = `Captured conversation ${Date.now()}`
+  page.on('request', request => {
+    if (request.method() === 'PATCH' && new URL(request.url()).pathname === '/api/sessions/preview-week') renamed.push(request.postDataJSON())
+  })
+  await open(page)
+  await editor(page).fill('Keep the original chat draft')
+  await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Rename', exact: true }).click()
+  const rename = page.getByRole('dialog', { name: 'Rename session', exact: true })
+  await expect(rename.getByRole('textbox')).toBeFocused()
+  await rename.getByRole('textbox').fill(nextTitle)
+  await page.evaluate(() => { window.location.hash = '/preview-idea' })
+  await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
+  await rename.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(rename).toBeHidden()
+  await expect.poll(() => renamed.some(body => body.title === nextTitle)).toBe(true)
+  await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
+  await page.goto(`${origin}/#/preview-week`)
+  await expect(editor(page)).toHaveText('Keep the original chat draft')
+})
+
+test('chat delete confirmation retains its conversation owner when navigation changes', async ({ page }) => {
+  const deleted = []
+  await page.route(/\/api\/sessions\/[^/?]+(?:\?|$)/, async route => {
+    if (route.request().method() !== 'DELETE') return route.continue()
+    deleted.push(new URL(route.request().url()).pathname)
+    await route.fulfill({ status: 503, json: { error: 'Synthetic deletion rejected' } })
+  })
+  await open(page)
+  await editor(page).fill('Keep the original delete draft')
+  await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click()
+  const confirm = page.getByRole('dialog', { name: 'Delete session?', exact: true })
+  await expect(confirm).toBeVisible()
+  expect(deleted).toEqual([])
+  await page.evaluate(() => { window.location.hash = '/preview-idea' })
+  await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
+  await confirm.getByRole('button', { name: 'Delete', exact: true }).click()
+  await expect.poll(() => deleted).toEqual(['/api/sessions/preview-week'])
+  await expect(page.getByRole('alert')).toContainText('Could not delete conversation.')
+  await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
+  await page.goto(`${origin}/#/preview-week`)
+  await expect(editor(page)).toHaveText('Keep the original delete draft')
+})
+
 test('chat actions open from the title toolbar with panel controls', async ({ page }) => {
   await open(page)
   const trigger = page.getByRole('button', { name: 'Chat actions', exact: true })
@@ -942,16 +989,16 @@ test('chat actions open from the title toolbar with panel controls', async ({ pa
   await trigger.click()
   const menu = page.locator('[role="menu"]:visible').last()
   await expect(menu.getByText('Panels', { exact: true })).toHaveCount(0)
-  await expect(menu.getByRole('menuitem', { name: 'Files', exact: true })).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: 'Review', exact: true })).toBeVisible()
+  await expect(menu.getByRole('menuitemcheckbox', { name: 'Files', exact: true })).toBeVisible()
+  await expect(menu.getByRole('menuitemcheckbox', { name: 'Review', exact: true })).toBeVisible()
   await expect(menu.getByText(/Rename/)).toBeVisible()
   await expect(menu.getByText(/Open in new tab/)).toHaveCount(0)
   await expect(menu.getByText(/New window/)).toHaveCount(0)
   await expect(menu.getByText('Appearance', { exact: true })).toHaveCount(0)
   await expect(menu.getByText('Move to project', { exact: true })).toHaveCount(0)
-  expect(await menu.evaluate(element => Array.from(element.children).map(child =>
-    child.getAttribute('role') === 'separator' ? 'separator' : child.querySelector('span')?.textContent
-  ).filter(Boolean))).toEqual(['Rename', 'Pin', 'Mark as unread', 'Files', 'Review', 'separator', 'Archive', 'Delete'])
+  expect(await menu.locator('[role^="menuitem"]').evaluateAll(items => items.map(item =>
+    item.querySelector('.browser-action-label > span')?.textContent
+  ))).toEqual(['Rename', 'Pin', 'Mark as unread', 'Files', 'Review', 'Archive', 'Delete'])
   await page.keyboard.press('Escape')
   await page.locator('[data-web-session-id="preview-week"]').first().click({ button: 'right' })
   await expect(page.getByRole('menuitem', { name: 'Appearance', exact: true })).toBeVisible()
@@ -975,7 +1022,7 @@ for (const platform of ['MacIntel', 'Linux x86_64']) {
       await editor(page).fill('Keep my panel shortcut draft')
       for (const [id, label, key] of [['files', 'Files', 'E'], ['review', 'Review', 'G']]) {
         await trigger.click()
-        await expect(page.getByRole('menuitem', { name: label, exact: true }).locator('.browser-session-shortcut')).toHaveText(prefix + key)
+        await expect(page.getByRole('menuitemcheckbox', { name: label, exact: true }).or(page.getByRole('menuitem', { name: label, exact: true })).locator('.browser-session-shortcut')).toHaveText(prefix + key)
         await page.keyboard.press('Escape')
         await main.focus()
         // Start closed even when an upstream panel is restored by default.
@@ -989,7 +1036,7 @@ for (const platform of ['MacIntel', 'Linux x86_64']) {
         await expect(panel(id)).toBeHidden()
         // Menu clicks and shortcuts share the same visibility owner.
         await trigger.click()
-        await page.getByRole('menuitem', { name: label, exact: true }).click()
+        await page.getByRole('menuitemcheckbox', { name: label, exact: true }).or(page.getByRole('menuitem', { name: label, exact: true })).click()
         await expect(panel(id)).toBeVisible()
         await main.focus()
         await page.keyboard.press(`${modifier}+Shift+${key}`)
@@ -2831,19 +2878,19 @@ for (const scenario of [
         const bounds = button.getBoundingClientRect(), glyph = icon?.getBoundingClientRect()
         return { width: bounds.width, height: bounds.height, icon: glyph?.width, centered: glyph ? Math.abs(glyph.x + glyph.width / 2 - bounds.x - bounds.width / 2) < 1 && Math.abs(glyph.y + glyph.height / 2 - bounds.y - bounds.height / 2) < 1 : false }
       }))
-      expect(controls).toHaveLength(4)
+      expect(controls).toHaveLength(2)
       for (const control of controls) {
         expect(control.width).toBeCloseTo(Math.max(36 * scale / 100, hasTouch ? 44 : 0), 0)
         expect(control.height).toBeCloseTo(control.width, 0)
         expect(control.icon).toBeCloseTo(16 * scale / 100, 0)
         expect(control.centered).toBe(true)
       }
-      const settings = page.getByRole('button', { name: 'Open settings menu', exact: true })
+      const settings = page.getByRole('button', { name: 'Chat actions', exact: true })
       await page.keyboard.press('Tab')
       await settings.focus()
       await expect(settings).toHaveCSS('outline-style', 'solid')
       await page.keyboard.press('Enter')
-      const actions = page.getByRole(compact && hasTouch ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
+      const actions = page.getByRole(compact && hasTouch ? 'dialog' : 'menu', { name: 'Chat actions', exact: true })
       await expect(actions).toBeVisible()
       const appearance = await actions.evaluate(el => {
         const style = getComputedStyle(el)
@@ -2860,7 +2907,7 @@ for (const scenario of [
       if (compact && hasTouch) {
         expect(bounds.width).toBeCloseTo(width, 0)
         expect(bounds.y + bounds.height).toBeCloseTo(height, 0)
-        const last = actions.getByRole('button', { name: 'Agents', exact: true })
+        const last = actions.getByRole('button', { name: 'Delete', exact: true })
         await last.scrollIntoViewIfNeeded()
         const lastBox = await last.boundingBox()
         expect(lastBox.y + lastBox.height).toBeLessThanOrEqual(height + 1)

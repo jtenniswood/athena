@@ -23,6 +23,19 @@ browser initialization. Browser pane ownership is derived once by the wrapper
 and passed into the workspace adapter. The adapter projects the existing
 renderer layout without changing its saved state.
 
+`upstream/entry.ts` starts the browser host after authentication and profile
+migration. `upstream/browser-host.tsx` mounts the engine's contribution wiring
+and exposes browser surfaces and plain panel commands. The shell does not consume
+renderer contribution objects or the engine's menu components. Conversation,
+selection, profile and action adapters project the authoritative stores; they do
+not create a second conversation store. `upstream/browser-api.tsx` remains the
+explicit visual primitive boundary.
+
+The chat action menu and its keyboard shortcuts use the same browser commands.
+Rename and delete dialogs retain the conversation they were opened for even if
+selection changes before a request completes. Sidebar row menus still use a
+guarded renderer adapter for project and appearance actions.
+
 ## Capability and lifecycle boundaries
 
 Browser, hosting, and connected-server support facts are described in

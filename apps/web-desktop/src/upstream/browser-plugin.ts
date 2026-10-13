@@ -1234,52 +1234,18 @@ export function disableBrowserSessionOpenActions(source: string, root: string): 
   const owner = JSON.stringify(path.join(root, 'src/experience/session-shortcuts'))
   let menu = (output.slice(0, copyStart) + output.slice(projectStart)).replace(copyImport, '')
   const shortcuts = [
-    ['  onPin?: () => void', '  keyboardShortcuts?: boolean\n  onPin?: () => void'],
-    ['  pinned = false,', '  keyboardShortcuts = false,\n  pinned = false,'],
     ['        suppressCloseFocusRef.current = true', '        suppressCloseFocusRef.current = Boolean(document.querySelector(\'[role="menu"]\'))'],
     ['      label: r.rename,', "      key: 'rename',\n      label: browserSessionActionLabel('rename', r.rename.replace(/(?:\\.{3}|…)$/, '')),"],
     ['      label: pinned ? r.unpin : r.pin,', "      key: 'pin',\n      label: browserSessionActionLabel('pin', pinned ? r.unpin : r.pin),"],
     ['      label: unread || isUnread ? r.markRead : r.markUnread,', "      key: 'unread',\n      label: browserSessionActionLabel('unread', unread || isUnread ? r.markRead : r.markUnread),"],
     ['      label: r.archive,', "      key: 'archive',\n      label: browserSessionActionLabel('archive', r.archive),"],
     ['      label: t.common.delete,', "      key: 'delete',\n      label: browserSessionActionLabel('delete', t.common.delete),"],
-    ['  const renderItems = (kit: MenuKit) => (', `  useBrowserSessionShortcuts(keyboardShortcuts && Boolean(sessionId), {
-    rename: identityItems[0], pin: identityItems[1], unread: identityItems[2],
-    archive: dangerItems[0], delete: dangerItems[1]
-  })
-
-  const renderItems = (kit: MenuKit) => (`]
   ]
   for (const [before, after] of shortcuts) {
     if (menu.split(before).length !== 2) throw new Error('Browser session shortcut contract changed')
     menu = menu.replace(before, after)
   }
-  return `import { browserSessionActionLabel, useBrowserSessionShortcuts } from ${owner}\n` + menu
-}
-
-export function addBrowserChatPanelActions(source: string, root: string): string {
-  const importTarget = "import type { SessionTitleResponse } from '../../types'\n"
-  const actionInterface = '  onHideTabBar?: () => void\n'
-  const actionDestructure = '  onHideTabBar,\n  surface = \'row\',\n  tabPaneId\n}: SessionActions) {'
-  const actionItemsTarget = '      <kit.Separator />\n      {dangerItems.map(item => renderActionItem(kit, item))}'
-  const appearanceStart = '      <kit.Sub>\n        <kit.SubTrigger disabled={!sessionId}>\n          <Codicon name="symbol-color"'
-  const projectStart = '      <kit.Sub>\n        <kit.SubTrigger disabled={!sessionId}>\n          <Codicon name="folder"'
-  const submenuEnd = '      </kit.Sub>'
-  if (source.split(importTarget).length !== 2 || source.split(actionInterface).length !== 2 || source.split(actionDestructure).length !== 2 || source.split(actionItemsTarget).length !== 2 || source.split(appearanceStart).length !== 2 || source.split(projectStart).length !== 2) {
-    throw new Error('Browser chat panel menu contract changed')
-  }
-  // Keep project and appearance actions on sidebar rows, while the chat
-  // toolbar exposes only conversation actions and workspace panel toggles.
-  for (const start of [appearanceStart, projectStart]) {
-    const from = source.indexOf(start)
-    const to = source.indexOf(submenuEnd, from) + submenuEnd.length
-    if (to < from) throw new Error('Browser chat submenu boundary changed')
-    const submenu = source.slice(from, to)
-    source = source.replace(submenu, `      {browserPanelEntries === undefined && (\n${submenu}\n      )}`)
-  }
-  return source.replace(importTarget, `${importTarget}import { BrowserChatPanelActions } from ${JSON.stringify(path.join(root, 'src/experience/chat-panel-actions.tsx'))}\n`)
-    .replace(actionInterface, `${actionInterface}  browserPanelEntries?: readonly { id: string; title?: unknown; data?: unknown }[]\n  onBrowserPanelOpen?: () => void\n`)
-    .replace(actionDestructure, '  onHideTabBar,\n  surface = \'row\',\n  tabPaneId,\n  browserPanelEntries,\n  onBrowserPanelOpen\n}: SessionActions) {')
-    .replace(actionItemsTarget, `      <BrowserChatPanelActions kit={kit} entries={browserPanelEntries} onOpen={onBrowserPanelOpen} />\n${actionItemsTarget}`)
+  return `import { browserSessionActionLabel } from ${owner}\n` + menu
 }
 
 export function filterBrowserKeybinds(source: string): string {
@@ -1384,7 +1350,6 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
     disableBrowserSessionRowTabs,
     disableBrowserSessionOpenActions: source => disableBrowserSessionOpenActions(source, root),
-    addBrowserChatPanelActions: source => addBrowserChatPanelActions(source, root),
     filterBrowserKeybinds,
     useBrowserSessionSelection: source => useBrowserSessionSelection(source, root),
     useBrowserBotSelection: source => useBrowserRosterSelection(source, root, 'bot'),

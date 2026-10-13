@@ -516,7 +516,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/session-actions-menu.tsx",
-    "reason": "Remove tab/window actions, retain session mutations, add panel controls to the chat menu, and share keyboard shortcuts with the chat toolbar.",
+    "reason": "Keep browser sidebar session menus single-view and share shortcut labels. Browser toolbar menus and panel commands are owned by Athena components.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -528,15 +528,14 @@
         "scenario": "conversation action shortcuts"
       }
     ],
-    "removal": "The browser owns session menus or upstream accepts browser capabilities.",
+    "removal": "The browser also owns sidebar session menus or upstream accepts browser capabilities.",
     "handlers": [
-      "disableBrowserSessionOpenActions",
-      "addBrowserChatPanelActions"
+      "disableBrowserSessionOpenActions"
     ],
     "sourceHash": "235143c976b1d6b777dd2f13ad1f1ddadd6d0a3ff2b5bb83034d8fc9b630dc71",
     "sourceRoot": "renderer",
     "inputHash": "235143c976b1d6b777dd2f13ad1f1ddadd6d0a3ff2b5bb83034d8fc9b630dc71",
-    "outputHash": "ef0bf7f8a6072914c272e4f33ace23c758991dc9db88351bc77ce1a43619f373"
+    "outputHash": "76a7aade1284924d003e466ae430cf5676b82d5208833a3f46327ca397b9857d"
   },
   {
     "name": "canonical-bot-row-actions",
