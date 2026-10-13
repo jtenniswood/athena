@@ -51,7 +51,7 @@ test('configuration recovery reaches proxy sign-in and preserves browser data', 
     const response = await page.reload()
     expect(response.fromServiceWorker()).toBe(true)
     await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
-    await expect(page.getByRole('status')).toContainText('Your session may have expired')
+    await expect(page.locator('.athena-sign-in-status')).toBeHidden()
     await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
     expect(await page.evaluate(() => Boolean(window.hermesDesktop))).toBe(false)
     await expect(page.getByText('Connection help', { exact: true })).toHaveCount(0)
