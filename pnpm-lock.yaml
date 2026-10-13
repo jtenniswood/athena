@@ -18,8 +18,8 @@ importers:
   apps/web-desktop:
     dependencies:
       '@assistant-ui/core':
-        specifier: 0.2.23
-        version: 0.2.23(@assistant-ui/store@0.2.22(@assistant-ui/tap@0.9.12(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(react@19.2.7))(@assistant-ui/tap@0.9.12(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(assistant-cloud@0.1.40)(react@19.2.7)(zustand@5.0.15(@types/react@19.2.17)(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7)))
+        specifier: 0.3.27
+        version: 0.3.27(@assistant-ui/store@0.3.19(@assistant-ui/tap@0.9.23(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(react@19.2.7))(@assistant-ui/tap@0.9.23(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(assistant-cloud@0.1.40)(react@19.2.7)
       '@assistant-ui/react':
         specifier: 0.14.24
         version: 0.14.24(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
@@ -64,7 +64,7 @@ importers:
         version: 1.2.5
       '@nanostores/react':
         specifier: 1.1.0
-        version: 1.1.0(nanostores@1.4.0)(react@19.2.7)
+        version: 1.1.0(nanostores@1.5.5)(react@19.2.7)
       '@nous-research/ui':
         specifier: 0.19.1
         version: 0.19.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(motion@12.43.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -87,8 +87,8 @@ importers:
         specifier: 4.3.3
         version: 4.3.3(vite@8.3.4(@types/node@22.20.5)(jiti@2.7.0)(terser@5.50.0))
       '@tanstack/react-query':
-        specifier: 5.101.2
-        version: 5.101.2(react@19.2.7)
+        specifier: 5.104.2
+        version: 5.104.2(react@19.2.7)
       '@tanstack/react-virtual':
         specifier: 3.14.17
         version: 3.14.17(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -171,8 +171,8 @@ importers:
         specifier: 12.43.0
         version: 12.43.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       nanostores:
-        specifier: 1.4.0
-        version: 1.4.0
+        specifier: 1.5.5
+        version: 1.5.5
       node-pty:
         specifier: 1.1.0
         version: 1.1.0
@@ -307,6 +307,22 @@ packages:
       zustand:
         optional: true
 
+  '@assistant-ui/core@0.3.27':
+    resolution: {integrity: sha512-OIPO8yLXEhQF38qCRTWwrzkGKm0jun2gq/xXsfZH3m3rFiN0WlNShPCkh/GSjHMY8xW48tqZau/ZVdpP2Unjyg==}
+    peerDependencies:
+      '@assistant-ui/store': ^0.3.19
+      '@assistant-ui/tap': ^0.9.23
+      '@types/react': '*'
+      assistant-cloud: ^0.2.1
+      react: ^18 || ^19
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      assistant-cloud:
+        optional: true
+      react:
+        optional: true
+
   '@assistant-ui/react-markdown@0.14.20':
     resolution: {integrity: sha512-I+zblcZHjC/hn3pepmiGQhkJsIV7IUr4xSA3bf1Pkmln1k5W3LbbSITD5qMiccC0a3EKor6BF1B7XrsYfvBfdQ==}
     peerDependencies:
@@ -362,8 +378,31 @@ packages:
       '@types/react':
         optional: true
 
+  '@assistant-ui/store@0.3.19':
+    resolution: {integrity: sha512-lxmbfbQCBx7ijIQYmP2OQJMa1aUCvRkvb/Y09fmbkxIhYAcNhSIRcINALe940dGtia+cGn63m8HxYNVoJEcFqg==}
+    peerDependencies:
+      '@assistant-ui/tap': ^0.9.22
+      '@types/react': '*'
+      react: ^18 || ^19
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      react:
+        optional: true
+
   '@assistant-ui/tap@0.9.12':
     resolution: {integrity: sha512-VJrAPipWzhswHMUbO/8yTOyzGCJLYFFKtU22dlMx5ejmvktgErEgpAsHg7SARdB7Cd6skInSOHW0cMlGp155Hw==}
+    peerDependencies:
+      '@types/react': '*'
+      react: ^18 || ^19
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      react:
+        optional: true
+
+  '@assistant-ui/tap@0.9.23':
+    resolution: {integrity: sha512-VnWoJLDv8/98YknvgB+Cjy+hwM4+BiW9nZMsKvaPdl3dUhuRdLDOZZs6gvE7x6x40NAeP4Wsq9WBDfmus5k31w==}
     peerDependencies:
       '@types/react': '*'
       react: ^18 || ^19
@@ -2366,11 +2405,11 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
-  '@tanstack/query-core@5.101.2':
-    resolution: {integrity: sha512-hH5MLoJhF7KaIGd7q3xTXGXvslI+GYlM1Z/35aSHHWaCJWB7XvTSHYuV3eM7tw+aE0mT/xMro4M4Q9rCGHT0lw==}
+  '@tanstack/query-core@5.104.2':
+    resolution: {integrity: sha512-/qbsxJK5c3Ve1aFIULWYNcT2jeRUAiD4HME6Eu2ZdpofHoVgAjpkQhLg5xHuOoBkTPQUJLfP7zOxy0qsBcqROA==}
 
-  '@tanstack/react-query@5.101.2':
-    resolution: {integrity: sha512-seDkr6kzGzX1okaaTtZPtgA688CDPlXUz1C6xSg0ESqn04Vuc8tlrYms1s3de+znBqhPVxFRfpAfUf+6XvfPWg==}
+  '@tanstack/react-query@5.104.2':
+    resolution: {integrity: sha512-xKmzWGhadbE5wGS/ZmXShRITnI9oItox5GO14KvFZco3+vhTAyXS1erYzJWdiY280zapAGJXFUL9nHgwP6SV/g==}
     peerDependencies:
       react: ^18 || ^19
 
@@ -2494,6 +2533,9 @@ packages:
 
   '@types/hast@3.0.5':
     resolution: {integrity: sha512-rp/ezSWaD1m44dPKICGhiskI13nVr7qTloFwDa/IYkhhf5nzwP+zIQcIJh3WIFSBOy/H1PzB40jPjMDksN4F+g==}
+
+  '@types/json-schema@7.0.15':
+    resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
   '@types/katex@0.16.8':
     resolution: {integrity: sha512-trgaNyfU+Xh2Tc+ABIb44a5AYUpicB3uwirOioeOkNPPbmgRNtcWyDeeFRzjPZENO9Vq8gvVqfhaaXWLlevVwg==}
@@ -2645,6 +2687,20 @@ packages:
       ioredis: ^5.10.1 || ^6.0.0
       redis: ^5.12.1
     peerDependenciesMeta:
+      ioredis:
+        optional: true
+      redis:
+        optional: true
+
+  assistant-stream@0.3.50:
+    resolution: {integrity: sha512-IaH+fesbKJE/2R1lH69DPRUfvv87lNE6j3hFf2RZaCCf79UCyF8dtaI1NK5k792p8eIQpxSLbgHs09fX5H8A6A==}
+    peerDependencies:
+      ai: ^6.0.0 || ^7.0.0
+      ioredis: ^5.10.1 || ^6.0.0
+      redis: ^5.12.1
+    peerDependenciesMeta:
+      ai:
+        optional: true
       ioredis:
         optional: true
       redis:
@@ -4198,8 +4254,13 @@ packages:
     engines: {node: ^22 || ^24 || >=26}
     hasBin: true
 
-  nanostores@1.4.0:
-    resolution: {integrity: sha512-i0tloweeudshAEuddpDxcg9Ik6pkPfVsHIgKyf143JrgG7/MOh0+q7BypdLXZPoOP7fOYt1eTcwGkyiVmhJFkA==}
+  nanoid@6.0.2:
+    resolution: {integrity: sha512-hIvVOb9Qr1p/9CNNLOe0OlWvgx/ziTsVwKN/GDSsuArN2K0wDiafP3s0SWmsm7o2BdnyS8Z9Z64NFBUbn6ziBg==}
+    engines: {node: ^22 || ^24 || >=26}
+    hasBin: true
+
+  nanostores@1.5.5:
+    resolution: {integrity: sha512-FixtE239Gl6Gz0ZGCK0WzvNwObNCIwVT+L7zQcf1QgcA6AzBxblzqe9OT88qiucNkhsjSOqiogSaF5jVbJiqSA==}
     engines: {node: ^20.0.0 || >=22.0.0}
 
   negotiator@0.6.4:
@@ -5372,6 +5433,21 @@ snapshots:
       - ioredis
       - redis
 
+  '@assistant-ui/core@0.3.27(@assistant-ui/store@0.3.19(@assistant-ui/tap@0.9.23(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(react@19.2.7))(@assistant-ui/tap@0.9.23(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(assistant-cloud@0.1.40)(react@19.2.7)':
+    dependencies:
+      '@assistant-ui/store': 0.3.19(@assistant-ui/tap@0.9.23(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(react@19.2.7)
+      '@assistant-ui/tap': 0.9.23(@types/react@19.2.17)(react@19.2.7)
+      assistant-stream: 0.3.50
+      nanoid: 6.0.2
+    optionalDependencies:
+      '@types/react': 19.2.17
+      assistant-cloud: 0.1.40
+      react: 19.2.7
+    transitivePeerDependencies:
+      - ai
+      - ioredis
+      - redis
+
   '@assistant-ui/react-markdown@0.14.20(@assistant-ui/react@0.14.24(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7)))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@assistant-ui/react': 0.14.24(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
@@ -5449,7 +5525,19 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.17
 
+  '@assistant-ui/store@0.3.19(@assistant-ui/tap@0.9.23(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(react@19.2.7)':
+    dependencies:
+      '@assistant-ui/tap': 0.9.23(@types/react@19.2.17)(react@19.2.7)
+    optionalDependencies:
+      '@types/react': 19.2.17
+      react: 19.2.7
+
   '@assistant-ui/tap@0.9.12(@types/react@19.2.17)(react@19.2.7)':
+    optionalDependencies:
+      '@types/react': 19.2.17
+      react: 19.2.7
+
+  '@assistant-ui/tap@0.9.23(@types/react@19.2.17)(react@19.2.7)':
     optionalDependencies:
       '@types/react': 19.2.17
       react: 19.2.7
@@ -6592,9 +6680,9 @@ snapshots:
     dependencies:
       '@chevrotain/types': 11.1.2
 
-  '@nanostores/react@1.1.0(nanostores@1.4.0)(react@19.2.7)':
+  '@nanostores/react@1.1.0(nanostores@1.5.5)(react@19.2.7)':
     dependencies:
-      nanostores: 1.4.0
+      nanostores: 1.5.5
       react: 19.2.7
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
@@ -6602,11 +6690,11 @@ snapshots:
 
   '@nous-research/ui@0.19.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(motion@12.43.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@nanostores/react': 1.1.0(nanostores@1.4.0)(react@19.2.7)
+      '@nanostores/react': 1.1.0(nanostores@1.5.5)(react@19.2.7)
       class-variance-authority: 0.7.1
       clsx: 2.1.1
       motion: 12.43.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      nanostores: 1.4.0
+      nanostores: 1.5.5
       radix-ui: 1.6.7(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
@@ -7752,11 +7840,11 @@ snapshots:
       tailwindcss: 4.3.3
       vite: 8.3.4(@types/node@22.20.5)(jiti@2.7.0)(terser@5.50.0)
 
-  '@tanstack/query-core@5.101.2': {}
+  '@tanstack/query-core@5.104.2': {}
 
-  '@tanstack/react-query@5.101.2(react@19.2.7)':
+  '@tanstack/react-query@5.104.2(react@19.2.7)':
     dependencies:
-      '@tanstack/query-core': 5.101.2
+      '@tanstack/query-core': 5.104.2
       react: 19.2.7
 
   '@tanstack/react-virtual@3.14.17(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
@@ -7907,6 +7995,8 @@ snapshots:
     dependencies:
       '@types/unist': 3.0.3
 
+  '@types/json-schema@7.0.15': {}
+
   '@types/katex@0.16.8': {}
 
   '@types/mdast@4.0.4':
@@ -8047,6 +8137,13 @@ snapshots:
     dependencies:
       '@standard-schema/spec': 1.1.0
       nanoid: 6.0.1
+      secure-json-parse: 4.1.0
+
+  assistant-stream@0.3.50:
+    dependencies:
+      '@standard-schema/spec': 1.1.0
+      '@types/json-schema': 7.0.15
+      nanoid: 6.0.2
       secure-json-parse: 4.1.0
 
   async-function@1.0.0: {}
@@ -9948,7 +10045,9 @@ snapshots:
 
   nanoid@6.0.1: {}
 
-  nanostores@1.4.0: {}
+  nanoid@6.0.2: {}
+
+  nanostores@1.5.5: {}
 
   negotiator@0.6.4:
     optional: true

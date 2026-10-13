@@ -119,6 +119,35 @@ export function BrowserProfileNavigation({ hidden = false }: { hidden?: boolean 
           }] : []
         },
         {
+          key: 'new-sessions',
+          actions: [{
+            key: 'default-new-session-profile',
+            label: 'Default for new sessions',
+            ariaLabel: 'Default for new sessions',
+            icon: <Codicon name="add" size="1rem" />,
+            description: 'Used when viewing All profiles. Saved in this browser.',
+            run: () => {},
+            children: [{
+              key: 'default-new-session-profile',
+              selection: 'single',
+              actions: [
+                {
+                  key: 'last-active-profile',
+                  label: 'Last active profile',
+                  checked: model.defaultNewSessionProfile === null,
+                  run: () => model.setDefaultNewSessionProfile(null)
+                },
+                ...profileItems.map(item => ({
+                  key: `default-profile-${item.key}`,
+                  label: item.label,
+                  checked: model.defaultNewSessionProfile === item.key,
+                  run: () => model.setDefaultNewSessionProfile(item.key)
+                }))
+              ]
+            }]
+          }]
+        },
+        {
           key: 'profiles',
           label: 'Profiles',
           actions: [

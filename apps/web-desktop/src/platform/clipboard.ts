@@ -1,5 +1,9 @@
 import { browserCapabilities } from './capabilities'
 
+// Capture the browser method before the renderer installs its Electron shim,
+// which redirects navigator.clipboard.writeText back into this bridge.
+const nativeWriteText = navigator.clipboard?.writeText?.bind(navigator.clipboard)
+
 /** Read the first image off the clipboard, if any (modern Chromium Clipboard
  *  API). Returns null when there is none or permission is denied. */
 export async function clipboardImageAsFile(): Promise<null | Blob> {
@@ -37,8 +41,8 @@ export async function readClipboard(): Promise<string> {
 
 export async function writeClipboard(text: string): Promise<boolean> {
   try {
-    if (browserCapabilities().clipboard && navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text)
+    if (nativeWriteText) {
+      await nativeWriteText(text)
       return true
     }
   } catch {
@@ -56,9 +60,10 @@ export async function writeClipboard(text: string): Promise<boolean> {
   textarea.select()
 
   try {
-    return document.execCommand('copy')
-  } catch {
-    return false
+    if (!document.execCommand('copy')) {
+      throw new Error('Could not copy text to the clipboard')
+    }
+    return true
   } finally {
     textarea.remove()
   }
