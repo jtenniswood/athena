@@ -18,6 +18,11 @@ onlyBuiltDependencies:
 # the repo-root node_modules (same shape as npm).
 nodeLinker: hoisted
 
+# The pinned renderer's read-only plugin store does not implement the eq()
+# method required by Nanostores 1.5. Keep its shared store API consistent.
+overrides:
+  nanostores: 1.4.0
+
 allowBuilds:
   get-windows: false
   node-pty: false

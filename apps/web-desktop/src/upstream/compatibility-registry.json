@@ -1292,7 +1292,7 @@
     "specifier": "react/jsx-dev-runtime",
     "replacement": "../../node_modules/react/jsx-dev-runtime.js",
     "aliasGroup": "vite",
-    "sourceHash": "51966ae9c8c377ff592b5d69c980966992101bc6791bf83a1e5c7ad9bcefa7f4"
+    "sourceHash": "6e003e4e9ed25afa7fdd55613f8aa877cefa9b359d9c13f81ee704030248e24e"
   },
   {
     "name": "react-jsx-singleton",
@@ -1312,7 +1312,7 @@
     "specifier": "react/jsx-runtime",
     "replacement": "../../node_modules/react/jsx-runtime.js",
     "aliasGroup": "vite",
-    "sourceHash": "51966ae9c8c377ff592b5d69c980966992101bc6791bf83a1e5c7ad9bcefa7f4"
+    "sourceHash": "6e003e4e9ed25afa7fdd55613f8aa877cefa9b359d9c13f81ee704030248e24e"
   },
   {
     "name": "react-dom-singleton",
@@ -1332,7 +1332,7 @@
     "specifier": "react-dom",
     "replacement": "../../node_modules/react-dom",
     "aliasGroup": "vite",
-    "sourceHash": "447acd72cdb6a966d9db967729e286e7cbb4a09ea61fddd45e12c2a97fd4cfb6"
+    "sourceHash": "136d4af63de473392ea79d6a21932b0ed9eb37fe518ce70f4621250f3d79e9bb"
   },
   {
     "name": "react-singleton",
@@ -1352,7 +1352,7 @@
     "specifier": "react",
     "replacement": "../../node_modules/react",
     "aliasGroup": "vite",
-    "sourceHash": "51966ae9c8c377ff592b5d69c980966992101bc6791bf83a1e5c7ad9bcefa7f4"
+    "sourceHash": "6e003e4e9ed25afa7fdd55613f8aa877cefa9b359d9c13f81ee704030248e24e"
   },
   {
     "name": "driver-raw-iife",
@@ -1441,7 +1441,7 @@
     "order": 1,
     "module": "emojibase-data/package.json",
     "sourceRoot": "dependency",
-    "sourceHash": "71e5b6ef1a414e00f8c2bc6f45c129ad115569636ef01d9789bedec257ac0281",
+    "sourceHash": "bf331a49d67b4264914cbedc0a226a64e970c76bf9adfecbd37beb8e521baecc",
     "reason": "Serve and bundle the emoji picker JSON at the paths expected by the renderer.",
     "owner": "apps/web-desktop/vite.config.ts",
     "handler": "emojibaseAssets",

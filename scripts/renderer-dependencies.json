@@ -7,6 +7,34 @@
     "use-stick-to-bottom", "typescript", "vite", "@vitejs/plugin-react"
   ],
   "overrides": {
+    "@assistant-ui/react": {
+      "upstream": "0.14.24", "version": "0.14.29",
+      "reason": "Use the newer 0.14 runtime without removing the composer, message and thread hooks used by the pinned renderer; verify snapshot caching and chat submission."
+    },
+    "@assistant-ui/react-streamdown": {
+      "upstream": "0.3.5", "version": "0.3.7",
+      "reason": "Use the newest integration declaring support for assistant-ui React 0.14; verify transcript rendering with Streamdown 2.7."
+    },
+    "@nanostores/react": {
+      "upstream": "1.1.0", "version": "2.0.1",
+      "reason": "Use the updated React bindings while retaining Nanostores 1.4.0 and its batch side-effect repair; verify production state writes and conversation selection."
+    },
+    "react": {
+      "upstream": "19.2.7", "version": "19.3.0",
+      "reason": "Update React and React DOM together; verify singleton fingerprints, chat submission, settings saves and draft retention."
+    },
+    "react-dom": {
+      "upstream": "19.2.7", "version": "19.3.0",
+      "reason": "Use the same React DOM release as React; verify singleton fingerprints, the production build and browser workflows."
+    },
+    "streamdown": {
+      "upstream": "2.5.0", "version": "2.7.0",
+      "reason": "Update with the renderer-compatible assistant-ui integration; verify highlighted code, Mermaid rendering and transcript output."
+    },
+    "typescript": {
+      "upstream": "6.0.3", "version": "npm:@typescript/typescript6@6.0.2",
+      "reason": "Retain the TypeScript 6 compiler API for diagnostics and transform tests while the separate native TypeScript 7 package supplies tsc; verify both typecheck paths."
+    },
     "nanostores": {
       "upstream": "1.4.2", "version": "1.4.0",
       "reason": "Retain the fingerprinted batch side-effect repair and its production bundling regression check until a replacement is verified."
@@ -20,16 +48,16 @@
       "reason": "Retain Athena's current menu primitives; verify desktop and touch menus, dialog focus and action shortcuts."
     },
     "@nous-research/ui": {
-      "upstream": "0.18.2", "version": "0.19.1",
-      "reason": "Retain the existing browser theme and shared controls integration; verify settings and menu presentation."
+      "upstream": "0.18.2", "version": "1.5.2",
+      "reason": "Update the shared UI with React 19.3 while retaining Motion 12 to satisfy its peer; verify browser settings, menus and dialog focus."
     },
     "@tanstack/react-virtual": {
       "upstream": "3.14.6", "version": "3.14.17",
       "reason": "Retain the current virtual list version; verify conversation and sidebar rendering."
     },
     "react-arborist": {
-      "upstream": "3.13.2", "version": "3.16.0",
-      "reason": "Retain the current project tree version; verify sidebar disclosure and session navigation."
+      "upstream": "3.13.2", "version": "4.0.1",
+      "reason": "Update the project tree together with React DnD and dnd-core 16; verify sidebar disclosure and session navigation against the pinned renderer."
     },
     "@streamdown/math": {
       "upstream": "1.0.2", "version": "1.0.3",
