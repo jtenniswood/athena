@@ -31,7 +31,7 @@ export function showStartupRecovery(error: unknown, revision: string): void {
     const reconnecting = url.searchParams.get('hermes-reconnect') === '1'
     const { section, card, status } = createSignInView(reconnecting
       ? 'Athena is still unavailable. Check your connection and try again.'
-      : 'Your session may have expired. Sign in to reconnect to Athena.')
+      : '')
     const signIn = document.createElement('button')
     signIn.type = 'button'
     signIn.className = 'athena-sign-in-primary'
@@ -40,18 +40,13 @@ export function showStartupRecovery(error: unknown, revision: string): void {
       signIn.disabled = true
       section.setAttribute('aria-busy', 'true')
       status.textContent = reconnecting ? 'Reconnecting…' : 'Opening sign-in…'
+      status.hidden = false
       try { sessionStorage.setItem(RETURN_HASH_KEY, url.hash) } catch { /* Navigation remains available without storage. */ }
       url.searchParams.set('hermes-reconnect', '1')
       if (url.href === window.location.href) window.location.reload()
       else window.location.assign(url.href)
     }
-    const help = document.createElement('details')
-    help.className = 'athena-sign-in-advanced'
-    help.innerHTML = `<summary>Connection help</summary>
-      <p>If signing in does not reconnect you, check your internet connection or ask your server administrator to check Athena’s configuration.</p>
-      <p class="athena-sign-in-build">Build ${wrapperRevision}</p>`
-    help.append(diagnosticsButton(stage, wrapperRevision))
-    card.append(signIn, help)
+    card.append(signIn)
     root.replaceChildren(section)
     return
   }
