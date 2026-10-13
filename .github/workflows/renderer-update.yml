@@ -52,7 +52,7 @@ jobs:
           repositories: ${{ github.event.repository.name }}
           permission-contents: write
           permission-pull-requests: write
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: main
           token: ${{ steps.app.outputs.token }}
