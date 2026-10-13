@@ -42,6 +42,15 @@
     "@vitejs/plugin-react": {
       "upstream": "6.0.3", "version": "6.1.2",
       "reason": "Use Athena's existing React build plugin with its reviewed Vite version."
+    },
+    "react-shiki": {
+      "upstream": "0.9.3", "version": "0.11.2",
+      "reason": "Retain main's aligned react-shiki and Shiki update; typecheck and build the transcript renderer as one dependency unit."
+    },
+    "shiki": {
+      "upstream": "4.3.1", "version": "4.5.0",
+      "reason": "Use the same Shiki version as react-shiki 0.11.2 to retain main's type compatibility fix."
+
     }
   }
 }
