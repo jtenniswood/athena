@@ -15,5 +15,6 @@ export function createSignInView(message: string): {
   const card = section.querySelector<HTMLElement>('.athena-sign-in-card')!
   const status = card.querySelector<HTMLParagraphElement>('[role="status"]')!
   status.textContent = message
+  status.hidden = !message
   return { section, card, status }
 }
