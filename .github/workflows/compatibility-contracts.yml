@@ -15,8 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v5
-        with:
-          version: 11.28.5
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -25,5 +23,11 @@ jobs:
         run: pnpm prepare:renderer
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Verify renderer dependency baseline
+        run: pnpm check:renderer-dependencies
       - name: Verify compatibility registry
         run: node --test scripts/compatibility-registry.test.mjs
+      - name: Typecheck browser and renderer integration
+        run: pnpm typecheck
+      - name: Build browser application
+        run: pnpm build

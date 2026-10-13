@@ -1,0 +1,47 @@
+{
+  "packages": [
+    "@assistant-ui/core", "@assistant-ui/react", "@assistant-ui/react-streamdown",
+    "@nanostores/react", "nanostores", "react", "react-dom", "react-router",
+    "radix-ui", "@nous-research/ui", "@tanstack/react-virtual", "react-arborist",
+    "streamdown", "@streamdown/code", "@streamdown/math", "react-shiki", "shiki",
+    "use-stick-to-bottom", "typescript", "vite", "@vitejs/plugin-react"
+  ],
+  "overrides": {
+    "nanostores": {
+      "upstream": "1.4.2", "version": "1.4.0",
+      "reason": "Retain the fingerprinted batch side-effect repair and its production bundling regression check until a replacement is verified."
+    },
+    "react-router": {
+      "upstream": "8.3.0", "version": "8.4.0",
+      "reason": "Retain Athena's current routing version; verify conversation, profile and settings navigation against the pinned renderer."
+    },
+    "radix-ui": {
+      "upstream": "1.6.7", "version": "1.8.0",
+      "reason": "Retain Athena's current menu primitives; verify desktop and touch menus, dialog focus and action shortcuts."
+    },
+    "@nous-research/ui": {
+      "upstream": "0.18.2", "version": "0.19.1",
+      "reason": "Retain the existing browser theme and shared controls integration; verify settings and menu presentation."
+    },
+    "@tanstack/react-virtual": {
+      "upstream": "3.14.6", "version": "3.14.17",
+      "reason": "Retain the current virtual list version; verify conversation and sidebar rendering."
+    },
+    "react-arborist": {
+      "upstream": "3.13.2", "version": "3.16.0",
+      "reason": "Retain the current project tree version; verify sidebar disclosure and session navigation."
+    },
+    "@streamdown/math": {
+      "upstream": "1.0.2", "version": "1.0.3",
+      "reason": "Retain Athena's existing math rendering version; typecheck and build the transcript renderer together with Shiki."
+    },
+    "vite": {
+      "upstream": "8.2.0", "version": "8.3.4",
+      "reason": "Athena owns the browser build and compatibility plugin pipeline; verify the registry and production build."
+    },
+    "@vitejs/plugin-react": {
+      "upstream": "6.0.3", "version": "6.1.2",
+      "reason": "Use Athena's existing React build plugin with its reviewed Vite version."
+    }
+  }
+}

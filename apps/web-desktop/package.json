@@ -6,7 +6,7 @@
   "description": "Athena for Hermes Agent as a plain Vite web app, built from the pinned Hermes Desktop renderer.",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node ../../scripts/renderer-dependencies.mjs && vite build",
     "preview": "vite preview",
     "test:gateway": "node --test scripts/test-gateway-proxy.mjs",
     "typecheck": "node ../../scripts/typecheck.mjs"
@@ -86,7 +86,7 @@
     "react-dnd-html5-backend": "14.1.0",
     "react-dom": "19.2.7",
     "react-router": "8.4.0",
-    "react-shiki": "0.11.2",
+    "react-shiki": "0.9.3",
     "remark-math": "6.0.0",
     "remend": "1.4.0",
     "shiki": "4.3.1",

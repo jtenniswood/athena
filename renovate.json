@@ -6,6 +6,17 @@
   "internalChecksFilter": "strict",
   "packageRules": [
     {
+      "description": "Review renderer-sensitive libraries together with the pinned renderer baseline.",
+      "matchPackageNames": [
+        "@assistant-ui/core", "@assistant-ui/react", "@assistant-ui/react-streamdown",
+        "@nanostores/react", "nanostores", "react", "react-dom", "react-router",
+        "radix-ui", "@nous-research/ui", "@tanstack/react-virtual", "react-arborist",
+        "streamdown", "@streamdown/code", "@streamdown/math", "react-shiki", "shiki",
+        "use-stick-to-bottom", "typescript", "vite", "@vitejs/plugin-react"
+      ],
+      "groupName": "renderer compatibility"
+    },
+    {
       "description": "Align npm updates with pnpm's one-day release-age policy.",
       "matchDatasources": ["npm"],
       "minimumReleaseAge": "1 day"
