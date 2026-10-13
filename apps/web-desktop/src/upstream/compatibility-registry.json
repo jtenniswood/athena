@@ -2720,5 +2720,47 @@
     "sourceHash": "170396fa30886b5440df06a2c96e569294acd398f32692c620f2fa14300fcecd",
     "inputHash": "170396fa30886b5440df06a2c96e569294acd398f32692c620f2fa14300fcecd",
     "outputHash": "ff98b4216e102ce2b63ce33463cb24f6efa9914010e286c2a20a0e0577fc7d67"
+  },
+  {
+    "name": "browser-workspace-owner-identity",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "components/pane-shell/workspace-scope.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "8493ac2fa43aac84ee65d565b65c3bbfa3669bc34420230afb61e3a8e7aed76d",
+    "reason": "Project the exact current engine workspace owner for canonical Bot chats missing from sidebar rows.",
+    "owner": "apps/web-desktop/src/upstream/conversation.ts",
+    "tests": [
+      {
+        "file": "scripts/conversation-model.test.mjs",
+        "scenario": "hidden canonical Bot identity uses the exact engine workspace owner"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Replace when the renderer exposes a public current-conversation identity contract."
+  },
+  {
+    "name": "browser-bot-owner-identity",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "plugins/hermes-bots/routing.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "b2b8732319cee7cf1f4802f82468fab6e473c8205e73cc37019a2e1987ffe94c",
+    "reason": "Project the exact current engine workspace owner for canonical Bot chats missing from sidebar rows.",
+    "owner": "apps/web-desktop/src/upstream/conversation.ts",
+    "tests": [
+      {
+        "file": "scripts/conversation-model.test.mjs",
+        "scenario": "hidden canonical Bot identity uses the exact engine workspace owner"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Replace when the renderer exposes a public current-conversation identity contract."
   }
 ]

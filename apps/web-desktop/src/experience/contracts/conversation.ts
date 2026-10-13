@@ -42,6 +42,8 @@ export interface ConversationInput {
   groupName: string | null
   sessions: readonly ConversationSession[]
   bots: readonly ConversationBot[]
+  /** Exact current engine workspace owner; never a last-clicked roster fallback. */
+  selectedBotOwner?: ConversationBot | null
 }
 
 function text(value: unknown): string {
@@ -64,10 +66,18 @@ function emptyConversation(): BrowserConversation {
   return { kind: 'unknown', status: 'empty', id: null, sessionId: null, profile: null, displayName: null, connectionId: null }
 }
 
+function botConversation(bot: ConversationBot, sessionId: string, profile: string | null): BrowserConversation {
+  return {
+    kind: 'bot', status: 'ready', id: botKey(bot), sessionId, profile,
+    displayName: text(bot.display_name) || text(bot.name) || null,
+    connectionId: text(bot.connectionId) || null
+  }
+}
+
 /**
- * Resolve the visible identity from stable IDs. A missing selected session is
- * intentionally unknown while the upstream stores hydrate; falling back to a
- * previously selected bot here would leak identity across conversations.
+ * Resolve visible identity from stable IDs. An unlisted canonical chat can use
+ * its exact current engine owner. Other missing rows remain unknown while they
+ * hydrate; a previously selected Bot must never supply another chat's identity.
  */
 export function resolveConversationIdentity(input: ConversationInput): BrowserConversation {
   const groupName = text(input.groupName)
@@ -80,6 +90,10 @@ export function resolveConversationIdentity(input: ConversationInput): BrowserCo
 
   const session = input.sessions.find(candidate => text(candidate.id) === selectedId)
   if (!session) {
+    const owner = input.selectedBotOwner
+    if (owner && botSessionIds(owner).includes(selectedId)) {
+      return botConversation(owner, selectedId, text(owner.name) || null)
+    }
     return { kind: 'unknown', status: 'loading', id: selectedId, sessionId: selectedId, profile: null, displayName: null, connectionId: null }
   }
 
@@ -90,10 +104,7 @@ export function resolveConversationIdentity(input: ConversationInput): BrowserCo
   )
 
   if (bot) {
-    const name = text(bot.display_name) || text(bot.name) || null
-    const connectionId = text(bot.connectionId) || null
-    const id = botKey(bot)
-    return { kind: 'bot', status: 'ready', id, sessionId: selectedId, profile, displayName: name, connectionId }
+    return botConversation(bot, selectedId, profile)
   }
 
   return { kind: 'session', status: 'ready', id: selectedId, sessionId: selectedId, profile, displayName: text(session.title) || null, connectionId: null }

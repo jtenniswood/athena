@@ -167,7 +167,7 @@ function BrowserLayout() {
   }
   const navigate = useNavigate(), location = useLocation()
   const conversation = useBrowserConversation()
-  const sessionActions = useBrowserSessionActions()
+  const sessionActions = useBrowserSessionActions(conversation)
   const chatTitle = conversation.displayName || ''
   const panels = useBrowserHostPanels()
   const main = useRef<HTMLElement>(null), menu = useRef<HTMLButtonElement>(null)

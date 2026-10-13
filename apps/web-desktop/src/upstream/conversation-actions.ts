@@ -9,9 +9,10 @@ import { deleteSession, setSessionArchived } from '@/api/sessions'
 import { $unreadWriteGuard, markSessionUnread, pendingUnreadValue } from './browser-unread'
 import { reportActionFailure } from '../experience/action-errors'
 import type { BrowserSessionActions } from '../experience/contracts/actions'
+import type { BrowserConversationModel } from '../experience/contracts/conversation'
 
 /** Commands operate on the displayed session; upstream stores remain authoritative. */
-export function useBrowserSessionActions(): BrowserSessionActions {
+export function useBrowserSessionActions(conversation: BrowserConversationModel): BrowserSessionActions {
   const selected = useStore($selectedStoredSessionId)
   const sessions = useStore($sessions)
   const activeProfile = useStore($activeGatewayProfile)
@@ -20,7 +21,7 @@ export function useBrowserSessionActions(): BrowserSessionActions {
   useStore($unreadWriteGuard)
   const navigate = useNavigate()
   const session = sessions.find(row => String(row.id) === selected)
-  const profile = session?.profile || activeProfile
+  const profile = session?.profile || conversation.profile || activeProfile
   const pinId = session ? sessionPinId(session) : selected
   const pinned = Boolean(pinId && pins.includes(pinId))
 
