@@ -14,7 +14,7 @@ vm.runInContext(compile(readFileSync(pluginFile, 'utf8')), plugin)
 const original = readFileSync(path.join(root, '../desktop/src/app/chat/composer/hooks/use-composer-submit.ts'), 'utf8')
 const source = plugin.exports.useBrowserFollowupSubmit(plugin.exports.useBrowserAcceptedSubmit(original, root), root)
 
-function composer({ preference = 'queue', busy = true, disabled = false, attachments = [], queueEdit = null, blocking = false, compacting = false, text = 'live draft' } = {}) {
+function composer({ preference = 'queue', busy = true, disabled = false, attachments = [], queueEdit = null, blocking = false, text = 'live draft' } = {}) {
   const calls = []
   const policy = vm.createContext({ exports: {}, window: { localStorage: { getItem: () => preference } }, require: () => ({}) })
   vm.runInContext(compile(readFileSync(path.join(root, 'src/experience/followup-preferences.ts'), 'utf8')), policy)
@@ -22,6 +22,10 @@ function composer({ preference = 'queue', busy = true, disabled = false, attachm
     if (name.endsWith('/followup-preferences')) return policy.exports
     if (name.endsWith('/accepted-submit')) return { announceBrowserAcceptedSubmit: () => calls.push('accepted') }
     if (name === 'react') return { useRef: current => ({ current }), useLayoutEffect() {} }
+    if (name === '@/i18n') return { useI18n: () => ({ t: { desktop: {} } }), translateNow: key => key }
+    if (name.endsWith('/chat-runtime')) return { isSlashCommandText: text => /^\/\w/.test(text) }
+    if (name.endsWith('/desktop-slash-commands')) return { isSideTaskSlashCommand: () => false }
+    if (name.endsWith('/notifications')) return { notify() {} }
     if (name === '@hermes/shared') return { SLASH_COMMAND_RE: /^\/\w/ }
     if (name.endsWith('pane-visibility')) return { usePaneVisible: () => true }
     if (name.endsWith('/scope')) return { useComposerScope: () => ({ target: 'main', attachments: { clear() {} } }), useComposerSurfaceId: () => 'main' }
@@ -33,7 +37,7 @@ function composer({ preference = 'queue', busy = true, disabled = false, attachm
     if (name.endsWith('/prompts')) return { hasBlockingPromptRequest: () => blocking }
     if (name.endsWith('/composer-utils')) return { cloneAttachments: value => value }
     if (name.endsWith('/composer-input-history')) return { resetBrowseState() {} }
-    if (name.endsWith('/composer')) return { clearSessionDraft() {} }
+    if (name.endsWith('/composer')) return { clearSessionDraft() {}, isFreshDraftScope: scope => scope?.startsWith('__new__:'), freezeComposerTransportPayload: text => ({ displayText: text, transportText: text, missingLabels: [] }) }
     if (name.endsWith('/composer-queue')) return { enqueueQueuedPrompt: () => calls.push('fallback-queue') }
     if (name.endsWith('/focus')) return { onComposerSubmitRequest() {} }
     throw new Error(`Unexpected composer import: ${name}`)
@@ -42,8 +46,8 @@ function composer({ preference = 'queue', busy = true, disabled = false, attachm
   const draftRef = { current: 'stale draft' }
   const submit = realm.exports.useComposerSubmit({
     activeQueueSessionKey: 'session', activeQueueSessionKeyRef: { current: 'session' },
-    attachments, busy, compacting, disabled, queueEdit, queuedPrompts: [], sessionId: 'session',
-    draftRef, editorRef: { current: { textContent: text } },
+    attachments, busy, disabled, queueEdit, queuedPrompts: [], sessionId: 'session',
+    draftScopeRef: { current: 'session' }, draftRef, editorRef: { current: { textContent: text } },
     clearDraft: () => calls.push('clear'), focusInput: () => calls.push('focus'),
     queueCurrentDraft: () => { calls.push('queue'); return true },
     exitQueuedEdit: () => { calls.push('save-edit'); return true },
@@ -70,7 +74,7 @@ test('browser policy keeps idle sends, queue edits, disabled controls and blocki
   const idle = composer({ busy: false }); idle.submit.submitDraft(); assert.ok(idle.calls.includes('send:live draft'))
   const editing = composer({ queueEdit: {} }); editing.submit.submitDraft(); assert.ok(editing.calls.includes('save-edit')); assert.ok(!editing.calls.includes('queue'))
   const disabled = composer({ disabled: true }); disabled.submit.submitDraft(); assert.deepEqual(disabled.calls, [])
-  for (const options of [{ attachments: [{}] }, { blocking: true }, { compacting: true }]) {
+  for (const options of [{ attachments: [{}] }, { blocking: true }]) {
     const entry = composer({ preference: 'steer', ...options }); entry.submit.submitDraft(); assert.ok(entry.calls.includes('queue')); assert.ok(!entry.calls.includes('steer:live draft'))
   }
 })

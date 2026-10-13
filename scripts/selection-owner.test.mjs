@@ -31,6 +31,7 @@ function harness() {
     setSessionTileWorkspaceScope: (id, scope) => calls.push(['scope', id, scope]),
     focusOpenSession: id => { if (failure) throw new Error('Focus unavailable'); calls.push(['focus', id]); return null },
     focusedSessionNeedsRoute: () => true,
+    frontMainIfSelected: () => {},
     openSessionTile: (...args) => calls.push(['tile', ...args]),
     reuseBlankDraftTile: () => false,
     canOpenSessionWindow: () => false,

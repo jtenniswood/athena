@@ -49,7 +49,7 @@ test('semantic adapters preserve identity and reject upstream drift', () => {
   const updates = api.omitBrowserDesktopUpdateNotice(source('store/updates.ts').replace("icon: 'gift'", "icon: 'bell'"))
   assert.match(updates, /export function maybeNotifyUpdateAvailable[^\n]+\{\}/)
   assert.doesNotMatch(updates, /icon: 'bell'/)
-  for (const module of ['components/desktop-install-overlay.tsx', 'components/first-run-remote-form.tsx']) {
+  for (const module of ['components/desktop-install-overlay.tsx', 'components/remote-setup/first-run.tsx']) {
     const output = api.useBrowserSetupHooks(source(module))
     const count = module.includes('desktop-install') ? 3 : 1
     assert.equal(output.split('data-browser-overlay="setup"').length - 1, count)

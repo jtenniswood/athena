@@ -397,7 +397,7 @@ test('fresh startup restores chat, registrations, bots, and avatar-backed profil
   await open(page)
   await expect(page.locator('.browser-chat-title')).toHaveCount(0)
   await expect(page.locator('[data-browser-conversation-kind="session"]')).toHaveCount(1)
-  await expect(page.locator('.browser-upstream-workspace [data-zone-tabstrip]')).toHaveCount(0)
+  await expect(page.locator('.browser-upstream-workspace [data-zone-tabstrip]')).toBeHidden()
   await expect(page.locator('.browser-main header[class*="h-(--titlebar-height)"]')).toBeHidden()
   await page.getByRole('tab', { name: 'Bots', exact: true }).click()
   await expect(page.getByRole('button', { name: /Research · @/ })).toBeVisible()
@@ -1260,7 +1260,7 @@ test('settings fills the viewport and uses compact list and detail navigation', 
   await open(page)
   const chat = editor(page)
   await chat.fill('Keep this draft while changing settings layout')
-  await page.getByRole('button', { name: 'Open settings menu', exact: true }).click()
+  await (await settingsTrigger(page)).click()
   await page.getByRole('menuitem', { name: 'Settings', exact: true }).click()
 
   const surface = page.getByRole('dialog', { name: 'Settings', exact: true })
@@ -1271,15 +1271,15 @@ test('settings fills the viewport and uses compact list and detail navigation', 
   expect(Math.abs(bounds.y)).toBeLessThanOrEqual(1)
   expect(Math.abs(bounds.width - 390)).toBeLessThanOrEqual(1)
   expect(bounds.height).toBeGreaterThanOrEqual(843)
-  await expect(surface.locator('.browser-settings-content')).toBeHidden()
+  await expect(surface.locator('.browser-settings-content-slot')).toBeHidden()
 
   await surface.locator('.browser-settings-navigation').getByRole('button', { name: 'Appearance', exact: true }).click()
-  await expect(surface.getByRole('heading', { name: 'Appearance', exact: true })).toBeVisible()
-  await expect(surface.locator('.browser-settings-content')).toBeVisible()
+  await expect(surface.getByRole('heading', { name: 'Appearance', exact: true, level: 1 })).toBeVisible()
+  await expect(surface.locator('.browser-settings-content-slot')).toBeVisible()
   await surface.getByRole('button', { name: 'Back', exact: true }).click()
   await expect(surface.locator('.browser-settings-navigation')).toBeVisible()
-  await expect(surface.locator('.browser-settings-content')).toBeHidden()
-  await surface.getByRole('button', { name: 'Close settings', exact: true }).click()
+  await expect(surface.locator('.browser-settings-content-slot')).toBeHidden()
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
   await expect(chat).toHaveText('Keep this draft while changing settings layout')
 })
 
@@ -1305,7 +1305,7 @@ test('approval mode keeps the selected profile mode and composer icon synchroniz
 
 test('browser settings omit desktop-only keybinds', async ({ page }) => {
   await open(page)
-  await page.getByRole('button', { name: 'Open settings menu', exact: true }).click()
+  await (await settingsTrigger(page)).click()
   await page.getByRole('menuitem', { name: 'Settings', exact: true }).click()
   await page.getByText('Keyboard Shortcuts', { exact: true }).click()
   await expect(page.getByText('Toggle sessions sidebar', { exact: true })).toBeVisible()

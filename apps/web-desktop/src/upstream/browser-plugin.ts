@@ -17,20 +17,28 @@ function assertBrowserRoot(root: string): void {
 }
 /** Keep upstream boot/error/reconnect ownership; only adapt its loading visual. */
 export function useBrowserConnectingVisual(source: string): string {
-  const start = source.indexOf('  const leaving = phase')
-  if (start < 0 || !source.includes('<DecodeText')) throw new Error('Gateway connecting presentation changed')
+  const start = source.indexOf('function ConnectingOverlayView(')
+  const end = source.indexOf('export function GatewayConnectingOverlay()', start)
+  if (start < 0 || end < 0 || !source.slice(start, end).includes('<DecodeText')) {
+    throw new Error('Gateway connecting presentation changed')
+  }
   return source.slice(0, start)
     .replace("import { DecodeText } from '@/components/ui/decode-text'\n", '')
     .replace("import { cn } from '@/lib/utils'\n", '')
-    .replace("const TEXT = 'CONNECTING'\n", '') + `  return (
-    <div className="hermes-startup-loading athena-connecting-overlay" role="status" data-glass-opaque="">
-      <img className="hermes-startup-logo" src="/athena.svg" width="64" height="64" alt="" aria-hidden="true" />
-      <span className="hermes-startup-spinner" aria-hidden="true" />
-      <span className="hermes-startup-label">Connecting to Hermes…</span>
+    .replace("const TEXT = 'CONNECTING'\n", '') + `function ConnectingOverlayView({ onExit, phase }: ConnectingOverlayViewProps) {
+  return (
+    <div className="hermes-startup-loading athena-connecting-overlay" role="status" data-glass-opaque=""
+      style={{ opacity: phase === 'overlay-out' || phase === 'gone' ? 0 : 1 }}>
+      {onExit ? <SlowSetupStart onExit={onExit} /> : <>
+        <img className="hermes-startup-logo" src="/athena.svg" width="64" height="64" alt="" aria-hidden="true" />
+        <span className="hermes-startup-spinner" aria-hidden="true" />
+        <span className="hermes-startup-label">Connecting to Hermes…</span>
+      </>}
     </div>
   )
 }
-`
+
+` + source.slice(end)
 }
 
 export function useBrowserPinWrites(source: string, root: string): string {
@@ -148,7 +156,7 @@ export function useBrowserRosterDialogFocus(source: string, root: string): strin
 export function useBrowserBotDialogFocus(source: string, root: string): string {
   const owner = JSON.stringify(path.join(root, 'src/experience/ui/dialog-focus'))
   const changes = [
-    ['export function CreateAgentDialog({ open, onClose, roster }: CreateAgentDialogProps) {', 'export function CreateAgentDialog({ open, onClose, roster }: CreateAgentDialogProps) {\n  const browserReturnFocus = useBrowserDialogReturnFocus(open)'],
+    ['export function CreateAgentDialog({ open, onClose, onConfigureModel, roster }: CreateAgentDialogProps) {', 'export function CreateAgentDialog({ open, onClose, onConfigureModel, roster }: CreateAgentDialogProps) {\n  const browserReturnFocus = useBrowserDialogReturnFocus(open)'],
     ['export function CreateGroupChatDialog({ open, roster, onClose, onCreated }: CreateGroupChatDialogProps) {', 'export function CreateGroupChatDialog({ open, roster, onClose, onCreated }: CreateGroupChatDialogProps) {\n  const browserReturnFocus = useBrowserDialogReturnFocus(open)'],
     ['      <DialogContent\n', '      <DialogContent\n        data-browser-bot-dialog={advanced ? \'advanced\' : \'create\'}\n        onCloseAutoFocus={browserReturnFocus}\n'],
     ['      <DialogContent className="max-w-md">', '      <DialogContent className="max-w-md" data-browser-bot-dialog="group" onCloseAutoFocus={browserReturnFocus}>']
@@ -262,7 +270,7 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
     ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  ...SETTINGS_TOOL_PAGES.map(page => page.id),\n  'config:browser-theme',\n  'config:browser-sounds',\n  'config:browser-configuration',"],
     ["          {\n            active: activeView === 'notifications',", "          {\n            active: activeView === 'config:browser-theme',\n            icon: codiconIcon('color-mode'),\n            id: 'config:browser-theme',\n            label: 'Theme',\n            onSelect: () => setActiveView('config:browser-theme')\n          },\n          {\n            active: activeView === 'config:browser-sounds',\n            icon: codiconIcon('unmute'),\n            id: 'config:browser-sounds',\n            label: 'Sounds',\n            onSelect: () => setActiveView('config:browser-sounds')\n          },\n          {\n            active: activeView === 'notifications',"],
     ["          {\n            active: activeView === 'about',", "          {\n            active: activeView === 'config:browser-configuration',\n            gapBefore: true,\n            icon: Settings2,\n            id: 'config:browser-configuration',\n            label: 'Configuration',\n            onSelect: () => setActiveView('config:browser-configuration')\n          },\n          {\n            active: activeView === 'about',"],
-    ['        importInputRef={importInputRef}', '        importInputRef={importInputRef}\n        configurationCommands={configurationCommands}\n        configurationScopeProfile={scopeProfile}'],
+    ['      importInputRef={importInputRef}', '      importInputRef={importInputRef}\n      configurationCommands={configurationCommands}\n      configurationScopeProfile={scopeProfile}'],
     ['getHermesConfigRecord()', 'getHermesConfigRecord(scopeProfile)'],
     ['saveHermesConfig(await getHermesConfigDefaults())', 'saveHermesConfig(await getHermesConfigDefaults(), scopeProfile)'],
     ['title: t.settings.resetConfirm', 'title: `${t.settings.resetConfirm} — ${scopeProfile}`']
@@ -272,7 +280,7 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
   }
   const owner = JSON.stringify(path.join(root, 'src/experience/settings/frame'))
   const navFooterStart = '  const navFooter = ('
-  const activeContentStart = '\n\n  const activeSettingsContent ='
+  const activeContentStart = '\n\n  const SubpageView ='
   if (source.split(navFooterStart).length !== 2 || source.split(activeContentStart).length !== 2) {
     throw new Error('Browser configuration command boundary changed')
   }
@@ -843,12 +851,9 @@ export function useBrowserTouchHooks(source: string, root: string): string {
     const importTarget = "import { ModelPill } from './model-pill'\n"
     const reasoningTarget = '              {compactModelPill ? null : <ReasoningPill disabled={disabled} model={state.model} />}\n'
     if (output.split(importTarget).length !== 2 || output.split(reasoningTarget).length !== 2) throw new Error('Browser approval composer insertion point changed')
-    // Follow-up routing uses the queue control as the running-turn signal.
-    // Upstream also renders it while idle, where onQueue intentionally does nothing.
-    output = replaceBrowserContract(output, [[
-      "const showQueueButton = busyAction !== 'stop' && hasComposerPayload",
-      "const showQueueButton = busy && busyAction !== 'stop' && hasComposerPayload"
-    ]])
+    // Follow-up routing uses upstream's running-turn-only queue control.
+    const queueTarget = "const showQueueButton = busy && busyAction !== 'stop' && hasComposerPayload"
+    if (output.split(queueTarget).length !== 2) throw new Error('Browser queue control contract changed')
     output = output.replace(importTarget, `${importTarget}import { BrowserApprovalComposerControl } from ${JSON.stringify(`${root}/src/experience/browser-approval-composer-control`)}\n`)
       .replace(reasoningTarget, reasoningTarget + '              <BrowserApprovalComposerControl />\n')
   }
@@ -1186,23 +1191,23 @@ export function disableBrowserSessionTileMirrors(source: string): string {
 }
 
 export function useBrowserSessionSelection(source: string, root: string): string {
-  const target = `    onResumeSession: (sessionId, session) => {
-      const ownerRoute = sessionOwnerRouteFromRow(session)
+  const target = `  const openStoredSession = (sessionId: string, session?: SessionInfo) => {
+    const ownerRoute = sessionOwnerRouteFromRow(session)
 
-      if (ownerRoute) {
-        requestSessionResume(sessionId, ownerRoute)
-      } else {
-        forgetSessionOwnerHintsForSession(sessionId)
-        requestSessionResume(sessionId)
-      }
+    if (ownerRoute) {
+      requestSessionResume(sessionId, ownerRoute)
+    } else {
+      forgetSessionOwnerHintsForSession(sessionId)
+      requestSessionResume(sessionId)
+    }
 
-      openSession(sessionId, navigate)
-    },`
+    openSession(sessionId, navigate)
+  }`
   if (source.split(target).length !== 2) throw new Error('Browser session selection target changed')
   const adapter = JSON.stringify(path.join(root, 'src/upstream/selection.ts'))
-  return (`import { selectBrowserSession } from ${adapter}\n` + source).replace(target, `    onResumeSession: (sessionId, session) => selectBrowserSession({
-      sessionId, connectionId: session?.connection_id, profile: session?.profile
-    }, navigate),`)
+  return (`import { selectBrowserSession } from ${adapter}\n` + source).replace(target, `  const openStoredSession = (sessionId: string, session?: SessionInfo) => selectBrowserSession({
+    sessionId, connectionId: session?.connection_id, profile: session?.profile
+  }, navigate)`)
 }
 
 export function useBrowserRosterSelection(source: string, root: string, surface: 'bot' | 'group' | 'created-group'): string {
@@ -1267,7 +1272,7 @@ export function disableBrowserSessionOpenActions(source: string, root: string): 
     ['      label: r.rename,', "      key: 'rename',\n      label: browserSessionActionLabel('rename', r.rename.replace(/(?:\\.{3}|…)$/, '')),"],
     ['      label: pinned ? r.unpin : r.pin,', "      key: 'pin',\n      label: browserSessionActionLabel('pin', pinned ? r.unpin : r.pin),"],
     ['      label: unread || isUnread ? r.markRead : r.markUnread,', "      key: 'unread',\n      label: browserSessionActionLabel('unread', unread || isUnread ? r.markRead : r.markUnread),"],
-    ['      label: r.archive,', "      key: 'archive',\n      label: browserSessionActionLabel('archive', r.archive),"],
+    ['      label: archived ? r.unarchive : r.archive,', "      key: 'archive',\n      label: browserSessionActionLabel('archive', archived ? r.unarchive : r.archive),"],
     ['      label: t.common.delete,', "      key: 'delete',\n      label: browserSessionActionLabel('delete', t.common.delete),"],
   ]
   for (const [before, after] of shortcuts) {

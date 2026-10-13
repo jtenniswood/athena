@@ -111,7 +111,7 @@ test('actual composer flushes preserve stale-tab drafts and ordinary saves remai
       addEventListener(name, callback) { listeners.set(name, [...(listeners.get(name) || []), callback]) },
       dispatchEvent(event) { for (const callback of listeners.get(event.type) || []) callback(event) }
     }
-    const realm = vm.createContext({ exports: {}, window, navigator: { locks: store.locks }, CustomEvent: class {
+    const realm = vm.createContext({ exports: {}, crypto: globalThis.crypto, URL, window, navigator: { locks: store.locks }, CustomEvent: class {
       constructor(type, options) { this.type = type; this.detail = options.detail }
     } })
     const safetyRealm = vm.createContext({ exports: {} })
@@ -126,6 +126,8 @@ test('actual composer flushes preserve stale-tab drafts and ordinary saves remai
       if (name === 'nanostores') return { atom: initial => { let value = initial; return { get: () => value, set: next => { value = next } } } }
       if (name === '@/lib/draft-title') return { deriveDraftTitle: text => text }
       if (name === '@/lib/haptics') return { triggerHaptic() {} }
+      if (name === '@/lib/storage') return { storedString: () => null, persistString() {} }
+      if (name === './desktop-metrics') return { recordDislike() {}, recordFriction() {} }
       throw Error(`Unexpected import ${name}`)
     }
     vm.runInContext(ts.transpileModule(composer, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText, realm)
