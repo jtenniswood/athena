@@ -11,7 +11,52 @@ const file = path.join(root, 'src/upstream/dependency-compatibility.ts')
 const require = createRequire(file)
 const context = vm.createContext({ exports: {}, require })
 vm.runInContext(ts.transpileModule(readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText, context)
-const { preserveBatchEffects, dependencyCompatibilityPlugin } = context.exports
+const { preserveBatchEffects, cacheThreadListSnapshots, dependencyCompatibilityPlugin } = context.exports
+
+test('thread-list compatibility checks the locked source and is idempotent', () => {
+  const source = readFileSync(path.join(path.dirname(require.resolve('@assistant-ui/core/internal')), 'runtime/api/thread-list-runtime.js'), 'utf8')
+  const output = cacheThreadListSnapshots(source)
+  assert.equal(cacheThreadListSnapshots(output), output)
+  assert.throws(() => cacheThreadListSnapshots(source + '\n// changed'), /compatibility changed/)
+})
+
+test('thread-list snapshots stay cached across subscriptions and real updates', async () => {
+  async function bundle(patched) {
+    const result = await build({ configFile: false, root, logLevel: 'silent', define: { 'process.env.NODE_ENV': JSON.stringify('production') }, plugins: [
+      ...(patched ? [dependencyCompatibilityPlugin(root)] : []),
+      { name: 'snapshot-regression', resolveId(id) { if (id === 'snapshot-regression' || id.endsWith('/snapshot-regression')) return '\0snapshot-regression' }, load(id) { if (id === '\0snapshot-regression') return `
+        import { AssistantRuntimeImpl, ExternalStoreRuntimeCore } from ${JSON.stringify(require.resolve('@assistant-ui/core/internal'))};
+        const core = new ExternalStoreRuntimeCore({ messages: [], onNew: async () => {} });
+        const threads = new AssistantRuntimeImpl(core).threads;
+        const before = threads.getState();
+        const stableBefore = before === threads.getState();
+        const notifications = [];
+        const stop = threads.subscribe(() => notifications.push(threads.getState()));
+        const stableSubscribed = threads.getState() === threads.getState();
+        const adapter = { threadId: 'other', threads: [{ id: 'other', title: 'Other chat' }] };
+        core.threads.__internal_setAdapter(adapter);
+        const updated = threads.getState();
+        const fresh = updated !== before && updated.mainThreadId === 'other' && updated.threadItems.other.title === 'Other chat';
+        const notificationCurrent = notifications.length === 1 && notifications[0] === updated;
+        core.threads.__internal_setAdapter(adapter);
+        const stableNoop = updated === threads.getState() && notifications.length === 1;
+        stop();
+        const stableAfter = updated === threads.getState() && threads.getState() === threads.getState();
+        core.threads.__internal_setAdapter({ ...adapter, threads: [{ id: 'other', title: 'Renamed chat' }] });
+        const renamed = threads.getState();
+        const freshAfterCleanup = renamed !== updated && renamed.threadItems.other.title === 'Renamed chat' && renamed === threads.getState() && notifications.length === 1;
+        globalThis.result = { stableBefore, stableSubscribed, fresh, notificationCurrent, stableNoop, stableAfter, freshAfterCleanup };
+      ` } }
+    ], build: { write: false, minify: true, lib: { entry: 'snapshot-regression', formats: ['es'] } } })
+    const output = (Array.isArray(result) ? result[0] : result).output.find(item => item.type === 'chunk').code
+    const runtime = vm.createContext({ TransformStream, ReadableStream, TextEncoder, TextDecoder, AbortController }); vm.runInContext(output, runtime)
+    return JSON.parse(JSON.stringify(runtime.result))
+  }
+  const baseline = await bundle(false)
+  assert.equal(baseline.stableSubscribed, false, 'Regression must reproduce against the unpatched locked dependency')
+  const fixed = await bundle(true)
+  assert.ok(Object.values(fixed).every(Boolean), JSON.stringify(fixed))
+})
 
 test('batch compatibility checks the locked source and is idempotent', () => {
   const source = readFileSync(path.join(path.dirname(require.resolve('nanostores')), 'atom/index.js'), 'utf8')

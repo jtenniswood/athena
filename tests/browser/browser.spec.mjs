@@ -329,6 +329,22 @@ test.describe('browser microphone', () => {
   })
 })
 
+test('workspace snapshots remain stable through draft edits, session changes, and reload', async ({ page }) => {
+  const browserErrors = installBrowserErrorCollector(page)
+  await open(page)
+  await editor(page).fill('Keep this draft while changing conversations')
+  await page.getByRole('button', { name: 'Explore a product idea', exact: true }).click()
+  await expect(page).toHaveURL(/#\/preview-idea$/)
+  await expect(editor(page)).toBeEmpty()
+  await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
+  await expect(page).toHaveURL(/#\/preview-week$/)
+  await expect(editor(page)).toHaveText('Keep this draft while changing conversations')
+  await page.reload()
+  await expect(editor(page)).toHaveText('Keep this draft while changing conversations', { timeout: 30000 })
+  await expect(page.getByText(/failed to render/)).toHaveCount(0)
+  browserErrors.assertClean()
+})
+
 test('fresh startup restores chat, registrations, bots, and avatar-backed profiles', async ({ page }) => {
   const browserErrors = installBrowserErrorCollector(page)
   await open(page)

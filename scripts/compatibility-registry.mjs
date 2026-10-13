@@ -7,7 +7,7 @@ import { repositoryRoot } from './renderer.mjs'
 export const registryPath = 'apps/web-desktop/src/upstream/compatibility-registry.json'
 export const sourceRoots = { renderer: 'apps/desktop/src', shared: 'apps/shared/src', dependency: 'node_modules' }
 const kinds = new Set(['renderer-transform', 'browser-transform', 'replacement', 'source-contract', 'dependency-transform', 'alias', 'dedupe', 'virtual-module', 'asset-adapter'])
-const relativeFile = value => typeof value === 'string' && /^[\w./-]+$/.test(value) && !value.startsWith('/') && !value.split('/').includes('..')
+const relativeFile = value => typeof value === 'string' && /^[@\w./-]+$/.test(value) && !value.startsWith('/') && !value.split('/').includes('..')
 const fingerprint = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)
 
 export function loadRegistry(root = repositoryRoot) {

@@ -2649,5 +2649,26 @@
       }
     ],
     "removal": "Remove when upstream default session routing supports an All profiles preference scope."
+  },
+  {
+    "name": "assistant-ui-thread-list-snapshots",
+    "kind": "dependency-transform",
+    "order": 5,
+    "module": "@assistant-ui/core/dist/runtime/api/thread-list-runtime.js",
+    "reason": "Keep thread-list snapshots stable and subscribed to their cache to prevent workspace render loops",
+    "owner": "apps/web-desktop/src/upstream/dependency-compatibility.ts",
+    "tests": [
+      {
+        "file": "scripts/dependency-compatibility.test.mjs",
+        "scenario": "thread-list snapshots stay cached across subscriptions and real updates"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace snapshots remain stable through draft edits, session changes, and reload"
+      }
+    ],
+    "removal": "Remove when the locked assistant-ui core caches thread-list snapshots and subscribes through the cache.",
+    "sourceHash": "604e07dcfcc328e484eecc52149ca1d6e5eee5ccac630a42e396c9846ae166cc",
+    "sourceRoot": "dependency"
   }
 ]
