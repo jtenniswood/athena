@@ -51,10 +51,11 @@ test('configuration recovery reaches proxy sign-in and preserves browser data', 
     const response = await page.reload()
     expect(response.fromServiceWorker()).toBe(true)
     await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
-    await expect(page.getByRole('status')).toContainText('Your session may have expired')
+    await expect(page.locator('.athena-sign-in-status')).toBeHidden()
     await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
     expect(await page.evaluate(() => Boolean(window.hermesDesktop))).toBe(false)
-    await expect(page.getByRole('button', { name: 'Copy diagnostics' })).toBeHidden()
+    await expect(page.getByText('Connection help', { exact: true })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Copy diagnostics' })).toHaveCount(0)
     await page.screenshot({ path: testInfo.outputPath('reconnect-sign-in.png') })
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Proxy sign-in' })).toBeVisible()
@@ -72,7 +73,7 @@ test('configuration recovery reaches proxy sign-in and preserves browser data', 
   }
 })
 
-test('unavailable configuration after reconnect offers retry and connection help', async ({ page, context }) => {
+test('unavailable configuration after reconnect offers retry', async ({ page, context }) => {
   let container, origin = url
   try {
     if (!origin) {
@@ -89,8 +90,8 @@ test('unavailable configuration after reconnect offers retry and connection help
     await expect(page.getByRole('status')).toContainText('Athena is still unavailable')
     await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toHaveCount(0)
     expect(await page.evaluate(() => Boolean(window.hermesDesktop))).toBe(false)
-    await page.getByText('Connection help', { exact: true }).click()
-    await expect(page.getByRole('button', { name: 'Copy diagnostics' })).toBeVisible()
+    await expect(page.getByText('Connection help', { exact: true })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Copy diagnostics' })).toHaveCount(0)
     await page.getByRole('button', { name: 'Retry connection' }).click()
     await expect(page.getByRole('button', { name: 'Retry connection' })).toBeEnabled()
     expect(new URL(page.url()).searchParams.get('fixture')).toBe('keep')
