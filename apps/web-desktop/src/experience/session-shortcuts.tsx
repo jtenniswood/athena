@@ -1,10 +1,9 @@
 import { useEffect, useRef } from 'react'
-import type { ActionItemSpec } from '../upstream/browser-api'
 import { IS_MAC } from '../upstream/browser-api'
 
 const shortcutKeys = { rename: 'r', pin: 'p', unread: 'u', files: 'e', review: 'g', archive: 'a', delete: 'backspace' } as const
 type SessionAction = keyof typeof shortcutKeys
-type ShortcutActions = Partial<Record<SessionAction, Pick<ActionItemSpec, 'disabled' | 'onSelect'>>>
+type ShortcutActions = Partial<Record<SessionAction, { disabled?: boolean; onSelect(event: Event): void }>>
 
 export function browserSessionActionLabel(action: SessionAction, label: string) {
   const key = action === 'delete' ? (IS_MAC ? '⌫' : 'Backspace') : shortcutKeys[action].toUpperCase()
