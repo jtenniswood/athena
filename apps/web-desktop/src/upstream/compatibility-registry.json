@@ -528,7 +528,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/session-actions-menu.tsx",
-    "reason": "Remove tab/window actions, retain session mutations, add panel controls to the chat menu, and share keyboard shortcuts with the chat toolbar.",
+    "reason": "Keep browser sidebar session menus single-view and share shortcut labels. Browser toolbar menus and panel commands are owned by Athena components.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -540,15 +540,14 @@
         "scenario": "conversation action shortcuts"
       }
     ],
-    "removal": "The browser owns session menus or upstream accepts browser capabilities.",
+    "removal": "The browser also owns sidebar session menus or upstream accepts browser capabilities.",
     "handlers": [
-      "disableBrowserSessionOpenActions",
-      "addBrowserChatPanelActions"
+      "disableBrowserSessionOpenActions"
     ],
     "sourceHash": "abd03616fb9220ff2ab7564f36babebd7d261f3ec8eb94dce318e3d964a550d7",
     "sourceRoot": "renderer",
     "inputHash": "abd03616fb9220ff2ab7564f36babebd7d261f3ec8eb94dce318e3d964a550d7",
-    "outputHash": "c31f5ec842ef6d757087afbc5d9caaa6251571cbbaed8eaea42d73a9f4632809"
+    "outputHash": "7e74e9b4c4ccfacb0bb892d13b8c9993a23fa84c86685e611ba3eb9b29d9242f"
   },
   {
     "name": "canonical-bot-row-actions",
@@ -2443,7 +2442,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/settings/config-settings.tsx",
-    "reason": "Keep pending settings saves alive across page exit and update activation while showing all supported configuration fields by default and applying wrapper-owned visibility policy.",
+    "reason": "Register explicit debounced save commands with browser readiness, flush immediately on transitions, and retain the renderer write queue and profile scope.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -2453,13 +2452,21 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "settings actions retain drafts and transfer modal focus"
+      },
+      {
+        "file": "scripts/settings-save.test.mjs",
+        "scenario": "settings preparation starts the latest save without waiting for a debounce timer"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "connection preparation flushes a settings edit with timers paused"
       }
     ],
     "removal": "Remove when upstream settings provides equivalent browser save lifecycle and browser-aware field visibility defaults.",
     "sourceRoot": "renderer",
     "sourceHash": "01c4e2c2abbd10656647de02273f6bd0aa768ebfcc2ef961384f6044002d5c94",
     "inputHash": "01c4e2c2abbd10656647de02273f6bd0aa768ebfcc2ef961384f6044002d5c94",
-    "outputHash": "3fca0732beac35f443f3e42903c9b7d91efcade6fd60b061bc572b47002ce21c",
+    "outputHash": "809aab0e3cba59c2a6a18be829be0b6164a5ac9e1a25c99a4d13c9e3deef8ec7",
     "handlers": [
       "trackBrowserSettingsSaves",
       "filterBrowserSettingsFields",
@@ -2515,22 +2522,35 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/composer/hooks/use-composer-submit.ts",
-    "reason": "Drive browser submit positioning only after the renderer accepts a user message.",
+    "reason": "Apply browser Queue/Steer submission policy through the engine command and report accepted user messages for browser positioning.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "scripts/browser.test.mjs",
         "scenario": "accepted composer submissions report only successful sends"
+      },
+      {
+        "file": "scripts/composer-policy.test.mjs",
+        "scenario": "composer policy chooses queue or steer"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "idle messages send and running follow-ups queue"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "busy composer uses the selected follow-up intent"
       }
     ],
     "removal": "Remove when the renderer exposes an accepted-submit event for browser integrations.",
     "handlers": [
-      "useBrowserAcceptedSubmit"
+      "useBrowserAcceptedSubmit",
+      "useBrowserFollowupSubmit"
     ],
     "sourceRoot": "renderer",
     "sourceHash": "6287f486279bf03596e48eee90c786509e7bdb507e381da0b7e536bd03dffd1f",
     "inputHash": "6287f486279bf03596e48eee90c786509e7bdb507e381da0b7e536bd03dffd1f",
-    "outputHash": "95f6470299cbaa6cfcd258f7679e3b27d1ee851b7fc2987af2f0b9a774dccf7d"
+    "outputHash": "394155163e9cddadea67025059f59998fc6631db6c16f00e5223c00aba0d5ced"
   },
   {
     "name": "browser-draft-safety-alias",
@@ -2686,5 +2706,77 @@
     "removal": "Remove when the locked assistant-ui core caches thread-list snapshots and subscribes through the cache.",
     "sourceHash": "604e07dcfcc328e484eecc52149ca1d6e5eee5ccac630a42e396c9846ae166cc",
     "sourceRoot": "dependency"
+  },
+  {
+    "name": "browser-alternate-composer-submit",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/index.tsx",
+    "reason": "Request the alternate follow-up intent through the same submit command for Cmd/Ctrl+Enter.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/composer-policy.test.mjs",
+        "scenario": "composer policy chooses queue or steer"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "idle messages send and running follow-ups queue"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "busy composer uses the selected follow-up intent"
+      }
+    ],
+    "removal": "Remove when the renderer exposes a host-controlled follow-up intent.",
+    "handlers": [
+      "useBrowserAlternateSubmit"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "76cfdf96287db72e93eae8a6de7623391e43bb87e07906e6bc53cfde1490cbd4",
+    "inputHash": "76cfdf96287db72e93eae8a6de7623391e43bb87e07906e6bc53cfde1490cbd4",
+    "outputHash": "23165f852661eac9dfc24c7ef0e12ee65d1f91788e8c9e41b2bdd2b39808b178"
+  },
+  {
+    "name": "browser-workspace-owner-identity",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "components/pane-shell/workspace-scope.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "8518f1463e2395d87a0a95fa26067754f2ee1fd1f5312b8e2b19c62694b22807",
+    "reason": "Project the exact current engine workspace owner for canonical Bot chats missing from sidebar rows.",
+    "owner": "apps/web-desktop/src/upstream/conversation.ts",
+    "tests": [
+      {
+        "file": "scripts/conversation-model.test.mjs",
+        "scenario": "hidden canonical Bot identity uses the exact engine workspace owner"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Replace when the renderer exposes a public current-conversation identity contract."
+  },
+  {
+    "name": "browser-bot-owner-identity",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "plugins/hermes-bots/routing.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "b2b8732319cee7cf1f4802f82468fab6e473c8205e73cc37019a2e1987ffe94c",
+    "reason": "Project the exact current engine workspace owner for canonical Bot chats missing from sidebar rows.",
+    "owner": "apps/web-desktop/src/upstream/conversation.ts",
+    "tests": [
+      {
+        "file": "scripts/conversation-model.test.mjs",
+        "scenario": "hidden canonical Bot identity uses the exact engine workspace owner"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Replace when the renderer exposes a public current-conversation identity contract."
   }
 ]

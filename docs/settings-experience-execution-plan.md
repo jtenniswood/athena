@@ -1,5 +1,10 @@
 # Full-screen settings implementation plan
 
+> Historical design/delivery record. Current ownership is described in
+> [browser architecture](browser-architecture.md); current commands are in the
+> [tooling index](tooling.md) and [release guide](releases.md). Status statements
+> and checklists below describe earlier work, not additional acceptance gates.
+
 Status: responsive frame implemented; declarative presentation policy and live browser verification remain.
 Prepared: 2026-09-28; status updated 2026-09-29.
 

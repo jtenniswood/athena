@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router'
-import { BrowserPageRoutes, OverlayView, WiredPane } from '../upstream/browser-api'
+import { OverlayView } from '../upstream/browser-api'
+import { BrowserPageSurface } from '../upstream/browser-host'
 import { BROWSER_TOOL_ROUTES } from './tool-routes'
 
 /** Tool routes cover the workspace; closing returns to the complete prior URL. */
@@ -13,6 +14,6 @@ export function BrowserToolModal() {
   }, [location, route])
   if (!route) return null
   return <OverlayView closeLabel={`Close ${route.label}`} onClose={() => navigate(previous.current, { replace: true })}>
-    <BrowserPageRoutes><WiredPane part="chatRoutes" /></BrowserPageRoutes>
+    <BrowserPageSurface />
   </OverlayView>
 }

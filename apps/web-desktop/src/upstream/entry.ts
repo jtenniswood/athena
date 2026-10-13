@@ -1,5 +1,12 @@
-/** Evaluate upstream startup only after the caller prepares the browser bridge. */
-export async function startUpstreamRenderer(): Promise<void> {
+import { prepareBrowserBridge } from './browser-bootstrap'
+import { installSidebarCollapse } from '../web-sidebar-collapse'
+
+/** Install the host before evaluating stores that read its desktop compatibility bridge. */
+export async function startBrowserHost(): Promise<void> {
+  const { installWebBridge } = await import('../web-bridge/install')
+  installWebBridge()
+  prepareBrowserBridge()
+  installSidebarCollapse()
   const { initializeBrowserShell } = await import('./browser-initialize')
   initializeBrowserShell()
   await import('../../../desktop/src/main')

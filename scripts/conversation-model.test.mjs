@@ -16,12 +16,15 @@ function model() {
     $selectedBot: { value: 'web-single::default' },
     $groupChatWorkspace: { value: null },
     $sessions: { value: [{ id: 'session-a', title: 'First chat', profile: 'default' }, { id: 'session-b', title: 'Second chat' }] },
-    $lastRoster: { value: [] }
+    $lastRoster: { value: [] },
+    $workspaceMode: { value: 'sessions' },
+    $workspaceOwnerKey: { value: null }
   }
   const context = { exports: {}, require(name) {
     if (name === '@nanostores/react') return { useStore: store => store.value }
     if (name === '../experience/contracts/conversation') return contract.exports
-    if (['@/store/session', '@/plugins/hermes-bots/group-chat', '@/plugins/hermes-bots/data', '@/plugins/hermes-bots/bot-state'].includes(name)) return stores
+    if (name === '@/plugins/hermes-bots/routing') return { botWorkspaceOwnerKey: bot => bot.workspaceOwnerKey }
+    if (['@/store/session', '@/plugins/hermes-bots/group-chat', '@/plugins/hermes-bots/data', '@/plugins/hermes-bots/bot-state', '@/components/pane-shell/workspace-scope'].includes(name)) return stores
     throw new Error(`Unexpected adapter dependency: ${name}`)
   } }
   vm.runInNewContext(source('../apps/web-desktop/src/upstream/conversation.ts'), context)
@@ -63,4 +66,28 @@ test('real conversation changes dismiss navigation while background state in a g
   assert.notEqual(read().selectionKey, group)
   stores.$groupChatWorkspace.value = null
   assert.equal(read().selectionKey, first)
+})
+
+test('hidden canonical Bot identity uses the exact engine workspace owner', () => {
+  const { stores, read } = model()
+  stores.$selectedStoredSessionId.value = 'hidden-chat'
+  stores.$selectedBot.value = 'stale-selected-bot'
+  stores.$lastRoster.value = [{ name: 'research', display_name: 'Research', connectionId: 'web-single', canonical_session: { id: 'hidden-chat' }, workspaceOwnerKey: 'exact-research-owner' }]
+  stores.$workspaceMode.value = 'bots'
+  stores.$workspaceOwnerKey.value = 'exact-research-owner'
+  const identity = read()
+  assert.equal(identity.kind, 'bot')
+  assert.equal(identity.id, 'web-single::research')
+  assert.equal(identity.profile, 'research')
+  assert.equal(identity.displayName, 'Research')
+  const key = identity.selectionKey
+  stores.$workspaceOwnerKey.value = 'another-owner'
+  assert.equal(read().status, 'loading')
+  assert.equal(read().selectionKey, key)
+  stores.$workspaceOwnerKey.value = 'exact-research-owner'
+  stores.$workspaceMode.value = 'sessions'
+  assert.equal(read().status, 'loading')
+  stores.$workspaceMode.value = 'bots'
+  stores.$selectedStoredSessionId.value = 'another-chat'
+  assert.equal(read().status, 'loading')
 })

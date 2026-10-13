@@ -4,9 +4,7 @@ import { trackMediaRequests } from './platform/reload-safety'
 import { runtimeConfig } from './platform/runtime'
 import { waitForSignIn } from './platform/sign-in'
 import { registerPwa } from './pwa/register'
-import { prepareBrowserBridge } from './upstream/browser-bootstrap'
-import { startUpstreamRenderer } from './upstream/entry'
-import { installSidebarCollapse } from './web-sidebar-collapse'
+import { startBrowserHost } from './upstream/entry'
 
 /** Called once per page load; entry.ts owns startup completion and recovery. */
 export async function startBrowserApplication(): Promise<void> {
@@ -17,14 +15,7 @@ export async function startBrowserApplication(): Promise<void> {
   await waitForSignIn()
   initializeBrowserExperience()
 
-  // Bridge dependencies may read browser state while evaluating. Load them
-  // only after configuration, credentials, and profile migration are ready.
-  const { installWebBridge } = await import('./web-bridge/install')
-  installWebBridge()
-  prepareBrowserBridge()
-  installSidebarCollapse()
-
-  // Upstream stores read the bridge during module evaluation. The adapter
-  // defers that evaluation until the bridge and browser handlers are ready.
-  await startUpstreamRenderer()
+  // The host owns bridge assembly and renderer evaluation. Browser services
+  // and credentials must be ready before any engine module reads them.
+  await startBrowserHost()
 }

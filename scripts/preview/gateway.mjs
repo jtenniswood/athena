@@ -7,7 +7,9 @@ import { createFaultControls } from './faults.mjs'
 export function createPreviewGateway({ log = () => {}, delay = 95, strict = false } = {}) {
   const controls = createFaultControls()
   const now = () => Math.floor(Date.now() / 1000)
-  const info = { desktop_contract: 7, model: 'hermes-preview', provider: 'custom', version: 'synthetic-preview-v1', cwd: '/workspace', tools: {}, skills: [], reasoning_effort: 'medium' }
+  // Match the pinned renderer's REQUIRED_BACKEND_CONTRACT. A stale fixture
+  // otherwise produces a persistent upgrade notice that blocks phone controls.
+  const info = { desktop_contract: 8, model: 'hermes-preview', provider: 'custom', version: 'synthetic-preview-v1', cwd: '/workspace', tools: {}, skills: [], reasoning_effort: 'medium' }
   const modelOptions = { model: info.model, provider: 'custom', providers: [{ slug: 'custom', name: 'Preview', models: [info.model], authenticated: true, is_current: true, capabilities: { [info.model]: { fast: false, reasoning: false } } }] }
   const profiles = [
     { name: 'default', display_name: 'Hermes', description: 'Your everyday assistant', is_default: true, model: info.model },
@@ -123,6 +125,11 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       }, delay)
       timers.set(id, timer)
       return { status: 'accepted', session_id: id }
+    }
+    if (method === 'session.redirect') {
+      if (!timers.has(id)) return { status: 'rejected', text: params.text }
+      messages.get(id).push({ id: `${id}-correction-${Date.now()}`, role: 'user', content: params.text, display_kind: 'steer', timestamp: now() })
+      return { status: 'redirected', text: params.text }
     }
     if (/cancel|interrupt/.test(method)) { complete(id, 'interrupted', 'Response cancelled.'); return { ok: true } }
     if (method === 'file.attach') {

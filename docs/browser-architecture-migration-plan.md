@@ -1,5 +1,10 @@
 # Browser architecture migration plan
 
+> Historical design/delivery record. Current ownership is described in
+> [browser architecture](browser-architecture.md); current commands are in the
+> [tooling index](tooling.md) and [release guide](releases.md). Status statements
+> and checklists below describe earlier work, not additional acceptance gates.
+
 Status: initial adapter, save-readiness, and settings-frame deliveries
 implemented; later deliveries remain planned. Prepared: 2026-09-29.
 

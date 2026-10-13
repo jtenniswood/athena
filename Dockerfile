@@ -5,11 +5,12 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends git ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@11.20.0 --activate
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml flake.lock ./
+RUN corepack enable && corepack prepare "$(node -p 'require("./package.json").packageManager')" --activate
 COPY scripts ./scripts
 COPY apps/web-desktop/package.json apps/web-desktop/package.json
 RUN node scripts/renderer.mjs \
+ && node scripts/renderer-dependencies.mjs \
  && pnpm install --frozen-lockfile
 FROM dependencies AS build
 COPY apps/web-desktop ./apps/web-desktop

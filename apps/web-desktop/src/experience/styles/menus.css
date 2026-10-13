@@ -54,6 +54,11 @@
   white-space: normal;
 }
 
+.browser-action-label:has(.browser-session-shortcut) {
+  flex-direction: row;
+  align-items: center;
+}
+
 .browser-action-chevron {
   margin-left: auto;
   padding-left: var(--web-space-3);

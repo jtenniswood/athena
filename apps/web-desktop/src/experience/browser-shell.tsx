@@ -9,10 +9,10 @@ import { useLocation, useNavigate } from 'react-router'
 import { BrowserSidebarNavigation } from './sidebar-extras'
 import { BrowserSessionsPane } from './sidebar-sections'
 import { BrowserBotsFallback } from './browser-bots-fallback'
-import { installFollowupBehavior } from './followup-preferences'
 import { installTranscriptPreferences } from './transcript-preferences'
-import { browserPaneComposition } from './browser-pane-composition'
-import { Codicon, ContribWiring, WiredPane, SidebarProvider, ContribRender, ContribBoundary, useContributions, navigateToWorkspacePage, SessionTileCloseConfirm, BrowserWorkspace, SessionActionsMenu } from '../upstream/browser-api'
+import { Codicon, SidebarProvider } from '../upstream/browser-api'
+import { BrowserEngineHost, BrowserSessionsSurface, BrowserBotsSurface, BrowserConversationSurface, BrowserStatusSurface, useBrowserHostPanels, openBrowserPage } from '../upstream/browser-host'
+import { BrowserChatActionsMenu } from './chat-actions-menu'
 import { useBrowserConversation } from '../upstream/conversation'
 import { useBrowserSessionActions } from '../upstream/conversation-actions'
 import { browserDropProjectId, moveBrowserSessionToProject, reportBrowserProjectMoveFailure } from '../upstream/project-actions'
@@ -41,13 +41,12 @@ interface SessionReorderDrag {
 
 export function BrowserShell() {
   return <SidebarProvider className="browser-provider" style={{ '--sidebar-width': '100%' } as CSSProperties}>
-    <ContribWiring><BrowserLayout /><SessionTileCloseConfirm /></ContribWiring>
+    <BrowserEngineHost><BrowserLayout /></BrowserEngineHost>
   </SidebarProvider>
 }
 function BrowserLayout() {
   useRendererMenuCompatibility()
   useEffect(() => installConversationSubmitScroll(), [])
-  useEffect(() => installFollowupBehavior(), [])
   useEffect(() => installTranscriptPreferences(), [])
   const sessionProjectDrag = useRef<SessionProjectDrag | null>(null)
   const sessionReorderDrag = useRef<SessionReorderDrag | null>(null)
@@ -168,24 +167,20 @@ function BrowserLayout() {
   }
   const navigate = useNavigate(), location = useLocation()
   const conversation = useBrowserConversation()
-  const selected = conversation.sessionId
-  const sessionActions = useBrowserSessionActions()
+  const sessionActions = useBrowserSessionActions(conversation)
   const chatTitle = conversation.displayName || ''
-  const panes = useContributions('panes')
-  const paneComposition = browserPaneComposition(panes)
+  const panels = useBrowserHostPanels()
   const main = useRef<HTMLElement>(null), menu = useRef<HTMLButtonElement>(null)
   const navigation = useBrowserNavigation({ selectionKey: conversation.selectionKey, path: location.pathname, main, trigger: menu })
   const { tab } = navigation
   const [updateNotice, setUpdateNotice] = useState<PwaUpdateNotice | null>(() => currentPwaUpdate())
   const [updateDismissed, setUpdateDismissed] = useState(false)
-  const bots = paneComposition.bots
   useEffect(() => subscribePwaUpdate(notice => {
     setUpdateNotice(notice)
     if (notice) setUpdateDismissed(false)
   }), [])
-  const surface = (pane: typeof bots) => pane?.render ? <ContribBoundary id={pane.id}><ContribRender render={pane.render} /></ContribBoundary> : null
   const openRoute = (path: string) => {
-    navigateToWorkspacePage(navigate, path)
+    openBrowserPage(navigate, path)
     navigation.closeDrawer()
   }
   return <div className="browser-shell" data-browser-shell="" data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined}>
@@ -195,8 +190,8 @@ function BrowserLayout() {
       <aside id="browser-navigation" ref={navigation.drawer} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={navigation.compact && navigation.drawerOpen ? 'dialog' : undefined} aria-modal={navigation.compact && navigation.drawerOpen ? true : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
         <BrowserNavigationTabs navigation={navigation} settingsMenu={{ onOpenRoute: openRoute }} />
         <div className="browser-navigation-body" role="tabpanel" aria-label={tab}>
-          <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}><BrowserSidebarNavigation onNavigate={openRoute}><WiredPane part="sidebar" /></BrowserSidebarNavigation></BrowserSessionsPane>
-          <div hidden={tab !== 'bots'} className="browser-pane">{surface(bots) || <BrowserBotsFallback />}</div>
+          <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}><BrowserSidebarNavigation onNavigate={openRoute}><BrowserSessionsSurface /></BrowserSidebarNavigation></BrowserSessionsPane>
+          <div hidden={tab !== 'bots'} className="browser-pane"><BrowserBotsSurface fallback={<BrowserBotsFallback />} /></div>
         </div>
         {updateNotice && !updateDismissed && <div className="browser-update-panel" role="status" aria-label="Application update">
           <div className="browser-update-panel-heading"><strong>Update available</strong><button type="button" aria-label="Dismiss update" onClick={() => setUpdateDismissed(true)}>×</button></div>
@@ -212,13 +207,11 @@ function BrowserLayout() {
             <Codicon name="layout-sidebar-left" />
           </BrowserToolbarButton>
           <div className="browser-actions">
-            {selected && <SessionActionsMenu keyboardShortcuts align="end" browserPanelEntries={paneComposition.toolbarPanes} onBrowserPanelOpen={() => main.current?.focus()} onArchive={sessionActions.archive} onDelete={sessionActions.delete} onPin={sessionActions.togglePin} onToggleUnread={sessionActions.toggleUnread} pinned={sessionActions.pinned} unread={sessionActions.unread} profile={sessionActions.profile} sessionId={selected} title={chatTitle}>
-              <BrowserToolbarButton tooltip="Chat actions" type="button" className="browser-chat-actions" aria-label="Chat actions"><Codicon name="ellipsis" /></BrowserToolbarButton>
-            </SessionActionsMenu>}
+            <BrowserChatActionsMenu actions={sessionActions} title={chatTitle} panels={panels} main={main} />
           </div>
         </div>
-        <BrowserWorkspace panelIds={paneComposition.workspacePanelIds} />
-        <div className="browser-status"><WiredPane part="statusbar" /></div>
+        <BrowserConversationSurface />
+        <div className="browser-status"><BrowserStatusSurface /></div>
       </main>
       <BrowserToolModal />
     </div>
