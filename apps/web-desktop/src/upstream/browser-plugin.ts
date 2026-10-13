@@ -933,32 +933,41 @@ export function useBrowserSectionStyleHooks(source: string): string {
 }
 
 export function trackBrowserSettingsSaves(source: string, root: string): string {
-  const reactImport = "import { useEffect, useMemo, useRef, useState } from 'react'"
-  const reactBrowserImport = "import { useEffect, useId, useMemo, useRef, useState } from 'react'"
-  const queue = '  const saveQueueRef = useRef<Promise<void>>(Promise.resolve())'
-  const trackedQueue = `${queue}\n  const browserWorkId = useId()\n  const browserSavePendingRef = useRef(false)\n  const browserSaveFailureRef = useRef<string | null>(null)\n  const browserSaveWaitersRef = useRef(new Set<() => void>())\n  const browserWorkReleaseRef = useRef<(() => void) | null>(null)`
-  const cacheWrite = '          writeConfigCache(snapshot)'
-  const confirmedWrite = `${cacheWrite}\n\n          if (saveVersionRef.current === v) {\n            browserSavePendingRef.current = false\n            browserSaveFailureRef.current = null\n            for (const wake of browserSaveWaitersRef.current) wake()\n            browserSaveWaitersRef.current.clear()\n            browserWorkReleaseRef.current?.()\n            browserWorkReleaseRef.current = null\n          }`
-  const apply = `  const applyConfig = (next: HermesConfigRecord) => {\n    saveVersionRef.current += 1\n    setConfig(next)\n    setSaveVersion(saveVersionRef.current)\n  }`
-  const trackedApply = `  const applyConfig = (next: HermesConfigRecord) => {\n    saveVersionRef.current += 1\n    browserSavePendingRef.current = true\n    browserSaveFailureRef.current = null\n    if (!browserWorkReleaseRef.current) {\n      browserWorkReleaseRef.current = registerPendingBrowserWork({\n        id: \`settings-config:\${browserWorkId}\`,\n        async prepare() {\n          // The renderer's existing autosave is debounced by 550ms. Give its\n          // effect time to enqueue the latest edit before waiting on its queue.\n          await new Promise(resolve => window.setTimeout(resolve, 600))\n          if (browserSaveFailureRef.current) return { ready: false, reason: browserSaveFailureRef.current }\n          if (browserSavePendingRef.current) {\n            await new Promise<void>(resolve => browserSaveWaitersRef.current.add(resolve))\n          }\n          return browserSaveFailureRef.current\n            ? { ready: false, reason: browserSaveFailureRef.current }\n            : browserSavePendingRef.current\n              ? { ready: false, reason: 'A settings change is still being saved. Try the update again.' }\n              : { ready: true }\n        }\n      })\n    }\n    setConfig(next)\n    setSaveVersion(saveVersionRef.current)\n  }`
-  const cleanup = '    return () => window.clearTimeout(t)'
-  const retainedCleanup = `    return () => {\n      // A route close must not cancel the last debounced save. A newer edit\n      // or profile switch changes the version and still cancels this timer.\n      if (saveVersionRef.current !== v) window.clearTimeout(t)\n    }`
-  const failedSave = `          if (saveVersionRef.current === v) {\n            notifyError(err, c.autosaveFailed)\n          }`
-  const reportedFailure = `          if (saveVersionRef.current === v) {\n            browserSaveFailureRef.current = 'A settings change could not be saved. Reopen Settings and save it before updating.'\n            for (const wake of browserSaveWaitersRef.current) wake()\n            browserSaveWaitersRef.current.clear()\n            notifyError(err, c.autosaveFailed)\n          }`
-  let output = source
-  for (const [before, after] of [
-    [reactImport, reactBrowserImport],
-    [queue, trackedQueue],
-    [cacheWrite, confirmedWrite],
-    [cleanup, retainedCleanup],
-    [failedSave, reportedFailure],
-    [apply, trackedApply]
-  ]) {
-    if (output.split(before).length !== 2) throw new Error('Browser settings save lifecycle contract changed')
-    output = output.replace(before, after)
+  const effectStart = '  // eslint-disable-next-line no-restricted-syntax -- autosave bookkeeping refs, not an atom mirror\n  useEffect(() => {'
+  const effectEnd = '  }, [config, onConfigSaved, saveVersion, writeScope, scopeProfile])'
+  const queueStart = '      saveQueueRef.current = saveQueueRef.current.then(async () => {'
+  const queueEnd = '\n      })\n    }, 550)'
+  const from = source.indexOf(effectStart)
+  const to = source.indexOf(effectEnd, from)
+  const bodyFrom = source.indexOf(queueStart, from)
+  const bodyTo = source.indexOf(queueEnd, bodyFrom)
+  if (from < 0 || to < 0 || bodyFrom < from || bodyTo < bodyFrom || bodyTo > to) {
+    throw new Error('Browser settings autosave command boundary changed')
   }
-  const service = JSON.stringify(path.join(root, 'src/platform/pending-work'))
-  return `import { registerPendingBrowserWork } from ${service}\n${output}`
+  let body = source.slice(bodyFrom + queueStart.length, bodyTo)
+  body = replaceBrowserContract(body, [
+    ["          // The saved snapshot becomes the new baseline", "          // An older active-profile request must not seed the new profile's cache.\n          if (browserSettingsSave.scope !== browserSaveScope) return\n\n          // The saved snapshot becomes the new baseline"],
+    ["            notifyError(err, c.autosaveFailed)\n          }", "            notifyError(err, c.autosaveFailed)\n          }\n          throw err"]
+  ])
+  const command = `  const saveBrowserSettingsSnapshot = (snapshot: HermesConfigRecord, v: number, browserSaveScope: number): Promise<void> => {
+    saveQueueRef.current = saveQueueRef.current.catch(() => {}).then(async () => {${body}
+    })
+    return saveQueueRef.current
+  }`
+  let output = source.slice(0, from) + command + source.slice(to + effectEnd.length)
+  output = replaceBrowserContract(output, [
+    ['  // The editable draft is local (debounced autosave watches it), but it\'s seeded', '  // The editable draft is local (browser saves debounce its edits), but it\'s seeded'],
+    ['  // B. Drop the seed + draft (re-seeds from B\'s refetch) and zero saveVersion so\n  // the pending debounced autosave is cancelled by its effect cleanup.', '  // B. Drop the seed + draft (re-seeds from B\'s refetch) and cancel unsent\n  // browser saves. Requests already in flight remain part of readiness.'],
+    ["import { useEffect, useMemo, useRef, useState } from 'react'", "import { useEffect, useId, useMemo, useRef, useState } from 'react'"],
+    ['  const saveQueueRef = useRef<Promise<void>>(Promise.resolve())', `  const saveQueueRef = useRef<Promise<void>>(Promise.resolve())
+  const browserWorkId = useId()
+  const browserSettingsSave = useMemo(() => createBrowserSettingsSaveOwner(\`settings-config:\${browserWorkId}\`), [browserWorkId])`],
+    ['  const [saveVersion, setSaveVersion] = useState(0)\n', ''],
+    ['    setSaveVersion(0)\n    saveQueueRef.current = Promise.resolve()', '    browserSettingsSave.resetScope()\n    saveQueueRef.current = Promise.resolve()'],
+    ['    setSaveVersion(saveVersionRef.current)', '    const v = saveVersionRef.current\n    const browserSaveScope = browserSettingsSave.scope\n    browserSettingsSave.schedule(() => saveBrowserSettingsSnapshot(next, v, browserSaveScope))']
+  ])
+  const service = JSON.stringify(path.join(root, 'src/platform/settings-save'))
+  return `import { createBrowserSettingsSaveOwner } from ${service}\n${output}`
 }
 
 export function useBrowserSettingsFrame(source: string, root: string): string {
