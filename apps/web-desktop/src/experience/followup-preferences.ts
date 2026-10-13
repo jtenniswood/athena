@@ -5,10 +5,6 @@ export type FollowupBehavior = 'queue' | 'steer'
 const KEY = 'hermes-web.browser.followup-behavior'
 const CHANGE_EVENT = 'hermes-web:followup-behavior-change'
 
-function queueButton(composer: Element): HTMLButtonElement | null {
-  return composer.querySelector<HTMLButtonElement>('button[data-browser-queue-action]')
-}
-
 export function readFollowupBehavior(): FollowupBehavior {
   try {
     return window.localStorage.getItem(KEY) === 'steer' ? 'steer' : 'queue'
@@ -39,40 +35,8 @@ export function useFollowupBehavior(): FollowupBehavior {
   return useSyncExternalStore(subscribe, readFollowupBehavior, () => 'queue')
 }
 
-/** Route Enter through the existing composer controls when Queue is the default. */
-export function installFollowupBehavior(): () => void {
-  const onClick = (event: MouseEvent) => {
-    if (readFollowupBehavior() !== 'queue' || !event.isTrusted) return
-    const target = event.target
-    if (!(target instanceof Element)) return
-    const send = target.closest<HTMLButtonElement>('[data-browser-send-action]')
-    const composer = send?.closest('[data-slot="composer-dock"]')
-    const queue = composer ? queueButton(composer) : null
-    if (!send || !queue) return
-    event.preventDefault()
-    event.stopImmediatePropagation()
-    queue.click()
-  }
-
-  const onKeyDown = (event: KeyboardEvent) => {
-    if (readFollowupBehavior() !== 'queue' || event.key !== 'Enter' || event.shiftKey || event.isComposing) return
-    const target = event.target
-    if (!(target instanceof Element)) return
-    const composer = target.closest('[data-slot="composer-dock"]')
-    if (!composer) return
-    const queue = queueButton(composer)
-    const steer = composer.querySelector<HTMLButtonElement>('[data-browser-send-action]')
-    if (!queue || !steer) return
-    event.preventDefault()
-    event.stopImmediatePropagation()
-    if (event.metaKey || event.ctrlKey) steer.click()
-    else queue.click()
-  }
-
-  document.addEventListener('click', onClick, true)
-  document.addEventListener('keydown', onKeyDown, true)
-  return () => {
-    document.removeEventListener('click', onClick, true)
-    document.removeEventListener('keydown', onKeyDown, true)
-  }
+/** Resolve a submission intent without inspecting buttons or intercepting events. */
+export function browserFollowupMode(alternate = false): FollowupBehavior {
+  const preferred = readFollowupBehavior()
+  return alternate ? preferred === 'queue' ? 'steer' : 'queue' : preferred
 }

@@ -126,6 +126,11 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       timers.set(id, timer)
       return { status: 'accepted', session_id: id }
     }
+    if (method === 'session.redirect') {
+      if (!timers.has(id)) return { status: 'rejected', text: params.text }
+      messages.get(id).push({ id: `${id}-correction-${Date.now()}`, role: 'user', content: params.text, display_kind: 'steer', timestamp: now() })
+      return { status: 'redirected', text: params.text }
+    }
     if (/cancel|interrupt/.test(method)) { complete(id, 'interrupted', 'Response cancelled.'); return { ok: true } }
     if (method === 'file.attach') {
       if (!sessions.has(id) || !params.name || !params.data_url) throw new Error('File attachment requires a session, name, and bytes')

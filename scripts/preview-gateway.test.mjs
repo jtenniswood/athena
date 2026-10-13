@@ -26,6 +26,16 @@ async function fixture(t) {
   return { ...gateway, origin, socket, request }
 }
 
+test('synthetic redirect accepts an active correction and rejects an idle session', async t => {
+  const gateway = await fixture(t)
+  const params = { session_id: 'preview-week', text: 'Change direction' }
+  assert.equal((await gateway.request('session.redirect', params)).result.status, 'rejected')
+  await gateway.request('prompt.submit', { session_id: params.session_id, text: 'Start a response' })
+  assert.equal((await gateway.request('session.redirect', params)).result.status, 'redirected')
+  assert.ok(gateway.messages.get(params.session_id).some(row => row.content === params.text && row.display_kind === 'steer'))
+  gateway.controls.assertExpected()
+})
+
 test('RPC holds allow later selections to complete first without timing guesses', async t => {
   const gateway = await fixture(t)
   const held = gateway.controls.hold(call => call.method === 'session.resume' && call.params.session_id === 'preview-research')

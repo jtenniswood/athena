@@ -206,6 +206,53 @@ for (const preference of ['queue', 'steer']) {
   }
 }
 
+for (const preference of ['queue', 'steer']) for (const alternate of [false, true]) {
+  test(`busy composer uses the selected follow-up intent: ${preference}, alternate ${alternate}`, async ({ page }) => {
+    await page.addInitScript(value => localStorage.setItem('hermes-web.browser.followup-behavior', value), preference)
+    const submits = [], redirects = [], held = []
+    let holdCompletion = true
+    await page.routeWebSocket(/\/api\/ws/, socket => {
+      const server = socket.connectToServer()
+      socket.onMessage(message => {
+        const frame = JSON.parse(String(message))
+        if (frame.method === 'prompt.submit') submits.push(frame.params)
+        if (frame.method === 'session.redirect') redirects.push(frame.params)
+        server.send(message)
+      })
+      server.onMessage(message => {
+        const frame = JSON.parse(String(message))
+        if (holdCompletion && frame.params?.type === 'message.complete') held.push(() => socket.send(message))
+        else socket.send(message)
+      })
+    })
+    await open(page)
+    await editor(page).fill('Begin the follow-up policy check')
+    await editor(page).press('Enter')
+    await expect.poll(() => submits.length).toBe(1)
+    await expect(page.locator('[data-slot="composer-root"]').getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
+    const followup = `Follow-up ${preference} ${alternate}`
+    await editor(page).fill(followup)
+    const modifier = await page.evaluate(() => /Mac/i.test(navigator.platform) ? 'Meta' : 'Control')
+    await editor(page).press(alternate ? `${modifier}+Enter` : 'Enter')
+    await expect(editor(page)).toHaveText('')
+    const queue = preference === 'queue' ? !alternate : alternate
+    if (queue) {
+      await expect(page.getByRole('button', { name: '1 Queued', exact: true })).toBeVisible()
+      expect(redirects).toEqual([])
+      expect(submits).toHaveLength(1)
+    } else {
+      await expect.poll(() => redirects.length).toBe(1)
+      expect(redirects[0]).toMatchObject({ session_id: 'preview-week', text: followup })
+      await expect(page.getByRole('button', { name: '1 Queued', exact: true })).toHaveCount(0)
+    }
+    await expect.poll(() => held.length).toBe(1)
+    holdCompletion = false
+    held.forEach(release => release())
+    if (queue) await expect.poll(() => submits.length).toBe(2)
+    await expect(page.locator('[data-slot="composer-root"]').getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0)
+  })
+}
+
 test('response links open a browser tab without losing the conversation or draft', async ({ page, context }) => {
   const destination = 'https://example.com/response-link'
   // Exercise the actual transcript renderer with both Markdown and HTML anchors.

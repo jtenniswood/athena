@@ -868,6 +868,26 @@ export function useBrowserAcceptedSubmit(source: string, root: string): string {
     .replace(steerAccepted, `.then(accepted => {\n        if (!accepted) {\n          keep()\n        } else {\n          announceBrowserAcceptedSubmit({ text, sessionId })\n        }`)
 }
 
+/** Keep the renderer's submit/restore engine; supply the browser's follow-up policy. */
+export function useBrowserFollowupSubmit(source: string, root: string): string {
+  const start = '  const submitDraft = () => {'
+  const payload = '    const payloadPresent = text.trim().length > 0 || attachments.length > 0'
+  const policy = JSON.stringify(path.join(root, 'src/experience/followup-preferences'))
+  return `import { browserFollowupMode } from ${policy}\n` + replaceBrowserContract(source, [
+    [start, '  const submitDraft = (browserAlternate = false) => {'],
+    [payload, `${payload}\n\n    if (busy && !queueEdit && payloadPresent && browserFollowupMode(browserAlternate) === 'queue') {\n      queueCurrentDraft()\n      focusInput()\n      return\n    }`]
+  ])
+}
+
+export function useBrowserAlternateSubmit(source: string): string {
+  const start = source.indexOf("    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {")
+  const end = source.indexOf("    if (event.key === 'Enter' && !event.shiftKey) {", start)
+  if (start < 0 || end < 0) throw new Error('Browser alternate composer submit boundary changed')
+  const keyboard = source.slice(start, end)
+  if (keyboard.split('        queueDraft()').length !== 2) throw new Error('Browser alternate composer command changed')
+  return source.slice(0, start) + keyboard.replace('        queueDraft()', '        submitDraft(true)') + source.slice(end)
+}
+
 
 export function removeBrowserConversationalVoiceEntry(source: string, module: 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'): string {
   if (module.endsWith('voice-menu.tsx')) {
@@ -1339,7 +1359,9 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserDefaultSessionProfile: source => useBrowserDefaultSessionProfile(source, root),
     useBrowserDirectResumeOwner: source => useBrowserDirectResumeOwner(source),
     useBrowserSectionIdentity: source => useBrowserSectionIdentity(source, root),
-    useBrowserTouchHooks: source => useBrowserTouchHooks(source, root), useBrowserAcceptedSubmit: source => useBrowserAcceptedSubmit(source, root), useBrowserCodingActionHooks, useBrowserSectionIds, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
+    useBrowserTouchHooks: source => useBrowserTouchHooks(source, root), useBrowserAcceptedSubmit: source => useBrowserAcceptedSubmit(source, root),
+    useBrowserFollowupSubmit: source => useBrowserFollowupSubmit(source, root), useBrowserAlternateSubmit,
+    useBrowserCodingActionHooks, useBrowserSectionIds, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source, entry.module as 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     useBrowserProjectDisclosure,

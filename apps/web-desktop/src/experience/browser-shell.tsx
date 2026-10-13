@@ -9,7 +9,6 @@ import { useLocation, useNavigate } from 'react-router'
 import { BrowserSidebarNavigation } from './sidebar-extras'
 import { BrowserSessionsPane } from './sidebar-sections'
 import { BrowserBotsFallback } from './browser-bots-fallback'
-import { installFollowupBehavior } from './followup-preferences'
 import { installTranscriptPreferences } from './transcript-preferences'
 import { Codicon, SidebarProvider } from '../upstream/browser-api'
 import { BrowserEngineHost, BrowserSessionsSurface, BrowserBotsSurface, BrowserConversationSurface, BrowserStatusSurface, useBrowserHostPanels, openBrowserPage } from '../upstream/browser-host'
@@ -48,7 +47,6 @@ export function BrowserShell() {
 function BrowserLayout() {
   useRendererMenuCompatibility()
   useEffect(() => installConversationSubmitScroll(), [])
-  useEffect(() => installFollowupBehavior(), [])
   useEffect(() => installTranscriptPreferences(), [])
   const sessionProjectDrag = useRef<SessionProjectDrag | null>(null)
   const sessionReorderDrag = useRef<SessionReorderDrag | null>(null)
