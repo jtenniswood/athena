@@ -39,8 +39,8 @@
   padding-block-start: var(--web-space-2);
 }
 .browser-settings-page-header { display: grid; gap: var(--web-space-1); }
-.browser-settings-page-title { margin: 0; font-size: 1.25rem; font-weight: 500; line-height: var(--web-line-body); }
-.browser-settings-page-description { margin: 0; color: var(--web-text-muted); font-size: var(--web-text-caption); line-height: var(--web-line-body); }
+.browser-settings-page-title { margin: 0; font-size: 1.125rem; font-weight: 500; line-height: var(--web-line-body); }
+.browser-settings-page-description { margin: 0; color: var(--web-text-muted); font-size: var(--settings-text-caption); line-height: var(--web-line-body); }
 .browser-configuration-page { padding-inline: 0; }
 .browser-color-themes-mode { display: flex; gap: 0.35rem; }
 .browser-color-themes-mode button {
@@ -148,6 +148,8 @@
   --web-text-label: .75rem;
   --web-text-caption: .8125rem;
   --web-text-body: .875rem;
+  --settings-text-caption: calc(var(--web-text-caption) - .0625rem);
+  --settings-text-body: calc(var(--web-text-body) - .0625rem);
   box-sizing: border-box;
   display: flex;
   width: 100%;
@@ -159,6 +161,17 @@
   background: var(--web-bg);
   font-family: var(--web-font);
   font-size: var(--web-text-body);
+}
+
+/* Reduce upstream settings copy without changing shared control font tokens.
+   Rows with inline actions size their title span instead of the action wrapper. */
+.browser-settings-frame [class~="text-[length:var(--conversation-text-font-size)]"] { --settings-copy-font-size: var(--conversation-text-font-size); }
+.browser-settings-frame [class~="text-[length:var(--conversation-caption-font-size)]"] { --settings-copy-font-size: var(--conversation-caption-font-size); }
+.browser-settings-frame .text-sm { --settings-copy-font-size: var(--text-sm); }
+.browser-settings-frame .text-xs { --settings-copy-font-size: var(--text-xs); }
+.browser-settings-frame :is([class~="text-[length:var(--conversation-text-font-size)]"], [class~="text-[length:var(--conversation-caption-font-size)]"], .text-sm, .text-xs):not(:where(button, input, select, textarea, [role="button"], [role="combobox"], button *, [role="button"] *, [role="combobox"] *)):not(:has(button, input, select, textarea, [role="button"], [role="combobox"])),
+.browser-settings-frame :is([class~="text-[length:var(--conversation-text-font-size)]"], [class~="text-[length:var(--conversation-caption-font-size)]"], .text-sm, .text-xs):not(:where(button, [role="button"], [role="combobox"], button *, [role="button"] *, [role="combobox"] *)):has(button, input, select, textarea, [role="button"], [role="combobox"]) > span:not(:has(button, input, select, textarea, [role="button"], [role="combobox"])) {
+  font-size: calc(var(--settings-copy-font-size) - .0625rem);
 }
 
 .browser-settings-header {
@@ -173,7 +186,7 @@
 }
 .browser-settings-heading { display: flex; min-width: 0; align-items: center; gap: var(--web-space-2); }
 .browser-settings-heading > .codicon { color: var(--web-text-muted); font-size: var(--web-icon-size); }
-.browser-settings-heading h1 { margin: 0; font-size: var(--web-text-heading); font-weight: 600; line-height: var(--web-line-body); }
+.browser-settings-heading h1 { margin: 0; font-size: var(--web-text-title); font-weight: 600; line-height: var(--web-line-body); }
 .browser-settings-heading h1:focus { outline: none; }
 .browser-settings-search { width: var(--web-control-regular); flex: 0 0 auto; margin-left: auto; }
 .browser-settings-search > button {
@@ -207,7 +220,7 @@
 .browser-settings-category { flex-shrink: 0; }
 .browser-settings-nav-group { flex-shrink: 0; }
 .browser-settings-nav-group + .browser-settings-nav-group { margin-top: var(--web-space-4); }
-.browser-settings-group-heading { margin: 0; padding: var(--web-space-2); color: var(--web-text-subtle); font-size: var(--web-text-caption); font-weight: 600; }
+.browser-settings-group-heading { margin: 0; padding: var(--web-space-2); color: var(--web-text-subtle); font-size: var(--settings-text-caption); font-weight: 600; }
 .browser-settings-category + .browser-settings-category { margin-top: 1px; }
 .browser-settings-category-button {
   display: flex;
@@ -223,7 +236,7 @@
   background: transparent;
   text-align: left;
   font: inherit;
-  font-size: var(--web-text-body);
+  font-size: var(--settings-text-body);
   font-weight: 500;
   line-height: var(--text-sm--line-height);
   cursor: pointer;
@@ -231,7 +244,7 @@
 .browser-settings-category-button > span:not(.codicon) { min-width: 0; flex: 1; overflow-wrap: anywhere; }
 .browser-settings-category-button:hover { background: var(--web-hover); color: var(--web-text); }
 .browser-settings-category-button.is-active { color: var(--web-text); background: var(--web-active); font-weight: 500; }
-.browser-settings-category-button.is-child { margin-left: var(--web-space-6); width: calc(100% - var(--web-space-6)); font-size: var(--web-text-caption); }
+.browser-settings-category-button.is-child { margin-left: var(--web-space-6); width: calc(100% - var(--web-space-6)); font-size: var(--settings-text-caption); }
 .browser-settings-category-icon { width: var(--web-icon-size); height: var(--web-icon-size); flex: 0 0 auto; color: var(--web-text-subtle); }
 .browser-settings-category-button.is-active .browser-settings-category-icon { color: var(--web-text); }
 .browser-settings-category-chevron { display: none !important; }
@@ -272,7 +285,7 @@
 .browser-notification-settings > section.min-h-0.overflow-hidden > .h-full.min-h-0.overflow-y-auto { height: auto; overflow: visible; padding-inline: var(--web-space-1); }
 /* The permission panel replaces the desktop-only notification introduction. */
 .browser-notification-settings > section.min-h-0.overflow-hidden > .h-full.min-h-0.overflow-y-auto > p:first-of-type { display: none; }
-.browser-settings-page-notice { max-width: 54rem; margin: 0 auto var(--web-space-3); color: var(--web-text-muted); font-size: var(--web-text-caption); }
+.browser-settings-page-notice { max-width: 54rem; margin: 0 auto var(--web-space-3); color: var(--web-text-muted); font-size: var(--settings-text-caption); }
 .browser-settings-content-slot > section.min-h-0.overflow-hidden { width: 100%; min-height: 0; flex: 1; }
 .browser-settings-content-slot > section.min-h-0.overflow-hidden > .h-full.min-h-0.overflow-y-auto { overscroll-behavior: contain; padding-inline: var(--web-space-1); }
 .browser-settings-home h2 { font-size: var(--web-text-heading); font-weight: 600; }
@@ -341,6 +354,7 @@ body:has([data-browser-settings-frame]) [data-slot='select-item'][data-highlight
   border-top: 1px solid var(--web-border-subtle);
 }
 .browser-advanced-settings > summary {
+  font-size: var(--settings-text-body);
   display: flex;
   min-height: var(--web-touch-min);
   align-items: center;
@@ -354,7 +368,7 @@ body:has([data-browser-settings-frame]) [data-slot='select-item'][data-highlight
 .browser-advanced-settings > summary:focus-visible { outline: var(--web-focus-ring); outline-offset: 2px; }
 .browser-advanced-settings > summary > span {
   color: var(--web-text-subtle);
-  font-size: var(--web-text-caption);
+  font-size: var(--settings-text-caption);
   font-weight: 400;
 }
 .browser-advanced-settings[open] > summary { margin-bottom: var(--web-space-2); }
@@ -403,8 +417,8 @@ body:has([data-browser-settings-frame]) [data-slot='select-item'][data-highlight
 }
 .browser-configuration-action:hover { background: var(--web-hover); }
 .browser-configuration-action > span { min-width: 0; }
-.browser-configuration-action-label { display: block; font-weight: 500; }
-.browser-configuration-action-description { display: block; margin-top: var(--web-space-1); color: var(--web-text-muted); line-height: var(--web-line-body); }
+.browser-configuration-action-label { display: block; font-size: var(--settings-text-body); font-weight: 500; }
+.browser-configuration-action-description { display: block; font-size: var(--settings-text-caption); margin-top: var(--web-space-1); color: var(--web-text-muted); line-height: var(--web-line-body); }
 .browser-configuration-action:last-child { border: 1px solid var(--web-border-subtle); }
 .browser-configuration-action:last-child :is(svg, .browser-configuration-action-label) { color: var(--web-danger); }
 
@@ -432,7 +446,7 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
 .browser-followup-setting h3,
 .browser-transcript-setting h3 {
   margin: 0;
-  font-size: var(--web-text-body);
+  font-size: var(--settings-text-body);
   font-weight: 500;
   line-height: var(--web-line-body);
 }
@@ -441,7 +455,7 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
 .browser-transcript-setting p {
   margin: 0;
   color: var(--web-text-muted);
-  font-size: var(--web-text-caption);
+  font-size: var(--settings-text-caption);
   line-height: var(--web-line-body);
 }
 
@@ -515,7 +529,7 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
   height: var(--web-navigation-row);
   flex: 0 0 auto;
   border-color: transparent;
-  font-size: var(--web-text-body);
+  font-size: var(--settings-text-body);
 }
 .browser-settings-embedded-content > .grid > main { max-width: none; padding: 0; }
 .browser-settings-embedded-content > .grid > main > header > div:first-child { display: block; }
@@ -531,7 +545,7 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
   border-block: 1px solid var(--web-border-subtle);
 }
 .browser-settings-gateway-status > h3,
-.browser-gateway-settings-intro > h3 { margin: 0 0 var(--web-space-3); font-size: var(--web-text-body); font-weight: 500; }
+.browser-gateway-settings-intro > h3 { margin: 0 0 var(--web-space-3); font-size: var(--settings-text-body); font-weight: 500; }
 .browser-settings-gateway-status > div { border: 0; background: transparent; }
 
 .browser-settings-embedded-content > .grid > .pointer-events-none { display: none; }
@@ -551,7 +565,7 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
 .browser-updates-status > .codicon { margin-top: .125rem; color: var(--web-text-muted); }
 .browser-updates-status > div { min-width: 0; }
 .browser-updates-status h3,
-.browser-updates-changes h3 { margin: 0; font-size: var(--web-text-body); font-weight: 500; }
+.browser-updates-changes h3 { margin: 0; font-size: var(--settings-text-body); font-weight: 500; }
 .browser-updates-status p { margin: var(--web-space-1) 0 0; color: var(--web-text-muted); overflow-wrap: anywhere; }
 .browser-updates-status[role="alert"] > .codicon { color: var(--web-danger); }
 .browser-updates-actions { display: flex; flex-wrap: wrap; gap: var(--web-space-2); }
