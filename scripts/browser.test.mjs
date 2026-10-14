@@ -32,13 +32,18 @@ test('plugin installs return to the settings manager only when launched from set
   const { keepBrowserPluginInstallInSettings } = load('src/upstream/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/app/settings/plugin-install-modal.tsx'), 'utf8')
   const output = keepBrowserPluginInstallInSettings(source)
-  const destination = output.split('\n').find(line => line.includes("navigate(location.pathname === '/settings'"))
-  for (const [pathname, expected] of [['/settings', '/settings?tab=plugins&manage=1'], ['/capabilities', '/capabilities?tab=plugins']]) {
-    let actual
-    vm.runInNewContext(destination, { location: { pathname }, navigate: value => { actual = value } })
-    assert.equal(actual, expected)
+  const parsed = ts.createSourceFile('plugin.tsx', output, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+  const finish = parsed.statements.find(node => ts.isFunctionDeclaration(node) && node.name.text === 'finishInstall').getText(parsed)
+  for (const onSettings of [false, true]) for (const stayAfterInstall of [false, true]) {
+    let actual, closed = false
+    const code = ts.transpileModule(finish + '\nfinishInstall(request, navigate, onSettings)', { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+    vm.runInNewContext(code, { request: { stayAfterInstall }, onSettings, closePluginInstallRequest: () => { closed = true }, navigate: value => { actual = value } })
+    assert.equal(actual, stayAfterInstall ? undefined : onSettings ? '/settings?tab=plugins&manage=1' : '/capabilities?tab=plugins')
+    assert.ok(closed)
   }
-  assert.throws(() => keepBrowserPluginInstallInSettings(source.replace("navigate('/capabilities?tab=plugins')", 'navigate(destination)')), /destination changed/)
+  assert.match(output, /finishInstall\(request, navigate, onSettings\)/)
+  assert.match(output, /onSettings=\{onSettings\}/)
+  assert.throws(() => keepBrowserPluginInstallInSettings(source.replace("navigate('/capabilities?tab=plugins')", 'navigate(destination)')), /hook target changed/)
 })
 test('composer queue action receives an explicit browser identity', () => {
   const source = '<button aria-label={c.queueMessage}><Layers3 /></button>\n<button aria-label={showStop ? c.stop : c.send}><Send /></button>'

@@ -137,11 +137,6 @@
   top: calc(var(--settings-safe-top) + var(--settings-header-height) / 2);
   right: var(--web-sheet-padding-end);
 }
-.browser-settings-fullscreen-card > .pointer-events-none button {
-  width: var(--web-control-regular);
-  height: var(--web-control-regular);
-  border-radius: var(--web-radius-control);
-}
 
 .browser-settings-frame {
   /* Match the chat window's 14px body text while keeping settings styles local. */
@@ -193,8 +188,9 @@
 .browser-settings-heading h1 { margin: 0; font-size: var(--web-text-title); font-weight: 600; line-height: var(--web-line-body); }
 .browser-settings-heading h1:focus { outline: none; }
 .browser-settings-search { width: var(--web-control-regular); flex: 0 0 auto; margin-left: auto; }
-.browser-settings-search > button {
-  width: 100%;
+.browser-settings-search > button,
+.browser-settings-fullscreen-card > .pointer-events-none button {
+  width: var(--web-control-regular);
   height: var(--web-control-regular);
   justify-content: center;
   padding: 0;
@@ -203,10 +199,17 @@
   background: transparent;
   color: var(--web-text-muted);
   box-shadow: none;
+  transition: background-color 100ms, color 100ms;
 }
-.browser-settings-search > button:hover { background: var(--web-hover); color: var(--web-text); }
+.browser-settings-search > button:is(:hover, :focus-visible),
+.browser-settings-fullscreen-card > .pointer-events-none button:is(:hover, :focus-visible) { background: var(--web-hover); color: var(--web-text); }
+.browser-settings-search > button:focus-visible,
+.browser-settings-fullscreen-card > .pointer-events-none button:focus-visible { outline: var(--web-focus-ring); outline-offset: -2px; box-shadow: none; }
 .browser-settings-search > button > :not(svg) { display: none; }
-.browser-settings-search > button > svg { width: var(--web-icon-size); height: var(--web-icon-size); }
+.browser-settings-search > button > svg,
+.browser-settings-fullscreen-card > .pointer-events-none button > .codicon { width: var(--web-icon-size); height: var(--web-icon-size); }
+.browser-settings-fullscreen-card > .pointer-events-none button > .codicon { font-size: var(--web-icon-size) !important; line-height: 1; }
+.browser-settings-search > button > svg { stroke-width: 1.5; }
 
 .browser-settings-layout { display: grid; min-height: 0; flex: 1; grid-template-columns: 16rem minmax(0, 1fr); overflow: hidden; }
 .browser-settings-navigation { display: flex; min-height: 0; flex-direction: column; background: var(--web-sidebar); border-right: 1px solid var(--web-border-subtle); }
@@ -382,7 +385,7 @@ body:has([data-browser-settings-frame]) [data-slot='select-item'][data-highlight
   .browser-settings-heading { flex: 1; min-height: var(--settings-header-height); }
   .browser-settings-heading h1 { overflow-wrap: anywhere; }
   .browser-settings-search { width: var(--web-touch-min); flex: 0 0 auto; margin: 0; }
-  .browser-settings-search > button { height: var(--web-touch-min); }
+  .browser-settings-search > button { width: var(--web-touch-min); height: var(--web-touch-min); }
   .browser-settings-layout.is-compact { display: flex; flex-direction: column; }
   .browser-settings-navigation { flex: 1; border-right: 0; }
   .browser-settings-navigation[hidden] { display: none; }

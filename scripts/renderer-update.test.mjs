@@ -91,7 +91,8 @@ test('browser connecting visual retains the boot owner and stays absent after co
     useStore: store => store, prefersReducedMotion: () => true,
     useRef: current => ({ current }), useState: value => [typeof value === 'function' ? value() : value, () => {}],
     useEffect() {}, createElement: (type, props) => ({ type, props }),
-    isOnboardingEnabled: () => false, isMainWindow: () => true
+    $onboardingDecided: true, $introView: null, $introStartExit: null, $decideExit: null,
+    isMainWindow: () => true
   }
   const { GatewayConnectingOverlay } = evaluate(source.replace('import.meta.env.DEV', 'false'), () => dependencies, { React: dependencies })
   assert.equal(typeof GatewayConnectingOverlay, 'function')
@@ -100,4 +101,21 @@ test('browser connecting visual retains the boot owner and stays absent after co
   assert.equal(GatewayConnectingOverlay(), null)
   boot.running = true; boot.error = 'Failed'
   assert.equal(GatewayConnectingOverlay(), null)
+})
+
+test('browser startup marks desktop onboarding decided without requesting or registering a setup chat', () => {
+  const file = path.join(root, '../desktop/src/app/contrib/wiring.tsx')
+  const source = adapter('browser-plugin.ts').disableBrowserOnboardingTips(readFileSync(file, 'utf8'))
+  const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+  const hook = parsed.statements.find(node => ts.isFunctionDeclaration(node) && node.name.text === 'useFirstRunOnboarding')
+  const calls = []
+  const context = vm.createContext({
+    window: { __HERMES_WEB_BRIDGE__: true }, useEffect: effect => effect(), isMainWindow: () => true,
+    markOnboardingDecided: () => calls.push('decided'), decideOnboarding: () => calls.push('request'),
+    firstRunIntro: () => ({}), $onboardingChatOpener: { set: () => calls.push('opener') }
+  })
+  vm.runInContext(ts.transpileModule(hook.getText(parsed) + '\nuseFirstRunOnboarding(() => {}, () => {}, true)', {
+    compilerOptions: { target: ts.ScriptTarget.ES2022 }
+  }).outputText, context)
+  assert.deepEqual(calls, ['decided'])
 })
