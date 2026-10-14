@@ -21,8 +21,8 @@ if you prefer Compose.
 
 Copy the template, then edit `.env.hermes-web` and set the gateway address:
 
-```bash
-cp apps/web-desktop/.env.example .env.hermes-web
+```
+[cp apps/web-desktop/.env.example .env.hermes-web](https://github.com/jtenniswood/athena/blob/main/apps/web-desktop/.env.example)
 ```
 
 For a gateway running on the same host as Docker, use:
