@@ -15,7 +15,7 @@ vm.runInContext(compile(readFileSync(pluginFile, 'utf8')), plugin)
 const original = readFileSync(path.join(root, '../desktop/src/app/chat/composer/hooks/use-composer-submit.ts'), 'utf8')
 const source = plugin.exports.useBrowserFollowupSubmit(plugin.exports.useBrowserAcceptedSubmit(original, root), root)
 
-function composer({ preference = 'queue', busy = true, disabled = false, attachments = [], queueEdit = null, blocking = false, text = 'live draft' } = {}) {
+function composer({ preference = 'queue', busy = true, disabled = false, attachments = [], queueEdit = null, blocking = false, parked = false, yielded = false, text = 'live draft' } = {}) {
   const calls = []
   const preferenceStore = createBrowserPreference(browserPreferences.followupBehavior, {
     storage: () => ({ getItem: () => preference }), persist() {}, events: new EventTarget()
@@ -37,6 +37,10 @@ function composer({ preference = 'queue', busy = true, disabled = false, attachm
     if (name.endsWith('/path-refs')) return { pathifyRefs: value => value }
     if (name.endsWith('/haptics')) return { triggerHaptic() {} }
     if (name.endsWith('/clarify')) return { hasClarifyRequest: () => false }
+    if (name.endsWith('/parked-card-answers')) return {
+      answerParkedCard: () => { if (parked) calls.push('answer-card'); return parked },
+      yieldParkedCardsToMessage: () => yielded, skipParkedCards() {}
+    }
     if (name.endsWith('/connection-request')) return { hasConnectionRequest: () => false }
     if (name.endsWith('/prompts')) return { hasBlockingPromptRequest: () => blocking }
     if (name.endsWith('/composer-utils')) return { cloneAttachments: value => value }
@@ -81,4 +85,16 @@ test('browser policy keeps idle sends, queue edits, disabled controls and blocki
   for (const options of [{ attachments: [{}] }, { blocking: true }]) {
     const entry = composer({ preference: 'steer', ...options }); entry.submit.submitDraft(); assert.ok(entry.calls.includes('queue')); assert.ok(!entry.calls.includes('steer:live draft'))
   }
+})
+
+test('a waiting card consumes typed answers before either browser follow-up preference', () => {
+  for (const preference of ['queue', 'steer']) for (const alternate of [false, true]) {
+    const entry = composer({ preference, parked: true })
+    entry.submit.submitDraft(alternate)
+    assert.deepEqual(entry.calls, ['answer-card', 'clear', 'focus'])
+  }
+  const entry = composer({ preference: 'steer', yielded: true })
+  entry.submit.submitDraft()
+  assert.ok(entry.calls.includes('queue'))
+  assert.ok(!entry.calls.includes('steer:live draft'))
 })
