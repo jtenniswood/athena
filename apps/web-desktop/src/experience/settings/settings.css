@@ -240,6 +240,10 @@
 .browser-settings-detail > * { box-sizing: border-box; width: min(100%, 54rem); max-width: 54rem; margin-inline: 0; }
 .browser-settings-content-slot { display: flex; min-height: 0; flex: 1; flex-direction: column; }
 .browser-settings-content-slot[hidden] { display: none; }
+.browser-settings-plugin-manager { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: var(--web-space-3); }
+.browser-settings-plugin-back { display: flex; align-items: center; align-self: flex-start; gap: var(--web-space-2); min-height: 2.75rem; color: var(--web-text-muted); }
+.browser-settings-plugin-content { min-height: 0; flex: 1; overflow: hidden; }
+.browser-settings-plugin-content > div > div:first-child > div:first-child > p { flex-basis: 16rem; }
 .browser-notification-settings { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .browser-notification-permission { gap: var(--web-space-3); margin-bottom: var(--web-space-6); }
 .browser-notification-permission > button { justify-self: start; }

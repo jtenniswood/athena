@@ -1656,6 +1656,37 @@ for (const width of [390, 1440]) {
 }
 
 for (const width of [390, 1440]) {
+  test.extend({ hasTouch: width === 390 })(`plugin management stays in settings and preserves the draft at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 960 })
+    await open(page)
+    await editor(page).fill('Keep this draft while managing plugins')
+    await (await settingsTrigger(page)).click()
+    const menu = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
+    await menu.getByRole(width === 390 ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
+    const frame = page.locator('[data-browser-settings-frame]')
+    await frame.getByRole('navigation', { name: 'Settings categories' }).getByRole('button', { name: 'Plugins', exact: true }).click()
+    await frame.locator('[data-browser-profile-tabs]').getByRole('button', { name: 'Research', exact: true }).click()
+    await frame.getByRole('link', { name: 'Manage plugins', exact: true }).click()
+    await expect(page).toHaveURL(/\/settings\?tab=plugins&manage=1$/)
+    const manager = frame.getByRole('region', { name: 'Manage plugins', exact: true })
+    await expect(manager).toBeVisible()
+    await expect(manager.getByRole('button', { name: 'Research', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)
+    await expect(frame.getByRole('main', { name: 'Plugins', exact: true })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('plugin-manager.png') })
+    await manager.getByRole('button', { name: 'Back to plugin settings', exact: true }).click()
+    await expect(manager).toBeHidden()
+    await expect(frame.locator('[data-browser-profile-tabs]').getByRole('button', { name: 'Research', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(frame.getByRole('link', { name: 'Manage plugins', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+    await expect(frame).toBeHidden()
+    const backToChat = page.getByRole('button', { name: 'Back to chat', exact: true })
+    if (await backToChat.isVisible()) await backToChat.click()
+    await expect(editor(page)).toHaveText('Keep this draft while managing plugins')
+  })
+}
+
+for (const width of [390, 1440]) {
   for (const scale of [100, 150]) {
     test.extend({ hasTouch: width === 390 })(`settings actions retain drafts and transfer modal focus at ${width}px and ${scale}%`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 960 })

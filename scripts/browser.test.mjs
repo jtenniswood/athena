@@ -28,6 +28,18 @@ function load(file, globals = {}, moduleCache = new Map()) {
   return context.exports
 }
 const { browserPlugin, scopeBrowserStorage, useBrowserTouchHooks } = load('src/upstream/browser-plugin.ts')
+test('plugin installs return to the settings manager only when launched from settings', () => {
+  const { keepBrowserPluginInstallInSettings } = load('src/upstream/browser-plugin.ts')
+  const source = readFileSync(path.join(root, '../desktop/src/app/settings/plugin-install-modal.tsx'), 'utf8')
+  const output = keepBrowserPluginInstallInSettings(source)
+  const destination = output.split('\n').find(line => line.includes("navigate(location.pathname === '/settings'"))
+  for (const [pathname, expected] of [['/settings', '/settings?tab=plugins&manage=1'], ['/capabilities', '/capabilities?tab=plugins']]) {
+    let actual
+    vm.runInNewContext(destination, { location: { pathname }, navigate: value => { actual = value } })
+    assert.equal(actual, expected)
+  }
+  assert.throws(() => keepBrowserPluginInstallInSettings(source.replace("navigate('/capabilities?tab=plugins')", 'navigate(destination)')), /destination changed/)
+})
 test('composer queue action receives an explicit browser identity', () => {
   const source = '<button aria-label={c.queueMessage}><Layers3 /></button>\n<button aria-label={showStop ? c.stop : c.send}><Send /></button>'
   const output = useBrowserTouchHooks(source, '/workspace/apps/web-desktop')
