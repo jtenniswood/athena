@@ -15,8 +15,10 @@ explicitly and does not deploy the current Docker/Komodo stack.
 
 `.github/workflows/release.yml` runs for version tags and manual dispatches. It
 builds and publishes a native `linux/amd64` image after checking the pinned
-renderer, typechecking, and building the frontend. Every run publishes `latest`
-and `sha-<revision>`; version tags also publish their version tag. The renderer
+renderer, typechecking, and building the frontend. Stable main and version-tag
+builds publish `latest` and `sha-<revision>`; version tags also publish their
+version tag. Manual feature branch builds publish `dev-latest` and
+`dev-sha-<revision>` instead. The renderer
 revision comes from `flake.lock`.
 
 A manual dispatch on `main` also sends a signed deploy request to the configured
@@ -51,7 +53,10 @@ To build a test image without moving a release tag or deploying it, open
 **Actions → Build development image → Run workflow** and select the branch to
 build. The workflow publishes `ghcr.io/jtenniswood/athena:dev-latest` and the
 immutable `dev-sha-<revision>` tag. Each completed run updates `dev-latest`;
-version releases alone update `latest`.
+only stable main and version-tag publication updates `latest`. Both publishers
+use `scripts/image-publication.mjs` to select tags, release identity, and deployment
+eligibility. Stable version tags use `vMAJOR.MINOR.PATCH`; malformed or prerelease
+tags cannot update the stable channel.
 
 On the host, pull the latest ad hoc build with:
 
