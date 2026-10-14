@@ -47,12 +47,17 @@ services:
     ports:
       - "4174:80"
     volumes:
+      - athena-preferences:/data/athena
       - "${HOME}/.hermes:/data/hermes:ro"
+
+volumes:
+  athena-preferences:
 ```
 
-The volume gives Athena read-only access to installed `plugins/` and
-`desktop-plugins/` assets in your Hermes home directory. Remove the `volumes`
-section if you do not use filesystem plugins.
+The `athena-preferences` volume stores account preferences for syncing across
+devices. Keep it when recreating or upgrading the container.
+The Hermes directory mount gives Athena read-only access to installed `plugins/`
+and `desktop-plugins/` assets. Remove that mount if you do not use filesystem plugins.
 
 ## 3. Start Athena
 

@@ -1,4 +1,5 @@
 import type {} from '../upstream/types'
+import { saveSyncedPreference } from './preference-sync'
 
 const WEB_ZOOM_STORAGE_KEY = 'hermes-web.ui-scale'
 const MOBILE_WEB_ZOOM_STORAGE_KEY = 'hermes-web.ui-scale.mobile'
@@ -80,11 +81,7 @@ export function createWebZoomBridge(): NonNullable<Window['hermesDesktop']['zoom
     document.documentElement.style.setProperty('zoom', scale)
 
     if (persist) {
-      try {
-        window.localStorage.setItem(zoomStorageKey(), String(change.percent))
-      } catch {
-        // Private browsing or a blocked storage area should not disable zoom.
-      }
+      saveSyncedPreference(zoomStorageKey(), String(change.percent))
     }
 
     for (const listener of listeners) {

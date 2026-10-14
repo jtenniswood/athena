@@ -1,4 +1,6 @@
-/** Browser-scoped preferences. Keys stay stable to preserve existing installs. */
+import { saveSyncedPreference } from '../platform/preference-sync'
+
+/** Browser preference keys stay stable to preserve existing installs. */
 export const NAVIGATION_TABS = ['sessions', 'bots'] as const
 export type NavigationTab = typeof NAVIGATION_TABS[number]
 export const NAVIGATION_TAB_LABELS: Record<NavigationTab, string> = { sessions: 'Sessions', bots: 'Bots' }
@@ -23,7 +25,7 @@ function read(key: string): string | null {
 }
 
 export function writeBrowserPreference(key: keyof typeof KEYS, value: string): void {
-  try { storage()?.setItem(KEYS[key], value) } catch { /* Optional browser preference. */ }
+  saveSyncedPreference(KEYS[key], value)
 }
 
 export function clampNavigationWidth(width: number): number {

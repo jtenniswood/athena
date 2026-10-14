@@ -5,6 +5,7 @@ import { Codicon } from '../upstream/browser-api'
 import { notifyConversationOpen } from './conversation-navigation'
 
 import { HIDDEN_SECTIONS_KEY, readHiddenSections } from './sidebar-section-preferences'
+import { saveSyncedPreference } from '../platform/preference-sync'
 
 type SidebarSection = { key: string; label: string }
 
@@ -40,7 +41,7 @@ export function useBrowserSidebarSections() {
   const availableSections = [...new Map([...registered.values()].map(section => [section.key, section])).values()]
   if (!availableSections.some(section => section.key === 'cron-jobs')) availableSections.push({ key: 'cron-jobs', label: 'Cron jobs' })
   useEffect(() => {
-    try { localStorage.setItem(HIDDEN_SECTIONS_KEY, JSON.stringify({ version: 2, hidden: hiddenSections })) } catch { /* Optional preference. */ }
+    saveSyncedPreference(HIDDEN_SECTIONS_KEY, JSON.stringify({ version: 2, hidden: hiddenSections }))
   }, [hiddenSections])
   const actions: BrowserAction[] = availableSections.filter(section => section.key !== 'sessions').map(section => ({
     key: section.key,

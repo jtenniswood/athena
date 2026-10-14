@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { saveSyncedPreference } from '../platform/preference-sync'
 
 const KEY = 'hermes-web.browser.show-auxiliary-transcript-content'
 const CHANGE_EVENT = 'hermes-web:transcript-preferences-change'
@@ -12,11 +13,7 @@ export function readShowAuxiliaryTranscriptContent(): boolean {
 }
 
 export function writeShowAuxiliaryTranscriptContent(show: boolean): void {
-  try {
-    window.localStorage.setItem(KEY, String(show))
-  } catch {
-    // The setting remains usable in this tab when browser storage is unavailable.
-  }
+  saveSyncedPreference(KEY, String(show))
   window.dispatchEvent(new Event(CHANGE_EVENT))
 }
 

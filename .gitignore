@@ -20,6 +20,9 @@ apps/web-desktop/logs/
 # Exact renderer checkout prepared from flake.lock
 .renderer/
 
+# Local development preference storage
+.athena/
+
 # Browser test output
 test-results/
 playwright-report/

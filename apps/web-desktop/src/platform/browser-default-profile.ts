@@ -1,9 +1,14 @@
 import { WEB_CONNECTION_ID } from './connection'
 import { createBrowserDefaultProfileRoute } from './default-profile-route'
+import { saveSyncedPreference } from './preference-sync'
 
 /** One preference owner for the bridge, profile menu and new-session commands. */
 export const browserDefaultProfile = createBrowserDefaultProfileRoute(
-  () => window.localStorage,
+  () => ({
+    getItem: key => window.localStorage.getItem(key),
+    setItem: (key, value) => saveSyncedPreference(key, value, true),
+    removeItem: key => saveSyncedPreference(key, null, true)
+  }),
   WEB_CONNECTION_ID,
   {
     subscribe: listener => {

@@ -24,7 +24,8 @@ export function runtimeConfiguration(env = process.env) {
   const home = env.HERMES_HOME || '/data/hermes'
   const staticRoot = env.HERMES_STATIC_ROOT || '/usr/share/nginx/html'
   const stateDir = env.HERMES_STATE_DIR || '/tmp/hermes-nginx'
-  for (const value of [home, staticRoot, stateDir]) {
+  const preferencesDir = env.HERMES_PREFERENCES_DIR || '/data/athena'
+  for (const value of [home, staticRoot, stateDir, preferencesDir]) {
     if (!path.isAbsolute(value) || /[\r\n\0"$\\]/.test(value)) throw new Error('Hosting paths must be absolute without control characters, quotes, dollars, or backslashes')
   }
   const port = Number(env.HERMES_PORT || '80')
@@ -37,7 +38,7 @@ export function runtimeConfiguration(env = process.env) {
     throw new Error('HERMES_AUTH_MODE must be auto, hermes, or oidc')
   }
   return {
-    target, home, staticRoot, stateDir, listen,
+    target, home, staticRoot, stateDir, preferencesDir, listen,
     publicConfig: {
       version: 1,
       auth: { mode: authMode },

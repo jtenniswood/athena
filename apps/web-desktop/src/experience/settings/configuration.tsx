@@ -1,5 +1,6 @@
 import { settingsPageLabel } from './policy'
 import { useId } from 'react'
+import { BrowserPreferenceSync } from './preference-sync'
 import { useFollowupBehavior, writeFollowupBehavior } from '../followup-preferences'
 import { useShowAuxiliaryTranscriptContent, writeShowAuxiliaryTranscriptContent } from '../transcript-preferences'
 
@@ -31,6 +32,7 @@ export function BrowserConfigurationPage({ commands }: { commands: BrowserConfig
   const showAuxiliaryTranscriptContent = useShowAuxiliaryTranscriptContent()
   return <section className="browser-settings-page browser-configuration-page" aria-label="Configuration management">
     <h2 className="browser-settings-page-title">{settingsPageLabel('config:browser-configuration', 'Configuration')}</h2>
+    <BrowserPreferenceSync />
     <section className="browser-followup-setting" aria-labelledby="browser-followup-setting-title">
       <h3 id="browser-followup-setting-title">Follow-up behavior</h3>
       <p>Queue or steer messages sent during a reply. Cmd/Ctrl+Enter uses the other action once.</p>

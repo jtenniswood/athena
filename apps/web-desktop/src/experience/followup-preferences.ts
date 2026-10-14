@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { saveSyncedPreference } from '../platform/preference-sync'
 
 export type FollowupBehavior = 'queue' | 'steer'
 
@@ -14,11 +15,7 @@ export function readFollowupBehavior(): FollowupBehavior {
 }
 
 export function writeFollowupBehavior(value: FollowupBehavior): void {
-  try {
-    window.localStorage.setItem(KEY, value)
-  } catch {
-    // The setting is optional when browser storage is unavailable.
-  }
+  saveSyncedPreference(KEY, value)
   window.dispatchEvent(new Event(CHANGE_EVENT))
 }
 

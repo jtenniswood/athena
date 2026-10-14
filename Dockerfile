@@ -41,13 +41,14 @@ CMD ["node", "scripts/preview/gateway.mjs"]
 
 # ---- runtime stage: nginx -------------------------------------------------------
 FROM nginx:alpine
-# Node runs only the shared configuration generator at startup; nginx serves requests.
+# Node owns account preference storage; nginx serves the UI and proxies Hermes.
 RUN apk add --no-cache nodejs
 
 # The gateway URL + HERMES_HOME are injected by docker-entrypoint.sh via
 # the shared validated configuration generator at container start.
 COPY nginx.conf.template /etc/nginx/hermes.conf.template
 COPY scripts/runtime-config.mjs /opt/hermes/runtime-config.mjs
+COPY scripts/preference-schema.mjs scripts/preferences-server.mjs scripts/serve.mjs /opt/hermes/
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
@@ -55,9 +56,12 @@ COPY --from=build /app/apps/web-desktop/dist /usr/share/nginx/html
 
 # Defaults — override with -e at runtime.
 ENV HERMES_GATEWAY_URL=http://127.0.0.1:9119 \
-    HERMES_HOME=/data/hermes
+    HERMES_HOME=/data/hermes \
+    HERMES_PREFERENCES_DIR=/data/athena
+
+VOLUME /data/athena
 
 EXPOSE 80
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["node", "/opt/hermes/serve.mjs"]
