@@ -12,6 +12,8 @@ const read = file => readFileSync(new URL(`../../apps/web-desktop/${file}`, impo
 // normally supplied by Vite before transpiling the application modules.
 const compile = file => ts.transpileModule(read(file).replaceAll('import.meta.env.DEV', 'false'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText
 const guard = compile('src/platform/reload-safety.ts')
+const pending = compile('src/platform/pending-work.ts')
+const drafts = compile('src/platform/draft-safety.ts')
 const state = compile('src/platform/connection-state.ts')
 const network = compile('src/pwa/update-network.ts')
 const registration = compile('src/pwa/register.ts')
@@ -26,7 +28,13 @@ test.beforeAll(async () => {
     } else if (req.url === '/api/review') {
       res.setHeader('Content-Type', 'text/html')
       res.end(`<!doctype html><html><head><title>Browser safety fixture</title></head><body><div id="root"><textarea aria-label="Draft"></textarea></div>
-<script>window.exports={};${guard};window.safety=exports;</script>
+<script>window.exports={};${pending};window.pendingWork=exports;</script>
+<script>window.exports={};${drafts};window.draftSafety=exports;</script>
+<script>window.exports={};window.require=name=>{
+ if (name==='./pending-work') return window.pendingWork;
+ if (name==='./draft-safety') return window.draftSafety;
+ throw new Error('Unexpected reload safety import: '+name);
+};${guard};window.safety=exports;</script>
 <script>window.exports={};window.require=()=>({});${state};window.stateFactory=exports.createConnectionState;</script>
 <script>window.exports={};${network};window.updateNetwork=exports;</script>
 <script>
@@ -38,11 +46,11 @@ window.exports={};window.require=name=>{
 const register=navigator.serviceWorker.register.bind(navigator.serviceWorker);
 navigator.serviceWorker.register=()=>register('/api/worker.js',{scope:'/api/',updateViaCache:'none'});
 window.safety.setActiveWork({count:0});
-window.__HERMES_WEB_DRAFT_SNAPSHOT__=()=>{
+window.draftSafety.registerBrowserDraftSafety({snapshot:()=>{
  const text=document.querySelector('textarea').value;
  localStorage.setItem('fixture-drafts',JSON.stringify(text?{session:text}:{}));
- return {storageKey:'fixture-drafts',texts:text?{session:text}:{},attachments:window.unsentFiles||0,blocked:false};
-};
+ return {storageKey:'fixture-drafts',texts:text?{session:text}:{},attachments:window.unsentFiles||0};
+},flush:async()=>{}});
 let updatePanel, updateStatus, updateAction;
 window.addEventListener('hermes-update-available', event => {
  const notice=event.detail;

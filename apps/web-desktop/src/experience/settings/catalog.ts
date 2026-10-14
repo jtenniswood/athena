@@ -18,6 +18,8 @@ export type SettingsPageDefinition = {
   scope?: SettingsScope
   scopeDescription?: string
   capability?: string
+  icon?: string
+  surface?: 'renderer' | 'theme' | 'sounds' | 'configuration' | 'tool'
   visibility?: 'visible' | 'hidden'
   children?: readonly SettingsPageDefinition[]
 }
@@ -51,9 +53,9 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
     title: 'Preferences',
     pages: [
       { id: 'config:appearance', title: 'Appearance', scope: 'mixed' },
-      { id: 'config:browser-theme', title: 'Theme', aliases: ['Colour themes', 'Color themes'], scope: 'browser' },
+      { id: 'config:browser-theme', title: 'Theme', aliases: ['Colour themes', 'Color themes'], scope: 'browser', icon: 'color-mode', surface: 'theme' },
       { id: 'notifications', title: 'Notifications', aliases: ['Desktop alerts'], scope: 'browser' },
-      { id: 'config:browser-sounds', title: 'Sounds', scope: 'browser' },
+      { id: 'config:browser-sounds', title: 'Sounds', scope: 'browser', icon: 'unmute', surface: 'sounds' },
       { id: 'keybinds', title: 'Keyboard Shortcuts', scope: 'browser' }
     ]
   },
@@ -65,7 +67,7 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
       { id: 'providers', title: 'AI Connections', aliases: ['Providers', 'accounts', 'API keys', 'endpoints'], scope: 'connected-server' },
       { id: 'config:chat', title: 'Chat', aliases: ['Behavior', 'Behaviour', 'Attachments'], scope: 'mixed' },
       { id: 'config:voice', title: 'Voice', scope: 'mixed' },
-      { id: 'config:profiles', title: 'Profiles', scope: 'connected-server' },
+      { id: 'config:profiles', title: 'Profiles', scope: 'connected-server', icon: 'account', surface: 'tool' },
       { id: 'config:memory', title: 'Memory', aliases: ['Memory & context'], scope: 'connected-server' }
     ]
   },
@@ -79,7 +81,8 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
         capability: 'server.real-browser-profile',
         scopeDescription: 'Browser automation runs on the connected Hermes server. “Use My Real Browser Profile” uses that server’s supported Chromium profile, not the browser viewing this page. Private URLs and local network access refer to networks visible from that server.'
       },
-      { id: 'config:webhooks', title: 'Webhooks', scope: 'connected-server' },
+      { id: 'config:webhooks', title: 'Webhooks', scope: 'connected-server', icon: 'globe', surface: 'tool' },
+      { id: 'plugins', title: 'Plugins', scope: 'connected-server' },
       { id: 'config:safety', title: 'Permissions', aliases: ['Permissions & safety'], scope: 'connected-server' },
       {
         id: 'vault', title: 'Saved Logins', aliases: ['Passwords & Logins'], scope: 'connected-server', visibility: 'hidden',
@@ -99,7 +102,7 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
     title: 'Service',
     pages: [
       { id: 'gateway', title: 'Gateway', aliases: ['Gateways', 'Server Connection', 'sign in', 'sign out'], scope: 'connection' },
-      { id: 'config:command-center', title: 'Command center', aliases: ['system', 'logs', 'usage', 'maintenance'], scope: 'connected-server' },
+      { id: 'config:command-center', title: 'Command center', aliases: ['system', 'logs', 'usage', 'maintenance'], scope: 'connected-server', icon: 'symbol-misc', surface: 'tool' },
       {
         id: 'billing', title: 'Billing', aliases: ['Usage & billing'], scope: 'connected-server',
         scopeDescription: 'This page shows billing from the connected Hermes server, such as Nous usage. It does not include external model provider or web hosting charges.'
@@ -110,11 +113,11 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
     id: 'maintenance',
     title: 'Maintenance',
     pages: [
-      { id: 'config:system-updates', title: 'System updates', aliases: ['backend', 'update Hermes', 'version'], scope: 'connected-server' },
+      { id: 'config:system-updates', title: 'System updates', aliases: ['backend', 'update Hermes', 'version'], scope: 'connected-server', icon: 'cloud-download', surface: 'tool' },
       { id: 'sessions', title: 'Archived Chats', scope: 'connected-server' },
       {
         id: 'config:browser-configuration', title: 'Configuration',
-        aliases: ['Backup & reset', 'backup', 'import', 'export', 'reset'], scope: 'connected-server'
+        aliases: ['Backup & reset', 'backup', 'import', 'export', 'reset'], scope: 'connected-server', icon: 'settings-gear', surface: 'configuration'
       },
       { id: 'config:advanced', title: 'Advanced', scope: 'mixed' }
     ]

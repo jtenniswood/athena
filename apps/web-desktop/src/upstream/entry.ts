@@ -5,8 +5,11 @@ import { installSidebarCollapse } from '../web-sidebar-collapse'
 export async function startBrowserHost(): Promise<void> {
   const { installWebBridge } = await import('../web-bridge/install')
   installWebBridge()
+  const { observeRendererPreferences } = await import('./preference-sync')
+  observeRendererPreferences()
   prepareBrowserBridge()
   installSidebarCollapse()
+  await import('./engine-registration')
   const { initializeBrowserShell } = await import('./browser-initialize')
   initializeBrowserShell()
   await import('../../../desktop/src/main')

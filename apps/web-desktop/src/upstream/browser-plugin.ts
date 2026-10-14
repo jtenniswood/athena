@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import path from 'node:path'
 import type { Plugin } from 'vite'
 import registry from './compatibility-registry.json'
+import { useBrowserSettingsController } from './settings-controller.ts'
 const contracts = registry.filter(entry => entry.sourceRoot === 'renderer' && entry.module && entry.sourceHash)
 const storageScope = `\n  if (/^hermes\\.desktop\\.(?:layout|pane|sidebar|fileBrowser|rightRail|profileRail|terminal|statusbar|hiddenStrip|dismissedPanes|userPlaced)/.test(key)) key = 'hermes-web.browser.' + key\n`
 const browserRootPath = (root: string): string => path.join(root, 'src/upstream/browser-root.tsx')
@@ -246,102 +247,6 @@ export function useBrowserSettingsToolActions(source: string, root: string): str
   return `import { BrowserSettingsToolActions } from ${owner}\n` + source
     .replace(target, '<BrowserSettingsToolActions.Provider value={{ onDeleteSession: removeSession, onOpenSession: sessionId => openSession(sessionId, navigate) }}>\n          <SettingsView\n')
     .replace(end, '\n          </BrowserSettingsToolActions.Provider>' + end)
-}
-
-export function useBrowserSettingsPresentation(source: string, root: string): string {
-  const importTarget = "import { OverlayMain, OverlayNav, type OverlayNavGroup, OverlaySplitLayout } from '../overlays/overlay-split-layout'"
-  const overlayImport = "import { OverlayView } from '../overlays/overlay-view'"
-  const overlayTarget = '<OverlayView closeLabel={t.settings.closeSettings} edgeBadge={searchPill} onClose={onClose}>'
-  const layoutStart = source.indexOf('      <OverlaySplitLayout>')
-  const layoutEnd = source.indexOf('      </OverlaySplitLayout>', layoutStart)
-  if (source.split(importTarget).length !== 2 || source.split(overlayImport).length !== 2 || layoutStart < 0 || layoutEnd < 0 || source.split(overlayTarget).length !== 2) {
-    throw new Error('Browser settings presentation boundary changed')
-  }
-  const controlReplacements: [string, string][] = [
-    ['      type="button"\n    >\n      <Search className="size-3" />', '      aria-label={t.settings.search.pill}\n      type="button"\n    >\n      <Search className="size-3" />'],
-    ["useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:model' as SettingsViewId)", "useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:appearance' as SettingsViewId)"],
-    [
-      '  const subpage = resolveSettingsSubpage(activeView, params)',
-      "  const browserThemeRedirect = activeView === 'config:appearance' && resolveSettingsSubpage(activeView, params) === 'theme'\n  const browserSoundsRedirect = activeView === 'notifications' && resolveSettingsSubpage(activeView, params) === 'sounds'\n  const subpage = ['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance', 'config:chat'].includes(activeView) ? undefined : resolveSettingsSubpage(activeView, params)"
-    ],
-    [
-      '  const needsSubpageRedirect = Boolean(subpage && subpage !== requestedSubpage)',
-      '  const needsSubpageRedirect = browserThemeRedirect || browserSoundsRedirect || Boolean(subpage && subpage !== requestedSubpage)'
-    ],
-    [
-      "  if (subpage) {\n    subpageSearch.set('page', subpage)\n  }",
-      "  if (browserThemeRedirect) {\n    subpageSearch.set('tab', 'config:browser-theme')\n    subpageSearch.delete('page')\n  } else if (browserSoundsRedirect) {\n    subpageSearch.set('tab', 'config:browser-sounds')\n    subpageSearch.delete('page')\n  } else if (subpage) {\n    subpageSearch.set('page', subpage)\n  }"
-    ],
-    [
-      '      const destination = page ?? settingsSubpages(view)[0]?.id',
-      "      const destination = page ?? (['gateway', 'keybinds', 'sessions', 'config:safety', 'config:appearance', 'config:chat'].includes(view) ? undefined : settingsSubpages(view)[0]?.id)"
-    ],
-    ["        const children = settingsSubpages(view)", "        const children = ['config:appearance', 'config:chat', 'notifications'].includes(view) ? [] : settingsSubpages(view)"],
-    ["import { SettingsSubpageHeader } from './subpage-navigation'\n", ''],
-    ["  const activeGroup = navGroups.find(group => group.active)\n  const activeChild = activeGroup?.children?.find(child => child.active)\n", ''],
-  ]
-  controlReplacements.push(
-    ["const SETTINGS_VIEWS: readonly SettingsViewId[] = [", "const SETTINGS_VIEWS: readonly SettingsViewId[] = [\n  ...SETTINGS_TOOL_PAGES.map(page => page.id),\n  'config:browser-theme',\n  'config:browser-sounds',\n  'config:browser-configuration',"],
-    ["          {\n            active: activeView === 'notifications',", "          {\n            active: activeView === 'config:browser-theme',\n            icon: codiconIcon('color-mode'),\n            id: 'config:browser-theme',\n            label: 'Theme',\n            onSelect: () => setActiveView('config:browser-theme')\n          },\n          {\n            active: activeView === 'config:browser-sounds',\n            icon: codiconIcon('unmute'),\n            id: 'config:browser-sounds',\n            label: 'Sounds',\n            onSelect: () => setActiveView('config:browser-sounds')\n          },\n          {\n            active: activeView === 'notifications',"],
-    ["          {\n            active: activeView === 'about',", "          {\n            active: activeView === 'config:browser-configuration',\n            gapBefore: true,\n            icon: Settings2,\n            id: 'config:browser-configuration',\n            label: 'Configuration',\n            onSelect: () => setActiveView('config:browser-configuration')\n          },\n          {\n            active: activeView === 'about',"],
-    ['      importInputRef={importInputRef}', '      importInputRef={importInputRef}\n      configurationCommands={configurationCommands}\n      configurationScopeProfile={scopeProfile}'],
-    ['getHermesConfigRecord()', 'getHermesConfigRecord(scopeProfile)'],
-    ['saveHermesConfig(await getHermesConfigDefaults())', 'saveHermesConfig(await getHermesConfigDefaults(), scopeProfile)'],
-    ['title: t.settings.resetConfirm', 'title: `${t.settings.resetConfirm} — ${scopeProfile}`']
-  )
-  for (const [before] of controlReplacements) {
-    if (source.split(before).length !== 2) throw new Error('Browser settings control labels changed')
-  }
-  const owner = JSON.stringify(path.join(root, 'src/experience/settings/frame'))
-  const navFooterStart = '  const navFooter = ('
-  const activeContentStart = '\n\n  const SubpageView ='
-  if (source.split(navFooterStart).length !== 2 || source.split(activeContentStart).length !== 2) {
-    throw new Error('Browser configuration command boundary changed')
-  }
-  const navFooter = `  const configurationCommands = {
-    export: {
-      description: 'Download this profile’s configuration as a JSON file.',
-      label: t.settings.exportConfig,
-      run: exportConfig
-    },
-    import: {
-      description: 'Restore this profile’s configuration from a JSON file.',
-      label: t.settings.importConfig,
-      run: () => {
-        triggerHaptic('open')
-        importInputRef.current?.click()
-      }
-    },
-    reset: {
-      description: 'Restore this profile’s configuration defaults, including hidden options. You will be asked to confirm.',
-      label: t.settings.resetToDefaults,
-      run: () => {
-        triggerHaptic('warning')
-        return resetConfig()
-      }
-    }
-  }`
-  const layoutTarget = source.slice(layoutStart, layoutEnd + '      </OverlaySplitLayout>'.length)
-  const layoutReplacement = `      <SettingsBreadcrumbContext.Provider value={false}>
-        {needsSubpageRedirect ? (
-          <Navigate replace to={{ hash, pathname, search: '?' + subpageSearch }} />
-        ) : (
-          SETTINGS_TOOL_PAGES.some(page => page.id === activeView)
-            ? <BrowserSettingsToolContent view={activeView} onClose={onClose} />
-            : activeSettingsContent
-        )}
-      </SettingsBreadcrumbContext.Provider>`
-  let output = source
-    .replace(importTarget, '')
-    .replace(overlayImport, '')
-    .replace(overlayTarget, '<BrowserSettingsPresentation activeView={activeView} backLabel={t.common.back} closeLabel={t.settings.closeSettings} groups={navGroups} onClose={onClose} search={searchPill} title={t.commandCenter.settings}>')
-    .replace(layoutTarget, layoutReplacement)
-    .replace('</OverlayView>', '</BrowserSettingsPresentation>')
-  const transformedNavStart = output.indexOf(navFooterStart)
-  const transformedNavEnd = output.indexOf(activeContentStart, transformedNavStart)
-  output = output.slice(0, transformedNavStart) + navFooter + output.slice(transformedNavEnd)
-  for (const [before, after] of controlReplacements) output = output.replace(before, after)
-  return `import { SETTINGS_TOOL_PAGES, BrowserSettingsToolContent } from ${JSON.stringify(path.join(root, 'src/upstream/settings-tools'))}\nimport { BrowserSettingsPresentation } from ${owner}\n` + output
 }
 
 export function useBrowserConfigurationSettings(source: string, root: string): string {
@@ -1186,7 +1091,7 @@ export function enableBrowserUngroupedSessions(source: string, surface: 'store' 
 
 export function disableBrowserSessionTabs(source: string): string {
   const keybind = '    openNewSessionTab,\n'
-  const marker = '    // Browser-focused shell does not register chat tab creation.\n'
+  const marker = '    // Browser-focused shell does not register chat tab creation.\n    openNewSessionTab: () => undefined,\n'
   const action = '    $newSessionTabAction.set(openNewSessionTab)'
   const disabledAction = '    $newSessionTabAction.set(null)'
   const newSession = '    onNewSessionInWorkspace: path => startSessionInWorkspace(path, { openTab: true }),'
@@ -1385,7 +1290,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     respectBrowserOverlayFocusReturn: source => respectBrowserOverlayFocusReturn(source, root),
     useBrowserOverlayFocusOwner: source => useBrowserOverlayFocusOwner(source, root),
     useBrowserSettingsToolActions: source => useBrowserSettingsToolActions(source, root),
-    useBrowserSettingsPresentation: source => useBrowserSettingsPresentation(source, root),
+    useBrowserSettingsController: source => useBrowserSettingsController(source, root),
     useBrowserConfigurationSettings: source => useBrowserConfigurationSettings(source, root),
     filterBrowserSettingsFields: source => filterBrowserSettingsFields(source, root),
     useBrowserConnectingVisual,

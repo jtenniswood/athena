@@ -1774,7 +1774,7 @@ for (const width of [390, 1440]) {
     ])
     await expect(page.locator('.browser-settings-category-button:not(.is-child) > span:not(.codicon)')).toHaveText([
       'Appearance', 'Theme', 'Notifications', 'Sounds', 'Keyboard Shortcuts', 'Models', 'AI Connections', 'Chat', 'Voice',
-      'Profiles', 'Memory', 'Workspace', 'Webhooks', 'Permissions',
+      'Profiles', 'Memory', 'Workspace', 'Webhooks', 'Plugins', 'Permissions',
       'Credentials', 'Gateway', 'Command center', 'Billing', 'System updates', 'Archived Chats', 'Configuration', 'Advanced'
     ])
     await page.screenshot({ path: testInfo.outputPath('settings-groups.png') })

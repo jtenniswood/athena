@@ -4,11 +4,12 @@ import path from 'node:path'
 import { test } from 'node:test'
 import vm from 'node:vm'
 import ts from 'typescript'
+import * as preferenceContract from './browser-preference-contract.mjs'
 
 const root = path.resolve('apps/web-desktop/src')
 
-function startupHarness({ configurationError, rendererError, existingBridge, signInReady = Promise.resolve() } = {}) {
-  const state = { configured: false, tracking: false, tokenConsumed: false, signedIn: false, shellInitialized: false, rendererLoaded: false }
+function startupHarness({ configurationError, rendererError, existingBridge, signInReady = Promise.resolve(), preferencesReady = Promise.resolve() } = {}) {
+  const state = { configured: false, tracking: false, tokenConsumed: false, signedIn: false, engineRegistered: false, preferencesLoaded: false, shellInitialized: false, rendererLoaded: false }
   const listeners = new Map()
   const storage = new Map([['hermes-web.comparison.profile', 'saved-profile']])
   const window = {
@@ -34,15 +35,29 @@ function startupHarness({ configurationError, rendererError, existingBridge, sig
     'platform/reload-safety.ts': { trackMediaRequests() { state.tracking = true } },
     'platform/connection-state.ts': { consumeConnectionToken() { state.tokenConsumed = true } },
     'platform/sign-in.ts': { async waitForSignIn() { await signInReady; state.signedIn = true } },
+    'platform/preference-sync.ts': { async initializePreferenceSync() {
+      assert.equal(state.signedIn, true)
+      await preferencesReady
+      state.preferencesLoaded = true
+    } },
+    'upstream/preference-sync.ts': { observeRendererPreferences() { assert.ok(window.hermesDesktop) } },
     'web-bridge/bridge.ts': () => {
       // Check prerequisites at dependency evaluation, before installation.
       assert.equal(state.configured && state.tracking && state.tokenConsumed && state.signedIn, true)
+      assert.equal(state.preferencesLoaded, true)
       assert.equal(document.documentElement.dataset.experience, 'browser')
       assert.equal(storage.get('hermes-web.browser.profile'), 'saved-profile')
       return { createWebBridge: () => ({ getConnection: async profile => ({ profile }), profile: {} }) }
     },
+    'upstream/engine-registration.ts': () => {
+      assert.ok(window.hermesDesktop)
+      assert.equal(state.signedIn, true)
+      state.engineRegistered = true
+      return {}
+    },
     'upstream/browser-initialize.ts': { initializeBrowserShell() {
       assert.ok(window.hermesDesktop)
+      assert.equal(state.engineRegistered, true)
       state.shellInitialized = true
     } },
     '../../desktop/src/main.ts': () => {
@@ -68,7 +83,7 @@ function startupHarness({ configurationError, rendererError, existingBridge, sig
     }
     const context = vm.createContext({
       exports: {}, window, document, sessionStorage, URL,
-      require: specifier => load(path.resolve(path.dirname(filename), `${specifier}.ts`))
+      require: specifier => specifier.endsWith('/browser-preference-contract.mjs') ? preferenceContract : load(path.resolve(path.dirname(filename), `${specifier}.ts`))
     })
     const source = readFileSync(filename, 'utf8')
     vm.runInContext(ts.transpileModule(source, {
@@ -107,6 +122,21 @@ test('invalid configuration stops startup before bridge and renderer initializat
   assert.equal(harness.window.hermesDesktop, undefined)
   assert.equal(harness.listeners.size, 0)
   assert.equal(harness.state.rendererLoaded, false)
+})
+
+test('account preferences load before any renderer store reads local storage', async () => {
+  let finishPreferences
+  const preferencesReady = new Promise(resolve => { finishPreferences = resolve })
+  const harness = startupHarness({ preferencesReady })
+  const starting = harness.load('startup.ts').startBrowserApplication()
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(harness.state.signedIn, true)
+  assert.equal(harness.state.rendererLoaded, false)
+  assert.equal(harness.window.hermesDesktop, undefined)
+  finishPreferences()
+  harness.finishRenderer()
+  await starting
+  assert.equal(harness.state.rendererLoaded, true)
 })
 
 test('signed-out startup waits for authentication before installing the bridge or loading chat', async () => {

@@ -6,6 +6,7 @@ export interface HostingConfiguration {
   home: string
   staticRoot: string
   stateDir: string
+  preferencesDir: string
   listen: string
   publicConfig: {
     version: 1

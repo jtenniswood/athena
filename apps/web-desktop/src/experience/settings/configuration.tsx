@@ -1,5 +1,7 @@
 import { settingsPageLabel } from './policy'
 import { useId } from 'react'
+import { BrowserPreferenceSync } from './preference-sync'
+import { announceSettingsReset } from '../../upstream/settings-interactions'
 import { useFollowupBehavior, writeFollowupBehavior } from '../followup-preferences'
 import { useShowAuxiliaryTranscriptContent, writeShowAuxiliaryTranscriptContent } from '../transcript-preferences'
 
@@ -13,6 +15,17 @@ export type BrowserConfigurationCommands = {
   export: BrowserConfigurationCommand
   import: BrowserConfigurationCommand
   reset: BrowserConfigurationCommand
+}
+
+export function createBrowserConfigurationCommands(
+  labels: { export: string; import: string; reset: string },
+  commands: { export: () => void | Promise<void>; import: () => void; reset: () => void | Promise<void> }
+): BrowserConfigurationCommands {
+  return {
+    export: { label: labels.export, description: 'Download this profile’s configuration as a JSON file.', run: commands.export },
+    import: { label: labels.import, description: 'Restore this profile’s configuration from a JSON file.', run: commands.import },
+    reset: { label: labels.reset, description: 'Restore this profile’s configuration defaults, including hidden options. You will be asked to confirm.', run: () => { announceSettingsReset(); return commands.reset() } }
+  }
 }
 
 /** Keep upstream action handlers and confirmation flows on labelled controls. */
@@ -31,6 +44,7 @@ export function BrowserConfigurationPage({ commands }: { commands: BrowserConfig
   const showAuxiliaryTranscriptContent = useShowAuxiliaryTranscriptContent()
   return <section className="browser-settings-page browser-configuration-page" aria-label="Configuration management">
     <h2 className="browser-settings-page-title">{settingsPageLabel('config:browser-configuration', 'Configuration')}</h2>
+    <BrowserPreferenceSync />
     <section className="browser-followup-setting" aria-labelledby="browser-followup-setting-title">
       <h3 id="browser-followup-setting-title">Follow-up behavior</h3>
       <p>Queue or steer messages sent during a reply. Cmd/Ctrl+Enter uses the other action once.</p>

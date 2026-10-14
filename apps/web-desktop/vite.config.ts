@@ -1,13 +1,9 @@
-import { compatibilityRegistryPlugin } from '../../scripts/compatibility-registry.mjs'
-import { dependencyCompatibilityPlugin } from './src/upstream/dependency-compatibility'
-import { browserPlugin, browserActivityNotificationsPlugin } from './src/upstream/browser-plugin'
-import { athenaBranding } from './src/upstream/athena-branding'
-import { rendererOverrides } from './src/upstream/overrides'
+import { rendererAdapterPlugin, adapterAliases } from '../../scripts/renderer-adapter.mjs'
 import { runtimeConfiguration, runtimeScripts, matchesGatewayRoute, navigationFallbackDenylist, type HostingConfiguration } from '../../scripts/runtime-config.mjs'
-import { rendererAliases, compatibilityAliases, compatibilitySingletons } from '../../scripts/aliases.mjs'
+import { compatibilitySingletons } from '../../scripts/aliases.mjs'
 import { buildInfoPlugin } from '../../scripts/build-info.mjs'
+import { createPreferencesHandler, preferencesPath } from '../../scripts/preferences-server.mjs'
 import { defineConfig, loadEnv, type Plugin, type PreviewServer } from 'vite'
-import { rendererCompatibilityPlugin } from './src/upstream/transforms'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { createProxyServer, type ProxyServer } from 'http-proxy-3'
@@ -176,6 +172,10 @@ interface ProxyServerLike {
 }
 
 function attachDynamicProxy(server: ProxyServerLike): void {
+  const preferences = createPreferencesHandler({
+    target: hosting.target,
+    directory: process.env.HERMES_PREFERENCES_DIR || path.resolve(__dirname, '../../.athena/preferences')
+  })
   // Route HTTPS hostname-based gateways correctly (including Cloudflare
   // Tunnel) while retaining the app origin in forwarded metadata.
   const proxy: ProxyServer = createProxyServer({ changeOrigin: true, secure: true, ws: true })
@@ -204,6 +204,10 @@ function attachDynamicProxy(server: ProxyServerLike): void {
 
   server.middlewares.use((req, res, next) => {
     const pathname = req.url?.split('?')[0]
+    if (pathname === preferencesPath) {
+      void preferences(req, res)
+      return
+    }
     const scripts = runtimeScripts(hosting)
     if (pathname && Object.hasOwn(scripts, pathname.slice(1))) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
@@ -250,12 +254,8 @@ export default defineConfig(({ command, mode }) => {
   return {
   base: './',
   plugins: [
-    compatibilityRegistryPlugin(path.resolve(__dirname, '../..')),
-    dependencyCompatibilityPlugin(__dirname),
+    rendererAdapterPlugin(__dirname),
     buildInfoPlugin(),
-    athenaBranding(),
-    rendererOverrides(__dirname),
-    browserPlugin(__dirname),
     hermesDynamicProxy(),
     react(),
     tailwindcss(),
@@ -311,9 +311,7 @@ export default defineConfig(({ command, mode }) => {
       }
     }),
     emojibaseAssets(),
-    hermesPluginsAssets(),
-    rendererCompatibilityPlugin(path.resolve(__dirname, '../desktop/src')),
-    browserActivityNotificationsPlugin(__dirname)
+    hermesPluginsAssets()
   ],
   css: {
     postcss: { plugins: [] }
@@ -352,16 +350,7 @@ export default defineConfig(({ command, mode }) => {
     // (nix develop); realpathing them would make Vite look for node_modules
     // under the read-only store path and fail to resolve bare imports.
     preserveSymlinks: true,
-    alias: [
-      // UI 1.x no longer ships fonts; keep the renderer's Collapse face bundled.
-      {
-        find: '../../../node_modules/@nous-research/ui/dist/fonts/Collapse-Bold.woff2',
-        replacement: path.resolve(__dirname, 'src/assets/fonts/Collapse-Bold.woff2')
-      },
-      ...compatibilityAliases(__dirname).filter(alias => alias.find === '@/debug/dev-only'),
-      ...rendererAliases(),
-      ...compatibilityAliases(__dirname).filter(alias => alias.find !== '@/debug/dev-only')
-    ],
+    alias: adapterAliases(__dirname),
     dedupe: compatibilitySingletons(__dirname)
   },
   server: {

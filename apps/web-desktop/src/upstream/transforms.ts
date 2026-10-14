@@ -38,7 +38,7 @@ function rewrite(code: string, id: string): { code: string; map: null } | null {
     if (normalizedId.endsWith('/desktop/src/components/boot-failure-overlay.tsx')) {
       let patched = code.replace("  if (view === 'connect') {", `
   if (window.__HERMES_WEB_BRIDGE__) {
-    const configuredRetryAction = { ...retryAction, variant: 'secondary', onClick: () => {
+    const configuredRetryAction = { ...retryAction, variant: 'secondary' as const, onClick: () => {
       setBusy('retry')
       void window.hermesDesktop.applyConnectionConfig({ mode: 'remote' })
         .catch(error => notifyError(error, 'Could not reconnect'))
@@ -223,7 +223,7 @@ ${code.slice(targetEnd)}`
       normalizedId.endsWith('/apps/desktop/src/plugins/hermes-bots/roster-actions.ts') ||
       normalizedId.endsWith('/desktop/src/plugins/hermes-bots/roster-actions.ts')
     ) {
-      const withoutStaleFront = code.replace(/const fronted = focusExistingBotTab\(bot\)/, 'const fronted = null')
+      const withoutStaleFront = code.replace(/const fronted = focusExistingBotTab\(bot\)/, 'const fronted = window.__HERMES_WEB_BRIDGE__ ? null : focusExistingBotTab(bot)')
       const notifyStart = withoutStaleFront.lastIndexOf('notifyBotOpenFailure(error, bot,')
       const lineStart = notifyStart < 0 ? -1 : withoutStaleFront.lastIndexOf('\n', notifyStart) + 1
       const patched =
@@ -325,7 +325,7 @@ ${withoutStaleFront.slice(lineStart)}`
           }
 
           if (window.__HERMES_WEB_BRIDGE__ && typeof api === 'function') {
-            const response = await api({
+            const response = await api<{ sessions?: CanonicalChatRow[] } | CanonicalChatRow[]>({
               path: '/api/profiles/sessions?limit=200&offset=0&min_messages=0&archived=exclude&order=created&include_hidden=true&title=Bot%20Chat',
               profile: backendTargetProfile(route, name)
             })
@@ -333,7 +333,7 @@ ${withoutStaleFront.slice(lineStart)}`
             return Array.isArray(response) ? { sessions: response } : response
           }
 
-          return requestForBot(bot, 'session.list', {
+          return requestForBot<{ sessions?: CanonicalChatRow[] }>(bot, 'session.list', {
             profile: backendTargetProfile(route, name),
             title: CANONICAL_CHAT_TITLE,
             limit: PROFILE_SESSION_LIST_LIMIT,
@@ -364,7 +364,7 @@ ${withoutStaleFront.slice(lineStart)}`
       if (!openingStillCurrent || !openingStillCurrent()) return result
     } catch (error) {
       const current = typeof openingStillCurrent === 'function' && openingStillCurrent()
-      const superseded = /superseded by a newer selection/i.test(String(error?.message || error))
+      const superseded = /superseded by a newer selection/i.test(String((error as { message?: unknown } | null)?.message || error))
 
       if (!current || !superseded) {
         throw error
@@ -377,7 +377,7 @@ ${withoutStaleFront.slice(lineStart)}`
       `  const run = openBotCanonicalChatImpl(owner, options)
   canonicalChatOpens.set(key, run)`,
       `  const run = openBotCanonicalChatImpl(owner, options).catch(async error => {
-    const superseded = /superseded by a newer selection/i.test(String(error?.message || error))
+    const superseded = /superseded by a newer selection/i.test(String((error as { message?: unknown } | null)?.message || error))
 
     if (!superseded || !openingStillCurrent?.()) {
       throw error

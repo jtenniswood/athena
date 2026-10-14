@@ -1,8 +1,3 @@
-// The browser shell uses the upstream contribution wiring, but it does not
-// render the desktop controller. Importing the controller module still matters:
-// its module-level setup registers panes, layout presets, bundled plugins,
-// session routing, and the overlay bindings consumed by BrowserShell.
-import '../../../desktop/src/app/contrib/controller'
 import { $projectScope, ALL_PROJECTS, exitProjectScope } from '@/store/project-scope'
 import { setHideThreadTimeline } from '@/store/thread-timeline'
 
@@ -23,6 +18,6 @@ export function initializeBrowserShell(): void {
   // The web UI does not expose this preference; keep timeline bars visible
   // even when a browser has a previously saved desktop value.
   setHideThreadTimeline(false)
-  // Importing the upstream controller registers panes and layout presets.
+  // startBrowserHost has already completed the engine registration boundary.
   // BrowserShell owns the single ContribWiring instance at render time.
 }

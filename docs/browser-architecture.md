@@ -31,6 +31,15 @@ selection, profile and action adapters project the authoritative stores; they do
 not create a second conversation store. `upstream/browser-api.tsx` remains the
 explicit visual primitive boundary.
 
+`experience/settings/settings-route.tsx` assembles settings navigation from the
+catalog. The checked settings controller adapter extracts the existing Hermes
+page controls and commands without generating the browser frame. Schemas, values,
+profile-scoped requests, caches, and pending saves retain their renderer owners.
+Unknown renderer pages remain available in Other Settings. The fullscreen and
+embedded frame variants share compact navigation and focus behavior; each keeps
+its appropriate overlay host and breakpoint. Legacy bookmarks and field links
+are normalized by the browser route policy without dropping other query values.
+
 The chat action menu and its keyboard shortcuts use the same browser commands.
 Rename and delete dialogs retain the conversation they were opened for even if
 selection changes before a request completes. Sidebar row menus still use a
@@ -54,6 +63,16 @@ Browser, hosting, and connected-server support facts are described in
 `platform/capabilities.ts`. API availability does not imply permission; the
 owning browser operation still handles permission and failure at use time.
 
+`scripts/browser-preference-contract.mjs` records wrapper preference keys, owners,
+scope, defaults, parsers, serialization, and legacy migrations. The browser's
+typed access and subscription helper and the account-sync allowlist consume this
+same contract. Existing keys and wire formats remain compatible. Same-tab writes
+and relevant storage events share a subscription path with stable snapshots.
+Sidebar and session-profile migrations are repeatable and preserve migration
+inputs until the replacement is verified. Optional preferences tolerate blocked
+storage; connection credentials, drafts, and account-bound sync outboxes retain
+their stronger persistence owners and checks.
+
 The renderer registers its draft store through `platform/draft-safety.ts`.
 Update and connection transitions use that typed boundary to flush cross-tab
 writes and verify persisted text before they proceed. Ordinary draft saves keep
@@ -69,6 +88,19 @@ old profile cannot seed the new profile's configuration cache. Failed writes
 continue to block readiness instead of being treated as durable.
 
 ## Compatibility ownership
+
+`scripts/renderer-adapter.mjs` owns the ordered build adapters, module replacements,
+virtual modules, and aliases used by Vite and TypeScript. The compiler checks the
+adapted source graph, including injected imports and scoped replacements; it does
+not validate a separate unmodified renderer graph. Original renderer input
+fingerprints stay reviewed and fetched sources remain untouched. Adapter tests
+check final output fingerprints, replacement resolution, and whether introduced
+type errors and missing imports fail compilation.
+
+`upstream/entry.ts` installs the bridge and restores its profile before loading
+`upstream/engine-registration.ts`. That module contains the pinned renderer's
+controller registration dependency. Browser initialization follows registration;
+the desktop controller itself remains absent from the rendered shell.
 
 Renderer-sensitive dependency versions are checked by
 `pnpm check:renderer-dependencies`. They inherit the fetched renderer's manifest;

@@ -7,6 +7,7 @@ import { test } from 'node:test'
 import ts from 'typescript'
 import { loadRegistry, validateRegistry, registryContracts, checkGeneratedRegistryFiles, generatedRegistryFiles, coverageReport } from './compatibility-registry.mjs'
 import { inspectContracts } from './renderer-compatibility-report.mjs'
+import { rendererAdapterPlugin } from './renderer-adapter.mjs'
 
 const root = path.resolve('apps/web-desktop')
 const registry = loadRegistry()
@@ -99,7 +100,7 @@ for (const entry of registry.filter(entry => entry.kind === 'browser-transform')
 
 for (const entry of registry.filter(entry => entry.kind === 'replacement')) {
   test(`registered module replacement: ${entry.name}`, async () => {
-    const plugin = entry.owner.endsWith('/overrides.ts') ? rendererOverrides(root) : browserPlugin(root)
+    const plugin = rendererAdapterPlugin(root)
     const context = { resolve: async () => ({ id: path.join(root, '../desktop/src', entry.module) }) }
     const target = await plugin.resolveId.call(context, '@/' + entry.module, path.join(root, '../desktop/src', entry.importers?.[0] ?? 'app/consumer.tsx'))
     assert.equal(target, path.join(root, entry.replacement))

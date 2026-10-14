@@ -3,9 +3,10 @@ import { readFileSync } from 'node:fs'
 import vm from 'node:vm'
 import { test } from 'node:test'
 import ts from 'typescript'
+import * as preferenceContract from './browser-preference-contract.mjs'
 
 const source = readFileSync('apps/web-desktop/src/platform/default-profile-route.ts', 'utf8')
-const context = vm.createContext({ exports: {} })
+const context = vm.createContext({ exports: {}, require: () => preferenceContract })
 vm.runInContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, context)
 const { createBrowserDefaultProfileRoute } = context.exports
 

@@ -10,7 +10,7 @@ import { runtimeConfig } from '../platform/runtime'
 import { getActiveGateway, updateGateway } from '../web-bridge/gateways'
 import './gateway-settings.css'
 
-export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {}) {
+export function GatewaySettings({ embedded = false }: { embedded?: boolean; subpage?: string } = {}) {
   const gateway = getActiveGateway()
   const status = useBrowserGatewayStatus()
   const navigate = useNavigate()

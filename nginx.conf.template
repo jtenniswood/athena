@@ -1,4 +1,4 @@
-# nginx.conf template for Athena (frontend-only Docker image).
+# nginx.conf template for Athena and its account preference service.
 # ${HERMES_GATEWAY_URL} and ${HERMES_HOME} are substituted by
 # scripts/runtime-config.mjs at container start; every other $var is nginx's own.
 
@@ -78,6 +78,17 @@ http {
             expires 30d;
             add_header Cache-Control "public, immutable";
             try_files $uri =404;
+        }
+
+        # Local preference storage verifies every request with Hermes.
+        location = /api/athena/preferences {
+            client_max_body_size 2m;
+            proxy_pass http://127.0.0.1:4181;
+            proxy_http_version 1.1;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Forwarded-Proto $hermes_forwarded_proto;
+            proxy_read_timeout 15s;
         }
 
         # Hermes gateway — REST + WebSocket, same-origin (auth cookies/ws-tickets).

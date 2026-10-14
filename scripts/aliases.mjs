@@ -2,8 +2,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { repositoryRoot } from './renderer.mjs'
 
-export function rendererAliases() {
-  const root = path.join(repositoryRoot, 'apps/web-desktop')
+export function rendererAliases(root = path.join(repositoryRoot, 'apps/web-desktop')) {
   const registry = JSON.parse(readFileSync(path.join(root, 'src/upstream/compatibility-registry.json'), 'utf8'))
   const paths = Object.fromEntries(registry.filter(entry => entry.kind === 'alias' && entry.aliasGroup === 'renderer').map(entry => [entry.specifier, [entry.replacement]]))
   return Object.entries(paths).sort(([a], [b]) => Number(a.includes('*')) - Number(b.includes('*')) || b.length - a.length).map(([find, [target]]) => {

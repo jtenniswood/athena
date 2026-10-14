@@ -54,9 +54,9 @@ test('an explicit profile choice survives delayed Bot activation', async ({ page
   const finishHeldResponse = observeResponses(page)
   await openConversation(page, gatewayApp.origin)
   await page.getByRole('tab', { name: 'Bots', exact: true }).click()
-  const opening = gatewayApp.controls.hold(call => call.transport === 'rpc' && call.method === 'session.list' && call.params.profile === 'research')
+  const opening = gatewayApp.controls.hold(call => call.transport === 'rpc' && call.method === 'session.resume' && call.params.session_id === 'preview-research')
   await page.getByRole('button', { name: /Research · @/ }).click()
-  await expect.poll(() => gatewayApp.controls.calls.some(call => call.method === 'session.list' && call.params.profile === 'research')).toBe(true)
+  await expect.poll(() => gatewayApp.controls.calls.some(call => call.method === 'session.resume' && call.params.session_id === 'preview-research')).toBe(true)
   await page.getByRole('tab', { name: 'Sessions', exact: true }).click()
   const choice = page.locator('[data-profile-key="writer"]')
   await choice.click()
@@ -73,7 +73,7 @@ test('a session selection supersedes delayed Bot activation without losing its d
   await openConversation(page, gatewayApp.origin)
   await editor(page).fill('Keep the ordinary conversation draft')
   await page.getByRole('tab', { name: 'Bots', exact: true }).click()
-  const opening = gatewayApp.controls.hold(call => call.transport === 'rpc' && call.method === 'session.list' && call.params.profile === 'research')
+  const opening = gatewayApp.controls.hold(call => call.transport === 'rpc' && call.method === 'session.resume' && call.params.session_id === 'preview-research')
   await page.getByRole('button', { name: /Research · @/ }).click()
   await opening.entered
   await page.getByRole('tab', { name: 'Sessions', exact: true }).click()
@@ -90,7 +90,7 @@ test('returning to a Bot while its previous activation is pending honors the lat
   const finishHeldResponse = observeResponses(page)
   await openConversation(page, gatewayApp.origin)
   await page.getByRole('tab', { name: 'Bots', exact: true }).click()
-  const opening = gatewayApp.controls.hold(call => call.transport === 'rpc' && call.method === 'session.list' && call.params.profile === 'research')
+  const opening = gatewayApp.controls.hold(call => call.transport === 'rpc' && call.method === 'session.resume' && call.params.session_id === 'preview-research')
   await page.getByRole('button', { name: /Research · @/ }).click()
   await opening.entered
   await page.getByRole('button', { name: /Writer · @/ }).click()
@@ -120,7 +120,7 @@ test('group selection survives delayed Bot activation and preserves both compose
   await openConversation(page, gatewayApp.origin)
   await editor(page).fill('Keep the ordinary session draft beside the group')
   await page.getByRole('tab', { name: 'Bots', exact: true }).click()
-  const opening = gatewayApp.controls.hold(call => call.transport === 'rpc' && call.method === 'session.list' && call.params.profile === 'research')
+  const opening = gatewayApp.controls.hold(call => call.transport === 'rpc' && call.method === 'session.resume' && call.params.session_id === 'preview-research')
   await page.getByRole('button', { name: /Research · @/ }).click()
   await opening.entered
   await page.getByRole('button', { name: /^Planning team, 2 bots/ }).click()
@@ -141,10 +141,13 @@ test('group selection survives delayed Bot activation and preserves both compose
 })
 
 test('a rejected Bot activation reports a visible failure and preserves the session draft', async ({ page, gatewayApp }) => {
+  // Without a canonical ID the browser verifies the registry before selecting
+  // a chat. Reject that actual pre-activation lookup, rather than a skipped RPC.
+  gatewayApp.sessions.delete('preview-research')
   await openConversation(page, gatewayApp.origin)
   await editor(page).fill('Keep this draft after Bot activation fails')
   await page.getByRole('tab', { name: 'Bots', exact: true }).click()
-  gatewayApp.controls.reject(call => call.transport === 'rpc' && call.method === 'session.list' && call.params.profile === 'research', 'Bot activation rejected')
+  gatewayApp.controls.reject(call => call.transport === 'http' && call.method === 'GET' && call.path === '/api/profiles/sessions', 'Bot activation rejected', 400)
   await page.getByRole('button', { name: /Research · @/ }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'Could not open Bot conversation.' })).toBeVisible()
   await expect(page).toHaveURL(/#\/preview-week$/)
@@ -486,7 +489,7 @@ test('the session picker supersedes a delayed Bot selection', async ({ page, gat
   const finishHeldResponse = observeResponses(page)
   await openConversation(page, gatewayApp.origin)
   await page.getByRole('tab', { name: 'Bots', exact: true }).click()
-  const opening = gatewayApp.controls.hold(call => call.transport === 'rpc' && call.method === 'session.list' && call.params.profile === 'research')
+  const opening = gatewayApp.controls.hold(call => call.transport === 'rpc' && call.method === 'session.resume' && call.params.session_id === 'preview-research')
   await page.getByRole('button', { name: /Research · @/ }).click()
   await opening.entered
   await editor(page).fill('/resume')
@@ -509,7 +512,7 @@ test('a fresh chat supersedes delayed Bot activation and keeps its draft', async
   const finishHeldResponse = observeResponses(page)
   await openConversation(page, gatewayApp.origin)
   await page.getByRole('tab', { name: 'Bots', exact: true }).click()
-  const opening = gatewayApp.controls.hold(call => call.transport === 'rpc' && call.method === 'session.list' && call.params.profile === 'research')
+  const opening = gatewayApp.controls.hold(call => call.transport === 'rpc' && call.method === 'session.resume' && call.params.session_id === 'preview-research')
   await page.getByRole('button', { name: /Research · @/ }).click()
   await opening.entered
   await editor(page).fill('/new')
@@ -526,7 +529,7 @@ test('a direct resume command supersedes delayed Bot activation', async ({ page,
   const finishHeldResponse = observeResponses(page)
   await openConversation(page, gatewayApp.origin)
   await page.getByRole('tab', { name: 'Bots', exact: true }).click()
-  const opening = gatewayApp.controls.hold(call => call.transport === 'rpc' && call.method === 'session.list' && call.params.profile === 'research')
+  const opening = gatewayApp.controls.hold(call => call.transport === 'rpc' && call.method === 'session.resume' && call.params.session_id === 'preview-research')
   await page.getByRole('button', { name: /Research · @/ }).click()
   await opening.entered
   await editor(page).fill('/resume preview-idea')
