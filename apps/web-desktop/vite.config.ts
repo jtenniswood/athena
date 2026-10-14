@@ -353,6 +353,11 @@ export default defineConfig(({ command, mode }) => {
     // under the read-only store path and fail to resolve bare imports.
     preserveSymlinks: true,
     alias: [
+      // UI 1.x no longer ships fonts; keep the renderer's Collapse face bundled.
+      {
+        find: '../../../node_modules/@nous-research/ui/dist/fonts/Collapse-Bold.woff2',
+        replacement: path.resolve(__dirname, 'src/assets/fonts/Collapse-Bold.woff2')
+      },
       ...compatibilityAliases(__dirname).filter(alias => alias.find === '@/debug/dev-only'),
       ...rendererAliases(),
       ...compatibilityAliases(__dirname).filter(alias => alias.find !== '@/debug/dev-only')
