@@ -91,7 +91,7 @@
     ],
     "removal": "Remove when upstream canonical Bot navigation never reopens stale desktop tabs in the browser.",
     "sourceHash": "c58dabe0fdec0698f19b01b3c8e0d32d6b43e8632c92efcd9079c0a9226c2b6f",
-    "outputHash": "d612a460dc4e9e53d17e88812ff66bddb9c7d493fe6ff348e219ace1b2fb4cab",
+    "outputHash": "381d3629fc9e8b13d9bbe12637bd0eaf533c009f533b210a25650e5f8b17bd15",
     "handler": "bot-roster-opening",
     "sourceRoot": "renderer"
   },
@@ -149,7 +149,7 @@
     ],
     "removal": "Remove when upstream canonical lookup and deduplicated opens support the single-gateway browser route.",
     "sourceHash": "bf9237c88e0d448bc75381ad7ac3c0a33825f5f9a0e56e35243d9fb616c68e92",
-    "outputHash": "890c70c02003f087bb6c27909877ef3c4761258c8ccaeca27f0fd92c61bcb588",
+    "outputHash": "c61eaca30985b51b94d8c954c4c9a6e05e0e3c8d06831164856d553d9bbfad21",
     "handler": "canonical-bot-chat",
     "sourceRoot": "renderer"
   },
@@ -218,7 +218,7 @@
     ],
     "removal": "Remove when upstream recovery offers configured-gateway actions without native backend/log assumptions.",
     "sourceHash": "af469ace91dbff4cb5854e14ce6f5bae423c8801e2bbb6573c079573386e7281",
-    "outputHash": "818f0c5030585f402bba6981043fc81cb0b9e509a8dcf6e5a50f1f0aa93d4db2",
+    "outputHash": "b9c784247ffce91ed7d8e5cfa4d920596eec1ad9f3bf4de47cf94b7855c70668",
     "handler": "browser-gateway-recovery",
     "sourceRoot": "renderer"
   },
@@ -477,7 +477,7 @@
     "sourceHash": "35023ee0d711b25edb528228315706d6fe68ead22bd8afb95e1405d9bccfd65b",
     "sourceRoot": "renderer",
     "inputHash": "35023ee0d711b25edb528228315706d6fe68ead22bd8afb95e1405d9bccfd65b",
-    "outputHash": "a4f880bd94cdc27c62d1544c7b4b1b5da736006ba5668c52a355f9b589239295"
+    "outputHash": "7511e2286f37d3bac50bc4f5c32ddab877449df59932874717066e57a3a61b78"
   },
   {
     "name": "single-conversation-controller",
@@ -709,8 +709,8 @@
     ],
     "sourceHash": "c58dabe0fdec0698f19b01b3c8e0d32d6b43e8632c92efcd9079c0a9226c2b6f",
     "sourceRoot": "renderer",
-    "inputHash": "0ba5cf3a83d736f7b61e4c18f4a3b370462481e867bb2d7f7f112639ba6fdf91",
-    "outputHash": "4cdb14071f28eb0f0b6fd53a677bf2d080779be2389847f587dbc9219d66b1e9"
+    "inputHash": "720ab4d5584566f720f5dd7a0f015bcfb4fcdf4d32f335a88cd64fd881bc4db7",
+    "outputHash": "ec17d169302d9ea802711e84b3e2f03a909af984884d6ddabbe1803b219a4880"
   },
   {
     "name": "configured-gateway-settings",
@@ -2259,7 +2259,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "ae347f690ab8c5607ab026efee6c4fabf516100ca9ccd3c5779a2706c264b8b7",
     "inputHash": "ae347f690ab8c5607ab026efee6c4fabf516100ca9ccd3c5779a2706c264b8b7",
-    "outputHash": "c54f40e0e216b9c5725faeb05e7a019c6be6c911a8aa3b8388c2568080522965",
+    "outputHash": "bb67111683f0922bb808325753b584e562dbd8e5afd82a2c2d2bafdd19bd7fc4",
     "handlers": [
       "useBrowserSettingsPresentation"
     ],
@@ -2823,5 +2823,40 @@
       "keepBrowserPluginInstallInSettings"
     ],
     "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-remote-folder-picker",
+    "kind": "replacement",
+    "order": 10,
+    "module": "app/right-sidebar/files/remote-picker.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "e4d61c2948091e4a4fef228752de10658d888ef785aac228b779416440d6e4b3",
+    "replacement": "src/overrides/remote-folder-picker.tsx",
+    "owner": "scripts/renderer-adapter.mjs",
+    "reason": "Resolve server-backed browser directory selection through the same adapter for compiler and bundler callers.",
+    "tests": [
+      {
+        "file": "scripts/renderer-adapter.test.mjs",
+        "scenario": "replacement resolution is identical for relative and aliased remote folder picker callers"
+      }
+    ],
+    "removal": "Remove when upstream exposes an equivalent browser-owned remote picker boundary."
+  },
+  {
+    "name": "athena-empty-chat-branding",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "components/chat/intro.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "d2f3fb2115357c4c724b7bed5741c5def854ac346c9f4c570a68825ec65900d7",
+    "owner": "apps/web-desktop/src/upstream/athena-branding.ts",
+    "reason": "Review the pinned empty-chat source that receives Athena name and tagline presentation.",
+    "tests": [
+      {
+        "file": "scripts/renderer-adapter.test.mjs",
+        "scenario": "the shared source graph applies Athena branding without evaluating renderer modules"
+      }
+    ],
+    "removal": "Remove when the renderer accepts branding and empty-chat copy through a public host contract."
   }
 ]

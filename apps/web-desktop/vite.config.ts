@@ -1,13 +1,8 @@
-import { compatibilityRegistryPlugin } from '../../scripts/compatibility-registry.mjs'
-import { dependencyCompatibilityPlugin } from './src/upstream/dependency-compatibility'
-import { browserPlugin, browserActivityNotificationsPlugin } from './src/upstream/browser-plugin'
-import { athenaBranding } from './src/upstream/athena-branding'
-import { rendererOverrides } from './src/upstream/overrides'
+import { rendererAdapterPlugin, adapterAliases } from '../../scripts/renderer-adapter.mjs'
 import { runtimeConfiguration, runtimeScripts, matchesGatewayRoute, navigationFallbackDenylist, type HostingConfiguration } from '../../scripts/runtime-config.mjs'
-import { rendererAliases, compatibilityAliases, compatibilitySingletons } from '../../scripts/aliases.mjs'
+import { compatibilitySingletons } from '../../scripts/aliases.mjs'
 import { buildInfoPlugin } from '../../scripts/build-info.mjs'
 import { defineConfig, loadEnv, type Plugin, type PreviewServer } from 'vite'
-import { rendererCompatibilityPlugin } from './src/upstream/transforms'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { createProxyServer, type ProxyServer } from 'http-proxy-3'
@@ -250,12 +245,8 @@ export default defineConfig(({ command, mode }) => {
   return {
   base: './',
   plugins: [
-    compatibilityRegistryPlugin(path.resolve(__dirname, '../..')),
-    dependencyCompatibilityPlugin(__dirname),
+    rendererAdapterPlugin(__dirname),
     buildInfoPlugin(),
-    athenaBranding(),
-    rendererOverrides(__dirname),
-    browserPlugin(__dirname),
     hermesDynamicProxy(),
     react(),
     tailwindcss(),
@@ -311,9 +302,7 @@ export default defineConfig(({ command, mode }) => {
       }
     }),
     emojibaseAssets(),
-    hermesPluginsAssets(),
-    rendererCompatibilityPlugin(path.resolve(__dirname, '../desktop/src')),
-    browserActivityNotificationsPlugin(__dirname)
+    hermesPluginsAssets()
   ],
   css: {
     postcss: { plugins: [] }
@@ -352,16 +341,7 @@ export default defineConfig(({ command, mode }) => {
     // (nix develop); realpathing them would make Vite look for node_modules
     // under the read-only store path and fail to resolve bare imports.
     preserveSymlinks: true,
-    alias: [
-      // UI 1.x no longer ships fonts; keep the renderer's Collapse face bundled.
-      {
-        find: '../../../node_modules/@nous-research/ui/dist/fonts/Collapse-Bold.woff2',
-        replacement: path.resolve(__dirname, 'src/assets/fonts/Collapse-Bold.woff2')
-      },
-      ...compatibilityAliases(__dirname).filter(alias => alias.find === '@/debug/dev-only'),
-      ...rendererAliases(),
-      ...compatibilityAliases(__dirname).filter(alias => alias.find !== '@/debug/dev-only')
-    ],
+    alias: adapterAliases(__dirname),
     dedupe: compatibilitySingletons(__dirname)
   },
   server: {

@@ -62,6 +62,13 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'commands.catalog') return { commands: [] }
     if (method === 'plugins.manage' && params.action === 'list') return { plugins: [] }
     if (method === 'ping') return { pong: true }
+    // Optional probes from the pinned renderer, with explicit synthetic support.
+    if (method === 'client.capabilities') return { declines_not_shown: true }
+    if (method === 'i18n.languages') return []
+    if (method === 'shared_metrics.status') return { decided: true, enabled: false, send: false }
+    if (method === 'bot_relay.roster.sync' && Array.isArray(params.agents)) return { ok: true }
+    if (method === 'billing.state' || method === 'subscription.state') throw new Error('Billing is unavailable in the synthetic gateway')
+    if (method === 'config.set' && ['display.in_app_tips', 'display.in_app_tours', 'display.message_reactions'].includes(params.key)) return { value: params.value }
     // Explicit optional startup probes from the pinned renderer. These have no
     // provider, running process, local pet, or speech service in the fixture.
     if (method === 'free_tier.status') return { has_guest: false, enabled: false, available: false }
@@ -158,13 +165,14 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       if (req.method === 'GET' && pathname === '/api/config/schema') return send({ fields: {} })
       if (req.method === 'GET' && pathname === '/api/env') return send({})
       if (pathname === '/api/audio/voice-live/status') return send({ mode: 'chained', available: false, reason: 'Synthetic fixture has no voice service', model: '', voice: '' })
+      if (pathname === '/api/audio/elevenlabs/voices') return send({ voices: [] })
       if (pathname === '/api/fs/default-cwd') return send({ branch: '', cwd: '/workspace' })
       if (pathname === '/api/git/worktrees') return send({ worktrees: [] })
       if (pathname === '/api/profiles/projects/tree') return send({ projects: [], active_id: null, scoped_session_ids: [] })
       if (pathname === '/api/mcp/catalog') return send({ entries: [], diagnostics: [] })
       if (pathname === '/api/git/status') return send({ is_repo: false, files: [], branch: '' })
       if (/^\/api\/sessions\/[^/]+\/timeline$/.test(pathname)) return send({ events: [], has_more: false })
-      if (pathname === '/auth/me' || pathname === '/api/auth/me') return send({ authenticated: true })
+      if (pathname === '/auth/me' || pathname === '/api/auth/me') return send({ authenticated: true, user_id: 'preview-user', provider: 'preview', org_id: '' })
       if (pathname === '/auth/ws-ticket' || pathname === '/api/auth/ws-ticket') return send({ ticket: `preview-${Date.now()}` })
       if (pathname === '/auth/logout') return send({ ok: true })
       if (pathname === '/login') { res.writeHead(200, { 'Content-Type': 'text/html' }); return res.end('<p>Synthetic gateway: signed in. You can close this window.</p>') }

@@ -29,5 +29,7 @@ jobs:
         run: node --test scripts/compatibility-registry.test.mjs
       - name: Typecheck browser and renderer integration
         run: pnpm typecheck
+      - name: Verify shared adapter output and startup ordering
+        run: node --test scripts/renderer-adapter.test.mjs scripts/startup.test.mjs
       - name: Build browser application
         run: pnpm build

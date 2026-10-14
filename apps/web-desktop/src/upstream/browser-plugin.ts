@@ -332,7 +332,7 @@ export function useBrowserSettingsPresentation(source: string, root: string): st
         )}
       </SettingsBreadcrumbContext.Provider>`
   let output = source
-    .replace(importTarget, '')
+    .replace(importTarget, "import type { OverlayNavGroup } from '../overlays/overlay-split-layout'")
     .replace(overlayImport, '')
     .replace(overlayTarget, '<BrowserSettingsPresentation activeView={activeView} backLabel={t.common.back} closeLabel={t.settings.closeSettings} groups={navGroups} onClose={onClose} search={searchPill} title={t.commandCenter.settings}>')
     .replace(layoutTarget, layoutReplacement)
@@ -1186,7 +1186,7 @@ export function enableBrowserUngroupedSessions(source: string, surface: 'store' 
 
 export function disableBrowserSessionTabs(source: string): string {
   const keybind = '    openNewSessionTab,\n'
-  const marker = '    // Browser-focused shell does not register chat tab creation.\n'
+  const marker = '    // Browser-focused shell does not register chat tab creation.\n    openNewSessionTab: () => undefined,\n'
   const action = '    $newSessionTabAction.set(openNewSessionTab)'
   const disabledAction = '    $newSessionTabAction.set(null)'
   const newSession = '    onNewSessionInWorkspace: path => startSessionInWorkspace(path, { openTab: true }),'

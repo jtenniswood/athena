@@ -429,9 +429,12 @@ test('browser shell does not register chat tab creation actions', () => {
 
 test('browser startup keeps shared controller registration without rendering desktop UI', () => {
   const initializer = readFileSync(path.join(root, 'src/upstream/browser-initialize.ts'), 'utf8')
+  const registration = readFileSync(path.join(root, 'src/upstream/engine-registration.ts'), 'utf8')
   const entry = readFileSync(path.join(root, 'src/upstream/entry.ts'), 'utf8')
   const browserRoot = readFileSync(path.join(root, 'src/upstream/browser-root.tsx'), 'utf8')
-  assert.match(initializer, /import ['"]\.\.\/\.\.\/\.\.\/desktop\/src\/app\/contrib\/controller['"];?/)
+  assert.match(registration, /import ['"]\.\.\/\.\.\/\.\.\/desktop\/src\/app\/contrib\/controller['"];?/)
+  assert.doesNotMatch(initializer, /import.*contrib\/controller/)
+  assert.ok(entry.indexOf("await import('./engine-registration')") < entry.indexOf("await import('./browser-initialize')"))
   assert.ok(entry.indexOf("await import('./browser-initialize')") < entry.indexOf("await import('../../../desktop/src/main')"))
   assert.doesNotMatch(browserRoot, /browser-initialize/)
   assert.doesNotMatch(browserRoot, /ContribController/)

@@ -6,7 +6,9 @@ export interface BrowserAcceptedSubmit {
 }
 
 /** Announce only after the renderer's submit callback accepts the message. */
-export function announceBrowserAcceptedSubmit(detail: BrowserAcceptedSubmit): void {
+export function announceBrowserAcceptedSubmit(detail: { text: string; sessionId?: string | null }): void {
   if (typeof window === 'undefined') return
-  window.dispatchEvent(new CustomEvent<BrowserAcceptedSubmit>(BROWSER_SUBMIT_ACCEPTED_EVENT, { detail }))
+  window.dispatchEvent(new CustomEvent<BrowserAcceptedSubmit>(BROWSER_SUBMIT_ACCEPTED_EVENT, {
+    detail: { ...detail, sessionId: detail.sessionId ?? null }
+  }))
 }

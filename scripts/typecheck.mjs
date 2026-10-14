@@ -3,6 +3,7 @@ import { readFileSync, realpathSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { repositoryRoot } from './renderer.mjs'
+import { createRendererAdapter } from './renderer-adapter.mjs'
 
 const fatalCodes = new Set([2307, 2688, 6053, 7016])
 // These renderer-facing types live beside Electron implementations upstream.
@@ -30,19 +31,41 @@ export function classifyDiagnostics(diagnostics, baseline) {
   return { unexpected, stale: remaining }
 }
 
+export function adapterCompilerHost(options, adapter = createRendererAdapter()) {
+  const host = ts.createCompilerHost(options)
+  const getSourceFile = host.getSourceFile.bind(host)
+  host.getSourceFile = (fileName, languageVersion, onError, shouldCreateNewSourceFile) => {
+    const source = getSourceFile(fileName, languageVersion, onError, shouldCreateNewSourceFile)
+    if (!source) return source
+    const text = adapter.transform(rendererTypeDeclaration(fileName, source.text), fileName)
+    return text === source.text ? source : ts.createSourceFile(fileName, text, languageVersion, true)
+  }
+  host.resolveModuleNames = (names, containingFile) => names.map(specifier => {
+    const source = adapter.virtual(specifier) ?? adapter.alias(specifier)
+    let resolved = ts.resolveModuleName(source, adapter.logicalId(containingFile), options, host).resolvedModule
+    // Runtime singleton aliases point at JavaScript. Resolve their declarations
+    // from the same wrapper package, including DefinitelyTyped declarations.
+    if (source !== specifier && resolved && [ts.Extension.Js, ts.Extension.Jsx].includes(resolved.extension)) {
+      const typed = ts.resolveModuleName(specifier, path.join(adapter.root, 'src/entry.ts'), options, host).resolvedModule
+      if (typed && ![ts.Extension.Js, ts.Extension.Jsx].includes(typed.extension)) resolved = typed
+    }
+    if (!resolved) return undefined
+    const file = adapter.replacement(resolved.resolvedFileName, containingFile)
+    const resolvedUsingTsExtension = /\.(?:tsx?|mts|cts)$/.test(specifier) && resolved.resolvedUsingTsExtension
+    if (file === resolved.resolvedFileName) return { ...resolved, resolvedUsingTsExtension }
+    const { packageId, originalPath, ...local } = resolved
+    return { ...local, resolvedFileName: file, isExternalLibraryImport: false, resolvedUsingTsExtension,
+      extension: file.endsWith('.tsx') ? ts.Extension.Tsx : ts.Extension.Ts }
+  })
+  return host
+}
+
 function check() {
   const configPath = path.join(repositoryRoot, 'apps/web-desktop/tsconfig.json')
   const config = ts.readConfigFile(configPath, ts.sys.readFile)
   if (config.error) throw new Error(ts.flattenDiagnosticMessageText(config.error.messageText, '\n'))
   const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, path.dirname(configPath))
-  const host = ts.createCompilerHost(parsed.options)
-  const getSourceFile = host.getSourceFile.bind(host)
-  host.getSourceFile = (fileName, languageVersion, onError, shouldCreateNewSourceFile) => {
-    const source = getSourceFile(fileName, languageVersion, onError, shouldCreateNewSourceFile)
-    if (!source) return source
-    const declaration = rendererTypeDeclaration(fileName, source.text)
-    return declaration === source.text ? source : ts.createSourceFile(fileName, declaration, languageVersion, true)
-  }
+  const host = adapterCompilerHost(parsed.options)
   const program = ts.createProgram(parsed.fileNames, parsed.options, host)
   const aliases = ['desktop', 'shared'].map(name => ({ actual: realpathSync(path.join(repositoryRoot, 'apps', name)), logical: `apps/${name}` }))
   const diagnostics = [...parsed.errors, ...ts.getPreEmitDiagnostics(program)].map(d => {

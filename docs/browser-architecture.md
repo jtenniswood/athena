@@ -70,6 +70,19 @@ continue to block readiness instead of being treated as durable.
 
 ## Compatibility ownership
 
+`scripts/renderer-adapter.mjs` owns the ordered build adapters, module replacements,
+virtual modules, and aliases used by Vite and TypeScript. The compiler checks the
+adapted source graph, including injected imports and scoped replacements; it does
+not validate a separate unmodified renderer graph. Original renderer input
+fingerprints stay reviewed and fetched sources remain untouched. Adapter tests
+check final output fingerprints, replacement resolution, and whether introduced
+type errors and missing imports fail compilation.
+
+`upstream/entry.ts` installs the bridge and restores its profile before loading
+`upstream/engine-registration.ts`. That module contains the pinned renderer's
+controller registration dependency. Browser initialization follows registration;
+the desktop controller itself remains absent from the rendered shell.
+
 Renderer-sensitive dependency versions are checked by
 `pnpm check:renderer-dependencies`. They inherit the fetched renderer's manifest;
 `scripts/renderer-dependencies.json` records deliberate version overrides and the
