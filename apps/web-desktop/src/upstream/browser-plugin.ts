@@ -19,7 +19,7 @@ function assertBrowserRoot(root: string): void {
 /** Keep upstream boot/error/reconnect ownership; only adapt its loading visual. */
 export function useBrowserConnectingVisual(source: string): string {
   const start = source.indexOf('function ConnectingOverlayView(')
-  const end = source.indexOf('export function GatewayConnectingOverlay()', start)
+  const end = source.indexOf('/**\n * Held until the app knows whether onboarding runs', start)
   if (start < 0 || end < 0 || !source.slice(start, end).includes('<DecodeText')) {
     throw new Error('Gateway connecting presentation changed')
   }
@@ -234,9 +234,16 @@ export function keepBrowserPluginManagementInSettings(source: string): string {
 }
 
 export function keepBrowserPluginInstallInSettings(source: string): string {
-  const target = "        navigate('/capabilities?tab=plugins')"
-  if (source.split(target).length !== 2) throw new Error('Browser plugin install destination changed')
-  return source.replace(target, "        navigate(location.pathname === '/settings' ? '/settings?tab=plugins&manage=1' : '/capabilities?tab=plugins')")
+  return replaceBrowserContract(source, [
+    ['function finishInstall(request: PluginInstallRequest, navigate: (to: string) => void)', 'function finishInstall(request: PluginInstallRequest, navigate: (to: string) => void, onSettings: boolean)'],
+    ["    navigate('/capabilities?tab=plugins')", "    navigate(onSettings ? '/settings?tab=plugins&manage=1' : '/capabilities?tab=plugins')"],
+    ['finishInstall(request, navigate)', 'finishInstall(request, navigate, onSettings)'],
+    ['function InstallView({ request, installing, onInstallingChange }: InstallViewProps)', 'function InstallView({ request, installing, onInstallingChange, onSettings }: InstallViewProps)'],
+    ['interface InstallViewProps {', 'interface InstallViewProps {\n  onSettings: boolean'],
+    ['            onInstallingChange={setInstalling}', '            onInstallingChange={setInstalling}\n            onSettings={onSettings}'],
+    ['    if (request && onSettings) {', '    if (request && onSettings && !window.__HERMES_WEB_BRIDGE__) {'],
+    ['open={request !== null && !onSettings}', 'open={request !== null && (!onSettings || window.__HERMES_WEB_BRIDGE__)}']
+  ])
 }
 
 export function useBrowserSettingsToolActions(source: string, root: string): string {
@@ -811,7 +818,7 @@ export function useBrowserAcceptedSubmit(source: string, root: string): string {
 /** Keep the renderer's submit/restore engine; supply the browser's follow-up policy. */
 export function useBrowserFollowupSubmit(source: string, root: string): string {
   const start = '  const submitDraft = () => {'
-  const payload = '    const payloadPresent = text.trim().length > 0 || attachments.length > 0'
+  const payload = "    const blockingPrompt = !queueEdit && (parked === 'yielded' || hasBlockingPromptRequest(sessionId))"
   const policy = JSON.stringify(path.join(root, 'src/experience/followup-preferences'))
   return `import { browserFollowupMode } from ${policy}\n` + replaceBrowserContract(source, [
     [start, '  const submitDraft = (browserAlternate = false) => {'],
@@ -1110,7 +1117,10 @@ export function disableBrowserOnboardingTips(source: string): string {
   if (source.split(tipImport).length !== 2 || source.split(tipHost).length !== 2) {
     throw new Error('Browser onboarding tip host changed')
   }
+  const onboardingGuard = '    if (!isMainWindow()) {'
+  if (source.split(onboardingGuard).length !== 3) throw new Error('Browser onboarding window guards changed')
   return source.replace(tipImport, '').replace(tipHost, 'null')
+    .replaceAll(onboardingGuard, '    if (window.__HERMES_WEB_BRIDGE__ || !isMainWindow()) {')
 }
 
 export function disableBrowserSessionTileMirrors(source: string): string {
