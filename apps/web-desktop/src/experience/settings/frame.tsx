@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
+import { lazy, Suspense, useLayoutEffect, useRef, useState, useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { Codicon, NotificationsSettings, OverlayView } from '../../upstream/browser-api'
 import { groupSettingsSections, isSettingsSectionVisible, orderSettingsSections, settingsPageLabel, settingsPageDescription, settingsScopeDescription } from './policy'
@@ -7,6 +7,8 @@ import { BrowserColorThemesPage } from './themes-page'
 import { BrowserNotificationPermissionSetting } from './notification-permission'
 import { SETTINGS_TOOL_PAGES } from '../../upstream/settings-tools'
 import './settings.css'
+
+const PluginManager = lazy(async () => ({ default: (await import('./plugin-manager')).BrowserPluginManager }))
 
 type SettingsNavItem = {
   active: boolean
@@ -63,6 +65,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   const navigate = useNavigate()
   const [compactPresentation, setCompactPresentation] = useState<CompactPresentation>({ mode: 'automatic' })
   const params = new URLSearchParams(location.search)
+  const managingPlugins = activeView === 'plugins' && params.get('manage') === '1'
   const hasDirectTarget = params.has('tab') || params.has('field') || params.has('setting')
   const navigationGroups = groupSettingsSections<SettingsNavGroup>([...groups, ...SETTINGS_TOOL_PAGES.map(page => ({
     id: page.id,
@@ -175,7 +178,9 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
               <p className="browser-settings-page-description">{pageDescription}</p>
             </header>}
             {pageVisible && pageNotice && <p className="browser-settings-page-notice" role="note">{pageNotice}</p>}
-            {pageVisible && activeView === 'config:browser-theme'
+            {pageVisible && managingPlugins
+              ? <Suspense fallback={<p role="status">Loading…</p>}><PluginManager /></Suspense>
+              : pageVisible && activeView === 'config:browser-theme'
               ? <BrowserColorThemesPage />
               : pageVisible && activeView === 'config:browser-sounds'
                 ? <NotificationsSettings subpage="sounds" />
