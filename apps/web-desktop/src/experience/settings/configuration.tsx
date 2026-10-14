@@ -1,5 +1,6 @@
 import { settingsPageLabel } from './policy'
 import { useId } from 'react'
+import { triggerHaptic } from '@/lib/haptics'
 import { useFollowupBehavior, writeFollowupBehavior } from '../followup-preferences'
 import { useShowAuxiliaryTranscriptContent, writeShowAuxiliaryTranscriptContent } from '../transcript-preferences'
 
@@ -13,6 +14,17 @@ export type BrowserConfigurationCommands = {
   export: BrowserConfigurationCommand
   import: BrowserConfigurationCommand
   reset: BrowserConfigurationCommand
+}
+
+export function createBrowserConfigurationCommands(
+  labels: { export: string; import: string; reset: string },
+  commands: { export: () => void | Promise<void>; import: () => void; reset: () => void | Promise<void> }
+): BrowserConfigurationCommands {
+  return {
+    export: { label: labels.export, description: 'Download this profile’s configuration as a JSON file.', run: commands.export },
+    import: { label: labels.import, description: 'Restore this profile’s configuration from a JSON file.', run: commands.import },
+    reset: { label: labels.reset, description: 'Restore this profile’s configuration defaults, including hidden options. You will be asked to confirm.', run: () => { triggerHaptic('warning'); return commands.reset() } }
+  }
 }
 
 /** Keep upstream action handlers and confirmation flows on labelled controls. */

@@ -595,3 +595,18 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
   .browser-profile-settings-toolbar { flex-wrap: wrap; }
   .browser-profile-settings-tabs { flex-basis: 100%; }
 }
+
+.browser-settings-search-button {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  width: 100%;
+  padding: .5rem .75rem;
+  border: 1px solid var(--border);
+  border-radius: .5rem;
+  color: var(--muted-foreground);
+  background: var(--background);
+  text-align: left;
+}
+.browser-settings-search-button kbd { margin-left: auto; font-size: .75rem; }
+.browser-settings-search-button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }

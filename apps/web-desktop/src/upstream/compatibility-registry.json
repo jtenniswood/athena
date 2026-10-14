@@ -2252,19 +2252,19 @@
     "specifier": "@hermes/plugin-sdk"
   },
   {
-    "name": "browser-settings-fullscreen-frame",
+    "name": "browser-settings-controller",
     "kind": "browser-transform",
     "order": 20,
     "module": "app/settings/index.tsx",
     "sourceRoot": "renderer",
     "sourceHash": "ae347f690ab8c5607ab026efee6c4fabf516100ca9ccd3c5779a2706c264b8b7",
     "inputHash": "ae347f690ab8c5607ab026efee6c4fabf516100ca9ccd3c5779a2706c264b8b7",
-    "outputHash": "bb67111683f0922bb808325753b584e562dbd8e5afd82a2c2d2bafdd19bd7fc4",
+    "outputHash": "ded98f843b1cfb511d6dd7f816583c5cd9af7933c3b1a61e0b9b9ba5380cf597",
     "handlers": [
-      "useBrowserSettingsPresentation"
+      "useBrowserSettingsController"
     ],
-    "reason": "Keep the responsive settings layout, configuration management page, and visibility policy in the wrapper while upstream owns settings content and persistence. Present Appearance and permission controls without subpage filtering, and provide a top-level Theme destination with legacy link redirects. Promote Sounds to its own top-level page and keep all desktop alerts in Notifications, preserving legacy sound links. Combine Chat behavior and attachment options on the parent Chat page.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "reason": "Expose renderer-owned page controls, configuration commands, and save lifecycle while Athena composes the settings route.",
+    "owner": "apps/web-desktop/src/upstream/settings-controller.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2858,5 +2858,44 @@
       }
     ],
     "removal": "Remove when the renderer accepts branding and empty-chat copy through a public host contract."
+  },
+  {
+    "name": "browser-settings-route",
+    "kind": "replacement",
+    "order": 20,
+    "module": "app/settings/index.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "ae347f690ab8c5607ab026efee6c4fabf516100ca9ccd3c5779a2706c264b8b7",
+    "replacement": "src/experience/settings/settings-route.tsx",
+    "bypassImporters": [
+      "/upstream/settings-controller-api.tsx"
+    ],
+    "owner": "scripts/renderer-adapter.mjs",
+    "reason": "Assemble browser settings navigation and page surfaces from the Athena catalog.",
+    "tests": [
+      {
+        "file": "scripts/renderer-adapter.test.mjs",
+        "scenario": "compiler and Vite resolve scoped replacements, virtual modules, aliases, and bypass imports identically"
+      }
+    ],
+    "removal": "Keep browser product composition until upstream offers an equivalent public host contract."
+  },
+  {
+    "name": "settings-controller-virtual-module",
+    "kind": "virtual-module",
+    "order": 20,
+    "module": "app/settings/index.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "ae347f690ab8c5607ab026efee6c4fabf516100ca9ccd3c5779a2706c264b8b7",
+    "specifier": "hermes:settings-controller",
+    "owner": "scripts/renderer-adapter.mjs",
+    "reason": "Read renderer-owned page controls and commands without re-entering the browser settings route replacement.",
+    "tests": [
+      {
+        "file": "scripts/renderer-adapter.test.mjs",
+        "scenario": "compiler and Vite resolve scoped replacements, virtual modules, aliases, and bypass imports identically"
+      }
+    ],
+    "removal": "Remove when upstream publishes settings page and command contracts."
   }
 ]

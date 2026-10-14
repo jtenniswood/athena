@@ -31,6 +31,15 @@ selection, profile and action adapters project the authoritative stores; they do
 not create a second conversation store. `upstream/browser-api.tsx` remains the
 explicit visual primitive boundary.
 
+`experience/settings/settings-route.tsx` assembles settings navigation from the
+catalog. The checked settings controller adapter extracts the existing Hermes
+page controls and commands without generating the browser frame. Schemas, values,
+profile-scoped requests, caches, and pending saves retain their renderer owners.
+Unknown renderer pages remain available in Other Settings. The fullscreen and
+embedded frame variants share compact navigation and focus behavior; each keeps
+its appropriate overlay host and breakpoint. Legacy bookmarks and field links
+are normalized by the browser route policy without dropping other query values.
+
 The chat action menu and its keyboard shortcuts use the same browser commands.
 Rename and delete dialogs retain the conversation they were opened for even if
 selection changes before a request completes. Sidebar row menus still use a

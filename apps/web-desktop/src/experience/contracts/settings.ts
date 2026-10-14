@@ -3,6 +3,13 @@ export interface BrowserPanelEntry {
   collapsible: boolean
 }
 
+export interface BrowserSettingsPageProps {
+  gateway?: unknown
+  onClose(): void
+  onConfigSaved?(): void
+  onMainModelChanged?(provider: string, model: string): void
+}
+
 export interface BrowserSettings {
   activityToasts: { enabled: boolean; toggle: () => void }
   panels: readonly {

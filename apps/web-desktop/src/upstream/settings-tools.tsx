@@ -1,17 +1,15 @@
 import { lazy, Suspense, useContext } from 'react'
 import { BrowserSettingsEmbeddedOverlay, BrowserSettingsToolActions } from '../experience/settings/embedded-overlay'
+import { settingsCatalog } from '../experience/settings/catalog'
 
 const SystemUpdates = lazy(async () => ({ default: (await import('../experience/settings/updates-page')).BrowserSystemUpdatesPage }))
 const Profiles = lazy(async () => ({ default: (await import('@/app/profiles')).ProfilesView }))
 const Webhooks = lazy(async () => ({ default: (await import('@/app/webhooks')).WebhooksView }))
 const CommandCenter = lazy(async () => ({ default: (await import('@/app/command-center')).CommandCenterView }))
 
-export const SETTINGS_TOOL_PAGES = [
-  { id: 'config:system-updates', label: 'System updates', icon: 'cloud-download' },
-  { id: 'config:profiles', label: 'Profiles', icon: 'account' },
-  { id: 'config:webhooks', label: 'Webhooks', icon: 'globe' },
-  { id: 'config:command-center', label: 'Command center', icon: 'symbol-misc' }
-] as const
+export const SETTINGS_TOOL_PAGES = settingsCatalog.flatMap(group => group.pages)
+  .filter(page => page.surface === 'tool')
+  .map(page => ({ id: page.id, label: page.title, icon: page.icon ?? 'settings-gear' }))
 
 export function BrowserSettingsToolContent({ view, onClose }: { view: string; onClose: () => void }) {
   const actions = useContext(BrowserSettingsToolActions)

@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useLocation } from 'react-router'
+import { useMemo, type ReactNode } from 'react'
 import { Codicon, type OverlayNavGroup } from '../../upstream/browser-api'
-import { useBrowserOverlayFocus } from '../ui/overlay-focus'
-import { useCompactBrowser } from '../ui/use-compact-browser'
+import { SettingsFrameSurface, useSettingsFrame } from './frame-behavior'
 
 type SettingsEntry = {
   active: boolean
@@ -11,11 +9,6 @@ type SettingsEntry = {
   label: string
   onSelect: () => void
   nested: boolean
-}
-
-function routeHasSettingsDestination(search: string): boolean {
-  const params = new URLSearchParams(search)
-  return ['tab', 'pview', 'kview', 'setting', 'field'].some(key => params.has(key))
 }
 
 export function BrowserSettingsFrame({
@@ -37,10 +30,6 @@ export function BrowserSettingsFrame({
   search: ReactNode
   title: string
 }) {
-  const compact = useCompactBrowser()
-  const location = useLocation()
-  const surface = useBrowserOverlayFocus()
-  const activeNavItem = useRef<HTMLButtonElement>(null)
   const entries = useMemo<SettingsEntry[]>(() => groups.flatMap(group => {
     const childActive = group.children?.some(child => child.active) ?? false
     return [
@@ -56,46 +45,16 @@ export function BrowserSettingsFrame({
     ]
   }), [groups])
   const activeEntry = entries.find(entry => entry.active)
-  const activeIdentity = activeEntry?.id || ''
-  const [showingDetail, setShowingDetail] = useState(() => !compact || routeHasSettingsDestination(location.search))
-  const previousActiveIdentity = useRef(activeIdentity)
-
-  useEffect(() => {
-    if (activeIdentity !== previousActiveIdentity.current) {
-      previousActiveIdentity.current = activeIdentity
-      if (activeIdentity) setShowingDetail(true)
-    }
-  }, [activeIdentity])
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented) return
-      event.preventDefault()
-      onClose()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
+  const { compact, showingDetail, navigation, heading, select, back } = useSettingsFrame('embedded', activeEntry?.id ?? '')
 
   return (
-    <section
-      aria-label={title}
-      aria-modal="true"
-      className="browser-settings-surface"
-      data-overlay-surface=""
-      ref={surface}
-      role="dialog"
-      tabIndex={-1}
-    >
+    <SettingsFrameSurface variant="embedded" title={title} closeLabel={closeLabel} onClose={onClose}>
       <header className="browser-settings-header">
         {compact && showingDetail ? (
           <button
             aria-label={backLabel}
             className="browser-settings-back"
-            onClick={() => {
-              setShowingDetail(false)
-              window.requestAnimationFrame(() => activeNavItem.current?.focus())
-            }}
+            onClick={back}
             type="button"
           >
             <Codicon name="chevron-left" />
@@ -104,7 +63,7 @@ export function BrowserSettingsFrame({
         ) : (
           <h1>{title}</h1>
         )}
-        {compact && showingDetail && <h2 className="browser-settings-detail-title">{activeEntry?.label || title}</h2>}
+        {compact && showingDetail && <h2 ref={heading} tabIndex={-1} className="browser-settings-detail-title">{activeEntry?.label || title}</h2>}
         <div className="browser-settings-header-actions">
           {search}
           <button aria-label={closeLabel} className="browser-settings-close" onClick={onClose} type="button">
@@ -115,7 +74,7 @@ export function BrowserSettingsFrame({
 
       <div className="browser-settings-body">
         <aside className="browser-settings-navigation" hidden={compact && showingDetail}>
-          <nav aria-label={title} className="browser-settings-nav-list">
+          <nav ref={navigation} aria-label={title} className="browser-settings-nav-list">
             {entries.map(entry => {
               const Icon = entry.icon
               return (
@@ -123,11 +82,7 @@ export function BrowserSettingsFrame({
                   aria-current={entry.active ? 'page' : undefined}
                   className={`browser-settings-nav-item${entry.active ? ' is-active' : ''}${entry.nested ? ' is-nested' : ''}`}
                   key={entry.id}
-                  ref={entry.active ? activeNavItem : undefined}
-                  onClick={() => {
-                    setShowingDetail(true)
-                    entry.onSelect()
-                  }}
+                  onClick={() => select(entry.onSelect)}
                   type="button"
                 >
                   <Icon aria-hidden className="browser-settings-nav-icon" />
@@ -142,6 +97,6 @@ export function BrowserSettingsFrame({
           {children}
         </main>
       </div>
-    </section>
+    </SettingsFrameSurface>
   )
 }
