@@ -175,7 +175,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
           <div className="browser-settings-content-slot" data-settings-page={activeView} hidden={!showDetail} inert={!showDetail}>
             {pageVisible && activeGroup && <header className="browser-settings-page-header browser-settings-detail-header">
               <h2 className="browser-settings-page-title">{activeGroup.label}</h2>
-              <p className="browser-settings-page-description">{pageDescription}</p>
+              {activeView !== 'notifications' && <p className="browser-settings-page-description">{pageDescription}</p>}
             </header>}
             {pageVisible && pageNotice && <p className="browser-settings-page-notice" role="note">{pageNotice}</p>}
             {pageVisible && managingPlugins
