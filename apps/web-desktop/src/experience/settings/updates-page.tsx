@@ -28,7 +28,7 @@ export function BrowserSystemUpdatesPage() {
     <section className="browser-settings-page browser-updates-page" aria-label="System updates">
       <header className="browser-settings-page-header">
         <h2 className="browser-settings-page-title">System updates</h2>
-        <p className="browser-settings-page-description">Check and update Hermes Agent on the connected server.</p>
+        <p className="browser-settings-page-description">Check for Hermes Agent updates.</p>
       </header>
       <div className="browser-updates-version">
         <span>Installed version</span>
