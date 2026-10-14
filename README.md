@@ -11,8 +11,9 @@ build time.
 
 ## Docker self-hosting
 
-The image contains Athena’s web UI and nginx. It connects to a separate,
-already-running Hermes Gateway. The quickest setup uses the published Docker
+The image contains Athena’s web UI, nginx, and a small settings storage service.
+It connects to a separate, already-running Hermes Gateway. The quickest setup
+uses the published Docker
 image and `docker run`; Compose is optional. See the [Compose wiki guide](https://github.com/jtenniswood/athena/wiki/Run-with-Docker-Compose)
 if you prefer Compose.
 
@@ -48,13 +49,14 @@ docker run -d \
   --env-file .env.hermes-web \
   --add-host host.docker.internal:host-gateway \
   -p 4174:80 \
+  -v athena-preferences:/data/athena \
   -v "$HOME/.hermes:/data/hermes:ro" \
   ghcr.io/jtenniswood/athena:latest
 ```
 
 Open <http://localhost:4174/>. The mounted Hermes directory lets Athena serve
-installed `plugins/` and `desktop-plugins/`; remove the `-v` line if you do not
-use filesystem plugins.
+installed `plugins/` and `desktop-plugins/`; remove the Hermes directory mount
+if you do not use filesystem plugins.
 
 To stop Athena:
 
@@ -82,6 +84,26 @@ query strings, cookies, and authorization headers. nginx errors also go to
 Docker logs using nginx's native format and may include request URLs; redact
 these before sharing logs. Athena's container logs cover the UI server and
 proxy; check the separate Hermes Gateway logs for agent execution details.
+
+### Settings sync
+
+Athena saves your appearance, user preferences, and sidebar layout to the server
+and loads them when you open Athena on another device using the same account.
+The first device imports its existing preferences. Changes to different settings
+merge; when two devices change the same setting, the last server save wins.
+
+Open **Settings → Configuration → Sync across devices** to see the save status.
+An already-open device checks for changes when you return to it and periodically
+while visible. Select **Apply changes** to load settings saved on another device;
+Athena checks drafts, recordings, attachments, and pending work before reloading.
+Offline edits remain saved locally and retry when the connection returns.
+
+Keep the writable `athena-preferences:/data/athena` volume when recreating or
+upgrading the container. `HERMES_PREFERENCES_DIR` can change the storage location.
+Hermes verifies the account on every request; token-only connections share the
+gateway's local account. Backend profile configuration continues to be saved by
+Hermes. Drafts, credentials, browser permissions, transcript caches, and the
+currently selected conversation stay local.
 
 ### Browser notifications
 

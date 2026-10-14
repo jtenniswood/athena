@@ -31,5 +31,7 @@ jobs:
         run: pnpm typecheck
       - name: Verify shared adapter output and startup ordering
         run: node --test scripts/renderer-adapter.test.mjs scripts/startup.test.mjs
+      - name: Verify persisted preference compatibility
+        run: node --test scripts/browser-preference-contract.test.mjs scripts/preference-sync.test.mjs scripts/preferences-server.test.mjs scripts/default-profile-route.test.mjs scripts/sidebar-contracts.test.mjs
       - name: Build browser application
         run: pnpm build

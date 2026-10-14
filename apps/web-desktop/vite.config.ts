@@ -2,6 +2,7 @@ import { rendererAdapterPlugin, adapterAliases } from '../../scripts/renderer-ad
 import { runtimeConfiguration, runtimeScripts, matchesGatewayRoute, navigationFallbackDenylist, type HostingConfiguration } from '../../scripts/runtime-config.mjs'
 import { compatibilitySingletons } from '../../scripts/aliases.mjs'
 import { buildInfoPlugin } from '../../scripts/build-info.mjs'
+import { createPreferencesHandler, preferencesPath } from '../../scripts/preferences-server.mjs'
 import { defineConfig, loadEnv, type Plugin, type PreviewServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -171,6 +172,10 @@ interface ProxyServerLike {
 }
 
 function attachDynamicProxy(server: ProxyServerLike): void {
+  const preferences = createPreferencesHandler({
+    target: hosting.target,
+    directory: process.env.HERMES_PREFERENCES_DIR || path.resolve(__dirname, '../../.athena/preferences')
+  })
   // Route HTTPS hostname-based gateways correctly (including Cloudflare
   // Tunnel) while retaining the app origin in forwarded metadata.
   const proxy: ProxyServer = createProxyServer({ changeOrigin: true, secure: true, ws: true })
@@ -199,6 +204,10 @@ function attachDynamicProxy(server: ProxyServerLike): void {
 
   server.middlewares.use((req, res, next) => {
     const pathname = req.url?.split('?')[0]
+    if (pathname === preferencesPath) {
+      void preferences(req, res)
+      return
+    }
     const scripts = runtimeScripts(hosting)
     if (pathname && Object.hasOwn(scripts, pathname.slice(1))) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8')

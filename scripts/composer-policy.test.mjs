@@ -5,6 +5,7 @@ import { createRequire } from 'node:module'
 import vm from 'node:vm'
 import { test } from 'node:test'
 import ts from 'typescript'
+import { browserPreferences, createBrowserPreference } from './browser-preference-contract.mjs'
 
 const root = path.resolve('apps/web-desktop')
 const pluginFile = path.join(root, 'src/upstream/browser-plugin.ts')
@@ -16,7 +17,10 @@ const source = plugin.exports.useBrowserFollowupSubmit(plugin.exports.useBrowser
 
 function composer({ preference = 'queue', busy = true, disabled = false, attachments = [], queueEdit = null, blocking = false, text = 'live draft' } = {}) {
   const calls = []
-  const policy = vm.createContext({ exports: {}, window: { localStorage: { getItem: () => preference } }, require: () => ({}) })
+  const preferenceStore = createBrowserPreference(browserPreferences.followupBehavior, {
+    storage: () => ({ getItem: () => preference }), persist() {}, events: new EventTarget()
+  })
+  const policy = vm.createContext({ exports: {}, require: () => ({ browserPreference: () => preferenceStore }) })
   vm.runInContext(compile(readFileSync(path.join(root, 'src/experience/followup-preferences.ts'), 'utf8')), policy)
   const realm = vm.createContext({ exports: {}, require: name => {
     if (name.endsWith('/followup-preferences')) return policy.exports

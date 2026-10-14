@@ -1,62 +1,16 @@
-/** Browser-scoped preferences. Keys stay stable to preserve existing installs. */
-export const NAVIGATION_TABS = ['sessions', 'bots'] as const
-export type NavigationTab = typeof NAVIGATION_TABS[number]
+import { browserPreference } from '../platform/preferences'
+import type { PreferenceValues, NavigationTab } from '../../../../scripts/browser-preference-contract.mjs'
+export { NAVIGATION_TABS, DEFAULT_NAVIGATION_WIDTH, MIN_NAVIGATION_WIDTH, MAX_NAVIGATION_WIDTH, clampNavigationWidth } from '../../../../scripts/browser-preference-contract.mjs'
+export type { NavigationTab } from '../../../../scripts/browser-preference-contract.mjs'
 export const NAVIGATION_TAB_LABELS: Record<NavigationTab, string> = { sessions: 'Sessions', bots: 'Bots' }
-export const DEFAULT_NAVIGATION_WIDTH = 304
-export const MIN_NAVIGATION_WIDTH = 224
-export const MAX_NAVIGATION_WIDTH = 560
 
-const KEYS = {
-  activeTab: 'hermes-web.browser.navigation',
-  hiddenProfiles: 'hermes-web.browser.hidden-profiles',
-  hideAllProfilesButton: 'hermes-web.browser.hide-all-profiles-button',
-  navigationTabs: 'hermes-web.browser.navigation-tabs',
-  navigationWidth: 'hermes-web.browser.navigation-width'
-} as const
-
-function storage(): Storage | null {
-  try { return window.localStorage } catch { return null }
+type NavigationPreference = Extract<keyof PreferenceValues, 'activeTab' | 'hiddenProfiles' | 'hideAllProfilesButton' | 'navigationTabs' | 'navigationWidth'>
+/** Retain the existing wire-value interface for navigation callers. */
+export function writeBrowserPreference(key: NavigationPreference, value: string): void {
+  browserPreference(key).writeRaw(value)
 }
-
-function read(key: string): string | null {
-  try { return storage()?.getItem(key) ?? null } catch { return null }
-}
-
-export function writeBrowserPreference(key: keyof typeof KEYS, value: string): void {
-  try { storage()?.setItem(KEYS[key], value) } catch { /* Optional browser preference. */ }
-}
-
-export function clampNavigationWidth(width: number): number {
-  return Math.min(MAX_NAVIGATION_WIDTH, Math.max(MIN_NAVIGATION_WIDTH, width))
-}
-
-export function readNavigationTab(): NavigationTab {
-  return read(KEYS.activeTab) === 'bots' ? 'bots' : 'sessions'
-}
-
-export function readVisibleNavigationTabs(): NavigationTab[] {
-  try {
-    const saved = JSON.parse(read(KEYS.navigationTabs) || 'null')
-    if (Array.isArray(saved)) {
-      const visible = [...new Set(saved.filter((value): value is NavigationTab => NAVIGATION_TABS.includes(value)))]
-      if (visible.length) return visible
-    }
-  } catch { /* Malformed or unavailable preference uses the safe default. */ }
-  return [...NAVIGATION_TABS]
-}
-
-export function readHiddenProfiles(): string[] {
-  try {
-    const saved = JSON.parse(read(KEYS.hiddenProfiles) || 'null')
-    return Array.isArray(saved) ? saved.filter((value): value is string => typeof value === 'string') : []
-  } catch { return [] }
-}
-
-export function readHideAllProfilesButton(): boolean {
-  return read(KEYS.hideAllProfilesButton) === 'true'
-}
-
-export function readNavigationWidth(): number {
-  const saved = Number(read(KEYS.navigationWidth))
-  return Number.isFinite(saved) ? clampNavigationWidth(saved) : DEFAULT_NAVIGATION_WIDTH
-}
+export const readNavigationTab = (): NavigationTab => browserPreference('activeTab').read()
+export const readVisibleNavigationTabs = (): NavigationTab[] => browserPreference('navigationTabs').read()
+export const readHiddenProfiles = (): string[] => browserPreference('hiddenProfiles').read()
+export const readHideAllProfilesButton = (): boolean => browserPreference('hideAllProfilesButton').read()
+export const readNavigationWidth = (): number => browserPreference('navigationWidth').read()

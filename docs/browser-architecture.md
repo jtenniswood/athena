@@ -63,6 +63,16 @@ Browser, hosting, and connected-server support facts are described in
 `platform/capabilities.ts`. API availability does not imply permission; the
 owning browser operation still handles permission and failure at use time.
 
+`scripts/browser-preference-contract.mjs` records wrapper preference keys, owners,
+scope, defaults, parsers, serialization, and legacy migrations. The browser's
+typed access and subscription helper and the account-sync allowlist consume this
+same contract. Existing keys and wire formats remain compatible. Same-tab writes
+and relevant storage events share a subscription path with stable snapshots.
+Sidebar and session-profile migrations are repeatable and preserve migration
+inputs until the replacement is verified. Optional preferences tolerate blocked
+storage; connection credentials, drafts, and account-bound sync outboxes retain
+their stronger persistence owners and checks.
+
 The renderer registers its draft store through `platform/draft-safety.ts`.
 Update and connection transitions use that typed boundary to flush cross-tab
 writes and verify persisted text before they proceed. Ordinary draft saves keep
