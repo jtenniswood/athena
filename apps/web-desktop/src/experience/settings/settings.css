@@ -39,7 +39,7 @@
   padding-block-start: var(--web-space-2);
 }
 .browser-settings-page-header { display: grid; gap: var(--web-space-1); }
-.browser-settings-page-title { margin: 0; font-size: var(--web-text-body); font-weight: 500; line-height: var(--web-line-body); }
+.browser-settings-page-title { margin: 0; font-size: 1.25rem; font-weight: 500; line-height: var(--web-line-body); }
 .browser-settings-page-description { margin: 0; color: var(--web-text-muted); font-size: var(--web-text-caption); line-height: var(--web-line-body); }
 .browser-configuration-page { padding-inline: 0; }
 .browser-color-themes-mode { display: flex; gap: 0.35rem; }
