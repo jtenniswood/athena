@@ -224,6 +224,20 @@ export function useBrowserOverlayFocusOwner(source: string, root: string): strin
     .replace(element, '    <div\n      ref={browserOverlayRef}\n      tabIndex={-1}\n      className={cn(')
 }
 
+export function keepBrowserPluginManagementInSettings(source: string): string {
+  const target = 'const MANAGE_PLUGINS_HREF = `#${CAPABILITIES_ROUTE}?tab=plugins`'
+  const params = 'export const PAGE_SCOPED_PARAMS = ['
+  if (source.split(target).length !== 2 || source.split(params).length !== 2) throw new Error('Browser plugin management link changed')
+  return source.replace(target, "const MANAGE_PLUGINS_HREF = '#/settings?tab=plugins&manage=1'")
+    .replace(params, params + "\n  'manage',")
+}
+
+export function keepBrowserPluginInstallInSettings(source: string): string {
+  const target = "        navigate('/capabilities?tab=plugins')"
+  if (source.split(target).length !== 2) throw new Error('Browser plugin install destination changed')
+  return source.replace(target, "        navigate(location.pathname === '/settings' ? '/settings?tab=plugins&manage=1' : '/capabilities?tab=plugins')")
+}
+
 export function useBrowserSettingsToolActions(source: string, root: string): string {
   const target = '<SettingsView\n'
   const end = '\n        </Suspense>\n      )}\n\n      {currentView'
@@ -1360,6 +1374,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
   if (digest(code) === entry.outputHash) return { code, map: null }
   if (digest(code) !== entry.inputHash) throw new Error(`Browser compatibility changed: ${entry.name} (${entry.module}). Review this registry entry.`)
   const handlers: Record<string, (source: string) => string> = {
+    keepBrowserPluginManagementInSettings,
+    keepBrowserPluginInstallInSettings,
     useBrowserRosterDialogFocus: source => useBrowserRosterDialogFocus(source, root),
     useBrowserRosterActionSurfaces: source => useBrowserRosterActionSurfaces(source, root),
     useBrowserSectionActionSurface: source => useBrowserSectionActionSurface(source, root),

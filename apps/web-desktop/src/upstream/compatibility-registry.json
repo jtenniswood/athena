@@ -2779,5 +2779,49 @@
       }
     ],
     "removal": "Replace when the renderer exposes a public current-conversation identity contract."
+  },
+  {
+    "name": "browser-plugin-management-in-settings",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/plugin-settings.tsx",
+    "reason": "Open plugin management inside the browser Settings surface and clear its page state when changing settings categories.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "plugin management stays in settings and preserves the draft"
+      }
+    ],
+    "removal": "Remove when upstream plugin settings can embed plugin management without navigating away from Settings.",
+    "sourceHash": "2df9462bf6e00004920c701852b911bfa81c891d1244d5bcd12b48550cbb8972",
+    "inputHash": "2df9462bf6e00004920c701852b911bfa81c891d1244d5bcd12b48550cbb8972",
+    "outputHash": "8ec1062abce216eab66340ae946611fbec9e31400878c5eda2442c828fbb9a37",
+    "handlers": [
+      "keepBrowserPluginManagementInSettings"
+    ],
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-plugin-install-settings-return",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/plugin-install-modal.tsx",
+    "reason": "Return successful plugin installs started in Settings to its embedded plugin manager.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "plugin installs return to the settings manager only when launched from settings"
+      }
+    ],
+    "removal": "Remove when upstream plugin installation preserves an embedded Settings manager destination.",
+    "sourceHash": "9fcc9a7cf4d09c9775a8c4a420217e0765e8757ac230cbfd7759a237957e2150",
+    "inputHash": "9fcc9a7cf4d09c9775a8c4a420217e0765e8757ac230cbfd7759a237957e2150",
+    "outputHash": "d66c6705944ac9bc31c28f6344ae420bb67012c284dfdf4bb44abdf924088253",
+    "handlers": [
+      "keepBrowserPluginInstallInSettings"
+    ],
+    "sourceRoot": "renderer"
   }
 ]
