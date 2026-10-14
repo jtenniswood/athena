@@ -245,10 +245,33 @@
 .browser-settings-plugin-content { min-height: 0; flex: 1; overflow: hidden; }
 .browser-settings-plugin-content > div > div:first-child > div:first-child > p { flex-basis: 16rem; }
 .browser-notification-settings { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-.browser-notification-permission { gap: var(--web-space-3); margin-bottom: var(--web-space-6); }
-.browser-notification-permission > button { justify-self: start; }
+.browser-notification-permission {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--web-space-3) var(--web-space-4);
+  margin-bottom: var(--web-space-4);
+  padding: var(--web-space-4);
+  border: 1px solid var(--web-border);
+  border-radius: var(--web-radius-panel);
+  background: var(--web-surface);
+}
+.browser-notification-permission-copy { display: grid; flex: 1 1 15rem; min-width: 0; gap: var(--web-space-1); }
+.browser-notification-permission > button {
+  min-height: max(var(--web-control-regular), var(--web-touch-min));
+  max-width: 100%;
+  padding-inline: var(--web-space-4);
+  color: var(--web-on-accent);
+  background: var(--web-accent);
+  font-size: var(--web-text-body);
+  white-space: normal;
+}
+.browser-notification-permission > button:hover { background: color-mix(in srgb, var(--web-accent) 90%, var(--web-text)); }
+.browser-notification-permission-hint { flex-basis: 100%; color: var(--web-text-subtle); }
 .browser-notification-settings > section.min-h-0.overflow-hidden { overflow: visible; }
 .browser-notification-settings > section.min-h-0.overflow-hidden > .h-full.min-h-0.overflow-y-auto { height: auto; overflow: visible; padding-inline: var(--web-space-1); }
+/* The permission panel replaces the desktop-only notification introduction. */
+.browser-notification-settings > section.min-h-0.overflow-hidden > .h-full.min-h-0.overflow-y-auto > p:first-of-type { display: none; }
 .browser-settings-page-notice { max-width: 54rem; margin: 0 auto var(--web-space-3); color: var(--web-text-muted); font-size: var(--web-text-caption); }
 .browser-settings-content-slot > section.min-h-0.overflow-hidden { width: 100%; min-height: 0; flex: 1; }
 .browser-settings-content-slot > section.min-h-0.overflow-hidden > .h-full.min-h-0.overflow-y-auto { overscroll-behavior: contain; padding-inline: var(--web-space-1); }
