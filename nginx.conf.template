@@ -1,6 +1,6 @@
 # nginx.conf template for Athena (frontend-only Docker image).
 # ${HERMES_GATEWAY_URL} and ${HERMES_HOME} are substituted by
-# docker-entrypoint.sh (envsubst) at container start; every other $var is nginx's own.
+# scripts/runtime-config.mjs at container start; every other $var is nginx's own.
 
 pid "${HERMES_STATE_DIR}/nginx.pid";
 error_log stderr;
@@ -8,7 +8,26 @@ events {}
 
 http {
     include /etc/nginx/mime.types;
-    access_log /dev/stdout;
+    # Categories preserve diagnostics without logging URLs, query strings,
+    # conversation IDs, cookies, authorization headers, or referrers.
+    map $request_uri $athena_route {
+        default app;
+        ~^/api/ws(?:/|\?|$) websocket;
+        ~^/api(?:/|\?|$) api;
+        ~^/auth(?:/|\?|$) auth;
+        ~^/login(?:/|\?|$) login;
+        ~^/(?:desktop-plugins|plugins)(?:/|\?|$) plugins;
+        ~^/assets(?:/|\?|$) assets;
+        ~^/(?:runtime-config|gateway-config)\.js(?:\?|$) runtime_config;
+        ~^/build-info\.json(?:\?|$) build_info;
+        ~^/(?:sw|notifications-sw|update-coordinator-sw)\.js(?:\?|$) service_worker;
+    }
+    log_format athena escape=json
+        '{"time":"$time_iso8601","service":"athena","event":"request",'
+        '"method":"$request_method","route":"$athena_route","status":$status,'
+        '"bytes":$body_bytes_sent,"request_seconds":$request_time,'
+        '"upstream_status":"$upstream_status","upstream_seconds":"$upstream_response_time"}';
+    access_log /dev/stdout athena;
     client_body_temp_path "${HERMES_STATE_DIR}/client";
     proxy_temp_path "${HERMES_STATE_DIR}/proxy";
     default_type application/octet-stream;

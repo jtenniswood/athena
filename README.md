@@ -65,6 +65,24 @@ docker stop athena
 For microphone access from another device, open Athena over HTTPS (for example,
 through Tailscale Serve).
 
+### Container logs
+
+Follow startup and request diagnostics with:
+
+```bash
+docker logs --follow athena
+```
+
+Startup JSON lines report the build revisions, release channel, listening
+address, gateway origin, sign-in mode, and plugin directory availability.
+Request JSON lines include a route category, HTTP status, response size, total
+request time, and gateway status and response time (in seconds). WebSocket
+requests are logged when the connection closes. Access logs omit full URLs,
+query strings, cookies, and authorization headers. nginx errors also go to
+Docker logs using nginx's native format and may include request URLs; redact
+these before sharing logs. Athena's container logs cover the UI server and
+proxy; check the separate Hermes Gateway logs for agent execution details.
+
 ### Browser notifications
 
 Open **Settings → Notifications → Allow browser notifications**, then accept

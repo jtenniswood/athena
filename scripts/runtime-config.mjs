@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -70,14 +70,45 @@ export function renderNginx(template, configuration) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const log = (level, event, details = {}) => {
+    const line = JSON.stringify({ time: new Date().toISOString(), level, service: 'athena', event, ...details })
+    if (level === 'error') console.error(line)
+    else if (level === 'warn') console.warn(line)
+    else console.log(line)
+  }
+  let stage = 'validate_environment'
   try {
     const configuration = runtimeConfiguration()
+    stage = 'write_runtime_configuration'
     mkdirSync(configuration.stateDir, { recursive: true })
-    const destination = process.env.HERMES_STATIC_ROOT || '/usr/share/nginx/html'
+    const destination = configuration.staticRoot
     for (const [name, source] of Object.entries(runtimeScripts(configuration))) writeFileSync(path.join(destination, name), source)
     writeFileSync(process.env.HERMES_NGINX_CONFIG || '/etc/nginx/nginx.conf', renderNginx(readFileSync(process.env.HERMES_NGINX_TEMPLATE || '/etc/nginx/hermes.conf.template', 'utf8'), configuration))
     for (const name of ['plugins', 'desktop-plugins']) {
       try { mkdirSync(path.join(configuration.home, name), { recursive: true }) } catch { /* Read-only plugin mounts are supported. */ }
+      try {
+        const entries = readdirSync(path.join(configuration.home, name))
+        log('info', 'plugin_directory', { directory: name, available: true, entries: entries.length })
+      } catch (error) {
+        log('warn', 'plugin_directory', { directory: name, available: false, code: error.code })
+      }
     }
-  } catch (error) { console.error(error.message); process.exitCode = 1 }
+    try {
+      const info = JSON.parse(readFileSync(path.join(destination, 'build-info.json'), 'utf8'))
+      const fields = ['wrapperRevision', 'rendererRevision', 'builtAt', 'channel']
+      log('info', 'build_info', Object.fromEntries(fields.map(key => [key, typeof info[key] === 'string' ? info[key] : 'unknown'])))
+    } catch (error) {
+      log('warn', 'build_info_unavailable', { code: error.code || 'INVALID_BUILD_INFO' })
+    }
+    log('info', 'runtime_configured', {
+      listen: configuration.listen, gateway: configuration.target,
+      authMode: configuration.publicConfig.auth.mode
+    })
+  } catch (error) {
+    log('error', 'startup_failed', {
+      stage, code: error.code,
+      message: stage === 'validate_environment' ? error.message : 'Could not write runtime configuration'
+    })
+    process.exitCode = 1
+  }
 }
