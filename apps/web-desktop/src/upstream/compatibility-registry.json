@@ -2401,11 +2401,12 @@
     "sourceRoot": "renderer",
     "sourceHash": "25a78369dc3254b412634e175cd8798f20aa0018a83af9604bd2924e8f5d9ddf",
     "inputHash": "25a78369dc3254b412634e175cd8798f20aa0018a83af9604bd2924e8f5d9ddf",
-    "outputHash": "322a55532c5ccf5b9d6531e8cc5e40aa502627c5058eca47ce08693a7ae574eb",
+    "outputHash": "36a30e42be7cd4f23935fa557bf06d1216cb2c316e6fd2161e5824736b6f5068",
     "handlers": [
-      "hideBrowserLocalProjectDirectory"
+      "hideBrowserLocalProjectDirectory",
+      "useBrowserArchivedSessionsTable"
     ],
-    "reason": "Hide the desktop-local project directory picker while keeping remote working-directory settings.",
+    "reason": "Hide the desktop-local project directory picker while keeping remote working-directory settings. Present archived sessions in a compact semantic table with previews, message counts, workspace labels, and the existing unarchive/delete actions.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -2413,7 +2414,7 @@
         "scenario": "settings and command center use one upstream overlay and preserve the chat"
       }
     ],
-    "removal": "Remove once this control has a browser implementation for selecting a server-side project directory."
+    "removal": "Remove once upstream offers a browser-compatible project directory picker and compact archived sessions table."
   },
   {
     "name": "browser-project-group-disclosure",
