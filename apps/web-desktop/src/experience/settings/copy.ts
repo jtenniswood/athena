@@ -1,4 +1,4 @@
-import { registerAppLocale, type Translations } from '@/i18n'
+import { registerAppLocale, type Translations } from '../../upstream/browser-api'
 
 // Layer browser copy over the bundled English catalog without changing other locales.
 const copy = {
