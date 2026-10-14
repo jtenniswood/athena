@@ -33,7 +33,7 @@ export function BrowserConfigurationPage({ commands }: { commands: BrowserConfig
     <h2 className="browser-settings-page-title">{settingsPageLabel('config:browser-configuration', 'Configuration')}</h2>
     <section className="browser-followup-setting" aria-labelledby="browser-followup-setting-title">
       <h3 id="browser-followup-setting-title">Follow-up behavior</h3>
-      <p>Choose what happens when you submit a message while the assistant is running. Use Cmd/Ctrl+Enter for the other action for one message.</p>
+      <p>Queue or steer messages sent during a reply. Cmd/Ctrl+Enter uses the other action once.</p>
       <div className="browser-followup-options" role="group" aria-label="Default follow-up behavior">
         {(['queue', 'steer'] as const).map(value => <button
           aria-pressed={followupBehavior === value}
@@ -46,7 +46,7 @@ export function BrowserConfigurationPage({ commands }: { commands: BrowserConfig
     </section>
     <section className="browser-transcript-setting" aria-labelledby="browser-transcript-setting-title">
       <h3 id="browser-transcript-setting-title">Conversation content</h3>
-      <p>Choose whether to show thoughts, tool calls, timestamps, and activity notices alongside messages and replies.</p>
+      <p>Show thoughts, tool calls, timestamps, and activity notices in the chat.</p>
       <label className="browser-transcript-setting-toggle">
         <input
           checked={showAuxiliaryTranscriptContent}

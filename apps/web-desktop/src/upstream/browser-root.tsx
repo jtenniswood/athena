@@ -5,6 +5,7 @@ import { setReasoningCollapsedByDefault } from '@/store/reasoning-disclosure'
 import { setTipsEnabled } from '@/store/tips'
 import { setToursEnabled } from '@/store/tours'
 import '../experience/browser.css'
+import '../experience/settings/copy'
 export default function BrowserRoot() {
   useEffect(() => {
     const stopRestoringProfile = restoreBrowserProfile()
