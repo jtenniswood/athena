@@ -4,7 +4,8 @@ import { useMobileBrowser } from './ui/use-compact-browser'
 import { Codicon } from '../upstream/browser-api'
 import { notifyConversationOpen } from './conversation-navigation'
 
-import { HIDDEN_SECTIONS_KEY, readHiddenSections } from './sidebar-section-preferences'
+import { browserPreference, useBrowserPreference } from '../platform/preferences'
+import { browserPreferences, migrateBrowserPreference } from '../../../../scripts/browser-preference-contract.mjs'
 import { saveSyncedPreference } from '../platform/preference-sync'
 
 type SidebarSection = { key: string; label: string }
@@ -26,9 +27,11 @@ export function useBrowserSidebarSection(key: string, label: string) {
 }
 
 export function useBrowserSidebarSections() {
-  const [hiddenSections, setHiddenSections] = useState(() => {
-    try { return readHiddenSections(localStorage) } catch { return [] }
-  })
+  const hiddenSections = useBrowserPreference('hiddenSections')
+  useEffect(() => {
+    try { migrateBrowserPreference(browserPreferences.hiddenSections, window.localStorage, saveSyncedPreference) }
+    catch { /* Sidebar visibility remains available without storage. */ }
+  }, [])
   const [registered, setRegistered] = useState<Map<string, SidebarSection>>(() => new Map())
   const register = useCallback((instance: string, section: SidebarSection) => {
     setRegistered(current => new Map(current).set(instance, section))
@@ -40,16 +43,13 @@ export function useBrowserSidebarSections() {
   }, [])
   const availableSections = [...new Map([...registered.values()].map(section => [section.key, section])).values()]
   if (!availableSections.some(section => section.key === 'cron-jobs')) availableSections.push({ key: 'cron-jobs', label: 'Cron jobs' })
-  useEffect(() => {
-    saveSyncedPreference(HIDDEN_SECTIONS_KEY, JSON.stringify({ version: 2, hidden: hiddenSections }))
-  }, [hiddenSections])
   const actions: BrowserAction[] = availableSections.filter(section => section.key !== 'sessions').map(section => ({
     key: section.key,
     label: section.label,
     icon: <Codicon name={section.key === 'cron-jobs' ? 'watch' : section.key.startsWith('messaging:') ? 'comment' : section.key === 'pinned' ? 'pin' : 'folder'} size="1rem" />,
     checked: !hiddenSections.includes(section.key),
     keepOpen: true,
-    run: () => setHiddenSections(current => current.includes(section.key) ? current.filter(key => key !== section.key) : [...current, section.key])
+    run: () => browserPreference('hiddenSections').write(hiddenSections.includes(section.key) ? hiddenSections.filter(key => key !== section.key) : [...hiddenSections, section.key])
   }))
   return { hiddenSections, register, actions }
 }

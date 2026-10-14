@@ -1,36 +1,10 @@
-import { useSyncExternalStore } from 'react'
-import { saveSyncedPreference } from '../platform/preference-sync'
+import { browserPreference, useBrowserPreference } from '../platform/preferences'
+export type { FollowupBehavior } from '../../../../scripts/browser-preference-contract.mjs'
+import type { FollowupBehavior } from '../../../../scripts/browser-preference-contract.mjs'
 
-export type FollowupBehavior = 'queue' | 'steer'
-
-const KEY = 'hermes-web.browser.followup-behavior'
-const CHANGE_EVENT = 'hermes-web:followup-behavior-change'
-
-export function readFollowupBehavior(): FollowupBehavior {
-  try {
-    return window.localStorage.getItem(KEY) === 'steer' ? 'steer' : 'queue'
-  } catch {
-    return 'queue'
-  }
-}
-
-export function writeFollowupBehavior(value: FollowupBehavior): void {
-  saveSyncedPreference(KEY, value)
-  window.dispatchEvent(new Event(CHANGE_EVENT))
-}
-
-function subscribe(onChange: () => void): () => void {
-  window.addEventListener(CHANGE_EVENT, onChange)
-  window.addEventListener('storage', onChange)
-  return () => {
-    window.removeEventListener(CHANGE_EVENT, onChange)
-    window.removeEventListener('storage', onChange)
-  }
-}
-
-export function useFollowupBehavior(): FollowupBehavior {
-  return useSyncExternalStore(subscribe, readFollowupBehavior, () => 'queue')
-}
+export const readFollowupBehavior = (): FollowupBehavior => browserPreference('followupBehavior').read()
+export const writeFollowupBehavior = (value: FollowupBehavior): void => browserPreference('followupBehavior').write(value)
+export const useFollowupBehavior = (): FollowupBehavior => useBrowserPreference('followupBehavior')
 
 /** Resolve a submission intent without inspecting buttons or intercepting events. */
 export function browserFollowupMode(alternate = false): FollowupBehavior {

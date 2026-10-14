@@ -4,6 +4,7 @@ import path from 'node:path'
 import { test } from 'node:test'
 import vm from 'node:vm'
 import ts from 'typescript'
+import * as preferenceContract from './browser-preference-contract.mjs'
 
 const root = path.resolve('apps/web-desktop/src')
 
@@ -75,7 +76,7 @@ function startupHarness({ configurationError, rendererError, existingBridge, sig
     }
     const context = vm.createContext({
       exports: {}, window, document, sessionStorage, URL,
-      require: specifier => load(path.resolve(path.dirname(filename), `${specifier}.ts`))
+      require: specifier => specifier.endsWith('/browser-preference-contract.mjs') ? preferenceContract : load(path.resolve(path.dirname(filename), `${specifier}.ts`))
     })
     const source = readFileSync(filename, 'utf8')
     vm.runInContext(ts.transpileModule(source, {

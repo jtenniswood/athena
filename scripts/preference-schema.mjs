@@ -1,3 +1,4 @@
+import { wrapperSyncPreferenceKeys } from './browser-preference-contract.mjs'
 // Only user preferences belong here. Never include credentials, composer
 // drafts, queued messages, transcript caches, or current conversation state.
 const rendererKeys = [
@@ -40,12 +41,7 @@ const layoutKeys = new Set([
 export const preferenceKeys = [
   ...rendererKeys.flatMap(key => layoutKeys.has(key) ? [key, `${key}.simple`] : [key])
     .map(key => scoped.test(key) ? `hermes-web.browser.${key}` : key),
-  ...[
-    'navigation', 'hidden-profiles', 'hide-all-profiles-button', 'navigation-tabs',
-    'navigation-width', 'hidden-sections', 'followup-behavior',
-    'show-auxiliary-transcript-content'
-  ].map(key => `hermes-web.browser.${key}`),
-  'hermes-web.default-profile-route.v1', 'hermes-web.ui-scale', 'hermes-web.ui-scale.mobile',
+  ...wrapperSyncPreferenceKeys,
   'hermes.plugin.hermes-bots.activity-toasts', 'hermes.plugin.hermes-bots.bot-sections-v1'
 ]
 const allowedKeys = new Set(preferenceKeys)

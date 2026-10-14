@@ -1,8 +1,6 @@
 import type {} from '../upstream/types'
-import { saveSyncedPreference } from './preference-sync'
+import { browserPreference } from './preferences'
 
-const WEB_ZOOM_STORAGE_KEY = 'hermes-web.ui-scale'
-const MOBILE_WEB_ZOOM_STORAGE_KEY = 'hermes-web.ui-scale.mobile'
 const ZOOM_FACTOR_BASE = 1.2
 const DESKTOP_DEFAULT_ZOOM_LEVEL = Math.log(1.25) / Math.log(ZOOM_FACTOR_BASE)
 const MOBILE_DEFAULT_ZOOM_LEVEL = Math.log(1.25) / Math.log(ZOOM_FACTOR_BASE)
@@ -30,9 +28,7 @@ function defaultZoomLevel(): number {
   return isMobileDevice() ? MOBILE_DEFAULT_ZOOM_LEVEL : DESKTOP_DEFAULT_ZOOM_LEVEL
 }
 
-function zoomStorageKey(): string {
-  return isMobileDevice() ? MOBILE_WEB_ZOOM_STORAGE_KEY : WEB_ZOOM_STORAGE_KEY
-}
+function zoomPreference() { return browserPreference(isMobileDevice() ? 'mobileScale' : 'desktopScale') }
 
 function percentToZoomLevel(percent: number): number {
   if (!Number.isFinite(percent) || percent <= 0) {
@@ -46,15 +42,7 @@ function zoomLevelToPercent(level: number): number {
   return Math.round(Math.pow(ZOOM_FACTOR_BASE, clampZoomLevel(level)) * 100)
 }
 
-function readStoredZoomPercent(): number {
-  try {
-    const stored = Number(window.localStorage.getItem(zoomStorageKey()))
-
-    return Number.isFinite(stored) && stored > 0 ? stored : zoomLevelToPercent(defaultZoomLevel())
-  } catch {
-    return zoomLevelToPercent(defaultZoomLevel())
-  }
-}
+function readStoredZoomPercent(): number { return zoomPreference().read() }
 
 function isEditableZoomTarget(target: EventTarget | null): boolean {
   return target instanceof HTMLElement &&
@@ -81,7 +69,7 @@ export function createWebZoomBridge(): NonNullable<Window['hermesDesktop']['zoom
     document.documentElement.style.setProperty('zoom', scale)
 
     if (persist) {
-      saveSyncedPreference(zoomStorageKey(), String(change.percent))
+      zoomPreference().write(change.percent)
     }
 
     for (const listener of listeners) {

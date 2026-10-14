@@ -29,5 +29,7 @@ jobs:
         run: node --test scripts/compatibility-registry.test.mjs
       - name: Typecheck browser and renderer integration
         run: pnpm typecheck
+      - name: Verify persisted preference compatibility
+        run: node --test scripts/browser-preference-contract.test.mjs scripts/preference-sync.test.mjs scripts/preferences-server.test.mjs scripts/default-profile-route.test.mjs scripts/sidebar-contracts.test.mjs
       - name: Build browser application
         run: pnpm build

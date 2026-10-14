@@ -1,3 +1,4 @@
+import { browserPreferences, parseBrowserPreference } from '../../../../scripts/browser-preference-contract.mjs'
 export interface BrowserProfileRoute {
   connectionId: null | string
   profile: string
@@ -8,20 +9,11 @@ type StorageChanges = {
   subscribe: (listener: (key: null | string, value: null | string) => void) => () => void
 }
 
-const storageKey = 'hermes-web.default-profile-route.v1'
+const storageKey = browserPreferences.defaultProfile.key
 
 function decode(value: null | string, connectionId: string): BrowserProfileRoute | null {
-  if (!value) return null
-  try {
-    const route: unknown = JSON.parse(value)
-    if (typeof route !== 'object' || route === null) return null
-    const candidate = route as Partial<BrowserProfileRoute>
-    if (typeof candidate.profile !== 'string' || (candidate.connectionId !== null && typeof candidate.connectionId !== 'string')) return null
-    if (candidate.connectionId && candidate.connectionId !== connectionId) return null
-    return { connectionId, profile: candidate.profile || 'default' }
-  } catch {
-    return null
-  }
+  const route = parseBrowserPreference(browserPreferences.defaultProfile, value)
+  return route && (!route.connectionId || route.connectionId === connectionId) ? { ...route, connectionId } : null
 }
 
 export function createBrowserDefaultProfileRoute(
