@@ -1,6 +1,6 @@
 import { settingsPageLabel } from './policy'
 import { useId } from 'react'
-import { triggerHaptic } from '@/lib/haptics'
+import { announceSettingsReset } from '../../upstream/settings-interactions'
 import { useFollowupBehavior, writeFollowupBehavior } from '../followup-preferences'
 import { useShowAuxiliaryTranscriptContent, writeShowAuxiliaryTranscriptContent } from '../transcript-preferences'
 
@@ -23,7 +23,7 @@ export function createBrowserConfigurationCommands(
   return {
     export: { label: labels.export, description: 'Download this profile’s configuration as a JSON file.', run: commands.export },
     import: { label: labels.import, description: 'Restore this profile’s configuration from a JSON file.', run: commands.import },
-    reset: { label: labels.reset, description: 'Restore this profile’s configuration defaults, including hidden options. You will be asked to confirm.', run: () => { triggerHaptic('warning'); return commands.reset() } }
+    reset: { label: labels.reset, description: 'Restore this profile’s configuration defaults, including hidden options. You will be asked to confirm.', run: () => { announceSettingsReset(); return commands.reset() } }
   }
 }
 

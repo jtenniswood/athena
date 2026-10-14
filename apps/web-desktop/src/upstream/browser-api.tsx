@@ -14,6 +14,7 @@ export { avatarColor, botAppearance, BotFace } from '@/plugins/hermes-bots/avata
 export { DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from '@/components/ui/dropdown-menu'
 export { Brain, Power, ShieldLock } from '@/lib/icons'
 export { useI18n } from '@/i18n'
+export { registerAppLocale, type Translations } from '@/i18n'
 export { notifyError } from '@/store/notifications'
 export { botSourceStatus } from '@/plugins/hermes-bots/data'
 export { GatewayKindGlyph, rosterGatewayOptions } from '@/plugins/hermes-bots/roster-sections'

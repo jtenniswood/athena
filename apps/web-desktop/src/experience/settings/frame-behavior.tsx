@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { useLocation } from 'react-router'
-import { ESCAPE_PRIORITY, isTopEscapeLayer, pushEscapeLayer } from '@/lib/escape-layers'
+import { useBrowserSettingsEscapeClose } from '../../upstream/settings-interactions'
 import { OverlayView } from '../../upstream/browser-api'
 import { useBrowserOverlayFocus } from '../ui/overlay-focus'
 
@@ -48,16 +48,7 @@ export function useSettingsFrame(variant: SettingsFrameVariant, activeIdentity: 
 
 function EmbeddedSurface({ children, title, onClose }: { children: ReactNode; title: string; onClose: () => void }) {
   const surface = useBrowserOverlayFocus()
-  useEffect(() => {
-    const release = pushEscapeLayer(ESCAPE_PRIORITY.overlay)
-    const close = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented || !isTopEscapeLayer(ESCAPE_PRIORITY.overlay)) return
-      event.preventDefault()
-      onClose()
-    }
-    window.addEventListener('keydown', close)
-    return () => { window.removeEventListener('keydown', close); release() }
-  }, [onClose])
+  useBrowserSettingsEscapeClose(onClose)
   return <section aria-label={title} aria-modal="true" className="browser-settings-surface" data-overlay-surface="" ref={surface} role="dialog" tabIndex={-1}>{children}</section>
 }
 
