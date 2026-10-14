@@ -5,7 +5,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends git ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml flake.lock ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml flake.lock renovate.json ./
 RUN corepack enable && corepack prepare "$(node -p 'require("./package.json").packageManager')" --activate
 COPY scripts ./scripts
 COPY apps/web-desktop/package.json apps/web-desktop/package.json
