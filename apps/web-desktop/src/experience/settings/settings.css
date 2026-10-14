@@ -145,6 +145,7 @@
   --web-text-body: .875rem;
   --settings-text-caption: calc(var(--web-text-caption) - .0625rem);
   --settings-text-body: calc(var(--web-text-body) - .0625rem);
+  --settings-navigation-padding-start: max(.625rem, calc(env(safe-area-inset-left, 0px) / var(--web-ui-scale, 1)));
   box-sizing: border-box;
   display: flex;
   width: 100%;
@@ -180,6 +181,9 @@
   background: var(--web-sidebar);
 }
 .browser-settings-heading { display: flex; min-width: 0; align-items: center; gap: var(--web-space-2); }
+.browser-settings-header:has(.is-settings-home) {
+  padding-left: calc(var(--settings-navigation-padding-start) + var(--web-space-2));
+}
 .browser-settings-heading > .codicon { color: var(--web-text-muted); font-size: var(--web-icon-size); }
 .browser-settings-heading h1 { margin: 0; font-size: var(--web-text-title); font-weight: 600; line-height: var(--web-line-body); }
 .browser-settings-heading h1:focus { outline: none; }
@@ -218,7 +222,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   /* Chat navigation uses px-2.5, 6px top clearance, and a 1px row gap. */
-  padding: calc(var(--web-space-3) / 2) max(.625rem, calc(env(safe-area-inset-right, 0px) / var(--web-ui-scale, 1))) var(--web-space-4) max(.625rem, calc(env(safe-area-inset-left, 0px) / var(--web-ui-scale, 1)));
+  padding: calc(var(--web-space-3) / 2) max(.625rem, calc(env(safe-area-inset-right, 0px) / var(--web-ui-scale, 1))) var(--web-space-4) var(--settings-navigation-padding-start);
 }
 .browser-settings-category { flex-shrink: 0; }
 .browser-settings-nav-group { flex-shrink: 0; }
