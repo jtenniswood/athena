@@ -25,6 +25,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Verify renderer dependency baseline
         run: pnpm check:renderer-dependencies
+      - name: Verify image publication channels
+        run: node --test scripts/image-publication.test.mjs
       - name: Verify compatibility registry
         run: node --test scripts/compatibility-registry.test.mjs
       - name: Typecheck browser and renderer integration
