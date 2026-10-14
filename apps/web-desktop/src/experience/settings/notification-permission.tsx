@@ -17,14 +17,14 @@ export function BrowserNotificationPermissionSetting() {
   }, [])
 
   const description = permission === 'granted'
-    ? 'Browser permission is allowed. Enable notifications and Response ready below to receive alerts when a reply finishes in your current chat while you are away.'
+    ? 'Permission granted. Enable notifications and Response ready below for current-chat replies that finish while you are away.'
     : permission === 'denied'
-      ? 'Notifications are blocked. Allow notifications for Athena in your browser’s site settings, then return here.'
+      ? 'Notifications blocked. Allow them in your browser’s site settings, then return here.'
       : permission === 'insecure'
         ? 'Open Athena over HTTPS or localhost to enable browser notifications.'
         : permission === 'unsupported'
-          ? 'Notifications are unavailable in this browser. On iPhone or iPad, add Athena to your Home Screen and open it there.'
-          : 'Allow Athena to send browser notifications when a reply finishes while you are away.'
+          ? 'Notifications unavailable. On iPhone or iPad, add Athena to your Home Screen and open it there.'
+          : 'Allow alerts for replies that finish while you are away.'
 
   const requestPermission = async () => {
     setRequesting(true)
@@ -41,6 +41,6 @@ export function BrowserNotificationPermissionSetting() {
     {permission === 'default' && <Button disabled={requesting} onClick={() => void requestPermission()} variant="outline">
       {requesting ? 'Waiting for permission…' : 'Allow browser notifications'}
     </Button>}
-    <p className="browser-settings-page-description">Keep Athena open in a tab or installed app. Alerts pause if the browser suspends or closes Athena.</p>
+    <p className="browser-settings-page-description">Keep Athena open. Alerts pause when the browser suspends or closes the app.</p>
   </section>
 }

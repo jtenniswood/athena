@@ -440,6 +440,22 @@ export function hideBrowserLocalProjectDirectory(source: string): string {
   return source.replace(target, `${target}\n  if (window.__HERMES_WEB_BRIDGE__) return null`)
 }
 
+export function useBrowserArchivedSessionsTable(source: string, root: string): string {
+  const replacements: [string, string][] = [
+    ['        <div className="grid gap-1">', '        <BrowserArchivedSessionsTable title={s.archivedTitle}>'],
+    ['              <div className="scroll-mt-6 rounded-lg" id={`archived-session-${session.id}`} key={session.id}>\n                <ListRow', '              <BrowserArchivedSessionRow id={`archived-session-${session.id}`} key={session.id}'],
+    ['                  hint={label ? `${label} · ${s.messages(session.message_count)}` : s.messages(session.message_count)}', '                  workspace={label}\n                  messageCount={session.message_count}\n                  messageLabel={s.messages(session.message_count)}'],
+    ['                />\n              </div>\n            )\n          })}\n        </div>', '              />\n            )\n          })}\n        </BrowserArchivedSessionsTable>']
+  ]
+  let output = source
+  for (const [before, after] of replacements) {
+    if (output.split(before).length !== 2) throw new Error('Browser archived sessions table boundary changed')
+    output = output.replace(before, after)
+  }
+  const owner = JSON.stringify(path.join(root, 'src/experience/settings/archived-sessions-table'))
+  return `import { BrowserArchivedSessionsTable, BrowserArchivedSessionRow } from ${owner}\n` + output
+}
+
 export function filterBrowserSettingsFields(source: string, root: string): string {
   const owner = JSON.stringify(path.join(root, 'src/experience/settings/policy'))
   const target = "  const visibleFields = activeSectionId === 'voice' ? fields.filter(([key]) => voiceFieldVisible(key, config)) : fields"
@@ -1379,6 +1395,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     hideBrowserAppearanceOnlySettings,
     keepBrowserMessageBubblesSolid,
     hideBrowserLocalProjectDirectory,
+    useBrowserArchivedSessionsTable: source => useBrowserArchivedSessionsTable(source, root),
     removeBrowserPetAvatarTab,
     removeBrowserPetSlashCommands,
     filterBrowserSettingsSearch: source => filterBrowserSettingsSearch(source, root),
