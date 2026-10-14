@@ -29,7 +29,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
   }
   const content = <section className="browser-gateway-settings" aria-label="Gateway connection">
     <div className="browser-settings-page-header"><h2 className="browser-settings-page-title">{settingsPageLabel('gateway', 'Gateway')}</h2>
-      <p className="browser-settings-page-description">Monitor your gateway and manage how this browser connects.</p></div>
+      <p className="browser-settings-page-description">Check gateway status and connection settings.</p></div>
     <section className="browser-settings-gateway-status" aria-label="Gateway status">
       <h3>Connection status</h3>
       <BrowserGatewayPanel status={status} onClose={() => {}} onOpenSystem={() => navigate('/settings?tab=config:command-center&section=system', { replace: true })} />
