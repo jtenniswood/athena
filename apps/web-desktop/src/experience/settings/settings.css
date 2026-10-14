@@ -39,7 +39,7 @@
   padding-block-start: var(--web-space-2);
 }
 .browser-settings-page-header { display: grid; gap: var(--web-space-1); }
-.browser-settings-page-title { margin: 0; font-size: var(--web-text-body); font-weight: 500; line-height: var(--web-line-body); }
+.browser-settings-page-title { margin: 0; font-size: 1.25rem; font-weight: 500; line-height: var(--web-line-body); }
 .browser-settings-page-description { margin: 0; color: var(--web-text-muted); font-size: var(--web-text-caption); line-height: var(--web-line-body); }
 .browser-configuration-page { padding-inline: 0; }
 .browser-color-themes-mode { display: flex; gap: 0.35rem; }
@@ -251,6 +251,28 @@
 .browser-settings-home h2 { font-size: var(--web-text-heading); font-weight: 600; }
 .browser-settings-home p { color: var(--web-text-muted); }
 .browser-theme-mode-row > div > div > div:first-child { justify-content: flex-start; }
+
+.browser-settings-frame [id="setting-field-notifications.completion-sound"] > .grid > .flex {
+  width: min(100%, 22rem);
+  flex-wrap: nowrap;
+}
+.browser-settings-frame [id="setting-field-notifications.completion-sound"] [data-slot="select-trigger"] {
+  width: 14rem;
+  min-width: 0;
+  flex: 0 1 14rem;
+}
+.browser-settings-frame [id="setting-field-notifications.completion-sound"] button:not([data-slot="select-trigger"]) {
+  flex-shrink: 0;
+}
+body:has([data-settings-page="config:browser-sounds"]:not([hidden])) [data-slot="select-content"] {
+  /* Radix measures the trigger after Athena's browser zoom is applied. */
+  width: calc(var(--radix-select-trigger-width) / var(--web-ui-scale, 1));
+  min-width: 0;
+}
+body:has([data-settings-page="config:browser-sounds"]:not([hidden])) [data-radix-select-viewport] {
+  min-width: 0;
+}
+
 .browser-settings-frame :is(button, input, select, textarea) { scroll-margin-block: var(--web-space-4); }
 .browser-settings-frame :is(button, input, select, textarea):focus-visible { outline: var(--web-focus-ring); outline-offset: -2px; }
 .browser-settings-frame :is(input:not([type='checkbox'], [type='radio'], [type='range']), textarea, select, [data-slot='select-trigger']) {
