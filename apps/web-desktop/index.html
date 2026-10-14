@@ -21,6 +21,8 @@
         gap: 24px;
         color: light-dark(#626a78, #a9afbb);
         background: var(--hermes-boot-background, Canvas);
+        /* Keep the loader at its original size when the browser bridge applies UI zoom. */
+        zoom: calc(1 / var(--web-ui-scale, 1));
       }
       .hermes-startup-logo {
         display: block;

@@ -29,5 +29,4 @@
 /* Use the same centered logo/spinner from the HTML shell through gateway boot. */
 .athena-connecting-overlay {
   z-index: var(--z-connecting, 1000);
-  zoom: calc(1 / var(--web-ui-scale, 1));
 }
