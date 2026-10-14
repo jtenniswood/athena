@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       packages: write
@@ -61,7 +61,7 @@ jobs:
   deploy-production:
     if: github.ref == 'refs/heads/main'
     needs: build
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     concurrency:
       group: production-deploy
       cancel-in-progress: false
