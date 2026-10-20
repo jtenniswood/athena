@@ -296,8 +296,8 @@ importers:
         specifier: 3.4.17
         version: 3.4.17
       driver.js:
-        specifier: 1.9.0
-        version: 1.9.0
+        specifier: 1.10.2
+        version: 1.10.2
       emojibase-data:
         specifier: 17.0.0
         version: 17.0.0(emojibase@17.0.0)
@@ -3405,8 +3405,8 @@ packages:
     resolution: {integrity: sha512-qI4JLRKnSzqFqr7hAlS5xQDusBCjKSEG4t4+7aNrIQMHBcsC2TGEhuyABJdYkgSewL57PNLYEiibY2iPKhKpaA==}
     engines: {node: '>=20.19.0'}
 
-  driver.js@1.9.0:
-    resolution: {integrity: sha512-+YWVdNVUrY1/2spszQshohWYY4soIjNBnMFS6lfmousT8igos2lmswhlqyuuNMhr+qbV0EjJ+L6i2FECPr6Ygg==}
+  driver.js@1.10.2:
+    resolution: {integrity: sha512-L/EMTriJPAmg+5kIFmrjzt3TI+1NblhHOV/UZkfpgU/uxhSflGheynMBxk5oImDSy6seAEkIl6MzNOc0zdoKtg==}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -8877,7 +8877,7 @@ snapshots:
       domelementtype: 3.0.0
       domhandler: 6.0.1
 
-  driver.js@1.9.0: {}
+  driver.js@1.10.2: {}
 
   dunder-proto@1.0.1:
     dependencies:
