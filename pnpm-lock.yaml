@@ -430,7 +430,7 @@ importers:
         version: 6.1.2(vite@8.3.4(@types/node@24.19.2)(jiti@2.7.0)(terser@5.50.0))
       http-proxy-3:
         specifier: ^2.0.1
-        version: 2.0.1
+        version: 2.0.2
       typescript:
         specifier: npm:@typescript/typescript6@6.0.2
         version: '@typescript/typescript6@6.0.2'
@@ -3781,8 +3781,8 @@ packages:
   http-cache-semantics@4.3.0:
     resolution: {integrity: sha512-M5t5LlJpS1UHMjvwRQVdFHvPISGeLAxNcrWuJkeGh0KxsqCHZ1O3NXZU/8x7cD0BDcGW8kapxMKTvwlqrNkHkA==}
 
-  http-proxy-3@2.0.1:
-    resolution: {integrity: sha512-CK9FEsoFko6wv5Y5+YvO6A0KANMZEXh7SvHjbne6zzQpih6qhTmA3xgS/5/QFlIF2HIFH5vZhtvk1Fk2udIsDw==}
+  http-proxy-3@2.0.2:
+    resolution: {integrity: sha512-JUeHVBJl3JhVvnXBi3JEcXpQaeAteidEwdeMQlp32d2o76/6trHtIz/rByB7DHsDOtUqG4QPZlW6zV9nIGjgkg==}
     engines: {node: '>=22'}
 
   http-proxy-agent@7.0.2:
@@ -9393,7 +9393,7 @@ snapshots:
   http-cache-semantics@4.3.0:
     optional: true
 
-  http-proxy-3@2.0.1:
+  http-proxy-3@2.0.2:
     dependencies:
       debug: 4.4.3
       follow-redirects: 1.16.1(debug@4.4.3)
