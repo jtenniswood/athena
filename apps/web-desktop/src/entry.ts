@@ -10,6 +10,7 @@ import './platform/sign-in.css'
 import { installTimelineRailScrubbing } from './experience/ui/timeline-rail-scrubbing'
 import { trackVisualViewport } from './platform/viewport'
 import { installComposerKeyboard } from './platform/composer-keyboard'
+import { installAndroidNavigationGuard } from './platform/android-navigation'
 
 const stopTrackingViewport = trackVisualViewport()
 if (import.meta.hot) import.meta.hot.dispose(stopTrackingViewport)
@@ -17,6 +18,8 @@ const stopTimelineRailScrubbing = installTimelineRailScrubbing()
 if (import.meta.hot) import.meta.hot.dispose(stopTimelineRailScrubbing)
 const stopComposerKeyboard = installComposerKeyboard()
 if (import.meta.hot) import.meta.hot.dispose(stopComposerKeyboard)
+const stopAndroidNavigationGuard = installAndroidNavigationGuard()
+if (import.meta.hot) import.meta.hot.dispose(stopAndroidNavigationGuard)
 
 async function start(): Promise<void> {
   try {

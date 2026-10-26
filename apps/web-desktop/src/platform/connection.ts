@@ -1,4 +1,5 @@
 import { beginOperation } from './reload-safety'
+import { androidOpenSignIn, isAndroidApp } from './android'
 import type { DesktopConnectionConfig, DesktopConnectionConfigInput, DesktopOauthLoginResult, HermesApiRequest, HermesConnection } from '../upstream/types'
 import {
   activeUpstreamOrigin,
@@ -165,6 +166,17 @@ export function openOauthLoginPopup(base: string, origin: string | null, loginPa
   let loginUrl: URL
   try { loginUrl = browserLoginUrl(base, loginPath) }
   catch (error) { return Promise.reject(error) }
+  if (isAndroidApp()) return (async () => {
+    const opened = await androidOpenSignIn(loginUrl.pathname + loginUrl.search)
+    if (!opened) return { ok: false, baseUrl: base, connected: false }
+    const deadline = Date.now() + 5 * 60_000
+    while (Date.now() < deadline) {
+      await new Promise<void>(resolve => window.setTimeout(resolve, 600))
+      try { if (await probeAuthConnected(base, origin)) return { ok: true, baseUrl: base, connected: true } }
+      catch { /* Keep waiting while returning from the browser offline. */ }
+    }
+    return { ok: true, baseUrl: base, connected: false }
+  })()
   return new Promise(resolve => {
     const popup = window.open(
       withGatewayRoute(loginUrl.href, origin),

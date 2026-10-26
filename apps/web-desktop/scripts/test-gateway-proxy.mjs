@@ -86,7 +86,12 @@ test('configured remote gateways survive page startup in dev and preview', async
         origin = `http://127.0.0.1:${server.httpServer.address().port}`
       }
       const html = await (await fetch(origin)).text()
-      const context = vm.createContext({ window: {} })
+      const context = vm.createContext({
+        window: { matchMedia: () => ({ matches: false }) },
+        localStorage: { getItem: () => null },
+        document: { documentElement: { style: { setProperty() {} }, dataset: {} } },
+        require: () => ({})
+      })
       // Execute classic scripts in page order to catch the old config overwrite.
       for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
         if (match[1].includes('type="module"')) continue

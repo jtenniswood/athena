@@ -36,7 +36,7 @@ export interface BrowserCapabilities {
 function currentBrowserEnvironment(): BrowserEnvironment {
   return {
     clipboard: typeof navigator !== 'undefined' && Boolean(navigator.clipboard),
-    notifications: typeof window !== 'undefined' && 'Notification' in window,
+    notifications: typeof window !== 'undefined' && ('Notification' in window || 'AthenaAndroid' in window),
     microphone: typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia)
   }
 }

@@ -114,6 +114,95 @@ Home Screen and open the installed app. Keep Athena open: alerts pause if the
 browser suspends or closes it. If permission is blocked, allow notifications
 in the browser’s site settings.
 
+### Android app
+
+`apps/android` contains a native Android shell for the hosted Athena web app.
+Enter your Athena HTTPS address when the app opens. The web interface and its
+updates continue to come from that server. Android supplies notifications,
+file selection, microphone permission, and back navigation. External links open
+in the browser. App settings can change the server or reload after Athena has
+confirmed that drafts are saved and recordings and active replies have finished.
+
+Build with Java 17 and the Android SDK (platform 36 and build tools 35.0.0):
+
+```bash
+cd apps/android
+./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+```
+
+The APK is `apps/android/app/build/outputs/apk/debug/app-debug.apk`. The Android
+GitHub Actions workflow also builds a debug APK for review. Debug artifacts from
+different machines or workflow runs can have different signing keys; use a
+consistent release signing key for installations that must preserve drafts
+across updates. Release signing reads `ATHENA_ANDROID_KEYSTORE`,
+`ATHENA_ANDROID_STORE_PASSWORD`, `ATHENA_ANDROID_KEY_ALIAS` (default `athena`),
+and `ATHENA_ANDROID_KEY_PASSWORD`. With these set, build `:app:assembleRelease`.
+Keep the keystore and its passwords outside Git and retain a secure backup.
+
+Hermes and OIDC sign-in use an Android Custom Tab. Check the matching code and
+approve the handoff in the browser, then return to the app. The server transfers
+the session through a one-use PKCE exchange lasting five minutes. This moves
+the browser's Athena session into the app so rotating refresh tokens are not
+shared between two clients. Session-token sign-in remains available.
+
+Native alerts work without Firebase while the web app is running. To receive
+response-completion and response-error alerts after Android suspends or closes
+the app:
+
+1. Create a Firebase project and register an Android app with package name
+   `com.athena.android`. Analytics is not required.
+2. Download `google-services.json` to `apps/android/app/google-services.json`
+   before building the APK. The file is ignored by Git. Builds without it keep
+   local notifications and omit Firebase initialization.
+3. Enable Firebase Cloud Messaging's HTTP v1 API. Give a dedicated service
+   account the **Firebase Cloud Messaging API Admin** role on that project,
+   and mount its JSON credentials into the Athena container as a read-only secret.
+4. Set `ATHENA_FIREBASE_CREDENTIALS` to the credentials' path inside the container,
+   for example `/run/secrets/athena-firebase.json`. Recreate the container with
+   an Athena version that includes Android support.
+5. Sign into the app and allow Android notifications under **Settings →
+   Notifications**. Existing notification toggles control delivery.
+
+Restrict the Android API key to `com.athena.android` and the SHA-1 fingerprint
+of your APK signing certificate. Debug, release, and Google Play signing keys
+have different fingerprints; allow each certificate only when it needs Firebase
+access. Limit the key's API allowlist to Firebase Installations, FCM Registration,
+Firebase Management, and Cloud Logging. Remove unused client keys. Keep the
+server credential private, outside Git and the APK, with file permissions `0600`;
+the container only needs read access. This integration does not need a database,
+Storage bucket, Analytics, or a billing account. If you add data services later,
+configure their Security Rules before storing data.
+
+Check the sender's credentials and permission without sending a notification:
+
+```bash
+ATHENA_FIREBASE_CREDENTIALS=.athena/firebase-service-account.json node scripts/check-android-push.mjs
+```
+
+For example, add the following environment variable and secret mount to your
+Athena Compose service, using your own local credentials file:
+
+```yaml
+environment:
+  ATHENA_FIREBASE_CREDENTIALS: /run/secrets/athena-firebase.json
+volumes:
+  - ./.athena/firebase-service-account.json:/run/secrets/athena-firebase.json:ro
+```
+
+The Android connection goes through a small server relay that forwards the same
+Hermes protocol and retains the authenticated connection while its WebView is
+away. It sends generic alerts through Firebase; response text and credentials
+are not included in push payloads. Notification taps open the conversation.
+Signing out disables native push and removes the server's device registration.
+
+The relay keeps a disconnected active response for up to 24 hours and closes
+idle disconnected sockets after a minute. It keeps no conversation history or
+durable notification queue: restarting the Athena container interrupts these
+connections, and delivery resumes when the app reconnects. Force-stopping the
+app, disabling notifications, or Android battery restrictions can prevent or
+delay alerts. Background approvals and plugin alerts still depend on the
+running web app; background push currently covers response completion and errors.
+
 ### Sign in
 
 Athena checks the configured Hermes server before opening chat. If authentication

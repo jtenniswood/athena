@@ -25,6 +25,34 @@ test.afterAll(async () => {
 const oidc = { name: 'self-hosted', display_name: 'Self-Hosted OIDC', supports_password: false }
 const editor = page => page.locator('[contenteditable="true"]:visible').first()
 
+test('Android sign-in opens the native browser bridge and resumes the selected conversation', async ({ page, context }) => {
+  await hermesAuth(context)
+  const nativeRequests = []
+  await context.exposeBinding('athenaNativeRequest', (_source, request) => nativeRequests.push(request))
+  await context.addInitScript(() => {
+    window.AthenaAndroid = {
+      onmessage: null,
+      postMessage(raw) {
+        const request = JSON.parse(raw)
+        void window.athenaNativeRequest(request)
+        queueMicrotask(() => this.onmessage?.({ data: JSON.stringify({ id: request.id, value: request.method === 'openSignIn' ? true : null }) }))
+      }
+    }
+  })
+  await page.goto(`${origin}/#/preview-week`)
+  await page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC', exact: true }).click()
+  await expect.poll(() => nativeRequests.some(request => request.method === 'openSignIn')).toBe(true)
+  const request = nativeRequests.find(request => request.method === 'openSignIn')
+  expect(request.payload.path).toContain('/auth/login?')
+  expect(new URL(request.payload.path, origin).searchParams.get('provider')).toBe('self-hosted')
+  expect(page.url()).toBe(`${origin}/#/preview-week`)
+  expect(context.pages()).toHaveLength(1)
+  // Model the native CookieManager finishing the one-time server exchange.
+  await context.addCookies([{ name: 'athena_test_session', value: 'authenticated', url: origin, httpOnly: true }])
+  await expect(editor(page)).toBeVisible({ timeout: 30000 })
+  expect(page.url()).toBe(`${origin}/#/preview-week`)
+})
+
 async function hermesAuth(context, { providers = [oidc], signedIn = false, authMode } = {}) {
   if (authMode) await context.route(/\/runtime-config\.js(?:\?.*)?$/, async route => {
     const response = await route.fetch()

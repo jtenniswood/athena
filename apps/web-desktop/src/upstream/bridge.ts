@@ -20,6 +20,7 @@ import { createWebZoomBridge } from '../platform/display'
 import { clipboardImageAsFile, readClipboard, writeClipboard } from '../platform/clipboard'
 import { isUnderPluginRoot, isWebFileHandle, registerWebFile, webFileAsDataUrl, ensureFileInput, pickWithInput, acceptsFor } from '../platform/files'
 import { webNotify } from '../platform/notifications'
+import { androidPushGatewayUrl, resumeAndroidPush, stopAndroidPush } from '../platform/android-push'
 import { WEB_CONNECTION_ID, wsBaseUrl, connection, connectionForProfile, resolveToken, buildTokenWsUrl, mintWsTicket, apiFetch, waitForRemoteRestart, loadStoredConnection, persistConnection, toConnectionConfig, fetchStatus, baseUrl, isSameOrigin, openOauthLoginPopup } from '../platform/connection'
 const noop = (): void => {}
 const unsubscribed = (): (() => void) => noop
@@ -80,10 +81,10 @@ export function createWebBridge(): Window['hermesDesktop'] {
       const origin = activeUpstreamOrigin()
       const token = resolveToken()
 
-      if (token) {return withGatewayRoute(buildTokenWsUrl(token), origin)}
+      if (token) {return androidPushGatewayUrl(withGatewayRoute(buildTokenWsUrl(token), origin))}
       const ticket = await mintWsTicket(origin)
 
-      return withGatewayRoute(`${wsBaseUrl()}/api/ws?ticket=${encodeURIComponent(ticket)}`, origin)
+      return androidPushGatewayUrl(withGatewayRoute(`${wsBaseUrl()}/api/ws?ticket=${encodeURIComponent(ticket)}`, origin))
     },
     getGatewayWsUrlFor: async ({ connectionId }) => {
       // Bot Mode routes profiles through the web-single registry source. It is
@@ -248,14 +249,17 @@ export function createWebBridge(): Window['hermesDesktop'] {
       return openOauthLoginPopup(base, origin, browserSignInTarget().path)
     },
     oauthLogoutConnectionConfig: async remoteUrl => {
+      await stopAndroidPush()
       const base = remoteUrl ? normalizeBase(remoteUrl) : baseUrl()
       const origin = remoteUrl ? upstreamOriginFor(remoteUrl) : activeUpstreamOrigin()
-      const response = await fetch(withGatewayRoute(`${base}/auth/logout`, origin), {
-        method: 'POST', credentials: 'same-origin', signal: AbortSignal.timeout(10_000)
-      })
-      if (!response.ok) throw new Error(`Sign-out failed (${response.status}). Try again.`)
+      try {
+        const response = await fetch(withGatewayRoute(`${base}/auth/logout`, origin), {
+          method: 'POST', credentials: 'same-origin', signal: AbortSignal.timeout(10_000)
+        })
+        if (!response.ok) throw new Error(`Sign-out failed (${response.status}). Try again.`)
 
-      return { ok: true, connected: false }
+        return { ok: true, connected: false }
+      } catch (error) { await resumeAndroidPush(); throw error }
     },
     profile: {
       getDefault: defaultProfileRoute.getDefault,

@@ -3,6 +3,9 @@ import { runtimeConfiguration, runtimeScripts, matchesGatewayRoute, navigationFa
 import { compatibilitySingletons } from '../../scripts/aliases.mjs'
 import { buildInfoPlugin } from '../../scripts/build-info.mjs'
 import { createPreferencesHandler, preferencesPath } from '../../scripts/preferences-server.mjs'
+import { createAndroidAuthHandler } from '../../scripts/android-auth.mjs'
+import { createAndroidPush } from '../../scripts/android-push.mjs'
+import { createFirebaseSender } from '../../scripts/firebase-messaging.mjs'
 import { defineConfig, loadEnv, type Plugin, type PreviewServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -172,6 +175,12 @@ interface ProxyServerLike {
 }
 
 function attachDynamicProxy(server: ProxyServerLike): void {
+  const androidAuth = createAndroidAuthHandler({ target: hosting.target })
+  const androidPush = createAndroidPush({ target: hosting.target, sender: createFirebaseSender() })
+  if (server.httpServer) {
+    androidPush.attach(server.httpServer)
+    server.httpServer.once('close', () => androidPush.close())
+  }
   const preferences = createPreferencesHandler({
     target: hosting.target,
     directory: process.env.HERMES_PREFERENCES_DIR || path.resolve(__dirname, '../../.athena/preferences')
@@ -204,6 +213,10 @@ function attachDynamicProxy(server: ProxyServerLike): void {
 
   server.middlewares.use((req, res, next) => {
     const pathname = req.url?.split('?')[0]
+    if (pathname?.startsWith('/api/athena/android/')) {
+      void androidAuth(req, res).then(handled => handled || androidPush.handle(req, res)).then(handled => { if (!handled) next() })
+      return
+    }
     if (pathname === preferencesPath) {
       void preferences(req, res)
       return
@@ -220,6 +233,7 @@ function attachDynamicProxy(server: ProxyServerLike): void {
   })
 
   server.httpServer?.on('upgrade', (req, socket, head) => {
+    if (req.url?.split('?')[0] === '/api/athena/android/ws') return
     if (!matchesGatewayRoute(req.url)) return
     proxy.ws(req, socket, head, { target: hosting.target })
   })
