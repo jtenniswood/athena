@@ -39,6 +39,9 @@
       ],
       "hermes:web-draft-safety": [
         "./src/platform/draft-safety.ts"
+      ],
+      "hermes:web-assistant-ui-runtime": [
+        "./src/upstream/assistant-ui-runtime.ts"
       ]
     }
   }

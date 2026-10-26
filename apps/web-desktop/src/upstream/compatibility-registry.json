@@ -195,11 +195,15 @@
       {
         "file": "tests/browser/upgrades.spec.mjs",
         "scenario": "real drafts survive a previous-image upgrade after active work and unsent files are resolved"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "message actions follow the current runtime after conversation switches without losing drafts"
       }
     ],
     "removal": "Remove when upstream exposes a public flush-all-composers operation with queue/history refusal.",
     "sourceHash": "24872e7ee8d07f6e9aa4d414e8898e817a172f23b1f7031a1ce1c24aa46bb423",
-    "outputHash": "53e515887c8457ea48869fa73526b7b765c62dbf0d4b5836b708635bd34b4a50",
+    "outputHash": "c4cd84841be0434a8fc25438d1895613449009debbabf6abae3061c39c95fa5a",
     "handler": "browser-flush-all-composers",
     "sourceRoot": "renderer"
   },
@@ -998,23 +1002,6 @@
     "sourceRoot": "renderer"
   },
   {
-    "name": "nanostores-batch-effects",
-    "kind": "dependency-transform",
-    "order": 5,
-    "module": "nanostores/atom/index.js",
-    "reason": "Preserve state writes inside batch callbacks that are incorrectly annotated as side-effect-free.",
-    "owner": "apps/web-desktop/src/upstream/dependency-compatibility.ts",
-    "tests": [
-      {
-        "file": "scripts/dependency-compatibility.test.mjs",
-        "scenario": "production bundling preserves state writes inside batch callbacks"
-      }
-    ],
-    "removal": "Remove after a reviewed nanostores release corrects the annotation and the production-bundling regression passes without the patch.",
-    "sourceRoot": "dependency",
-    "sourceHash": "d821b53d28eee40e810e2a5fc6d714fecc60dacc67796cbde689eadf2dfe9b20"
-  },
-  {
     "name": "renderer-alias-1",
     "kind": "alias",
     "order": 0,
@@ -1376,7 +1363,7 @@
     "pattern": "^driver\\.js/dist/driver\\.js\\.iife\\.js(\\?raw)?$",
     "replacement": "../../node_modules/driver.js/dist/driver.js.iife.js$1",
     "aliasGroup": "vite",
-    "sourceHash": "e52b65c66f23cbcdae8a0b68e378bfd7f6e29a664445fe4240067335e11f6843"
+    "sourceHash": "541520f33f84cc5cf6696b421f705cc9efe2d72656b3b5cd7f72c22e6d7e17c0"
   },
   {
     "name": "browser-debug-entry",
@@ -1580,7 +1567,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "fe1e4753b5d938a082a0b851566e5a1e284129baea5b29e478de7239d68e02d5",
     "inputHash": "fe1e4753b5d938a082a0b851566e5a1e284129baea5b29e478de7239d68e02d5",
-    "outputHash": "34d4187dce7924f7ed90e5ebe0132776d3cae7530a679e3541f52eea2d9b3fe8"
+    "outputHash": "e164aa3fbfd82b72900041ae9bd55810438dbac9c9890f4f108a48ce9eb71d2e"
   },
   {
     "name": "browser-session-open-owner",
@@ -1678,8 +1665,8 @@
     "removal": "Remove when upstream avoids automatic composer focus on mobile and respects focus restored by closing browser overlays.",
     "sourceRoot": "renderer",
     "sourceHash": "24872e7ee8d07f6e9aa4d414e8898e817a172f23b1f7031a1ce1c24aa46bb423",
-    "inputHash": "d7967ee7974756c82fd6ad357c1b8a146ac3d27ea853c19bb2b68b32986781bf",
-    "outputHash": "e461883d6a8bbc685d19d82191e6704ea5b0332026ebefab0f535cd191a8a0d9"
+    "inputHash": "4bf82e88c5139050a5cfcbaf3c3ba971e4b23900eadd57d671091e17fc5a9b04",
+    "outputHash": "e32dff0b60b223d2f479fd99d033ecc5b4703cb48b5a1238644560ab5ea9a237"
   },
   {
     "name": "browser-workspace-route-lifetime",
@@ -2696,27 +2683,6 @@
     "removal": "Remove when upstream default session routing supports an All profiles preference scope."
   },
   {
-    "name": "assistant-ui-thread-list-snapshots",
-    "kind": "dependency-transform",
-    "order": 5,
-    "module": "@assistant-ui/core/dist/runtime/api/thread-list-runtime.js",
-    "reason": "Keep thread-list snapshots stable and subscribed to their cache to prevent workspace render loops",
-    "owner": "apps/web-desktop/src/upstream/dependency-compatibility.ts",
-    "tests": [
-      {
-        "file": "scripts/dependency-compatibility.test.mjs",
-        "scenario": "thread-list snapshots stay cached across subscriptions and real updates"
-      },
-      {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "workspace snapshots remain stable through draft edits, session changes, and reload"
-      }
-    ],
-    "removal": "Remove when the locked assistant-ui core caches thread-list snapshots and subscribes through the cache.",
-    "sourceHash": "604e07dcfcc328e484eecc52149ca1d6e5eee5ccac630a42e396c9846ae166cc",
-    "sourceRoot": "dependency"
-  },
-  {
     "name": "browser-alternate-composer-submit",
     "kind": "browser-transform",
     "order": 20,
@@ -2905,5 +2871,91 @@
       }
     ],
     "removal": "Remove when upstream publishes settings page and command contracts."
+  },
+  {
+    "name": "assistant-ui-message-runtime",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "components/assistant-ui/thread/assistant-message.tsx",
+    "reason": "Bind removed runtime hooks to the current assistant-ui scope without introducing another runtime or state store.",
+    "owner": "apps/web-desktop/src/upstream/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace snapshots remain stable through draft edits, session changes, and reload"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "message actions follow the current runtime after conversation switches without losing drafts"
+      }
+    ],
+    "removal": "Remove when the pinned renderer uses the assistant-ui client API instead of removed runtime hooks.",
+    "sourceRoot": "renderer",
+    "sourceHash": "f996a66066e428bf66d5d8e4d1ee69e84bd0ea192b7f5534aee33c87b8a7a4c5",
+    "outputHash": "29bb186dc183a759d3183c5c323cff325f8a5947f6f561992b179634ede35627"
+  },
+  {
+    "name": "assistant-ui-reaction-runtime",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "components/assistant-ui/thread/use-message-reactions.ts",
+    "reason": "Bind removed runtime hooks to the current assistant-ui scope without introducing another runtime or state store.",
+    "owner": "apps/web-desktop/src/upstream/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace snapshots remain stable through draft edits, session changes, and reload"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "message actions follow the current runtime after conversation switches without losing drafts"
+      }
+    ],
+    "removal": "Remove when the pinned renderer uses the assistant-ui client API instead of removed runtime hooks.",
+    "sourceRoot": "renderer",
+    "sourceHash": "cd02fa42b107f494cf7b8602c1cac47ee7d3bfe67925af28b1edfa04573e7e15",
+    "outputHash": "627cab54fb99f30f28668e988f3158c8469f5f8b07ce6a8b6ca8a05950aac61b"
+  },
+  {
+    "name": "nanostores-readonly-plugin-view",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "sdk/bridge.ts",
+    "reason": "Supply the Nanostores equality contract without exposing a plugin-store mutation method.",
+    "owner": "apps/web-desktop/src/upstream/transforms.ts",
+    "tests": [
+      {
+        "file": "scripts/dependency-compatibility.test.mjs",
+        "scenario": "readonly plugin decisions support equality and computed subscriptions without exposing writes"
+      }
+    ],
+    "removal": "Remove when the pinned renderer includes the read-only store equality method.",
+    "sourceRoot": "renderer",
+    "sourceHash": "5220aeeef13355bc7685ad5dca85ab5c68cdbeefd4b957e78ad18b9885ebcb43",
+    "outputHash": "7daa4b20ad94e3e0594deecb236d091461a163b4d0c9234705b817135162ddb5"
+  },
+  {
+    "name": "assistant-ui-runtime-hook-adapter",
+    "kind": "alias",
+    "order": 0,
+    "module": null,
+    "reason": "Keep the pinned renderer bound to its existing composer, message and thread runtimes with assistant-ui React 0.15.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace snapshots remain stable through draft edits, session changes, and reload"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "message actions follow the current runtime after conversation switches without losing drafts"
+      }
+    ],
+    "removal": "Remove when the pinned renderer no longer imports the removed runtime hooks.",
+    "sourceRoot": "renderer",
+    "specifier": "hermes:web-assistant-ui-runtime",
+    "replacement": "./src/upstream/assistant-ui-runtime.ts",
+    "aliasGroup": "renderer",
+    "fingerprintPolicy": "The wrapper hook adapter is exercised by draft, message-action and conversation-switch browser checks."
   }
 ]

@@ -80,7 +80,7 @@ function writePin(id: string, pinned: boolean, profile?: null | string): void {
     })`, 'writePin(id, true, row.profile)'],
     ['$pinnedSessionIds.listen(reconcile)', `$pinnedSessionIds.listen((_ids, previous) => {
     // Capture the removed pin's position before reconciliation queues its unpin.
-    browserPreviousPinOrder = previous
+    browserPreviousPinOrder = previous ?? []
     reconcile()
   })`],
     ['export function resetSessionPinMirror(): void {', 'export function resetSessionPinMirror(): void {\n  browserPreviousPinOrder = []\n  resetBrowserPinWrites()']

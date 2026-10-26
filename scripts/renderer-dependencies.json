@@ -7,17 +7,21 @@
     "use-stick-to-bottom", "typescript", "vite", "@vitejs/plugin-react"
   ],
   "overrides": {
+    "@assistant-ui/core": {
+      "upstream": "0.2.23", "version": "0.3.28",
+      "reason": "Use upstream-corrected thread-list snapshot caching; verify stable subscriptions, selection changes and draft retention without the old dependency transform."
+    },
     "@assistant-ui/react": {
-      "upstream": "0.14.24", "version": "0.14.29",
-      "reason": "Use the newer 0.14 runtime without removing the composer, message and thread hooks used by the pinned renderer; verify snapshot caching and chat submission."
+      "upstream": "0.14.24", "version": "0.15.28",
+      "reason": "Use the matching 0.15 React integration with core 0.3; verify renderer hooks, chat submission and draft retention."
     },
     "@assistant-ui/react-streamdown": {
-      "upstream": "0.3.5", "version": "0.3.7",
-      "reason": "Use the newest integration declaring support for assistant-ui React 0.14; verify transcript rendering with Streamdown 2.7."
+      "upstream": "0.3.5", "version": "0.3.20",
+      "reason": "Use the matching assistant-ui React 0.15 integration; verify highlighted code, math and transcript rendering."
     },
     "@nanostores/react": {
       "upstream": "1.1.0", "version": "2.0.1",
-      "reason": "Use the updated React bindings while retaining Nanostores 1.4.0 and its batch side-effect repair; verify production state writes and conversation selection."
+      "reason": "Use the updated React bindings with Nanostores 1.5; verify production state writes, plugin visibility and conversation selection."
     },
     "react": {
       "upstream": "19.2.7", "version": "19.3.0",
@@ -36,28 +40,32 @@
       "reason": "Retain the TypeScript 6 compiler API for diagnostics and transform tests while the separate native TypeScript 7 package supplies tsc; verify both typecheck paths."
     },
     "nanostores": {
-      "upstream": "1.4.2", "version": "1.4.0",
-      "reason": "Retain the fingerprinted batch side-effect repair and its production bundling regression check until a replacement is verified."
+      "upstream": "1.4.2", "version": "1.5.5",
+      "reason": "Use upstream-corrected batch side effects and the 1.5 equality API; verify plugin stores and production state writes without the old batch transform."
     },
     "react-router": {
       "upstream": "8.3.0", "version": "8.4.0",
       "reason": "Retain Athena's current routing version; verify conversation, profile and settings navigation against the pinned renderer."
     },
     "radix-ui": {
-      "upstream": "1.6.7", "version": "1.8.0",
-      "reason": "Retain Athena's current menu primitives; verify desktop and touch menus, dialog focus and action shortcuts."
+      "upstream": "1.6.7", "version": "1.8.1",
+      "reason": "Use the updated menu primitives; verify browser menus and dialog focus."
     },
     "@nous-research/ui": {
       "upstream": "0.18.2", "version": "1.5.2",
       "reason": "Update the shared UI with React 19.3 while retaining Motion 12 to satisfy its peer; verify browser settings, menus and dialog focus."
     },
     "@tanstack/react-virtual": {
-      "upstream": "3.14.6", "version": "3.14.17",
-      "reason": "Retain the current virtual list version; verify conversation and sidebar rendering."
+      "upstream": "3.14.6", "version": "3.14.18",
+      "reason": "Use the updated virtual list; verify conversation selection and sidebar rendering."
     },
     "react-arborist": {
       "upstream": "3.13.2", "version": "4.0.1",
       "reason": "Update the project tree together with React DnD and dnd-core 16; verify sidebar disclosure and session navigation against the pinned renderer."
+    },
+    "@streamdown/code": {
+      "upstream": "1.1.1", "version": "2.0.0",
+      "reason": "Retain the code plugin API used by the pinned renderer while aligning its Shiki 4 types with the reviewed transcript stack; verify highlighted code, typechecking and the production build."
     },
     "@streamdown/math": {
       "upstream": "1.0.2", "version": "1.0.3",

@@ -1,3 +1,7 @@
+# Only web-desktop is a pnpm workspace here — desktop/shared are SOURCE files
+# supplied by the flake input at build/dev time, never pnpm projects. Keeping
+# the workspace to one project makes pnpm-lock.yaml stable across upstream
+# commits (no importers that drift with the pinned hermes-agent input).
 packages:
   - apps/web-desktop
 
@@ -14,8 +18,8 @@ onlyBuiltDependencies:
 # the repo-root node_modules (same shape as npm).
 nodeLinker: hoisted
 
-# The pinned renderer's read-only plugin store does not implement the eq()
-# method required by Nanostores 1.5. Keep its shared store API consistent.
+# Keep the renderer and shared UI on one store runtime. Athena adapts the
+# pinned renderer's read-only plugin view to Nanostores 1.5's equality API.
 overrides:
   nanostores: 1.5.5
 
