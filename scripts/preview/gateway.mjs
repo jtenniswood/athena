@@ -64,6 +64,8 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'ping') return { pong: true }
     // Optional probes from the pinned renderer, with explicit synthetic support.
     if (method === 'client.capabilities') return { declines_not_shown: true }
+    if (method === 'groups.capabilities') return { driver: false, persistent_process: false }
+    if (method === 'groups.list') return { rooms: [] }
     if (method === 'i18n.languages') return []
     if (method === 'shared_metrics.status') return { decided: true, enabled: false, send: false }
     if (method === 'bot_relay.roster.sync' && Array.isArray(params.agents)) return { ok: true }
@@ -131,7 +133,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
         const piece = parts[index++]; sent += piece; event('message.delta', id, { text: piece })
       }, delay)
       timers.set(id, timer)
-      return { status: 'accepted', session_id: id }
+      return { status: 'started', session_id: id, submission_id: params.submission_id }
     }
     if (method === 'session.redirect') {
       if (!timers.has(id)) return { status: 'rejected', text: params.text }
@@ -178,6 +180,9 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       if (pathname === '/login') { res.writeHead(200, { 'Content-Type': 'text/html' }); return res.end('<p>Synthetic gateway: signed in. You can close this window.</p>') }
       if (pathname === '/api/profiles/sessions/sidebar') return send({ recents: page(url.searchParams.get('recents_profile') || 'all'), cron: page('none'), messaging: page('none') })
       if (pathname === '/api/sessions' || pathname === '/api/profiles/sessions') return send(page(url.searchParams.get('profile') || 'all', false, url.searchParams.get('archived') || 'exclude'))
+      // This fixture models the legacy REST gateway, which has no mutation
+      // snapshots. A route-level 404 selects the renderer's legacy write path.
+      if (/^\/api\/sessions\/[^/]+\/mutation-snapshot$/.test(pathname)) return send({ error: 'No such API endpoint' }, 404)
       const match = /^\/api\/sessions\/([^/]+)(\/messages)?$/.exec(pathname)
       if (match) {
         const id = decodeURIComponent(match[1])

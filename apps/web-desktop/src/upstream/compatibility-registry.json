@@ -25,8 +25,8 @@
       }
     ],
     "removal": "Remove when routed Bot opens use public browser navigation contracts with equivalent interruption tests.",
-    "sourceHash": "b033b37ff3530cd5ce67708106f043c8705fffea6659fd265bc8b6285a6d6905",
-    "outputHash": "e389b4c6c16275ebccb6f93f5d2fd5159a8327f642f02a79d58232171e38716f",
+    "sourceHash": "dffe0562d74e3b8c37eec4a78ff2cc413bb8c455fa3aa1430ddfef10245f23bd",
+    "outputHash": "3fe80f5e1c709541d0d107893824cd725292c895cdf646f71eec8288152f1f2b",
     "handler": "bot-session-cancellation",
     "sourceRoot": "renderer"
   },
@@ -48,8 +48,8 @@
       }
     ],
     "removal": "Remove when the upstream gateway registry supports shared browser connections without backend activation.",
-    "sourceHash": "0a419baa07bf70dbc188b801c1a21d5573ea8a1d871550656f39bf0502f8303d",
-    "outputHash": "0f8fbbb72ab6ce9f296ac82fd8b9522e4be5602a0b84934e3c9c6ba91a5d7cb3",
+    "sourceHash": "78315591ca1320f76038a9cc75125f2627d9a3f8cfa8582ddd83820c11cd3603",
+    "outputHash": "d466bd0ff768bc8d5078ca502bb6dac9ae5482dbcf97c876c9a0876ebda4fa60",
     "handler": "shared-gateway-activation",
     "sourceRoot": "renderer"
   },
@@ -71,8 +71,8 @@
       }
     ],
     "removal": "Remove when upstream profile selection supports a browser-owned scope without starting desktop backends.",
-    "sourceHash": "69f9d67a5fadc7e133445a8c5e821ceb44b11372c2310ecf3744892bb933d523",
-    "outputHash": "7f77acaceb2697104bf7dea7eeb11ab0edecd3b7fa2cc2e356574ac5f915149f",
+    "sourceHash": "55d064cdff86ca18dab3dae7d26da01d54ecfa33ad5ca99fb233fa2f60fa897d",
+    "outputHash": "cc28256b5329dc8af0a167979e25d95214dc7b33ddd5e7861a242ce29a5b386f",
     "handler": "browser-profile-selection",
     "sourceRoot": "renderer"
   },
@@ -90,8 +90,8 @@
       }
     ],
     "removal": "Remove when upstream canonical Bot navigation never reopens stale desktop tabs in the browser.",
-    "sourceHash": "c58dabe0fdec0698f19b01b3c8e0d32d6b43e8632c92efcd9079c0a9226c2b6f",
-    "outputHash": "381d3629fc9e8b13d9bbe12637bd0eaf533c009f533b210a25650e5f8b17bd15",
+    "sourceHash": "153167b4db718663e7f6976d75512881970fab9fcf79c6b6aa60d7f210bccb31",
+    "outputHash": "830e18dd4e5d1d469829fc38e396c59f6029fccb764f55a526676fe5415efe48",
     "handler": "bot-roster-opening",
     "sourceRoot": "renderer"
   },
@@ -179,8 +179,8 @@
       }
     ],
     "removal": "Remove when upstream exposes a public complete draft and attachment snapshot for safe browser updates.",
-    "sourceHash": "ef99b5ee791f8c639e413c20aafb392a4b0c9d3af318b165943844b965e08149",
-    "outputHash": "ef0fade9efb66c5174b18660e96c7f6f19b4b6f0665b15205f99d9101887c928",
+    "sourceHash": "2345f865b4f9a9680607432b887f870afa1a6f4f52956a35941692b2cfe3081b",
+    "outputHash": "3d284859b904d9a766790b2d38d80488ae7e3b498e5762502aee3e446d0fd0c2",
     "handler": "browser-draft-snapshot",
     "sourceRoot": "renderer"
   },
@@ -198,8 +198,8 @@
       }
     ],
     "removal": "Remove when upstream exposes a public flush-all-composers operation with queue/history refusal.",
-    "sourceHash": "47e339b7c8e7a3421fcdfb0425c32470cc075eaec9e905ab700712b98dbd8200",
-    "outputHash": "ba42b0caf35ca47e5beb950f2992822feb548106f2e1243b8f731e4a1e44aae2",
+    "sourceHash": "24872e7ee8d07f6e9aa4d414e8898e817a172f23b1f7031a1ce1c24aa46bb423",
+    "outputHash": "53e515887c8457ea48869fa73526b7b765c62dbf0d4b5836b708635bd34b4a50",
     "handler": "browser-flush-all-composers",
     "sourceRoot": "renderer"
   },
@@ -236,8 +236,8 @@
       }
     ],
     "removal": "Remove when public profile activation contracts prevent background readiness overwriting browser selection.",
-    "sourceHash": "ae51d0b4e7f910bc1de004c7410cbaf1b1b8eb0bfd552c445e2ca0141afb5f9b",
-    "outputHash": "ab4947dc43c36aacc6a6ecbe2650b46f352c2296e197119dfeb7bb89824e38df",
+    "sourceHash": "1a3f0be3d1cc7ac96c4da93942e371eed3e587f00067f6ed6c4fd31134b6e540",
+    "outputHash": "02d593977164538a9978121fb33a9793f362ae823a6ab15a95a221e87e46b004",
     "handler": "browser-profile-commit",
     "sourceRoot": "renderer"
   },
@@ -274,8 +274,8 @@
       }
     ],
     "removal": "Remove when upstream bare-URL preprocessing preserves HTML tag attributes.",
-    "sourceHash": "7fc4301ddda6d9d23169a6546be66bc3e77799db6f1b9ab72d91362371fad4a0",
-    "outputHash": "7b7e764e12ef2146939e962221bfc97b6dfb197977d7ff7391088acb4c326f05",
+    "sourceHash": "72a206d1dc8fe8d437dde78da42f00e70e758ef4f145bae1a9930f6164a25321",
+    "outputHash": "9ba99e3fde77dfd7defcb9147d6efafea616dfb61374152c310b8396263b92ee",
     "handler": "browser-html-link-attributes",
     "sourceRoot": "renderer"
   },
@@ -478,10 +478,10 @@
       "useBrowserSettingsToolActions",
       "useBrowserDefaultSessionProfile"
     ],
-    "sourceHash": "6fdebfed6f34cf3901c0bb5cb1fb154b39e08bb383f1bd8c85bab169997b971b",
+    "sourceHash": "360359af806718a0b2dc2d97af0bccc8db1ed57d0dfd9aa39d76ccfa9a81f0b4",
     "sourceRoot": "renderer",
-    "inputHash": "6fdebfed6f34cf3901c0bb5cb1fb154b39e08bb383f1bd8c85bab169997b971b",
-    "outputHash": "3043ff396c537b60a664a34bde64d28ab0675ef3255ba8d2f05b58675e8e9f15"
+    "inputHash": "360359af806718a0b2dc2d97af0bccc8db1ed57d0dfd9aa39d76ccfa9a81f0b4",
+    "outputHash": "d96a8363e67360d77f848aa8ef2556309522bcc8ac6db342c4c08b50d1651a34"
   },
   {
     "name": "single-conversation-controller",
@@ -548,10 +548,10 @@
     "handlers": [
       "disableBrowserSessionOpenActions"
     ],
-    "sourceHash": "abd03616fb9220ff2ab7564f36babebd7d261f3ec8eb94dce318e3d964a550d7",
+    "sourceHash": "fe7e15de900ae2e9dc1e042e21bc80180a3e434759dc078cac1518008063f57e",
     "sourceRoot": "renderer",
-    "inputHash": "abd03616fb9220ff2ab7564f36babebd7d261f3ec8eb94dce318e3d964a550d7",
-    "outputHash": "7e74e9b4c4ccfacb0bb892d13b8c9993a23fa84c86685e611ba3eb9b29d9242f"
+    "inputHash": "fe7e15de900ae2e9dc1e042e21bc80180a3e434759dc078cac1518008063f57e",
+    "outputHash": "d0a33422e25181a358d91fdb956207c6156e0069f8b2b6448eca5a3998fc204c"
   },
   {
     "name": "canonical-bot-row-actions",
@@ -711,10 +711,10 @@
     "after": [
       "bot-roster-opening"
     ],
-    "sourceHash": "c58dabe0fdec0698f19b01b3c8e0d32d6b43e8632c92efcd9079c0a9226c2b6f",
+    "sourceHash": "153167b4db718663e7f6976d75512881970fab9fcf79c6b6aa60d7f210bccb31",
     "sourceRoot": "renderer",
-    "inputHash": "720ab4d5584566f720f5dd7a0f015bcfb4fcdf4d32f335a88cd64fd881bc4db7",
-    "outputHash": "ec17d169302d9ea802711e84b3e2f03a909af984884d6ddabbe1803b219a4880"
+    "inputHash": "4864605d2462a45d63d7f0c8f5f7fd6dd585455e638f60e010b0af0316380d86",
+    "outputHash": "afaab2331ed2faaf77d4972dbc1e82cc63fa90fc7f85677e6d2571ed81967a4e"
   },
   {
     "name": "configured-gateway-settings",
@@ -753,7 +753,7 @@
     ],
     "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",
     "replacement": "src/experience/browser-bots-toolbar.tsx",
-    "sourceHash": "07c6b90b0813250f01fddf78399ce981bd9ef48e9623367625aa9367659d0160",
+    "sourceHash": "2a386ad18290adfe3281a1ed80bccc70d1242f06a0e5fb7c835525813fc2d864",
     "sourceRoot": "renderer"
   },
   {
@@ -771,7 +771,7 @@
     ],
     "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",
     "replacement": "src/experience/browser-approval-mode-menu.tsx",
-    "sourceHash": "a4738f3f152e73f4f72acece6d00c7ae6db1af600de774a5cc315dd5773b15dc",
+    "sourceHash": "0902bbf07c9b705eee66a6f510675175299cdd3e9ee6399b5eb1a2c3838db410",
     "sourceRoot": "renderer"
   },
   {
@@ -977,7 +977,7 @@
       }
     ],
     "removal": "Remove when the browser adapter no longer imports this composition contract.",
-    "sourceHash": "8bef5a9dc0ac9a65cb1833a2a713bc4c43250c774747193ce24f6aedcd0b2257",
+    "sourceHash": "3b7d38106b94117b7e9f2e8170dd8ab5f4f5badb52e49920caa944378b8af268",
     "sourceRoot": "renderer"
   },
   {
@@ -1132,7 +1132,7 @@
     "specifier": "@hermes/plugin-sdk",
     "replacement": "../desktop/src/sdk/index.ts",
     "aliasGroup": "renderer",
-    "sourceHash": "b033b37ff3530cd5ce67708106f043c8705fffea6659fd265bc8b6285a6d6905"
+    "sourceHash": "dffe0562d74e3b8c37eec4a78ff2cc413bb8c455fa3aa1430ddfef10245f23bd"
   },
   {
     "name": "renderer-alias-6",
@@ -1156,7 +1156,7 @@
     "specifier": "@hermes/shared/billing",
     "replacement": "../shared/src/billing-types.ts",
     "aliasGroup": "renderer",
-    "sourceHash": "bc2974e2d5d2259cfa4aa2a99ef2f74d2227312466c8aa6d8dca236587409aaf"
+    "sourceHash": "69d529855196cf2736895bfee788e53f1bd1debbcdb30c21912b1ac1c8c5433b"
   },
   {
     "name": "renderer-alias-7",
@@ -1252,7 +1252,7 @@
     "specifier": "@hermes/shared",
     "replacement": "../shared/src/index.ts",
     "aliasGroup": "renderer",
-    "sourceHash": "6eca2aeefa69b2cca3cae65d9735be55455303c4dc59797b648b523f9ee7be9b"
+    "sourceHash": "cbfeb921966ce1558edccaab042a44075ee38e22174b66f1778dec99fad6744b"
   },
   {
     "name": "renderer-alias-11",
@@ -1491,10 +1491,10 @@
     "handlers": [
       "useBrowserGroupSelection"
     ],
-    "sourceHash": "60fa5c8f87bcbc827b8e9d4e5e43028ac2b06f2acb0f76c00fa52947f960052c",
+    "sourceHash": "d9f864d1034b326a0b386d85d39d024a7fa05f08c075cefb09c564559e670176",
     "sourceRoot": "renderer",
-    "inputHash": "60fa5c8f87bcbc827b8e9d4e5e43028ac2b06f2acb0f76c00fa52947f960052c",
-    "outputHash": "800209b49bcaf68ac8ce8f5e0f90ecdfc06dd2670f6e0718df7ceb4d873410ba"
+    "inputHash": "d9f864d1034b326a0b386d85d39d024a7fa05f08c075cefb09c564559e670176",
+    "outputHash": "83f1e47d0b152150f9399610e574adcac32eb6ed0a7b05044c9ce68e0f87f58c"
   },
   {
     "name": "browser-created-group-selection",
@@ -1513,10 +1513,10 @@
     "handlers": [
       "useBrowserCreatedGroupSelection"
     ],
-    "sourceHash": "0994f4f26f14e06c1a4648400c55c866d3ac8091bce5c66dc5d9cdf11721b6d5",
+    "sourceHash": "51f973c68e91858839c62c8c345f3ae11a4bf0baccb809a79c66f2ddf8a7f65b",
     "sourceRoot": "renderer",
-    "inputHash": "0994f4f26f14e06c1a4648400c55c866d3ac8091bce5c66dc5d9cdf11721b6d5",
-    "outputHash": "692b2dfb3b3164d1b2cd318cc08a20e7d664869179a2c129af4d8ecdf054fa82"
+    "inputHash": "51f973c68e91858839c62c8c345f3ae11a4bf0baccb809a79c66f2ddf8a7f65b",
+    "outputHash": "94a978a44b6c765a67c72ac866dd1fac959b59c4c5b38ee1fecf246185242165"
   },
   {
     "name": "ordered-browser-unread-writes",
@@ -1578,9 +1578,9 @@
     ],
     "removal": "Remove when upstream pin persistence serializes writes, fences pending intent, invalidates old connection work, and reports current failures.",
     "sourceRoot": "renderer",
-    "sourceHash": "864e623a69c6f9fc9aa5c542407f5826ec72907f2277c2e00164876e91086097",
-    "inputHash": "864e623a69c6f9fc9aa5c542407f5826ec72907f2277c2e00164876e91086097",
-    "outputHash": "ca7137332cb5be23023c7208e5022752f8b1023e0d604de64bc401084b7ff560"
+    "sourceHash": "fe1e4753b5d938a082a0b851566e5a1e284129baea5b29e478de7239d68e02d5",
+    "inputHash": "fe1e4753b5d938a082a0b851566e5a1e284129baea5b29e478de7239d68e02d5",
+    "outputHash": "34d4187dce7924f7ed90e5ebe0132776d3cae7530a679e3541f52eea2d9b3fe8"
   },
   {
     "name": "browser-session-open-owner",
@@ -1626,9 +1626,9 @@
     ],
     "removal": "Remove when upstream shared session entry points supersede older Bot selections and release group identity.",
     "sourceRoot": "renderer",
-    "sourceHash": "da0263104b61052279fa802a9e1814e7a214713bf93868152580bc3b376d4621",
-    "inputHash": "da0263104b61052279fa802a9e1814e7a214713bf93868152580bc3b376d4621",
-    "outputHash": "bdc5240b89986f1d4a726257ca1e11bd18554d960a21af153d08b0f6068a44da"
+    "sourceHash": "41ef12485c0934d1db78a32d4fec70deb70e4d025484563a02460dc24136b825",
+    "inputHash": "41ef12485c0934d1db78a32d4fec70deb70e4d025484563a02460dc24136b825",
+    "outputHash": "f3067b60c2e759e70d7c8574dd8b398cc74f2e8dbc8ba307acb0b6e4cc837293"
   },
   {
     "name": "browser-overlay-focus-owner",
@@ -1677,9 +1677,9 @@
     ],
     "removal": "Remove when upstream avoids automatic composer focus on mobile and respects focus restored by closing browser overlays.",
     "sourceRoot": "renderer",
-    "sourceHash": "47e339b7c8e7a3421fcdfb0425c32470cc075eaec9e905ab700712b98dbd8200",
-    "inputHash": "0ef5e6862aaf08849e8f58f65fe603609e18014900915a1dee658479fd0b57ac",
-    "outputHash": "1188508b59063c817d81e6a7d82770d352947a520b8a72aa98afa8616f2bc669"
+    "sourceHash": "24872e7ee8d07f6e9aa4d414e8898e817a172f23b1f7031a1ce1c24aa46bb423",
+    "inputHash": "d7967ee7974756c82fd6ad357c1b8a146ac3d27ea853c19bb2b68b32986781bf",
+    "outputHash": "e461883d6a8bbc685d19d82191e6704ea5b0332026ebefab0f535cd191a8a0d9"
   },
   {
     "name": "browser-workspace-route-lifetime",
@@ -1721,9 +1721,9 @@
     ],
     "removal": "Remove when upstream controlled Bot creation and section dialogs restore their opening control and fit browser viewport scaling.",
     "sourceRoot": "renderer",
-    "sourceHash": "f4018cf7452be6b3c019141eaeeb1c47f67651e3f6adac28861f1e1308bd4b51",
-    "inputHash": "f4018cf7452be6b3c019141eaeeb1c47f67651e3f6adac28861f1e1308bd4b51",
-    "outputHash": "926bd942618fb82d86a5af03fd01056054c47008da8c53b74091326d568ba916"
+    "sourceHash": "725fc4a671133c71aab5b6d8e6f3621002247e6ab58fba32e40c53c63882edef",
+    "inputHash": "725fc4a671133c71aab5b6d8e6f3621002247e6ab58fba32e40c53c63882edef",
+    "outputHash": "96c619e5001831e0d31124aabbd6f59138b3e94fa9339d0cfc829c3f2b7f2f70"
   },
   {
     "name": "browser-section-dialog-return-focus",
@@ -1823,9 +1823,9 @@
     ],
     "removal": "Remove when upstream group membership dialogs restore their opening control and respect browser scale.",
     "sourceRoot": "renderer",
-    "sourceHash": "f4018cf7452be6b3c019141eaeeb1c47f67651e3f6adac28861f1e1308bd4b51",
-    "inputHash": "926bd942618fb82d86a5af03fd01056054c47008da8c53b74091326d568ba916",
-    "outputHash": "6136e7e2b58db3a7486190b8e1c4869b7025d3022350f4bef760bb6ecb7b7306"
+    "sourceHash": "725fc4a671133c71aab5b6d8e6f3621002247e6ab58fba32e40c53c63882edef",
+    "inputHash": "96c619e5001831e0d31124aabbd6f59138b3e94fa9339d0cfc829c3f2b7f2f70",
+    "outputHash": "c3d09e4492e33af7d5cd3391bd5c74296021844ef62c8188f680c976586f86f2"
   },
   {
     "name": "browser-edit-dialog-focus",
@@ -1902,9 +1902,9 @@
       "useBrowserSectionIdentity"
     ],
     "sourceRoot": "renderer",
-    "sourceHash": "154f937b73d8e30125c2f8a6507960163efc71c7d8a5b53a7ff9bd6ac1ca69b9",
-    "inputHash": "154f937b73d8e30125c2f8a6507960163efc71c7d8a5b53a7ff9bd6ac1ca69b9",
-    "outputHash": "8fe8d3baa5d3f466d9eb727134239af27d82d474773d5680736b3aec24abee68"
+    "sourceHash": "4309fe015a42cddfcbcd39fc5fedd298b3296925469739183eda6402833224f8",
+    "inputHash": "4309fe015a42cddfcbcd39fc5fedd298b3296925469739183eda6402833224f8",
+    "outputHash": "8762f3d12e18b209b49768b411a08f52a1f8afa16054c740b8f2190ffacc1c54"
   },
   {
     "name": "browser-cron-jobs-section-styling",
@@ -1933,9 +1933,9 @@
       "useBrowserSectionIdentity"
     ],
     "sourceRoot": "renderer",
-    "sourceHash": "514f4207ff39f46e5ca8bfcc20f6cbf2d8513f3ee41ff1115f81805a50fd8228",
-    "inputHash": "514f4207ff39f46e5ca8bfcc20f6cbf2d8513f3ee41ff1115f81805a50fd8228",
-    "outputHash": "390a916187949a85b173ac2d3b5e4df86c87dea1ad93925c16d305ffdb43acfc"
+    "sourceHash": "821785056a2a31bbae394cf642c212e1621be9e7c99dabfe9cb624be9923a308",
+    "inputHash": "821785056a2a31bbae394cf642c212e1621be9e7c99dabfe9cb624be9923a308",
+    "outputHash": "5713feaa45474cd84fd3f9f3e963e797068a3765c174be6c265a93a5e825a168"
   },
   {
     "name": "browser-draft-persistence-alias",
@@ -1975,9 +1975,9 @@
       "omitBrowserDesktopUpdateNotice"
     ],
     "sourceRoot": "renderer",
-    "sourceHash": "a1c5f9f986ebd5d21e6d5c81c51431ebf68f61a8f226a5906dc98a98f1a2eb7b",
-    "inputHash": "a1c5f9f986ebd5d21e6d5c81c51431ebf68f61a8f226a5906dc98a98f1a2eb7b",
-    "outputHash": "61d0657d474baab09eae7d3a1db8239c0be9e5bce8615b6f60889ec8271d54f5"
+    "sourceHash": "3e0f0250446381d4fbb9f76a79759d78b634fac46eb484ca53f32c129c74542f",
+    "inputHash": "3e0f0250446381d4fbb9f76a79759d78b634fac46eb484ca53f32c129c74542f",
+    "outputHash": "952c586f3a9daa6aedf8b8237458813cfb58e278672437c41db03918ed5c6d3c"
   },
   {
     "name": "browser-semantic-desktop-install-overlay",
@@ -2049,9 +2049,9 @@
       "useBrowserTouchHooks"
     ],
     "sourceRoot": "renderer",
-    "sourceHash": "2226ef69d09e051d7c62f8a8448db5c9a622af6111d82b399ace4848c877917c",
-    "inputHash": "2226ef69d09e051d7c62f8a8448db5c9a622af6111d82b399ace4848c877917c",
-    "outputHash": "40666eb0c7fa1944913d1fc8dc5037787bbaef2a801ab4c4c1f3d99f51e7da34"
+    "sourceHash": "ecdc84e1f7859c3a319825a7ae1a7d28fe3bac2b2da863373e21879e9395b4b4",
+    "inputHash": "ecdc84e1f7859c3a319825a7ae1a7d28fe3bac2b2da863373e21879e9395b4b4",
+    "outputHash": "9c668dcea817ba47977cb24b7c78c1b7b78ed2fc01b26845333bad9d395d3aea"
   },
   {
     "name": "browser-semantic-context-menu",
@@ -2225,7 +2225,7 @@
     "order": 20,
     "module": "sdk/index.ts",
     "sourceRoot": "renderer",
-    "sourceHash": "b033b37ff3530cd5ce67708106f043c8705fffea6659fd265bc8b6285a6d6905",
+    "sourceHash": "dffe0562d74e3b8c37eec4a78ff2cc413bb8c455fa3aa1430ddfef10245f23bd",
     "replacement": "src/upstream/browser-dialog-sdk.ts",
     "importers": [
       "plugins/hermes-bots/create-dialog.tsx",
@@ -2469,9 +2469,9 @@
     ],
     "removal": "Remove when upstream settings provides equivalent browser save lifecycle and browser-aware field visibility defaults.",
     "sourceRoot": "renderer",
-    "sourceHash": "af48cbaa32920b5b31a12b3cde5322b4657d50309d5babe31bbef2e088441ab9",
-    "inputHash": "af48cbaa32920b5b31a12b3cde5322b4657d50309d5babe31bbef2e088441ab9",
-    "outputHash": "429f70452bb26e8d897012bd7cb2ad0710f28087149f1e658e449ba18e604ffe",
+    "sourceHash": "dd6f88ee6f027a541d34710d571625911d7e4bd0bef95d95807df6ffaf3b1615",
+    "inputHash": "dd6f88ee6f027a541d34710d571625911d7e4bd0bef95d95807df6ffaf3b1615",
+    "outputHash": "cb72f6eaa40b387a3223e82e6ab29d6777b32e0eccf2b930e40fe45d5381f71c",
     "handlers": [
       "trackBrowserSettingsSaves",
       "filterBrowserSettingsFields",
@@ -2506,9 +2506,9 @@
     "order": 20,
     "module": "lib/desktop-slash-commands.ts",
     "sourceRoot": "renderer",
-    "sourceHash": "bee5a4404990024fa92f40b76b3fbe51bfbc0d7f26a3e6906cf901db6088af96",
-    "inputHash": "bee5a4404990024fa92f40b76b3fbe51bfbc0d7f26a3e6906cf901db6088af96",
-    "outputHash": "69ef44ddddf2b4284a786c0806f45dc3a1b559cfad2521e1a2994e49eb71970b",
+    "sourceHash": "665fc72fdd57ddae53150ff04ab5f128826296a212bd8bdc279e00c89ba4c4e4",
+    "inputHash": "665fc72fdd57ddae53150ff04ab5f128826296a212bd8bdc279e00c89ba4c4e4",
+    "outputHash": "c7c6b97cf765fd435ce38b32ca1d24f43539d3cffcf762794e0e1038f82f2e49",
     "handlers": [
       "removeBrowserPetSlashCommands"
     ],
@@ -2557,9 +2557,9 @@
       "useBrowserFollowupSubmit"
     ],
     "sourceRoot": "renderer",
-    "sourceHash": "03ec97d406175f0224069e8ab48d0b0ae74c63e31a339ae9fb49c9775dc0dd8e",
-    "inputHash": "03ec97d406175f0224069e8ab48d0b0ae74c63e31a339ae9fb49c9775dc0dd8e",
-    "outputHash": "cd5597b4da9ec4b372a6413d7bc7881e7723659be709c0f32a639cbfb1e1b17f"
+    "sourceHash": "a7b5091e42f231f831dd4aae3ee4efd91117fd0744fd53b1d6d392c4ffb3a01e",
+    "inputHash": "a7b5091e42f231f831dd4aae3ee4efd91117fd0744fd53b1d6d392c4ffb3a01e",
+    "outputHash": "c7b2d29622e1c1e0daa347a5d9c9b4d1f2d26cae47a68f79d510110612751780"
   },
   {
     "name": "browser-draft-safety-alias",
@@ -2742,9 +2742,9 @@
       "useBrowserAlternateSubmit"
     ],
     "sourceRoot": "renderer",
-    "sourceHash": "89a99902c2f425ad3f2901cd7eae8fb6bc4c68dca262f3e6a528b2dc4592320c",
-    "inputHash": "89a99902c2f425ad3f2901cd7eae8fb6bc4c68dca262f3e6a528b2dc4592320c",
-    "outputHash": "9462cef84682a54f595d1114959949ccaef08fbd7ee4da37ec87f89e69d72909"
+    "sourceHash": "592d9e15ca9e16c5e61bebf5b236245a33ff61b43653976a7e0e6bec8234bf7a",
+    "inputHash": "592d9e15ca9e16c5e61bebf5b236245a33ff61b43653976a7e0e6bec8234bf7a",
+    "outputHash": "0e8e4972a70d06fb52b54234771bceb1468a9201a50ecc6a99b3718ced044085"
   },
   {
     "name": "browser-workspace-owner-identity",
@@ -2824,9 +2824,9 @@
       }
     ],
     "removal": "Remove when upstream plugin installation preserves an embedded Settings manager destination.",
-    "sourceHash": "1b81511777e65b346c3ecdbb3d7a20abcfa3151cab687f3793a220b53c24738c",
-    "inputHash": "1b81511777e65b346c3ecdbb3d7a20abcfa3151cab687f3793a220b53c24738c",
-    "outputHash": "d4b452c216c5e7f48d6120167157d5b64588ed4eb2fc9477a3bdebfe938ede8a",
+    "sourceHash": "473d06960dcd059e1c1d7afe92a38338c316f13fde8572901a3b30b6640351d6",
+    "inputHash": "473d06960dcd059e1c1d7afe92a38338c316f13fde8572901a3b30b6640351d6",
+    "outputHash": "8d1f33e3e05d4c1c72d94f63623b4780f101f0d3647e4d90e06300a83f5817e1",
     "handlers": [
       "keepBrowserPluginInstallInSettings"
     ],

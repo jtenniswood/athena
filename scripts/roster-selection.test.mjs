@@ -11,11 +11,12 @@ function harness() {
   let generation = 0
   const dependencies = {
     $lastRoster: { get: () => bots }, $botMeta: { get: () => ({}) }, $groupChats: { get: () => rooms },
+    $canonicalGroupBindings: { get: () => ({ 'canonical:remote:research:room': { roomId: 'room' } }) },
     botSelectionKey: bot => `${bot.connectionId}::${bot.name}`,
     groupChatNames: () => ['Team', 'Gone'],
     getBotOpenGeneration: () => generation,
     openRosterBot: bot => { generation++; opened.push(bot); return new Promise((resolve, reject) => pending.push({ resolve, reject })) },
-    openGroupChat: name => { generation++; opened.push(name) },
+    openGroupChat: (name, origin) => { generation++; opened.push([name, origin]) },
     reportActionFailure: message => errors.push(message)
   }
   const context = vm.createContext({ exports: {}, require: () => dependencies })
@@ -51,6 +52,15 @@ test('group commands retain live engine rooms and reject deleted or missing room
   h.selectBrowserGroup('Team')
   h.selectBrowserGroup('Gone')
   h.selectBrowserGroup('Unknown')
-  assert.deepEqual(h.opened, ['Team'])
+  assert.deepEqual(h.opened, [['Team', 'name']])
+  assert.equal(h.errors.length, 2)
+})
+
+test('canonical group selection preserves key origin and rejects unregistered keys', () => {
+  const h = harness()
+  h.selectBrowserGroup('canonical:remote:research:room', 'key')
+  h.selectBrowserGroup('canonical:remote:research:missing', 'key')
+  h.selectBrowserGroup('canonical:remote:research:room', 'name')
+  assert.deepEqual(h.opened, [['canonical:remote:research:room', 'key']])
   assert.equal(h.errors.length, 2)
 })
