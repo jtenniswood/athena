@@ -45,7 +45,7 @@
     "@nanostores/react": "2.0.1",
     "@nous-research/ui": "1.5.2",
     "@novnc/novnc": "1.7.0",
-    "@streamdown/code": "1.1.1",
+    "@streamdown/code": "2.0.0",
     "@streamdown/math": "1.0.3",
     "@tabler/icons-react": "3.49.0",
     "@tailwindcss/typography": "0.5.20",
