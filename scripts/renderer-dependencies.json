@@ -59,6 +59,10 @@
       "upstream": "3.13.2", "version": "4.0.1",
       "reason": "Update the project tree together with React DnD and dnd-core 16; verify sidebar disclosure and session navigation against the pinned renderer."
     },
+    "@streamdown/code": {
+      "upstream": "1.1.1", "version": "2.0.0",
+      "reason": "Retain the code plugin API used by the pinned renderer while aligning its Shiki 4 types with the reviewed transcript stack; verify highlighted code, typechecking and the production build."
+    },
     "@streamdown/math": {
       "upstream": "1.0.2", "version": "1.0.3",
       "reason": "Retain Athena's existing math rendering version; typecheck and build the transcript renderer together with Shiki."
