@@ -64,7 +64,7 @@
       "reason": "Retain Athena's existing math rendering version; typecheck and build the transcript renderer together with Shiki."
     },
     "vite": {
-      "upstream": "8.2.0", "version": "8.3.4",
+      "upstream": "8.2.4", "version": "8.3.4",
       "reason": "Athena owns the browser build and compatibility plugin pipeline; verify the registry and production build."
     },
     "@vitejs/plugin-react": {

@@ -370,7 +370,7 @@ export function useBrowserArchivedSessionsTable(source: string, root: string): s
 
 export function filterBrowserSettingsFields(source: string, root: string): string {
   const owner = JSON.stringify(path.join(root, 'src/experience/settings/policy'))
-  const target = "  const visibleFields = activeSectionId === 'voice' ? fields.filter(([key]) => voiceFieldVisible(key, config)) : fields"
+  const target = "  ).filter(([key]) => key !== DELEGATION_ROUTE_COMPANION_KEY)"
   if (source.split(target).length !== 2) throw new Error('Browser settings field visibility target changed')
   let output = source.replace(target, target + '.filter(([key]) => isSettingsFieldVisible(key))')
   const mapStart = '          {visibleFields.map(([key, field]) => (\n'
@@ -751,7 +751,7 @@ export function useBrowserSectionIdentity(source: string, root: string): string 
     ['interface SidebarSessionsSectionProps {', 'interface SidebarSessionsSectionProps {\n  browserSectionId: string'],
     ['export function SidebarSessionsSection({', 'export function SidebarSessionsSection({\n  browserSectionId,'],
     ['}: SidebarSessionsSectionProps) {', '}: SidebarSessionsSectionProps) {\n  const browserSection = useBrowserSidebarSection(browserSectionId, label)'],
-    ['<SidebarGroup className={rootClassName}>', '<SidebarGroup {...browserSection} className={rootClassName}>']
+    ['<SidebarGroup className={cn(rootClassName, DROP_TARGET_RING)}', '<SidebarGroup {...browserSection} className={cn(rootClassName, DROP_TARGET_RING)}']
   ] : [
     ['}: SidebarCronJobsSectionProps) {', "}: SidebarCronJobsSectionProps) {\n  const browserSection = useBrowserSidebarSection('cron-jobs', label)"],
     ['<SidebarGroup className="shrink-0 p-0 pb-1">', '<SidebarGroup {...browserSection} className="shrink-0 p-0 pb-1">']
@@ -778,11 +778,16 @@ export function omitBrowserDesktopUpdateNotice(source: string): string {
 }
 
 export function useBrowserTouchHooks(source: string, root: string): string {
-  const sendTarget = 'aria-label={showStop ? c.stop : c.send}'
-  const labels = ['c.queueMessage', 'showStop ? c.stop : c.send', 'state.tools.label', 'copy.openModelPicker', 'triggerLabel', 'label', 'title']
+  const sendTarget = 'aria-label={showStop ? c.stop : sendLabel}'
+  const labels = ['c.queueMessage', 'showStop ? c.stop : sendLabel', 'state.tools.label', 'copy.openModelPicker', 'triggerLabel', 'label', 'title']
   const targets = labels.map(label => `aria-label={${label}}`).filter(target => source.includes(target))
   if (!targets.length) throw new Error('Browser composer touch controls changed')
-  let output = replaceBrowserContract(source, targets.map(target => [target, `${target === sendTarget ? 'data-browser-send-action="" ' : ''}${target === 'aria-label={c.queueMessage}' ? 'data-browser-queue-action="" ' : ''}data-browser-composer-action="" ${target}`]))
+  let output = source
+  for (const target of targets) {
+    const expected = target === 'aria-label={label}' && source.includes('function renderSteerButton(') ? 2 : 1
+    if (output.split(target).length !== expected + 1) throw new Error('Browser composer touch target changed: ' + target)
+    output = output.replaceAll(target, `${target === sendTarget ? 'data-browser-send-action="" ' : ''}${target === 'aria-label={c.queueMessage}' ? 'data-browser-queue-action="" ' : ''}data-browser-composer-action="" ${target}`)
+  }
   if (source.includes("const tourMarker = useTourMarker('model-pill')")) {
     const marker = 'data-tour={tourMarker}'
     const matches = output.split(marker).length - 1
@@ -794,7 +799,7 @@ export function useBrowserTouchHooks(source: string, root: string): string {
     const reasoningTarget = '              {compactModelPill ? null : <ReasoningPill disabled={disabled} model={state.model} />}\n'
     if (output.split(importTarget).length !== 2 || output.split(reasoningTarget).length !== 2) throw new Error('Browser approval composer insertion point changed')
     // Follow-up routing uses upstream's running-turn-only queue control.
-    const queueTarget = "const showQueueButton = busy && busyAction !== 'stop' && hasComposerPayload"
+    const queueTarget = 'const showQueueButton = queueButtonVisible(busy, busyAction, hasComposerPayload, cardWaiting)'
     if (output.split(queueTarget).length !== 2) throw new Error('Browser queue control contract changed')
     output = output.replace(importTarget, `${importTarget}import { BrowserApprovalComposerControl } from ${JSON.stringify(`${root}/src/experience/browser-approval-composer-control`)}\n`)
       .replace(reasoningTarget, reasoningTarget + '              <BrowserApprovalComposerControl />\n')
@@ -818,21 +823,28 @@ export function useBrowserAcceptedSubmit(source: string, root: string): string {
 /** Keep the renderer's submit/restore engine; supply the browser's follow-up policy. */
 export function useBrowserFollowupSubmit(source: string, root: string): string {
   const start = '  const submitDraft = () => {'
-  const payload = "    const blockingPrompt = !queueEdit && (parked === 'yielded' || hasBlockingPromptRequest(sessionId))"
   const policy = JSON.stringify(path.join(root, 'src/experience/followup-preferences'))
   return `import { browserFollowupMode } from ${policy}\n` + replaceBrowserContract(source, [
     [start, '  const submitDraft = (browserAlternate = false) => {'],
-    [payload, `${payload}\n\n    if (busy && !queueEdit && payloadPresent && browserFollowupMode(browserAlternate) === 'queue') {\n      queueCurrentDraft()\n      focusInput()\n      return\n    }`]
+    ['const submitWhileBusy = (text: string, payloadPresent: boolean, blockingPrompt: boolean) => {', 'const submitWhileBusy = (text: string, payloadPresent: boolean, blockingPrompt: boolean, browserAlternate: boolean) => {'],
+    ['submitWhileBusy(text, payloadPresent, blockingPrompt)', 'submitWhileBusy(text, payloadPresent, blockingPrompt, browserAlternate)'],
+    ["if (busyInputMode === 'queue') {", "if (browserFollowupMode(browserAlternate) === 'queue') {"],
+    ["} else if (busyInputMode !== null) {\n        steerDraft(busyInputMode)", "} else {\n        steerDraft('interrupt')"]
   ])
 }
 
-export function useBrowserAlternateSubmit(source: string): string {
+export function useBrowserAlternateSubmit(source: string, root: string): string {
   const start = source.indexOf("    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {")
   const end = source.indexOf("    if (event.key === 'Enter' && !event.shiftKey) {", start)
   if (start < 0 || end < 0) throw new Error('Browser alternate composer submit boundary changed')
   const keyboard = source.slice(start, end)
   if (keyboard.split('        queueDraft()').length !== 2) throw new Error('Browser alternate composer command changed')
-  return source.slice(0, start) + keyboard.replace('        queueDraft()', '        submitDraft(true)') + source.slice(end)
+  source = source.slice(0, start) + keyboard.replace('        queueDraft()', '        submitDraft(true)') + source.slice(end)
+  const policy = JSON.stringify(path.join(root, 'src/experience/followup-preferences'))
+  return replaceBrowserContract(source, [
+    ["import { useBusyInputMode } from '@/app/session/hooks/use-busy-input-mode'", `import { useFollowupBehavior } from ${policy}`],
+    [`  const busyInputMode = useBusyInputMode({\n    sessionId: sessionId ?? null,\n    storedSessionId: queueSessionKey ?? null,\n    requestGateway: requestBusyConfig\n  })`, '  const busyInputMode = useFollowupBehavior()']
+  ])
 }
 
 
@@ -1163,11 +1175,12 @@ export function useBrowserRosterSelection(source: string, root: string, surface:
     ],
     group: [
       ["import { GroupChatWorkspace, openGroupChat } from './group-chat-view'", "import { GroupChatWorkspace } from './group-chat-view'"],
-      ['onOpen={openGroupChat}', 'onOpen={selectBrowserGroup}']
+      ['onOpen={openGroupChat}', 'onOpen={selectBrowserGroup}'],
+      ["onOpen={group => openGroupChat(group, 'name')}", "onOpen={group => selectBrowserGroup(group, 'name')}"]
     ],
     'created-group': [
       ["import { disbandGroupChat, openGroupChat } from './group-chat-view'", "import { disbandGroupChat } from './group-chat-view'"],
-      ['onCreated={groupName => openGroupChat(groupName)}', 'onCreated={selectBrowserGroup}']
+      ['onCreated={(group, origin) => openGroupChat(group, origin)}', 'onCreated={selectBrowserGroup}']
     ]
   }
   let output = source
@@ -1322,7 +1335,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserDirectResumeOwner: source => useBrowserDirectResumeOwner(source),
     useBrowserSectionIdentity: source => useBrowserSectionIdentity(source, root),
     useBrowserTouchHooks: source => useBrowserTouchHooks(source, root), useBrowserAcceptedSubmit: source => useBrowserAcceptedSubmit(source, root),
-    useBrowserFollowupSubmit: source => useBrowserFollowupSubmit(source, root), useBrowserAlternateSubmit,
+    useBrowserFollowupSubmit: source => useBrowserFollowupSubmit(source, root), useBrowserAlternateSubmit: source => useBrowserAlternateSubmit(source, root),
     useBrowserCodingActionHooks, useBrowserSectionIds, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source, entry.module as 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,

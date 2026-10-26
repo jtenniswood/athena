@@ -64,6 +64,8 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'ping') return { pong: true }
     // Optional probes from the pinned renderer, with explicit synthetic support.
     if (method === 'client.capabilities') return { declines_not_shown: true }
+    if (method === 'groups.capabilities') return { driver: false, persistent_process: false }
+    if (method === 'groups.list') return { rooms: [] }
     if (method === 'i18n.languages') return []
     if (method === 'shared_metrics.status') return { decided: true, enabled: false, send: false }
     if (method === 'bot_relay.roster.sync' && Array.isArray(params.agents)) return { ok: true }
@@ -131,7 +133,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
         const piece = parts[index++]; sent += piece; event('message.delta', id, { text: piece })
       }, delay)
       timers.set(id, timer)
-      return { status: 'accepted', session_id: id }
+      return { status: 'started', session_id: id, submission_id: params.submission_id }
     }
     if (method === 'session.redirect') {
       if (!timers.has(id)) return { status: 'rejected', text: params.text }

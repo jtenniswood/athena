@@ -169,13 +169,13 @@ for (const preference of ['queue', 'steer']) {
         })
         server.onMessage(message => {
           const frame = JSON.parse(String(message))
-          if (holdCompletion && frame.params?.type === 'message.complete') held.push(() => socket.send(message))
+          if (holdCompletion && frame.params?.type === 'message.complete' && frame.params.session_id === 'preview-week') held.push(() => socket.send(message))
           else socket.send(message)
         })
       })
       const send = async () => {
         if (method === 'Enter') await editor(page).press('Enter')
-        else await page.getByRole('button', { name: 'Send', exact: true }).click()
+        else await page.locator('[data-browser-send-action]').click()
       }
       await open(page)
       await editor(page).fill(`Idle message via ${method}`)
@@ -188,7 +188,7 @@ for (const preference of ['queue', 'steer']) {
 
       if (preference === 'queue') {
         await editor(page).fill(`Queued follow-up via ${method}`)
-        await expect(page.locator('[data-browser-queue-action]')).toBeVisible()
+        await expect(page.locator('[data-browser-send-action]')).toHaveAttribute('aria-label', 'Queue message')
         await send()
         await expect(editor(page)).toHaveText('')
         await expect(page.getByRole('button', { name: '1 Queued', exact: true })).toBeVisible()
@@ -221,7 +221,7 @@ for (const preference of ['queue', 'steer']) for (const alternate of [false, tru
       })
       server.onMessage(message => {
         const frame = JSON.parse(String(message))
-        if (holdCompletion && frame.params?.type === 'message.complete') held.push(() => socket.send(message))
+        if (holdCompletion && frame.params?.type === 'message.complete' && frame.params.session_id === 'preview-week') held.push(() => socket.send(message))
         else socket.send(message)
       })
     })
