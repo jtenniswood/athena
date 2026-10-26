@@ -18,10 +18,10 @@ onlyBuiltDependencies:
 # the repo-root node_modules (same shape as npm).
 nodeLinker: hoisted
 
-# The pinned renderer's read-only plugin store does not implement the eq()
-# method required by Nanostores 1.5. Keep its shared store API consistent.
+# Keep the renderer and shared UI on one store runtime. Athena adapts the
+# pinned renderer's read-only plugin view to Nanostores 1.5's equality API.
 overrides:
-  nanostores: 1.4.0
+  nanostores: 1.5.5
 
 allowBuilds:
   get-windows: false

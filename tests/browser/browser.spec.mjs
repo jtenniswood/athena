@@ -404,6 +404,32 @@ test('workspace snapshots remain stable through draft edits, session changes, an
   browserErrors.assertClean()
 })
 
+test('message actions follow the current runtime after conversation switches without losing drafts', async ({ page, context }) => {
+  const browserErrors = installBrowserErrorCollector(page)
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await open(page)
+  await expect(page.locator('.athena-connecting-overlay')).toBeHidden()
+  await editor(page).fill('Keep this draft while using message actions')
+  await page.locator('[data-slot="aui_assistant-message-root"]').hover()
+  await page.locator('[data-slot="aui_assistant-message-root"]').getByRole('button', { name: 'Copy', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('A little more room to think')
+
+  await page.getByRole('button', { name: 'Explore a product idea', exact: true }).click()
+  await expect(page).toHaveURL(/#\/preview-idea$/)
+  await page.locator('[data-slot="aui_assistant-message-root"]').hover()
+  await page.locator('[data-slot="aui_assistant-message-root"]').getByRole('button', { name: 'Copy', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('one person, one problem')
+  await page.getByRole('button', { name: 'Edit message', exact: true }).click()
+  const edit = page.locator('[data-slot="aui_edit-composer-root"]')
+  await expect(edit.locator('[contenteditable="true"]')).toHaveText('Help me make a thoughtful plan.')
+  await edit.locator('[contenteditable="true"]').press('Escape')
+  await expect(edit).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
+  await expect(editor(page)).toHaveText('Keep this draft while using message actions')
+  browserErrors.assertClean()
+})
+
 test('fresh startup restores chat, registrations, bots, and avatar-backed profiles', async ({ page }) => {
   const browserErrors = installBrowserErrorCollector(page)
   await open(page)

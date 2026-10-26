@@ -52,11 +52,11 @@ export function createRendererAdapter(root = path.join(repositoryRoot, 'apps/web
   checkGeneratedRegistryFiles(registry, path.resolve(root, '../..'))
   verifyInstalledInputs(registry, path.resolve(root, '../..'))
   const loader = transformerLoader()
-  const definitions = ['dependency-compatibility.ts', 'athena-branding.ts', 'browser-plugin.ts', 'transforms.ts']
+  const definitions = ['athena-branding.ts', 'browser-plugin.ts', 'transforms.ts']
     .map(file => path.join(root, 'src/upstream', file))
-  const [dependency, branding, browser, renderer] = definitions.map(loader.load)
+  const [branding, browser, renderer] = definitions.map(loader.load)
   const stages = [
-    dependency.dependencyCompatibilityPlugin(root), branding.athenaBranding(),
+    branding.athenaBranding(),
     browser.browserPlugin(root), renderer.rendererCompatibilityPlugin(path.resolve(root, '../desktop/src')),
     browser.browserActivityNotificationsPlugin(root)
   ]
@@ -109,7 +109,6 @@ export function rendererAdapterPlugin(root) {
   const adapter = createRendererAdapter(root)
   return {
     name: 'athena:renderer-adapter', enforce: 'pre',
-    config: () => adapter.stages[0].config(),
     buildStart() {
       const repository = path.resolve(root, '../..')
       checkGeneratedRegistryFiles(adapter.registry, repository)

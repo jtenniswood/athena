@@ -5,9 +5,28 @@ import type { Plugin } from 'vite'
 import registry from './compatibility-registry.json'
 const fixtures = registry.filter(entry => entry.kind === 'renderer-transform')
 
+export function redirectAssistantRuntimeHooks(source: string): string {
+  return source.replace(/import\s*\{([^}]+)\}\s*from '@assistant-ui\/react'/, (declaration, names: string) => {
+    const imports = names.split(',').map(name => name.trim()).filter(Boolean)
+    const legacy = imports.filter(name => ['useComposerRuntime', 'useMessageRuntime', 'useThreadRuntime'].includes(name))
+    if (!legacy.length) throw new Error('Renderer runtime hooks changed')
+    const current = imports.filter(name => !legacy.includes(name))
+    return `import { ${current.join(', ')} } from '@assistant-ui/react'\nimport { ${legacy.join(', ')} } from 'hermes:web-assistant-ui-runtime'`
+  })
+}
+
 function rewrite(code: string, id: string): { code: string; map: null } | null {
 
     const normalizedId = id.replaceAll('\\', '/').split('?')[0]
+    if (normalizedId.endsWith('/desktop/src/components/assistant-ui/thread/assistant-message.tsx') ||
+        normalizedId.endsWith('/desktop/src/components/assistant-ui/thread/use-message-reactions.ts')) {
+      return { code: redirectAssistantRuntimeHooks(code), map: null }
+    }
+    if (normalizedId.endsWith('/desktop/src/sdk/bridge.ts')) {
+      const target = 'export const pluginDecisions: ReadableAtom<Record<string, boolean>> = {'
+      if (code.split(target).length !== 2) throw new Error('Readonly plugin decisions changed')
+      return { code: code.replace(target, target + '\n  eq: Object.is,'), map: null }
+    }
     if (normalizedId.endsWith('/desktop/src/lib/markdown-preprocess.ts')) {
       // HTML attributes already own their URLs. Keep bare-URL autolinking
       // from inserting angle brackets inside href/src attribute values.
@@ -96,6 +115,7 @@ registerBrowserDraftSafety({
       return { map: null, code: patched }
     }
     if (normalizedId.endsWith('/desktop/src/app/chat/composer/hooks/use-composer-draft.ts')) {
+      code = redirectAssistantRuntimeHooks(code)
       return { map: null, code: `import { blockBrowserDraftSnapshot } from 'hermes:web-draft-safety'\n` + code.replace(
         'onComposerDraftSyncRequest(({ mode, target: requested }) => {',
         `onComposerDraftSyncRequest(({ mode, target: requested }) => {
