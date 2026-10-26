@@ -19,11 +19,7 @@ if you prefer Compose.
 
 ### 1. Create the environment file
 
-Copy the template, then edit `.env.hermes-web` and set the gateway address:
-
-```bash
-cp apps/web-desktop/.env.example .env.hermes-web
-```
+Copy the template, then edit [`.env.hermes-web`](apps/web-desktop/.env.example) and set the gateway address:
 
 For a gateway running on the same host as Docker, use:
 

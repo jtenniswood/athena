@@ -11,7 +11,7 @@ function ApprovalModeIcon({ mode }: { mode: ApprovalMode }) {
   return <Power className="size-3.5" />
 }
 
-export function useApprovalModeStatusbarItem(profile: string, requestGateway: ApprovalModeRequester): StatusbarItem {
+export function useApprovalModeStatusbarItem(profile: string, requestGateway: ApprovalModeRequester, _gatewayState?: string): StatusbarItem {
   const { t } = useI18n()
   const copy = t.shell.approvalMode
   const { mode, setMode } = useBrowserApproval(profile, requestGateway)

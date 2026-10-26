@@ -189,7 +189,9 @@
   color: var(--web-text);
 }
 
-.browser-action-menu .browser-action-item:has(> .browser-action-check) {
+/* Reserve the check column across shortcut rows so their hints stay aligned. */
+.browser-action-menu .browser-action-item:has(> .browser-action-check),
+.browser-action-menu:has(.browser-action-check) .browser-action-item:has(.browser-session-shortcut) {
   position: relative;
   padding-right: calc(var(--web-space-2) + var(--web-icon-size) + var(--web-space-2));
 }

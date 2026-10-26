@@ -66,16 +66,12 @@ export function createWebBridge(): Window['hermesDesktop'] {
         profile: name,
         targetProfile: name
       })),
-    // Web has no spawn pool; report the default UI values (Settings rows read them).
-    getPoolLimits: async () => ({ maxBackends: 3, idleMs: 10 * 60_000 }),
-    setPoolLimits: async () => ({ ok: false, limits: { maxBackends: 3, idleMs: 10 * 60_000 } }),
     openBrowserWindow: async () => ({ ok: false, error: 'no browser pop-out in the web app' }),
     onBrowserPopoutClosed: unsubscribed,
     // No OS keychain in the browser; secrets encryption stays off.
     getSecretStorageEncryption: async () => ({ on: capabilities.secureTokenStorage }),
     setSecretStorageEncryption: async () => ({ on: capabilities.secureTokenStorage }),
     revalidateConnection: async () => ({ ok: true, rebuilt: false }),
-    touchBackend: async () => ({ ok: true }),
     // Single window in the browser: always the first to claim a cue.
     claimAmbientCue: async () => true,
     getGatewayWsUrl: async () => {

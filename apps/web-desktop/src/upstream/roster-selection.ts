@@ -2,6 +2,7 @@ import { $lastRoster, $botMeta, botSelectionKey } from '@/plugins/hermes-bots/da
 import { $groupChats } from '@/plugins/hermes-bots/group-chat'
 import { groupChatNames } from '@/plugins/hermes-bots/group-membership'
 import { openGroupChat } from '@/plugins/hermes-bots/group-chat-view'
+import { $canonicalGroupBindings, type CanonicalGroupOrigin } from '@/plugins/hermes-bots/canonical-group-registry'
 import { openRosterBot } from '@/plugins/hermes-bots/roster-actions'
 import { getBotOpenGeneration } from '@/plugins/hermes-bots/shared'
 import { reportActionFailure } from '../experience/action-errors'
@@ -25,13 +26,16 @@ export async function selectBrowserBot(key: string): Promise<void> {
 }
 
 /** Existing room state and the engine's room lifecycle remain authoritative. */
-export function selectBrowserGroup(name: string): void {
-  if ($groupChats.get()[name]?.tombstone || !groupChatNames($botMeta.get(), $groupChats.get()).includes(name)) {
+export function selectBrowserGroup(name: string, origin: CanonicalGroupOrigin = 'name'): void {
+  const available = origin === 'key'
+    ? Boolean($canonicalGroupBindings.get()[name])
+    : !$groupChats.get()[name]?.tombstone && groupChatNames($botMeta.get(), $groupChats.get()).includes(name)
+  if (!available) {
     reportActionFailure('This group is no longer available. Refresh the roster and try again.')
     return
   }
   try {
-    openGroupChat(name)
+    openGroupChat(name, origin)
   } catch {
     reportActionFailure('Could not open group conversation.')
   }

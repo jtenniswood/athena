@@ -15,7 +15,7 @@ function evaluate(source, dependencies, extra = {}) {
 const pluginFile = path.join(root, 'src/upstream/browser-plugin.ts')
 const { useBrowserPinWrites } = evaluate(readFileSync(pluginFile, 'utf8'), createRequire(pluginFile))
 const transformed = useBrowserPinWrites(readFileSync('apps/desktop/src/store/session-pin-sync.ts', 'utf8'), root)
-function harness({ rows = [{ id: 'chat', profile: 'research', pinned: false }], saved = [], active = 'research' } = {}) {
+function harness({ rows = [{ id: 'chat', profile: 'research', pinned: false }], saved = [], active = 'research', removing = false } = {}) {
   const atom = initial => {
     let value = initial
     const listeners = new Set()
@@ -32,7 +32,8 @@ function harness({ rows = [{ id: 'chat', profile: 'research', pinned: false }], 
     unpinSession: id => { if (pins.get().includes(id)) pins.set(pins.get().filter(value => value !== id)) },
     onConnectionScopeChange: callback => { dependencies.rescope = callback },
     setSessionPinnedRemote: (id, pinned, profile) => new Promise((resolve, reject) => requests.push({ id, pinned, profile, resolve, reject })),
-    reportActionFailure: message => errors.push(message)
+    reportActionFailure: message => errors.push(message),
+    isSessionRemovalPending: () => removing
   }
   const queue = evaluate(readFileSync(path.join(root, 'src/upstream/browser-pin-writes.ts'), 'utf8'), () => dependencies)
   const engine = evaluate(transformed, name => name.endsWith('browser-pin-writes') ? queue : dependencies, { window: { hermesDesktop: {} } })
@@ -40,6 +41,19 @@ function harness({ rows = [{ id: 'chat', profile: 'research', pinned: false }], 
   return { ...dependencies, ...queue, pins, sessions, cron, messaging, profile, requests, errors }
 }
 const flush = () => new Promise(resolve => setImmediate(resolve))
+
+test('session removal owns its unpin without a competing browser write', async () => {
+  const h = harness({ saved: ['chat'], rows: [{ id: 'chat', profile: 'research', pinned: true }], removing: true })
+  await flush()
+  h.requests[0].resolve({ ok: true })
+  await flush()
+  h.sessions.set([])
+  h.unpinSession('chat')
+  await flush()
+  assert.equal(h.requests.length, 1)
+  assert.equal(h.requests[0].pinned, true)
+  assert.deepEqual(h.pins.get(), [])
+})
 
 test('pin ordering includes upstream reconciliation and fences stale pages during queued writes', async () => {
   const h = harness()

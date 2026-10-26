@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useBrowserBotVisibility } from '../upstream/bots'
+import { seatableGroupBots, useGroupCapability, useBrowserBotVisibility } from '../upstream/bots'
 import { cn, Codicon, GatewayKindGlyph, rosterGatewayOptions, SearchField, type RosterActivityFilter, type RosterKindFilter, type RosterRow, type useBots } from '../upstream/browser-api'
 import { BrowserActionSurface, type BrowserActionGroup, type BrowserActionAnchor } from './ui/action-surface'
 import { BrowserToolbarButton } from './ui/toolbar-button'
@@ -9,6 +9,7 @@ type RenderRosterToolbarProps = {
   b: ReturnType<typeof useBots>
   activityToasts: boolean
   activeSourceRoster: RosterRow[]
+  roster: RosterRow[]
   setCreateOpen: (value: boolean) => void
   setGroupCreateOpen: (value: boolean) => void
   setSectionDialog: (value: null | { bot?: RosterRow; mode: 'create' } | { id: string; mode: 'rename'; name: string }) => void
@@ -63,10 +64,11 @@ export function renderRosterToolbar(props: RenderRosterToolbarProps) {
   return <BrowserBotsToolbar {...props} />
 }
 
-function BrowserBotsToolbar({ b, activeSourceRoster, setCreateOpen, setGroupCreateOpen, setSectionDialog, showRosterTools, showRosterSearch, query, setQuery, ...filters }: RenderRosterToolbarProps) {
+function BrowserBotsToolbar({ b, roster, setCreateOpen, setGroupCreateOpen, setSectionDialog, showRosterTools, showRosterSearch, query, setQuery, ...filters }: RenderRosterToolbarProps) {
+  const capability = useGroupCapability(true)
   const create: BrowserActionGroup[] = [{ key: 'create', actions: [
     { key: 'bot', label: b.bot.newTitle, icon: <Codicon name="hubot" />, afterClose: true, run: () => setCreateOpen(true) },
-    { key: 'group', label: b.group.newTitle, icon: <Codicon name="organization" />, disabled: activeSourceRoster.length < 2, afterClose: true, run: () => setGroupCreateOpen(true) },
+    { key: 'group', label: b.group.newTitle, icon: <Codicon name="organization" />, disabled: !['canonical', 'legacy'].includes(capability.mode) || seatableGroupBots(roster, capability).length < 2, afterClose: true, run: () => setGroupCreateOpen(true) },
     { key: 'section', label: b.sections.newSection, icon: <Codicon name="new-folder" />, afterClose: true, run: () => setSectionDialog({ mode: 'create' }) }
   ] }]
   return <>

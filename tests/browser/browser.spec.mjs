@@ -78,6 +78,18 @@ const open = async (page, session = 'preview-week') => {
   await expect(page.getByText('Help me make a thoughtful plan.', { exact: true }).first()).toBeVisible({ timeout: 30000 })
 }
 
+async function setFollowupPreference(page, value) {
+  await page.addInitScript(preference => localStorage.setItem('hermes-web.browser.followup-behavior', preference), value)
+  // Tests share one synthetic account. Its confirmed server value takes
+  // precedence over a new browser context's local seed.
+  const saved = await (await page.request.get(`${origin}/api/athena/preferences`)).json()
+  const response = await page.request.patch(`${origin}/api/athena/preferences`, {
+    headers: { Origin: origin },
+    data: { version: 1, accountId: saved.accountId, seed: false, changes: { 'hermes-web.browser.followup-behavior': value } }
+  })
+  expect(response.ok()).toBe(true)
+}
+
 viewportChecks(test, open)
 narrowDesktopChecks(test, open)
 
@@ -156,7 +168,7 @@ for (const preference of ['queue', 'steer']) {
   for (const method of ['Enter', 'Send']) {
     test(`idle messages send and running follow-ups queue: ${preference}, ${method}`, async ({ page }) => {
       await page.setViewportSize({ width: method === 'Send' ? 390 : 1440, height: 900 })
-      await page.addInitScript(value => localStorage.setItem('hermes-web.browser.followup-behavior', value), preference)
+      await setFollowupPreference(page, preference)
       const submits = []
       const held = []
       let holdCompletion = true
@@ -169,13 +181,13 @@ for (const preference of ['queue', 'steer']) {
         })
         server.onMessage(message => {
           const frame = JSON.parse(String(message))
-          if (holdCompletion && frame.params?.type === 'message.complete') held.push(() => socket.send(message))
+          if (holdCompletion && frame.params?.type === 'message.complete' && frame.params.session_id === 'preview-week') held.push(() => socket.send(message))
           else socket.send(message)
         })
       })
       const send = async () => {
         if (method === 'Enter') await editor(page).press('Enter')
-        else await page.getByRole('button', { name: 'Send', exact: true }).click()
+        else await page.locator('[data-browser-send-action]').click()
       }
       await open(page)
       await editor(page).fill(`Idle message via ${method}`)
@@ -188,7 +200,7 @@ for (const preference of ['queue', 'steer']) {
 
       if (preference === 'queue') {
         await editor(page).fill(`Queued follow-up via ${method}`)
-        await expect(page.locator('[data-browser-queue-action]')).toBeVisible()
+        await expect(page.locator('[data-browser-send-action]')).toHaveAttribute('aria-label', 'Queue message')
         await send()
         await expect(editor(page)).toHaveText('')
         await expect(page.getByRole('button', { name: '1 Queued', exact: true })).toBeVisible()
@@ -208,7 +220,7 @@ for (const preference of ['queue', 'steer']) {
 
 for (const preference of ['queue', 'steer']) for (const alternate of [false, true]) {
   test(`busy composer uses the selected follow-up intent: ${preference}, alternate ${alternate}`, async ({ page }) => {
-    await page.addInitScript(value => localStorage.setItem('hermes-web.browser.followup-behavior', value), preference)
+    await setFollowupPreference(page, preference)
     const submits = [], redirects = [], held = []
     let holdCompletion = true
     await page.routeWebSocket(/\/api\/ws/, socket => {
@@ -221,7 +233,7 @@ for (const preference of ['queue', 'steer']) for (const alternate of [false, tru
       })
       server.onMessage(message => {
         const frame = JSON.parse(String(message))
-        if (holdCompletion && frame.params?.type === 'message.complete') held.push(() => socket.send(message))
+        if (holdCompletion && frame.params?.type === 'message.complete' && frame.params.session_id === 'preview-week') held.push(() => socket.send(message))
         else socket.send(message)
       })
     })
@@ -1243,16 +1255,20 @@ test('settings and command center use one upstream overlay and preserve the chat
   await open(page)
   const chat = editor(page)
   await chat.fill('Keep this draft while checking settings')
-  await page.getByRole('button', { name: 'Open settings menu', exact: true }).click()
+  await (await settingsTrigger(page)).click()
   await page.getByRole('menuitem', { name: 'Settings', exact: true }).click()
   await expect(page.getByText('Appearance', { exact: true }).first()).toBeVisible()
   await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)
   await page.keyboard.press('Escape')
   await expect(chat).toContainText('Keep this draft while checking settings')
 
-  await page.getByRole('button', { name: 'Open settings menu', exact: true }).click()
-  await page.getByRole('menuitem', { name: 'Gateway', exact: true }).click()
-  await expect(page.getByRole('dialog', { name: 'Gateway', exact: true })).toBeVisible()
+  await (await settingsTrigger(page)).click()
+  await page.getByRole('menuitem', { name: 'Settings', exact: true }).click()
+  await page.getByRole('button', { name: 'Gateway', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Gateway', exact: true })).toBeVisible()
+  await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)
+  await page.keyboard.press('Escape')
+  await expect(chat).toContainText('Keep this draft while checking settings')
 })
 
 test('settings fills the viewport and uses compact list and detail navigation', async ({ page }) => {
@@ -1287,8 +1303,7 @@ test('approval mode keeps the selected profile mode and composer icon synchroniz
   await open(page)
   const control = page.locator('.browser-approval-control button')
   await expect(control).toBeVisible()
-  const initialIcon = await control.locator('svg').getAttribute('class')
-  expect(initialIcon).toContain('brain')
+  await expect(control.locator('[data-mode-name]')).toHaveText('Smart')
   await control.click()
   const menu = page.locator('[role="menu"]:visible').last()
   await expect(menu.getByText('Approval mode', { exact: true })).toBeVisible()
@@ -1298,7 +1313,7 @@ test('approval mode keeps the selected profile mode and composer icon synchroniz
   await expect(heading).toHaveCount(1)
   await expect(heading.locator('xpath=following-sibling::*[1]')).not.toHaveAttribute('data-slot', 'dropdown-menu-separator')
   await menu.getByRole('menuitemradio', { name: /Manual/ }).click()
-  await expect.poll(() => control.locator('svg').getAttribute('class')).toContain('shield-lock')
+  await expect(control.locator('[data-mode-name]')).toHaveText('Manual')
   await control.click()
   await expect(page.locator('[role="menu"]:visible').last().getByRole('menuitemradio', { name: /Manual/ })).toHaveAttribute('aria-checked', 'true')
 })
@@ -1426,7 +1441,7 @@ for (const width of [390, 1440]) {
     await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => route.fulfill({ json: [{ id: 'preview-header-job', name: 'Header verification job', prompt: 'Check navigation', enabled: true }] }))
     await open(page)
     await editor(page).fill('Draft retained through section disclosure')
-    if (width === 390) await openNavigation(page)
+    if (width === 390) await openSectionNavigation(page)
     const pane = page.locator('.browser-sessions-pane')
     for (const scale of [100, 150]) {
       await page.evaluate(percent => window.hermesDesktop.zoom.setPercent(percent), scale)

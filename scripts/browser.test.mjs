@@ -46,10 +46,10 @@ test('plugin installs return to the settings manager only when launched from set
   assert.throws(() => keepBrowserPluginInstallInSettings(source.replace("navigate('/capabilities?tab=plugins')", 'navigate(destination)')), /hook target changed/)
 })
 test('composer queue action receives an explicit browser identity', () => {
-  const source = '<button aria-label={c.queueMessage}><Layers3 /></button>\n<button aria-label={showStop ? c.stop : c.send}><Send /></button>'
+  const source = '<button aria-label={c.queueMessage}><Layers3 /></button>\n<button aria-label={showStop ? c.stop : sendLabel}><Send /></button>'
   const output = useBrowserTouchHooks(source, '/workspace/apps/web-desktop')
   assert.match(output, /data-browser-queue-action="" data-browser-composer-action="" aria-label=\{c\.queueMessage\}/)
-  assert.match(output, /data-browser-send-action="" data-browser-composer-action="" aria-label=\{showStop \? c\.stop : c\.send\}/)
+  assert.match(output, /data-browser-send-action="" data-browser-composer-action="" aria-label=\{showStop \? c\.stop : sendLabel\}/)
   assert.doesNotMatch(readFileSync(path.join(root, 'src/experience/followup-preferences.ts'), 'utf8'), /lucide-layers-3/)
 })
 test('accepted composer submissions report only successful sends', () => {

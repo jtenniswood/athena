@@ -62,6 +62,18 @@ test('rejected REST mutations leave sessions intact and consume the fault once',
   assert.equal(gateway.sessions.has('preview-week'), false)
 })
 
+test('legacy fixture reports a missing mutation snapshot route before allowing a session write', async t => {
+  const gateway = await fixture(t)
+  const path = gateway.origin + '/api/sessions/preview-week'
+  const snapshot = await fetch(path + '/mutation-snapshot')
+  assert.equal(snapshot.status, 404)
+  assert.deepEqual(await snapshot.json(), { error: 'No such API endpoint' })
+  const update = await fetch(path, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pinned: true }) })
+  assert.equal(update.status, 200)
+  assert.equal(gateway.sessions.get('preview-week').pinned, true)
+  gateway.controls.assertExpected()
+})
+
 test('approval RPC has authoritative state and errors retain the confirmed value', async t => {
   const gateway = await fixture(t)
   const params = { key: 'approvals.mode' }
