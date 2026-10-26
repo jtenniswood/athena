@@ -31,7 +31,7 @@
     "@assistant-ui/react": "0.14.29",
     "@assistant-ui/react-streamdown": "0.3.7",
     "@audiowave/react": "0.6.2",
-    "@chenglou/pretext": "0.0.9",
+    "@chenglou/pretext": "1.0.0",
     "@codemirror/commands": "6.11.1",
     "@codemirror/language": "6.13.1",
     "@codemirror/language-data": "6.5.2",
