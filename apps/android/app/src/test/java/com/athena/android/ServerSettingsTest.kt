@@ -18,21 +18,22 @@ import org.robolectric.shadows.ShadowAlertDialog
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class ServerSettingsTest {
-    private class Page(context: Context, private val guarded: Boolean) : WebView(context) {
+    private class Page(context: Context, private val guarded: Boolean, private val pageUrl: String?) : WebView(context) {
         var destroyed = false
-        var reloaded = false
+        var loadedUrl: String? = null
+        override fun getUrl(): String? = pageUrl
+        override fun loadUrl(url: String) { loadedUrl = url }
         override fun evaluateJavascript(script: String, callback: ValueCallback<String>?) {
             callback?.onReceiveValue(if (guarded) "false" else "true")
         }
         override fun destroy() { destroyed = true; super.destroy() }
-        override fun reload() { reloaded = true }
     }
 
-    private fun fixture(guarded: Boolean): Pair<MainActivity, Page> {
+    private fun fixture(guarded: Boolean, url: String? = "https://old.example.com/"): Pair<MainActivity, Page> {
         RuntimeEnvironment.getApplication().getSharedPreferences("athena", Context.MODE_PRIVATE)
             .edit().putString("origin", "https://old.example.com").commit()
         val activity = Robolectric.buildActivity(MainActivity::class.java).setup().get()
-        val page = Page(activity, guarded)
+        val page = Page(activity, guarded, url)
         MainActivity::class.java.getDeclaredField("web").apply { isAccessible = true }.set(activity, page)
         return activity to page
     }
@@ -70,7 +71,41 @@ class ServerSettingsTest {
     @Test fun reloadAlsoWorksWhenCloudflareHasNotLoadedAthena() {
         val (activity, page) = fixture(guarded = false)
         choose(activity, 2)
-        assertTrue(page.reloaded)
+        assertEquals("https://old.example.com/", page.loadedUrl)
+    }
+
+
+    private fun returnFromAccess(activity: MainActivity) {
+        // Invoke the connection callback used after the Access cookie is imported.
+        val field = MainActivity::class.java.getDeclaredField("accessSignIn$" + "delegate").apply { isAccessible = true }
+        val access = (field.get(activity) as Lazy<*>).value!!
+        val callback = AccessSignIn::class.java.getDeclaredField("connected").apply { isAccessible = true }.get(access)
+        @Suppress("UNCHECKED_CAST")
+        (callback as () -> Unit).invoke()
+    }
+
+    @Test fun accessReturnLoadsServerWhenInitialNavigationNeverCommitted() {
+        for (url in listOf(null, "about:blank")) {
+            val (activity, page) = fixture(guarded = true, url = url)
+            returnFromAccess(activity)
+            assertEquals("https://old.example.com/", page.loadedUrl)
+        }
+    }
+
+    @Test fun accessReturnLeavesTheCloudflareLoginUrlAndLoadsAthena() {
+        val (activity, page) = fixture(guarded = false, url = "https://old.example.com/cdn-cgi/access/login")
+        returnFromAccess(activity)
+        assertEquals("https://old.example.com/", page.loadedUrl)
+    }
+
+    @Test fun accessReturnPreservesConversationAfterTheDraftGuardAllowsNavigation() {
+        val (activity, page) = fixture(guarded = true, url = "https://old.example.com/#/chat-1")
+        returnFromAccess(activity)
+        assertNull(page.loadedUrl)
+        val field = MainActivity::class.java.getDeclaredField("navigationAction").apply { isAccessible = true }
+        @Suppress("UNCHECKED_CAST")
+        (field.get(activity) as () -> Unit).invoke()
+        assertEquals("https://old.example.com/#/chat-1", page.loadedUrl)
     }
 
     private fun <T : android.view.View> android.view.View.findViewByPredicate(predicate: (android.view.View) -> Boolean): T? {
