@@ -29,9 +29,7 @@ class MainActivity : ComponentActivity() {
     private val prefs by lazy { getSharedPreferences("athena", MODE_PRIVATE) }
     private val notifications by lazy { NativeNotifications(this) }
     private val signIn by lazy { BrowserSignIn(this) { web?.evaluateJavascript("window.dispatchEvent(new Event('focus'))", null) } }
-    private val accessSignIn by lazy { AccessSignIn(this) {
-        prepareNavigation(allowUnloaded = true) { web?.reload() }
-    } }
+    private val accessSignIn by lazy { AccessSignIn(this) { reconnectAthena() } }
     private var web: WebView? = null
     private var origin = ""
     private var permissionReply: ((String) -> Unit)? = null
@@ -266,13 +264,28 @@ class MainActivity : ComponentActivity() {
                         }.show()
                     2 -> AlertDialog.Builder(this).setTitle("Reload Athena?")
                         .setMessage("Finish active replies and recordings first.")
-                        .setNegativeButton("Cancel", null).setPositiveButton("Reload") { _, _ -> prepareNavigation(allowUnloaded = true) { web?.reload() } }.show()
+                        .setNegativeButton("Cancel", null).setPositiveButton("Reload") { _, _ -> reconnectAthena() }.show()
                 }
             }.show()
     }
 
+    private fun reconnectAthena() {
+        val view = web
+        if (view == null) { openServer(null); return }
+        // Access can interrupt the first navigation before WebView has a page to reload.
+        val target = view.url?.takeIf {
+            ServerAddress.belongsTo(it, origin) && Uri.parse(it).path == "/" && Uri.parse(it).query == null
+        } ?: "$origin/"
+        prepareNavigation(allowUnloaded = true) { view.loadUrl(target) }
+    }
+
     private fun prepareNavigation(allowUnloaded: Boolean = false, action: () -> Unit) {
         val view = web ?: return
+        if (allowUnloaded && (view.url.isNullOrBlank() || view.url == "about:blank")) {
+            navigationAction = null
+            action()
+            return
+        }
         navigationAction = action
         view.evaluateJavascript("window.dispatchEvent(new Event('athena:prepare-native-navigation', {cancelable:true}))") { unhandled ->
             if (allowUnloaded && unhandled == "true" && navigationAction === action) {
