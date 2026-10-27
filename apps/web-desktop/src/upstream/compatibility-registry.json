@@ -1283,7 +1283,7 @@
     "specifier": "react/jsx-dev-runtime",
     "replacement": "../../node_modules/react/jsx-dev-runtime.js",
     "aliasGroup": "vite",
-    "sourceHash": "6e003e4e9ed25afa7fdd55613f8aa877cefa9b359d9c13f81ee704030248e24e"
+    "sourceHash": "9cc9c3de5441a2eea7f41f52f3f2a15a4fc51f90c0b72741f0d7638643a85e67"
   },
   {
     "name": "react-jsx-singleton",
@@ -1303,7 +1303,7 @@
     "specifier": "react/jsx-runtime",
     "replacement": "../../node_modules/react/jsx-runtime.js",
     "aliasGroup": "vite",
-    "sourceHash": "6e003e4e9ed25afa7fdd55613f8aa877cefa9b359d9c13f81ee704030248e24e"
+    "sourceHash": "9cc9c3de5441a2eea7f41f52f3f2a15a4fc51f90c0b72741f0d7638643a85e67"
   },
   {
     "name": "react-dom-singleton",
@@ -1323,7 +1323,7 @@
     "specifier": "react-dom",
     "replacement": "../../node_modules/react-dom",
     "aliasGroup": "vite",
-    "sourceHash": "136d4af63de473392ea79d6a21932b0ed9eb37fe518ce70f4621250f3d79e9bb"
+    "sourceHash": "89d54f11575c9b0f7819962d9d72a31970dfb4d103f07e8b1d1b37e6d1fc3258"
   },
   {
     "name": "react-singleton",
@@ -1343,7 +1343,7 @@
     "specifier": "react",
     "replacement": "../../node_modules/react",
     "aliasGroup": "vite",
-    "sourceHash": "6e003e4e9ed25afa7fdd55613f8aa877cefa9b359d9c13f81ee704030248e24e"
+    "sourceHash": "9cc9c3de5441a2eea7f41f52f3f2a15a4fc51f90c0b72741f0d7638643a85e67"
   },
   {
     "name": "driver-raw-iife",
