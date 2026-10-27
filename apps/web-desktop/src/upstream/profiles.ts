@@ -42,7 +42,7 @@ export function restoreBrowserProfile(): () => void {
       stopSelectingDefault?.()
       return
     }
-    if (!$showAllProfiles.get() && $activeGatewayProfile.get() !== defaultProfile.name) {
+    if (!$showAllProfiles.get() && !hiddenProfiles.includes($activeGatewayProfile.get())) {
       stopSelectingDefault?.()
       return
     }
