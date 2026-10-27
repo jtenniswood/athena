@@ -213,7 +213,7 @@ function attachDynamicProxy(server: ProxyServerLike): void {
 
   server.middlewares.use((req, res, next) => {
     const pathname = req.url?.split('?')[0]
-    if (pathname?.startsWith('/api/athena/android/')) {
+    if (pathname === '/android/sign-in' || pathname?.startsWith('/api/athena/android/')) {
       void androidAuth(req, res).then(handled => handled || androidPush.handle(req, res)).then(handled => { if (!handled) next() })
       return
     }

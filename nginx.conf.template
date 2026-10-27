@@ -93,6 +93,16 @@ http {
             proxy_read_timeout 3600s;
         }
 
+        # Hermes permits this HTML landing page as a post-login destination.
+        location = /android/sign-in {
+            client_max_body_size 8k;
+            proxy_pass http://127.0.0.1:4181;
+            proxy_http_version 1.1;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Forwarded-Proto $hermes_forwarded_proto;
+        }
+
         location = /api/athena/preferences {
             client_max_body_size 2m;
             proxy_pass http://127.0.0.1:4181;
