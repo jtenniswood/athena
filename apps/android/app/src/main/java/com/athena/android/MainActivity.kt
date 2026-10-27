@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
     private val notifications by lazy { NativeNotifications(this) }
     private val signIn by lazy { BrowserSignIn(this) { web?.evaluateJavascript("window.dispatchEvent(new Event('focus'))", null) } }
     private val accessSignIn by lazy { AccessSignIn(this) { reconnectAthena() } }
+    private var nativeToolbar: View? = null
     private var web: WebView? = null
     private var origin = ""
     private var permissionReply: ((String) -> Unit)? = null
@@ -100,6 +101,7 @@ class MainActivity : ComponentActivity() {
         val toolbar = LinearLayout(this).apply { gravity = android.view.Gravity.CENTER_VERTICAL }
         toolbar.addView(TextView(this).apply { text = "  Athena"; textSize = 16f }, LinearLayout.LayoutParams(0, 48.dp(), 1f))
         toolbar.addView(Button(this).apply { text = "App settings"; setOnClickListener { appSettings() } })
+        nativeToolbar = toolbar
         container.addView(toolbar)
         val view = WebView(this)
         web = view
@@ -126,15 +128,20 @@ class MainActivity : ComponentActivity() {
             }
         }
         view.webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
+                toolbar.visibility = View.VISIBLE
+            }
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 if (request.isForMainFrame && request.url.scheme == "https" &&
                     request.url.path?.startsWith("/cdn-cgi/access/") == true &&
                     (ServerAddress.belongsTo(request.url.toString(), origin) || request.url.host?.endsWith(".cloudflareaccess.com") == true)) {
+                    toolbar.visibility = View.VISIBLE
                     accessSignIn.start(origin)
                     return true
                 }
                 if (request.isForMainFrame && ServerAddress.belongsTo(request.url.toString(), origin) &&
                     request.url.path in listOf("/login", "/auth/login")) {
+                    toolbar.visibility = View.VISIBLE
                     signIn.start(origin, request.url.encodedPath + (request.url.encodedQuery?.let { "?$it" } ?: ""))
                     return true
                 }
@@ -206,6 +213,11 @@ class MainActivity : ComponentActivity() {
                 catch (_: Exception) { /* The originating page may have closed during an Android prompt. */ }
             }
             when (message.getString("method")) {
+                "appSettings" -> { appSettings(); respond(true) }
+                "appSettingsMenu" -> {
+                    nativeToolbar?.visibility = if (message.getJSONObject("payload").optBoolean("mounted")) View.GONE else View.VISIBLE
+                    respond(true)
+                }
                 "permission" -> respond(notifications.permission())
                 "requestPermission" -> {
                     if (notifications.permission() == "default" && Build.VERSION.SDK_INT >= 33) {
