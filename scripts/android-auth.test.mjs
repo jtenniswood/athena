@@ -31,14 +31,17 @@ test('browser sign-in requires account authentication, explicit approval and the
   assert.match(request.code, /^[A-F0-9]{6}$/)
   assert.match(request.loginPath, /^\/login\?next=/)
   assert.equal((await post('exchange', { id: request.id, verifier })).status, 202)
-  const complete = origin + route + 'complete?id=' + request.id
+  const landing = new URL(request.loginPath, origin).searchParams.get('next')
+  assert.ok(landing.startsWith('/android/sign-in?'))
+  assert.equal(new URL(landing, origin).searchParams.get('hermes-reconnect'), '1')
+  const complete = origin + landing
   assert.equal((await fetch(complete)).status, 401)
   const cookie = '__Host-hermes_session_at=valid; __Host-hermes_session_rt=refresh; analytics=private'
   const preview = await fetch(complete, { headers: { Cookie: cookie } })
   assert.equal(preview.status, 200)
   assert.match(await preview.text(), new RegExp(request.code))
   assert.equal((await post('exchange', { id: request.id, verifier })).status, 202, 'viewing the page does not approve sign-in')
-  const approve = await fetch(origin + route + 'complete', {
+  const approve = await fetch(origin + '/android/sign-in', {
     method: 'POST', headers: { Origin: origin, Cookie: cookie, 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ id: request.id })
   })

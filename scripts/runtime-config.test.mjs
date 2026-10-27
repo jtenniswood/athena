@@ -52,7 +52,7 @@ test('Workbox sends queried login and callback navigations to the server', async
     const { NavigationRoute } = await import('workbox-routing/NavigationRoute.js')
     const route = new NavigationRoute(async () => new Response(), { denylist: navigationFallbackDenylist })
     const matches = path => route.match({ url: new URL(path, 'https://athena.example.test'), request: { mode: 'navigate' } })
-    for (const path of ['/login', '/login?next=%2F', '/auth?next=%2F', '/auth/login?provider=self-hosted', '/auth/callback?code=synthetic', '/api?test=1', '/runtime-config.js?hermes-runtime=1', '/build-info.json?test=1']) {
+    for (const path of ['/login', '/login?next=%2F', '/auth?next=%2F', '/auth/login?provider=self-hosted', '/auth/callback?code=synthetic', '/api?test=1', '/runtime-config.js?hermes-runtime=1', '/build-info.json?test=1', '/android/sign-in', '/android/sign-in?hermes-reconnect=1&id=synthetic']) {
       assert.equal(matches(path), false, path)
     }
     for (const path of ['/', '/?source=bookmark', '/login-help?test=1', '/apiary']) assert.equal(matches(path), true, path)

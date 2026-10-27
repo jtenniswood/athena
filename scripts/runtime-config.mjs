@@ -9,7 +9,8 @@ export const navigationFallbackDenylist = [
   /[?&]hermes-reconnect=1(?:&|$)/,
   /^\/(?:api|auth|login|plugins|desktop-plugins|cdn-cgi)(?:\/|\?|$)/,
   /^\/(?:runtime-config|gateway-config)\.js(?:\?|$)/,
-  /^\/build-info\.json(?:\?|$)/
+  /^\/build-info\.json(?:\?|$)/,
+  /^\/android\/sign-in(?:\?|$)/
 ]
 export function matchesGatewayRoute(url) {
   const pathname = new URL(url || '/', 'http://local.invalid').pathname
