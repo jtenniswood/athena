@@ -1,25 +1,35 @@
 import { useEffect, useState } from 'react'
 import { Button } from '../../upstream/ui'
 import { browserNotificationPermission, requestBrowserNotificationPermission } from '../../platform/notifications'
+import { androidPushActive, isAndroidApp, refreshAndroidNotificationPermission } from '../../platform/android'
 
 export function BrowserNotificationPermissionSetting() {
+  const native = isAndroidApp()
   const [permission, setPermission] = useState(browserNotificationPermission)
   const [requesting, setRequesting] = useState(false)
+  const [pushEnabled, setPushEnabled] = useState(androidPushActive)
 
   useEffect(() => {
-    const refresh = () => setPermission(browserNotificationPermission())
+    const update = () => { setPermission(browserNotificationPermission()); setPushEnabled(androidPushActive()) }
+    const refresh = () => {
+      update()
+      if (native) void refreshAndroidNotificationPermission()
+    }
+    refresh()
+    window.addEventListener('athena:notification-permission', update)
     window.addEventListener('focus', refresh)
     document.addEventListener('visibilitychange', refresh)
     return () => {
+      window.removeEventListener('athena:notification-permission', update)
       window.removeEventListener('focus', refresh)
       document.removeEventListener('visibilitychange', refresh)
     }
-  }, [])
+  }, [native])
 
   const description = permission === 'granted'
     ? 'Permission allowed. Choose your alerts below.'
     : permission === 'denied'
-      ? 'Blocked by your browser. Allow notifications in Athena’s site settings.'
+      ? native ? 'Blocked by Android. Open App settings → Android notification settings to allow alerts.' : 'Blocked by your browser. Allow notifications in Athena’s site settings.'
       : permission === 'insecure'
         ? 'Open Athena over HTTPS or localhost to enable browser notifications.'
         : permission === 'unsupported'
@@ -35,14 +45,16 @@ export function BrowserNotificationPermissionSetting() {
     }
   }
 
-  return <section className="browser-notification-permission" aria-label="Browser notification permission">
+  return <section className="browser-notification-permission" aria-label="Notification permission">
     <div className="browser-notification-permission-copy">
-      <h3 className="browser-settings-page-title">Browser notifications</h3>
+      <h3 className="browser-settings-page-title">{native ? 'Android notifications' : 'Browser notifications'}</h3>
       <p className="browser-settings-page-description" role="status">{description}</p>
     </div>
     {permission === 'default' && <Button disabled={requesting} aria-busy={requesting} onClick={() => void requestPermission()} type="button">
       {requesting ? 'Waiting for permission…' : 'Allow notifications'}
     </Button>}
-    {(permission === 'default' || permission === 'granted') && <p className="browser-settings-page-description browser-notification-permission-hint">Alerts pause when Athena is closed or suspended.</p>}
+    {(permission === 'default' || permission === 'granted') && <p className="browser-settings-page-description browser-notification-permission-hint">{native && pushEnabled
+      ? 'Response alerts can arrive while the app is closed.'
+      : 'Alerts pause when Athena is closed or suspended.'}</p>}
   </section>
 }

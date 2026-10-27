@@ -25,7 +25,7 @@ function notifications({ permission = 'granted', supported = true, secure = true
   const window = { isSecureContext: secure, location, focus: () => calls.push('focus'), setTimeout }
   const navigator = worker ? { serviceWorker: { ready: Promise.resolve(worker) } } : {}
   const context = vm.createContext({ exports: {}, Notification, window, navigator, URL,
-    require: () => ({ browserCapabilities: () => ({ notifications: supported }) }) })
+    require: name => name === './android' ? { isAndroidApp: () => false } : ({ browserCapabilities: () => ({ notifications: supported }) }) })
   vm.runInContext(compiled, context)
   return { api: context.exports, shown, calls, Notification, window }
 }
@@ -84,7 +84,7 @@ test('waiting for a missing worker is bounded', async () => {
   const context = vm.createContext({ exports: {}, URL, window,
     Notification: class { static permission = 'granted'; constructor() { shown.push('fallback') } },
     navigator: { serviceWorker: { ready: new Promise(() => {}) } },
-    require: () => ({ browserCapabilities: () => ({ notifications: true }) }) })
+    require: name => name === './android' ? { isAndroidApp: () => false } : ({ browserCapabilities: () => ({ notifications: true }) }) })
   vm.runInContext(compiled, context)
   assert.equal(await context.exports.webNotify({ body: 'Reply' }), true)
   assert.equal(timeout, 750)

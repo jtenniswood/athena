@@ -2,6 +2,7 @@ import { connectionState } from './connection-state'
 import { baseUrl, browserLoginUrl, checkBrowserSession, fetchStatus, openOauthLoginPopup, resolveToken } from './connection'
 import { browserSignInTarget, SignInConfigurationError, type SignInProvider } from './sign-in-target'
 import { createSignInView } from './sign-in-view'
+import { isAndroidApp } from './android'
 
 /** Use Hermes's public provider metadata; credentials and OIDC stay on Hermes. */
 async function signInProviders(): Promise<SignInProvider[]> {
@@ -51,7 +52,7 @@ export async function waitForSignIn(): Promise<void> {
     let busy = false
     let resuming = false
     let path = '/login'
-    const preferCurrentWindow = window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(pointer: coarse)').matches
+    const preferCurrentWindow = !isAndroidApp() && (window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(pointer: coarse)').matches)
     currentWindow.hidden = true
 
     function setStatus(message: string) {
@@ -127,13 +128,13 @@ export async function waitForSignIn(): Promise<void> {
           connectionState().update({ authMode: 'oauth', token: '' })
           connected()
         } else {
-          currentWindow.hidden = false
-          setStatus(result.ok
+          currentWindow.hidden = isAndroidApp()
+          setStatus(isAndroidApp() ? 'Sign-in was cancelled or did not complete. Try again.' : result.ok
             ? 'Sign-in did not complete. Try again or continue in this window.'
             : 'The sign-in window was blocked. Continue in this window to sign in.')
         }
       }).catch(() => {
-        currentWindow.hidden = false
+        currentWindow.hidden = isAndroidApp()
         setStatus('Sign-in could not be completed. Try again or continue in this window.')
       }).finally(() => { if (!finished) setBusy(false) })
     }

@@ -12,6 +12,7 @@ COPY apps/web-desktop/package.json apps/web-desktop/package.json
 RUN node scripts/renderer.mjs \
  && node scripts/renderer-dependencies.mjs \
  && pnpm install --frozen-lockfile
+RUN node -e "require('node:fs').cpSync(require('node:path').dirname(require.resolve('ws/package.json')), '/runtime-ws', { recursive: true })"
 FROM dependencies AS build
 COPY apps/web-desktop ./apps/web-desktop
 COPY docs ./docs
@@ -48,7 +49,8 @@ RUN apk add --no-cache nodejs
 # the shared validated configuration generator at container start.
 COPY nginx.conf.template /etc/nginx/hermes.conf.template
 COPY scripts/runtime-config.mjs /opt/hermes/runtime-config.mjs
-COPY scripts/preference-schema.mjs scripts/browser-preference-contract.mjs scripts/preferences-server.mjs scripts/serve.mjs /opt/hermes/
+COPY scripts/preference-schema.mjs scripts/browser-preference-contract.mjs scripts/preferences-server.mjs scripts/android-auth.mjs scripts/android-access.mjs scripts/android-push.mjs scripts/firebase-messaging.mjs scripts/serve.mjs /opt/hermes/
+COPY --from=dependencies /runtime-ws /opt/hermes/node_modules/ws
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 

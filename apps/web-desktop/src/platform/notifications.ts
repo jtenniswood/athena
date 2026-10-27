@@ -1,17 +1,20 @@
 import type { HermesNotification } from '../upstream/types'
 import { browserCapabilities } from './capabilities'
+import { androidNotificationPermission, androidNotify, isAndroidApp, refreshAndroidNotificationPermission } from './android'
 
 const WEB_NOTIFICATION_READY_TIMEOUT_MS = 750
 
 export type BrowserNotificationPermission = NotificationPermission | 'unsupported' | 'insecure'
 
 export function browserNotificationPermission(): BrowserNotificationPermission {
+  if (isAndroidApp()) return androidNotificationPermission()
   if (!window.isSecureContext) return 'insecure'
   return browserCapabilities().notifications ? Notification.permission : 'unsupported'
 }
 
 /** Call directly from a user click; response events cannot request permission. */
 export async function requestBrowserNotificationPermission(): Promise<BrowserNotificationPermission> {
+  if (isAndroidApp()) return refreshAndroidNotificationPermission(true)
   const permission = browserNotificationPermission()
   if (permission !== 'default') return permission
   try {
@@ -37,6 +40,7 @@ async function readyServiceWorkerRegistration(): Promise<ServiceWorkerRegistrati
 }
 
 export async function webNotify(payload: HermesNotification): Promise<boolean> {
+  if (isAndroidApp()) return androidNotify(payload)
   if (browserNotificationPermission() !== 'granted') return false
 
   const title = payload.kind === 'turnDone' ? 'Athena · Response ready' : payload.title ?? 'Athena'
