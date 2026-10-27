@@ -86,3 +86,12 @@ export async function androidOpenSignIn(path: string): Promise<boolean> {
 export async function androidNavigationReady(result: { ready: boolean; reason?: string }): Promise<void> {
   try { await call('navigationReady', result) } catch { /* Native navigation remains blocked. */ }
 }
+
+/** Older APKs keep their native header when these methods are unavailable. */
+export async function androidAppSettingsMenu(mounted: boolean): Promise<boolean> {
+  try { return await call('appSettingsMenu', { mounted }) === true } catch { return false }
+}
+
+export async function androidOpenAppSettings(): Promise<boolean> {
+  try { return await call('appSettings') === true } catch { return false }
+}

@@ -3177,3 +3177,44 @@ test.describe('semantic mobile controls', () => {
     await expect(page.locator('[data-browser-coding-path]')).toHaveCSS('opacity', '1')
   })
 })
+
+for (const mode of ['android', 'older-android', 'browser', 'android-phone']) {
+  test.describe(`Android app settings (${mode})`, () => {
+    test.use({ viewport: { width: mode === 'android-phone' ? 390 : 1280, height: 900 }, hasTouch: mode === 'android-phone' })
+    test('navigation menu opens native app settings only when the APK supports it', async ({ page, context }) => {
+      const calls = []
+      if (mode !== 'browser') {
+        await page.exposeBinding('testNativeSettingsCall', (_source, request) => calls.push(request))
+        await context.addInitScript(({ supported }) => {
+          window.AthenaAndroid = {
+            onmessage: null,
+            postMessage(raw) {
+              const request = JSON.parse(raw)
+              void window.testNativeSettingsCall(request)
+              const value = request.method === 'appSettingsMenu' || request.method === 'appSettings' ? supported
+                : request.method === 'permission' ? 'denied' : null
+              queueMicrotask(() => this.onmessage?.({ data: JSON.stringify({ id: request.id, value }) }))
+            }
+          }
+        }, { supported: mode !== 'older-android' })
+      }
+      await page.goto(`${origin}/#/preview-week`)
+      await expect(editor(page)).toBeVisible({ timeout: 30000 })
+      if (mode !== 'browser') await expect.poll(() => calls.some(call => call.method === 'appSettingsMenu' && call.payload.mounted)).toBe(true)
+      const open = page.getByRole('button', { name: 'Open navigation', exact: true })
+      if (await open.isVisible()) await open.click()
+      await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+      const surface = page.getByRole(mode === 'android-phone' ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
+      const settings = surface.getByRole(mode === 'android-phone' ? 'button' : 'menuitem', { name: 'App settings', exact: true })
+      if (mode === 'browser' || mode === 'older-android') await expect(settings).toHaveCount(0)
+      else {
+        await settings.click()
+        await expect.poll(() => calls.some(call => call.method === 'appSettings')).toBe(true)
+        await expect(surface).toHaveCount(0)
+        if (mode === 'android-phone') await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
+        await expect(editor(page)).toBeVisible()
+        expect(page.url()).toBe(`${origin}/#/preview-week`)
+      }
+    })
+  })
+}

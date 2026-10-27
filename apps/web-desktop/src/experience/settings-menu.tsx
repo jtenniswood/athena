@@ -1,4 +1,5 @@
 import { useEffect, useState, type RefObject } from 'react'
+import { androidAppSettingsMenu, androidOpenAppSettings, isAndroidApp } from '../platform/android'
 import { Codicon } from '../upstream/browser-api'
 import { BrowserActionSurface, type BrowserActionAnchor, type BrowserActionGroup } from './ui/action-surface'
 import { BrowserToolbarButton } from './ui/toolbar-button'
@@ -15,12 +16,20 @@ type SettingsMenuProps = {
 
 export function SettingsMenu({ triggerRef, onOpenRoute, additionalGroups = [], triggerClassName, triggerTooltip = 'Settings', navigationOpen }: SettingsMenuProps) {
   const compact = useMobileBrowser()
+  const [appSettingsAvailable, setAppSettingsAvailable] = useState(false)
+  useEffect(() => {
+    if (!isAndroidApp()) return
+    let mounted = true
+    void androidAppSettingsMenu(true).then(available => { if (mounted) setAppSettingsAvailable(available) })
+    return () => { mounted = false; void androidAppSettingsMenu(false) }
+  }, [])
   const [anchor, setAnchor] = useState<BrowserActionAnchor | null>(null)
   useEffect(() => { if (navigationOpen === false) setAnchor(null) }, [navigationOpen])
   const groups: BrowserActionGroup[] = [
     ...additionalGroups,
     { key: 'systems', label: 'Systems', actions: [
       { key: 'settings', label: 'Settings', icon: <Codicon name="settings-gear" size="1rem" />, afterClose: true, run: () => onOpenRoute('/settings') },
+      ...(appSettingsAvailable ? [{ key: 'app-settings', label: 'App settings', icon: <Codicon name="device-mobile" size="1rem" />, afterClose: true, run: () => { void androidOpenAppSettings() } }] : []),
     ] }
   ]
   return <>

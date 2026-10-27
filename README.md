@@ -122,6 +122,10 @@ updates continue to come from that server. Android supplies notifications,
 file selection, microphone permission, and back navigation. External links open
 in the browser. App settings can change the server or reload after Athena has
 confirmed that drafts are saved and recordings and active replies have finished.
+On supported APKs, open **Navigation tabs → App settings** for these Android
+controls. The separate Android header is hidden once that menu is ready and
+returns during page loading or sign-in. Older APKs and older server versions
+retain their native App settings button.
 
 Build with Java 17 and the Android SDK (platform 36 and build tools 35.0.0):
 
