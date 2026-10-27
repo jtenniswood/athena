@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import { handleAndroidAccess } from './android-access.mjs'
 
 const prefix = '/api/athena/android/auth/'
+const completePath = '/android/sign-in'
 const sessionCookie = /^(?:__Host-|__Secure-)?hermes_session_(?:at|rt|provider)$/
 const ttl = 5 * 60 * 1000
 const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]))
@@ -10,7 +11,7 @@ export function createAndroidAuthHandler({ target, fetch: request = globalThis.f
   const pending = new Map()
   return async (req, res) => {
     const url = new URL(req.url, 'http://local.invalid')
-    if (!url.pathname.startsWith(prefix)) return false
+    if (!url.pathname.startsWith(prefix) && url.pathname !== completePath) return false
     const scheme = req.headers['x-forwarded-proto'] === 'https' || req.socket.encrypted ? 'https' : 'http'
     const host = req.headers['x-forwarded-host'] || req.headers.host
     const origin = `${scheme}://${host}`
@@ -22,7 +23,7 @@ export function createAndroidAuthHandler({ target, fetch: request = globalThis.f
     }
     const page = (status, text, form = '') => {
       // Keep same-origin form POSTs from acquiring an opaque (null) Origin.
-    res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store',
+      res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store',
         'Content-Security-Policy': "default-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
         'Referrer-Policy': 'same-origin', 'X-Content-Type-Options': 'nosniff' })
       res.end(`<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Athena Android sign-in</title><h1>Athena Android</h1><p>${escape(text)}</p>${form}</html>`)
@@ -45,11 +46,12 @@ export function createAndroidAuthHandler({ target, fetch: request = globalThis.f
         const id = randomBytes(32).toString('base64url')
         const code = randomBytes(3).toString('hex').toUpperCase()
         pending.set(id, { challenge, code, created: now(), origin, cookies: null })
-        login.searchParams.set('next', prefix + 'complete?id=' + id)
+        // Hermes rejects /api/* post-login destinations. The marker also bypasses older app-shell workers.
+        login.searchParams.set('next', completePath + '?hermes-reconnect=1&id=' + id)
         json(200, { id, code, loginPath: login.pathname + login.search })
         return true
       }
-      if (url.pathname === prefix + 'complete' && ['GET', 'POST'].includes(req.method)) {
+      if ([completePath, prefix + 'complete'].includes(url.pathname) && ['GET', 'POST'].includes(req.method)) {
         const id = req.method === 'GET' ? url.searchParams.get('id') : new URLSearchParams(await readBody()).get('id')
         const entry = pending.get(id)
         if (!entry || entry.origin !== origin || entry.cookies) return page(410, 'This request has expired. Start sign-in again from the Android app.'), true
@@ -62,7 +64,7 @@ export function createAndroidAuthHandler({ target, fetch: request = globalThis.f
           const refreshed = identity.headers.getSetCookie()
           if (refreshed.length) res.setHeader('Set-Cookie', refreshed)
           page(200, `Check that the Android app shows code ${entry.code}. Only continue if you started this sign-in on your device. This moves your Athena sign-in from this browser to the Android app.`,
-            `<form method="post" action="${prefix}complete"><input type="hidden" name="id" value="${escape(id)}"><button type="submit">Sign in to Athena Android</button></form>`)
+            `<form method="post" action="${completePath}"><input type="hidden" name="id" value="${escape(id)}"><button type="submit">Sign in to Athena Android</button></form>`)
         } else {
           // Transfer only Hermes's session cookies, never unrelated cookies or the provider's PKCE state.
           const cookies = new Map()
@@ -78,7 +80,7 @@ export function createAndroidAuthHandler({ target, fetch: request = globalThis.f
           entry.cookies = [...cookies.values()]
           // Move rotating refresh credentials rather than sharing them between two cookie jars.
           res.setHeader('Set-Cookie', [...cookies.keys()].map(name => `${name}=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0`))
-          page(200, 'Sign-in approved. Return to the Athena Android app to finish connecting.')
+          page(200, 'Sign-in approved. Close this browser window to return to the Athena Android app and finish connecting.')
         }
         return true
       }
