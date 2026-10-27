@@ -1432,7 +1432,7 @@
     "order": 1,
     "module": "emojibase-data/package.json",
     "sourceRoot": "dependency",
-    "sourceHash": "bf331a49d67b4264914cbedc0a226a64e970c76bf9adfecbd37beb8e521baecc",
+    "sourceHash": "049c893b51aff1cfc77e91a09a0b41806ab244357573a030bce99026e420988e",
     "reason": "Serve and bundle the emoji picker JSON at the paths expected by the renderer.",
     "owner": "apps/web-desktop/vite.config.ts",
     "handler": "emojibaseAssets",
