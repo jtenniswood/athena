@@ -38,7 +38,9 @@ export function BrowserProfileNavigation({ hidden = false }: { hidden?: boolean 
     setHiddenProfiles(current => isHidden
       ? current.filter(name => name !== profileName)
       : [...current, profileName])
-    if (!isHidden && model.active === profileName) model.select(null)
+    if (!isHidden && !model.all && model.active === profileName) {
+      model.select(visibleProfileAvatars.find(item => item.key !== profileName)?.key ?? null)
+    }
   }
   const beginProfileDrag = (event: ReactDragEvent<HTMLButtonElement>, name: string) => {
     if (compact) { event.preventDefault(); return }
