@@ -42,7 +42,7 @@ kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarg
 
 dependencies {
     implementation("androidx.activity:activity:1.13.0")
-    implementation("androidx.fragment:fragment:1.8.6")
+    implementation("androidx.fragment:fragment:1.9.1")
     implementation("androidx.browser:browser:1.10.0")
     implementation("androidx.webkit:webkit:1.14.0")
     implementation("com.google.firebase:firebase-messaging:25.0.1")
