@@ -30,6 +30,7 @@ class BrowserSignIn(private val activity: Activity, private val connected: () ->
         connection.connectTimeout = 10000; connection.readTimeout = 10000
         connection.setRequestProperty("Content-Type", "application/json")
         connection.setRequestProperty("Origin", origin)
+        CookieManager.getInstance().getCookie(origin)?.let { connection.setRequestProperty("Cookie", it) }
         connection.doOutput = true
         connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
         return connection.responseCode to connection

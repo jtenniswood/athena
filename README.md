@@ -274,3 +274,25 @@ The [release guide](docs/releases.md) describes publication and rollback.
 Athena is an original project based on the work of
 [hermes-desktop-web-mobile-pwa](https://github.com/mdg-qc/hermes-desktop-web-mobile-pwa),
 with extensive improvements for web and mobile.
+
+### Android with Cloudflare Access and Pocket ID
+
+If Cloudflare Access asks you to sign in before Athena loads, use **App settings →
+Sign in through Cloudflare Access**. Athena also offers this flow when it detects
+an Access login redirect. The app opens your browser, where Pocket ID can use its
+normal passkey prompt. Check the server address and matching code, approve the
+connection, then tap **Return to Athena Android**. Athena imports the Access
+application cookie into its WebView and reloads after checking draft safety.
+
+Keep `/api/athena/android/auth/access` behind the same Cloudflare Access policy
+as Athena. No Access bypass rule, client secret, or shared service token is
+needed. Both the Android APK and Athena server must include this integration.
+The handoff is encrypted for a short-lived key held by the requesting app;
+Pocket ID cookies and passkeys are never transferred. Your browser remains
+signed into Access. Repeat the flow when the Access session expires, or if you
+change servers. Athena's own sign-in may still be required after Access succeeds.
+
+The tunnel must preserve the HTTPS public hostname and the `CF_Authorization`
+cookie on requests to Athena. This does not add a general browser-cookie import
+or change your Cloudflare policies. Test the flow with your actual Access policy
+and Android browser before relying on it away from your server.

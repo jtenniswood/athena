@@ -4,7 +4,8 @@ import { reloadReadinessAfterSaving } from './reload-safety'
 /** Native reload and server changes share the web app's draft and recording guards. */
 export function installAndroidNavigationGuard(): () => void {
   if (!isAndroidApp()) return () => {}
-  const prepare = () => {
+  const prepare = (event: Event) => {
+    event.preventDefault()
     // Cold sign-in has not mounted the renderer or opened a composer yet.
     if (document.getElementById('root')?.firstElementChild?.classList.contains('athena-sign-in')) {
       void androidNavigationReady({ ready: true })

@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
+import { handleAndroidAccess } from './android-access.mjs'
 
 const prefix = '/api/athena/android/auth/'
 const sessionCookie = /^(?:__Host-|__Secure-)?hermes_session_(?:at|rt|provider)$/
@@ -13,6 +14,8 @@ export function createAndroidAuthHandler({ target, fetch: request = globalThis.f
     const scheme = req.headers['x-forwarded-proto'] === 'https' || req.socket.encrypted ? 'https' : 'http'
     const host = req.headers['x-forwarded-host'] || req.headers.host
     const origin = `${scheme}://${host}`
+    const access = handleAndroidAccess(req, res, origin, now)
+    if (access) return access
     const json = (status, body, headers = {}) => {
       res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...headers })
       res.end(JSON.stringify(body))
