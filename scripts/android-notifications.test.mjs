@@ -77,3 +77,23 @@ test('unanswered native requests time out, and late or malformed replies are ign
   assert.equal(await result, false)
   bridge.onmessage({ data: JSON.stringify({ id: '1', value: true }) })
 })
+
+test('Access reload distinguishes an unloaded page from a mounted app and waits for draft safety', async () => {
+  const source = compile('../apps/web-desktop/src/platform/android-navigation.ts')
+  const window = new EventTarget(), replies = []
+  let finish
+  const context = vm.createContext({ exports: {}, window, document: { getElementById: () => null },
+    require: name => name === './android' ? { isAndroidApp: () => true, androidNavigationReady: result => replies.push(result) }
+      : { reloadReadinessAfterSaving: () => new Promise(resolve => { finish = resolve }) }
+  })
+  vm.runInContext(source, context)
+  assert.equal(window.dispatchEvent(new Event('athena:prepare-native-navigation', { cancelable: true })), true, 'Access page has no draft guard')
+  const stop = context.exports.installAndroidNavigationGuard()
+  assert.equal(window.dispatchEvent(new Event('athena:prepare-native-navigation', { cancelable: true })), false, 'mounted app takes ownership before asynchronous saving')
+  assert.equal(replies.length, 0)
+  finish({ ready: false, reason: 'Recording in progress' })
+  await Promise.resolve(); await Promise.resolve()
+  assert.equal(replies[0].ready, false)
+  stop()
+  assert.equal(window.dispatchEvent(new Event('athena:prepare-native-navigation', { cancelable: true })), true)
+})

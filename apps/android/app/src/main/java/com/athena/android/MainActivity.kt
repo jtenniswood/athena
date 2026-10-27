@@ -29,6 +29,9 @@ class MainActivity : ComponentActivity() {
     private val prefs by lazy { getSharedPreferences("athena", MODE_PRIVATE) }
     private val notifications by lazy { NativeNotifications(this) }
     private val signIn by lazy { BrowserSignIn(this) { web?.evaluateJavascript("window.dispatchEvent(new Event('focus'))", null) } }
+    private val accessSignIn by lazy { AccessSignIn(this) {
+        prepareNavigation(allowUnloaded = true) { web?.reload() }
+    } }
     private var web: WebView? = null
     private var origin = ""
     private var permissionReply: ((String) -> Unit)? = null
@@ -67,6 +70,7 @@ class MainActivity : ComponentActivity() {
         })
         origin = prefs.getString("origin", "") ?: ""
         if (origin.isEmpty()) setup() else openServer(savedInstanceState)
+        accessSignIn.receive(intent?.data, origin)
     }
 
     private fun setup() {
@@ -125,6 +129,12 @@ class MainActivity : ComponentActivity() {
         }
         view.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                if (request.isForMainFrame && request.url.scheme == "https" &&
+                    request.url.path?.startsWith("/cdn-cgi/access/") == true &&
+                    (ServerAddress.belongsTo(request.url.toString(), origin) || request.url.host?.endsWith(".cloudflareaccess.com") == true)) {
+                    accessSignIn.start(origin)
+                    return true
+                }
                 if (request.isForMainFrame && ServerAddress.belongsTo(request.url.toString(), origin) &&
                     request.url.path in listOf("/login", "/auth/login")) {
                     signIn.start(origin, request.url.encodedPath + (request.url.encodedQuery?.let { "?$it" } ?: ""))
@@ -245,25 +255,30 @@ class MainActivity : ComponentActivity() {
 
     private fun appSettings() {
         AlertDialog.Builder(this).setTitle("Athena app settings")
-            .setItems(arrayOf("Android notification settings", "Change Athena server", "Reload Athena")) { _, item ->
+            .setItems(arrayOf("Android notification settings", "Change Athena server", "Reload Athena", "Sign in through Cloudflare Access")) { _, item ->
                 when (item) {
+                    3 -> accessSignIn.start(origin)
                     0 -> startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
                     1 -> AlertDialog.Builder(this).setTitle("Change Athena server?")
                         .setMessage("Finish active replies and recordings first. Saved drafts remain on this device for the current server.")
                         .setNegativeButton("Cancel", null).setPositiveButton("Change server") { _, _ ->
-                            prepareNavigation { web?.destroy(); web = null; setup() }
+                            prepareNavigation(allowUnloaded = true) { web?.destroy(); web = null; setup() }
                         }.show()
                     2 -> AlertDialog.Builder(this).setTitle("Reload Athena?")
                         .setMessage("Finish active replies and recordings first.")
-                        .setNegativeButton("Cancel", null).setPositiveButton("Reload") { _, _ -> prepareNavigation { web?.reload() } }.show()
+                        .setNegativeButton("Cancel", null).setPositiveButton("Reload") { _, _ -> prepareNavigation(allowUnloaded = true) { web?.reload() } }.show()
                 }
             }.show()
     }
 
-    private fun prepareNavigation(action: () -> Unit) {
+    private fun prepareNavigation(allowUnloaded: Boolean = false, action: () -> Unit) {
         val view = web ?: return
         navigationAction = action
-        view.evaluateJavascript("window.dispatchEvent(new Event('athena:prepare-native-navigation'))", null)
+        view.evaluateJavascript("window.dispatchEvent(new Event('athena:prepare-native-navigation', {cancelable:true}))") { unhandled ->
+            if (allowUnloaded && unhandled == "true" && navigationAction === action) {
+                navigationAction = null; action()
+            }
+        }
         view.postDelayed({
             if (navigationAction === action) {
                 navigationAction = null
@@ -293,7 +308,7 @@ class MainActivity : ComponentActivity() {
             intent.data = null
         }
     }
-    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); openNotification(intent) }
+    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); if (accessSignIn.receive(intent.data, origin)) intent.data = null else openNotification(intent) }
     override fun onSaveInstanceState(state: Bundle) { super.onSaveInstanceState(state); web?.saveState(state) }
     override fun onResume() { super.onResume(); foreground = true; web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) signIn.resume(origin) }
     override fun onPause() { foreground = false; CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
