@@ -7,9 +7,10 @@ const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', 
 export function handleAndroidAccess(req, res, origin, now = Date.now) {
   if (new URL(req.url, origin).pathname !== route) return false
   const page = (status, content) => {
+    // Keep same-origin form POSTs from acquiring an opaque (null) Origin.
     res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store',
       'Content-Security-Policy': "default-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
-      'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff' })
+      'Referrer-Policy': 'same-origin', 'X-Content-Type-Options': 'nosniff' })
     res.end(`<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Athena Access sign-in</title><h1>Connect Athena Android</h1>${content}</html>`)
   }
   return (async () => {

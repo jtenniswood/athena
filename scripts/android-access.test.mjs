@@ -28,7 +28,7 @@ test('Access bootstrap requires explicit approval and encrypts only the Access c
   assert.match(html, /Approve Android connection/)
   assert.match(html, /xxxxxx/)
   assert.ok(!html.includes('athena-android://'), 'opening the page does not release a session')
-  assert.equal(preview.headers.get('referrer-policy'), 'no-referrer')
+  assert.equal(preview.headers.get('referrer-policy'), 'same-origin')
   assert.equal(preview.headers.get('cache-control'), 'no-store')
   const token = 'eyJhbGciOiJSUzI1NiJ9.eyJleHAiOjQwMDAwMDAwMDB9.signature'
   const approved = await post({ key, state }, { cookie: `CF_Authorization=${token}; pocket_id_session=private; hermes_session_at=private` })
@@ -49,6 +49,7 @@ test('Access bootstrap requires explicit approval and encrypts only the Access c
 test('Access bootstrap rejects missing cookies, unsafe input and cross-origin approvals', async t => {
   const { get, post } = await fixture(t)
   assert.equal((await post({ key, state })).status, 409)
+  assert.equal((await post({ key, state }, { origin: 'null' })).status, 403)
   assert.equal((await post({ key, state }, { origin: 'https://attacker.test', cookie: 'CF_Authorization=valid' })).status, 403)
   assert.equal((await get({ key, state: '<script>' })).status, 400)
   assert.equal((await get({ key: 'a'.repeat(400), state })).status, 400)
