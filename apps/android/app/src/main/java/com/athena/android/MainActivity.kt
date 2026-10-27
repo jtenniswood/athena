@@ -262,11 +262,11 @@ class MainActivity : ComponentActivity() {
                     1 -> AlertDialog.Builder(this).setTitle("Change Athena server?")
                         .setMessage("Finish active replies and recordings first. Saved drafts remain on this device for the current server.")
                         .setNegativeButton("Cancel", null).setPositiveButton("Change server") { _, _ ->
-                            prepareNavigation { web?.destroy(); web = null; setup() }
+                            prepareNavigation(allowUnloaded = true) { web?.destroy(); web = null; setup() }
                         }.show()
                     2 -> AlertDialog.Builder(this).setTitle("Reload Athena?")
                         .setMessage("Finish active replies and recordings first.")
-                        .setNegativeButton("Cancel", null).setPositiveButton("Reload") { _, _ -> prepareNavigation { web?.reload() } }.show()
+                        .setNegativeButton("Cancel", null).setPositiveButton("Reload") { _, _ -> prepareNavigation(allowUnloaded = true) { web?.reload() } }.show()
                 }
             }.show()
     }
