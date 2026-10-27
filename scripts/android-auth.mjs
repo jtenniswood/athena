@@ -21,9 +21,10 @@ export function createAndroidAuthHandler({ target, fetch: request = globalThis.f
       res.end(JSON.stringify(body))
     }
     const page = (status, text, form = '') => {
-      res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store',
+      // Keep same-origin form POSTs from acquiring an opaque (null) Origin.
+    res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store',
         'Content-Security-Policy': "default-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
-        'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff' })
+        'Referrer-Policy': 'same-origin', 'X-Content-Type-Options': 'nosniff' })
       res.end(`<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Athena Android sign-in</title><h1>Athena Android</h1><p>${escape(text)}</p>${form}</html>`)
     }
     try {

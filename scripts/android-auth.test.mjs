@@ -58,6 +58,7 @@ test('browser sign-in requires account authentication, explicit approval and the
 test('sign-in rejects cross-origin approval, redirects to other sites, and expired requests', async t => {
   const { challenge, post, start, advance, verifier } = await fixture(t)
   assert.equal((await post('start', { challenge }, { Origin: 'https://attacker.test' })).status, 403)
+  assert.equal((await post('start', { challenge }, { Origin: 'null' })).status, 403)
   assert.equal((await post('start', { challenge, loginPath: 'https://attacker.test/login' })).status, 400)
   assert.equal((await post('start', { challenge, loginPath: '/api/auth/logout' })).status, 400)
   const request = await start()

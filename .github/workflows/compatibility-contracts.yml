@@ -37,5 +37,9 @@ jobs:
         run: node --test scripts/browser-preference-contract.test.mjs scripts/preference-sync.test.mjs scripts/preferences-server.test.mjs scripts/default-profile-route.test.mjs scripts/sidebar-contracts.test.mjs
       - name: Verify Android bridge, sign-in and background notifications
         run: node --test scripts/android-*.test.mjs scripts/firebase-messaging.test.mjs scripts/browser-notifications.test.mjs
+      - name: Install browser for Android approval regression checks
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Verify Android approval forms in a real browser
+        run: pnpm exec playwright test tests/browser/android-sign-in.spec.mjs --project=chromium --reporter=line
       - name: Build browser application
         run: pnpm build
