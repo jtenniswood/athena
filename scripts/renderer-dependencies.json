@@ -8,11 +8,11 @@
   ],
   "overrides": {
     "@assistant-ui/core": {
-      "upstream": "0.2.23", "version": "0.3.28",
+      "upstream": "0.2.23", "version": "0.3.31",
       "reason": "Use upstream-corrected thread-list snapshot caching; verify stable subscriptions, selection changes and draft retention without the old dependency transform."
     },
     "@assistant-ui/react": {
-      "upstream": "0.14.24", "version": "0.15.28",
+      "upstream": "0.14.24", "version": "0.15.31",
       "reason": "Use the matching 0.15 React integration with core 0.3; verify renderer hooks, chat submission and draft retention."
     },
     "@assistant-ui/react-streamdown": {
@@ -24,15 +24,15 @@
       "reason": "Use the updated React bindings with Nanostores 1.5; verify production state writes, plugin visibility and conversation selection."
     },
     "react": {
-      "upstream": "19.2.7", "version": "19.3.0",
+      "upstream": "19.2.7", "version": "19.3.1",
       "reason": "Update React and React DOM together; verify singleton fingerprints, chat submission, settings saves and draft retention."
     },
     "react-dom": {
-      "upstream": "19.2.7", "version": "19.3.0",
+      "upstream": "19.2.7", "version": "19.3.1",
       "reason": "Use the same React DOM release as React; verify singleton fingerprints, the production build and browser workflows."
     },
     "streamdown": {
-      "upstream": "2.5.0", "version": "2.7.0",
+      "upstream": "2.5.0", "version": "2.7.1",
       "reason": "Update with the renderer-compatible assistant-ui integration; verify highlighted code, Mermaid rendering and transcript output."
     },
     "typescript": {
@@ -44,7 +44,7 @@
       "reason": "Use upstream-corrected batch side effects and the 1.5 equality API; verify plugin stores and production state writes without the old batch transform."
     },
     "react-router": {
-      "upstream": "8.3.0", "version": "8.4.0",
+      "upstream": "8.3.0", "version": "8.5.0",
       "reason": "Retain Athena's current routing version; verify conversation, profile and settings navigation against the pinned renderer."
     },
     "radix-ui": {
@@ -56,7 +56,7 @@
       "reason": "Update the shared UI with React 19.3 while retaining Motion 12 to satisfy its peer; verify browser settings, menus and dialog focus."
     },
     "@tanstack/react-virtual": {
-      "upstream": "3.14.6", "version": "3.14.18",
+      "upstream": "3.14.6", "version": "3.14.23",
       "reason": "Use the updated virtual list; verify conversation selection and sidebar rendering."
     },
     "react-arborist": {
@@ -72,7 +72,7 @@
       "reason": "Retain Athena's existing math rendering version; typecheck and build the transcript renderer together with Shiki."
     },
     "vite": {
-      "upstream": "8.2.4", "version": "8.3.4",
+      "upstream": "8.2.4", "version": "8.3.5",
       "reason": "Athena owns the browser build and compatibility plugin pipeline; verify the registry and production build."
     },
     "@vitejs/plugin-react": {
