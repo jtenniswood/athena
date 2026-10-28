@@ -6,6 +6,11 @@
   "internalChecksFilter": "strict",
   "packageRules": [
     {
+      "description": "Keep Gradle compatible with Android Gradle Plugin 8, which uses APIs removed in Gradle 9.6.",
+      "matchManagers": ["gradle-wrapper"],
+      "allowedVersions": "<9.6.0"
+    },
+    {
       "description": "Review renderer-sensitive libraries together with the pinned renderer baseline.",
       "matchPackageNames": [
         "@assistant-ui/core", "@assistant-ui/react", "@assistant-ui/react-streamdown",
