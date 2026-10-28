@@ -127,6 +127,10 @@ controls. The separate Android header is hidden once that menu is ready and
 returns during page loading or sign-in. Older APKs and older server versions
 retain their native App settings button.
 
+The native setup, settings sheet, and confirmation dialogs use Material 3, follow
+the system light/dark theme, and use wallpaper colours on Android 12 and later.
+Server setup includes inline address validation and a keyboard Connect action.
+
 Build with Java 17 and the Android SDK (platform 36 and build tools 35.0.0):
 
 ```bash

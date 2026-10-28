@@ -1,6 +1,6 @@
 package com.athena.android
 
-import android.app.AlertDialog
+import androidx.appcompat.app.AlertDialog
 import android.content.Context
 import android.webkit.ValueCallback
 import android.webkit.WebView
@@ -13,7 +13,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowAlertDialog
+import org.robolectric.shadows.ShadowDialog
+import com.google.android.material.bottomsheet.BottomSheetDialog
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
@@ -40,29 +41,34 @@ class ServerSettingsTest {
 
     private fun choose(activity: MainActivity, item: Int) {
         MainActivity::class.java.getDeclaredMethod("appSettings").apply { isAccessible = true }.invoke(activity)
-        val menu = ShadowAlertDialog.getLatestAlertDialog()
-        shadowOf(menu).clickOnItem(item)
+        val sheet = MainActivity::class.java.getDeclaredField("settingsSheet").apply { isAccessible = true }.get(activity) as BottomSheetDialog
+        sheet.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)!!
+            .findViewWithTag<android.view.View>(item).performClick()
         shadowOf(android.os.Looper.getMainLooper()).idle()
-        ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        (ShadowDialog.getLatestDialog() as AlertDialog).getButton(AlertDialog.BUTTON_POSITIVE).performClick()
         shadowOf(android.os.Looper.getMainLooper()).idle()
     }
 
     @Test fun changeServerOpensEditableAddressFromCloudflareAndPersistsNewOrigin() {
         val (activity, page) = fixture(guarded = false)
-        choose(activity, 1)
+        choose(activity, R.string.change_server)
         assertTrue(page.destroyed)
         val input = shadowOf(activity).contentView.findViewByPredicate<EditText> { it is EditText }
         assertNotNull(input)
         assertEquals("https://old.example.com", input!!.text.toString())
+        input.setText("http://new.example.com")
+        activity.findViewById<android.view.View>(R.id.connect).performClick()
+        assertNotNull(activity.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.server_input).error)
+        assertEquals("https://old.example.com", activity.getSharedPreferences("athena", Context.MODE_PRIVATE).getString("origin", null))
         input.setText("https://new.example.com/")
-        val button = shadowOf(activity).contentView.findViewByPredicate<android.widget.Button> { it is android.widget.Button && it.text == "Connect" }
-        button!!.performClick()
+        assertNull(activity.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.server_input).error)
+        activity.findViewById<android.view.View>(R.id.connect).performClick()
         assertEquals("https://new.example.com", activity.getSharedPreferences("athena", Context.MODE_PRIVATE).getString("origin", null))
     }
 
     @Test fun activeAthenaGuardStillBlocksDestructiveNavigationUntilItConfirmsSafety() {
         val (activity, page) = fixture(guarded = true)
-        choose(activity, 1)
+        choose(activity, R.string.change_server)
         assertFalse(page.destroyed)
         val pending = MainActivity::class.java.getDeclaredField("navigationAction").apply { isAccessible = true }.get(activity)
         assertNotNull(pending)
@@ -70,7 +76,7 @@ class ServerSettingsTest {
 
     @Test fun reloadAlsoWorksWhenCloudflareHasNotLoadedAthena() {
         val (activity, page) = fixture(guarded = false)
-        choose(activity, 2)
+        choose(activity, R.string.reload)
         assertEquals("https://old.example.com/", page.loadedUrl)
     }
 

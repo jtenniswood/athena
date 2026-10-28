@@ -12,8 +12,8 @@ android {
         applicationId = "com.athena.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.1.2"
+        versionCode = 4
+        versionName = "0.1.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     compileOptions {
@@ -41,6 +41,7 @@ android {
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 
 dependencies {
+    implementation("com.google.android.material:material:1.14.0")
     implementation("androidx.activity:activity:1.13.0")
     implementation("androidx.fragment:fragment:1.9.1")
     implementation("androidx.browser:browser:1.10.0")
