@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # The renderer revision is read from flake.lock by every build path.
-FROM node:24-bookworm-slim AS dependencies
+FROM node:26-bookworm-slim AS dependencies
 RUN apt-get update \
  && apt-get install -y --no-install-recommends git ca-certificates \
  && rm -rf /var/lib/apt/lists/*
@@ -31,7 +31,7 @@ RUN node scripts/renderer.mjs --check \
 FROM dependencies AS preview-dependencies
 RUN node -e "require('node:fs').cpSync(require('node:path').dirname(require.resolve('ws/package.json')), '/preview-ws', { recursive: true })"
 
-FROM node:24-bookworm-slim AS preview-gateway
+FROM node:26-bookworm-slim AS preview-gateway
 WORKDIR /app
 COPY --from=preview-dependencies /preview-ws ./node_modules/ws
 COPY scripts/preview ./scripts/preview
