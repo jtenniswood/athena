@@ -114,6 +114,23 @@ class ServerSettingsTest {
         assertEquals("https://old.example.com/#/chat-1", page.loadedUrl)
     }
 
+    @Test fun notificationTapDoesNotDiscardAnUnconfirmedDraft() {
+        val (activity, page) = fixture(guarded = true)
+        val target = "https://old.example.com/#/chat-2"
+        val intent = android.content.Intent().setAction("com.athena.android.OPEN_CONVERSATION")
+            .setData(android.net.Uri.parse(target))
+        MainActivity::class.java.getDeclaredMethod("openNotification", android.content.Intent::class.java)
+            .apply { isAccessible = true }.invoke(activity, intent)
+        assertNull(page.loadedUrl)
+        assertEquals(target, intent.dataString)
+        val pending = MainActivity::class.java.getDeclaredField("navigationAction").apply { isAccessible = true }.get(activity)
+        assertNotNull(pending)
+        @Suppress("UNCHECKED_CAST")
+        (pending as () -> Unit).invoke()
+        assertEquals(target, page.loadedUrl)
+        assertNull(intent.data)
+    }
+
     private fun <T : android.view.View> android.view.View.findViewByPredicate(predicate: (android.view.View) -> Boolean): T? {
         if (predicate(this)) { @Suppress("UNCHECKED_CAST") return this as T }
         if (this is android.view.ViewGroup) for (index in 0 until childCount) {

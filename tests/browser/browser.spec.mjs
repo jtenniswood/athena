@@ -3215,11 +3215,10 @@ for (const mode of ['android', 'older-android', 'browser', 'android-phone']) {
           }
         }, { supported: mode !== 'older-android' })
       }
-      await page.goto(`${origin}/#/preview-week`)
-      await expect(editor(page)).toBeVisible({ timeout: 30000 })
+      await open(page)
       if (mode !== 'browser') await expect.poll(() => calls.some(call => call.method === 'appSettingsMenu' && call.payload.mounted)).toBe(true)
-      const open = page.getByRole('button', { name: /^(Open navigation|Back to home)$/ })
-      if (await open.isVisible()) await open.click()
+      const navigation = page.getByRole('button', { name: /^(Open navigation|Back to home)$/ })
+      if (await navigation.isVisible()) await navigation.click()
       await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
       const surface = page.getByRole(mode === 'android-phone' ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
       const settings = surface.getByRole(mode === 'android-phone' ? 'button' : 'menuitem', { name: 'App settings', exact: true })
