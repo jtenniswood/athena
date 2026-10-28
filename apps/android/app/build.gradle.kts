@@ -58,3 +58,15 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.17")
 }
+
+// Instrumentation runs the actual web bridge against the production native listener.
+val prepareAndroidBridgeTest by tasks.registering(Exec::class) {
+    val adapter = layout.buildDirectory.file("generated/androidTestAssets/android-adapter.js")
+    inputs.file(rootProject.file("../web-desktop/src/platform/android.ts"))
+    inputs.file(rootProject.file("../../scripts/android-test-adapter.mjs"))
+    outputs.file(adapter)
+    workingDir(rootProject.projectDir.resolve("../.."))
+    commandLine(System.getenv("ATHENA_ANDROID_NODE") ?: "node", "scripts/android-test-adapter.mjs", adapter.get().asFile.absolutePath)
+}
+android.sourceSets.getByName("androidTest").assets.srcDir(layout.buildDirectory.dir("generated/androidTestAssets"))
+tasks.matching { it.name == "preDebugAndroidTestBuild" }.configureEach { dependsOn(prepareAndroidBridgeTest) }

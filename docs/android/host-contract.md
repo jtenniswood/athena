@@ -54,29 +54,24 @@ WebView. App settings exposes APK version, bridge/server protocol, web revision,
 WebView version, Firebase configuration and notification status. Failed or old
 servers remain recoverable through native controls.
 
-## Implementation sequence
+## Ownership and release boundaries
 
-1. Connection coordinator, capability handshake, guarded settings handover,
-   navigation correlation and diagnostics.
-2. Persistent notification registrations and delivery attempts, explicit web
-   visibility acknowledgement, and token-rotation recovery.
-3. Reproducible signed APK releases and real-emulator compatibility tests covering
-   native, web bridge and authentication changes; verify data-preserving upgrades.
-4. Investigate a supported Hermes completion event source independent of the
-   WebView. Persisting an outbox alone cannot recover events never observed.
-5. Continue Material 3 native setup/settings improvements incrementally. Evaluate
-   Compose for new native controls while preserving the existing complex WebView
-   host until interoperability and lifecycle behaviour are proven.
+The connection coordinator, capability handshake, correlated navigation and safe
+settings handover are implemented by the native host and shared web adapters.
+Notifications use persistent registration/delivery state, explicit visibility
+acknowledgements and scoped native token refresh. Signed APK releases and
+compatibility metadata are described in [Android releases](releases.md).
 
-Implementation and verification of later steps are tracked in the related PRs;
-this document defines the ownership and compatibility boundaries, not a claim
-that every step has shipped.
+The [architecture assessment](architecture.md) records the completed upstream
+event-source and native UI framework investigations. The retained relay remains
+necessary with the currently pinned Hermes interface; persistence cannot recover
+completion events it never observed.
 
 ## Targeted verification
 
 Run `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` from
 `apps/android`. With a running emulator, add `:app:connectedDebugAndroidTest`.
-The instrumentation fixture uses HTTPS-origin web content in the real WebView,
+The instrumentation fixture strips types from the actual production Android web adapter using Node.js 22.6+ (CI uses Node 26), then runs that module as HTTPS-origin web content in the real WebView,
 including the production origin checks and native bridge. It verifies settings
 handover and navigation approval correlation; it does not emulate Google or
 Pocket ID account approval. The existing browser authentication tests cover the
@@ -84,8 +79,9 @@ server approval forms and security boundaries separately.
 
 The Android workflow runs the instrumentation test on API 35 and also responds
 to changes in the shared bridge, settings integration, authentication adapters,
-and nginx routes. Signed release distribution and full sign-in/upgrade checks
-are separate subsequent work, not implied by the bridge fixture.
+and nginx routes. Signed release validation and data-preserving upgrade checks complement this
+fixture. Live identity-provider account approval remains separate from the
+local authentication protocol and lifecycle tests.
 
 ## Persistent notifications and token refresh
 
@@ -102,7 +98,7 @@ The web client retains an installation seed across page reloads; the server deri
 an account-specific binding from it. The native host accepts only its current
 server and binding. A scoped refresh key, hashed on the server, permits only FCM
 token replacement for that binding through `POST /api/athena/android/push/token`.
-It cannot register another device, change notification preferences, read account
+Older unversioned web clients retain ordinary foreground registration but revoke native refresh until the versioned contract is available. A monotonic native token version prevents late SDK results, refresh requests and web registrations from rolling back a newer token. It cannot register another device, change notification preferences, read account
 data, or extend the authenticated registration lifetime. Cloudflare Access remains
 in front of this endpoint. Missing or expired Access cookies require reopening
 Athena; the native status explains that registration is pending.
@@ -110,8 +106,8 @@ Athena; the native status explains that registration is pending.
 `webVisibility({ sessionId })` acknowledges a connected, selected conversation.
 The shell refreshes it every three seconds and clears it when hidden, disconnected,
 in navigation or in settings. Native suppression additionally requires an active
-Activity, a matching conversation and an acknowledgement no older than ten
-seconds. Pause, navigation, recovery and process death invalidate it. Duplicate
+Activity with window focus, a matching conversation and an acknowledgement no older than ten
+seconds. Pause, lost window focus, native settings, navigation, recovery and process death invalidate it. Duplicate
 and expired FCM events are filtered before display, including after dismissal.
 
 `GET /api/athena/android/push?device=...` authenticates the account and exposes

@@ -24,8 +24,13 @@ class ConnectionCoordinator(private val changed: (State) -> Unit = {}) {
     )
     fun pending(access: Boolean) = authenticate(access)
     fun ready() = update(Stage.READY, "Connected to Athena")
+    fun waitingForSession() = update(Stage.LOADING, "Reconnecting to your Athena session…")
+    fun sessionConnected(connected: Boolean) {
+        if (connected && state.stage == Stage.LOADING) ready()
+        else if (!connected && state.stage == Stage.READY) waitingForSession()
+    }
     fun recover(code: String, message: String) {
-        settingsReady = false
+        // A failure does not unmount the current document's settings entry. Health controls visibility.
         update(Stage.RECOVERY, message, code)
     }
     fun handshake(version: Int): Boolean {

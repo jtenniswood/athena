@@ -19,3 +19,11 @@ PLAN.md
 
 test-results
 playwright-report
+
+# Android signing/Firebase inputs and local runtime data never belong in a web image context.
+.athena
+apps/android
+android-release
+*.jks
+*.keystore
+**/google-services.json
