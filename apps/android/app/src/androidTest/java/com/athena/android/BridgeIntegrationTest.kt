@@ -64,7 +64,7 @@ class BridgeIntegrationTest {
                         <button id="settings">App settings</button>
                         <script type="module">
                           $adapter
-                          window.adapter = { androidAppSettingsMenu, androidOpenAppSettings, androidWebVisibility };
+                          window.adapter = { androidAppSettingsMenu, androidOpenAppSettings, androidWebVisibility, androidOpenActionMenu, androidDismissActionMenu };
                           window.productionHello = await androidHost();
                           const nativeReceiver = AthenaAndroid.onmessage;
                           window.result = null;
@@ -82,6 +82,36 @@ class BridgeIntegrationTest {
                 waitUntil { evaluate(web, "window.fixtureReady === true") == "true" }
                 scenario.onActivity { assertEquals("https://athena.example/", web.url) }
                 assertEquals("1", evaluate(web, "window.productionHello.protocol"))
+                assertEquals("true", evaluate(web, "window.productionHello.capabilities.includes('action-menu')"))
+                evaluate(web, """window.menuResult = null; window.adapter.androidOpenActionMenu({
+                    id:'fixture-menu',title:'Chat actions',compact:true,x:20,y:20,viewportWidth:390,
+                    groups:[{items:[{id:'rename',label:'Rename'},{id:'delete',label:'Delete',disabled:true}]}]
+                }).then(value => window.menuResult = value)""")
+                val menuDelegate = MainActivity::class.java.getDeclaredField("actionMenus$" + "delegate").apply { isAccessible = true }
+                waitUntil {
+                    var shown = false
+                    scenario.onActivity {
+                        val menus = (menuDelegate.get(it) as Lazy<*>).value as NativeActionMenus
+                        val sheetField = NativeActionMenus::class.java.getDeclaredField("sheet").apply { isAccessible = true }
+                        shown = (sheetField.get(menus) as? com.google.android.material.bottomsheet.BottomSheetDialog)?.isShowing == true
+                    }
+                    shown
+                }
+                instrumentation.waitForIdleSync()
+                instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
+                    java.io.File(context.getExternalFilesDir(null), "native-action-menu.png").outputStream().use {
+                        bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+                    }
+                }
+                scenario.onActivity {
+                    val menus = (menuDelegate.get(it) as Lazy<*>).value as NativeActionMenus
+                    val sheet = NativeActionMenus::class.java.getDeclaredField("sheet").apply { isAccessible = true }.get(menus) as com.google.android.material.bottomsheet.BottomSheetDialog
+                    val root = sheet.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)!!
+                    assertFalse(root.findViewWithTag<View>("delete").isEnabled)
+                    root.findViewWithTag<View>("rename").performClick()
+                }
+                waitUntil { evaluate(web, "window.menuResult?.id === 'rename'") == "true" }
+                assertEquals("\"selected\"", evaluate(web, "window.menuResult.status"))
                 request(web, "webState", JSONObject().put("ready", true).put("revision", "fixture").put("serverProtocol", 1))
                 evaluate(web, "window.discovered = null; window.adapter.androidAppSettingsMenu(true).then(value => window.discovered = value)")
                 waitUntil { evaluate(web, "window.discovered === true") == "true" }
