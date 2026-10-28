@@ -176,7 +176,7 @@ interface ProxyServerLike {
 
 function attachDynamicProxy(server: ProxyServerLike): void {
   const androidAuth = createAndroidAuthHandler({ target: hosting.target })
-  const androidPush = createAndroidPush({ target: hosting.target, sender: createFirebaseSender() })
+  const androidPush = createAndroidPush({ target: hosting.target, sender: createFirebaseSender(), directory: process.env.HERMES_PREFERENCES_DIR })
   if (server.httpServer) {
     androidPush.attach(server.httpServer)
     server.httpServer.once('close', () => androidPush.close())

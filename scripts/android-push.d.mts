@@ -7,8 +7,10 @@ export function createAndroidPush(options: {
   sender: Pick<FirebaseSender, 'enabled' | 'send'>
   fetch?: typeof fetch
   now?: () => number
+  directory?: string
 }): {
   handle(req: IncomingMessage, res: ServerResponse): Promise<boolean>
   attach(server: Server | Http2SecureServer): void
+  drain(): Promise<void>
   close(): void
 }

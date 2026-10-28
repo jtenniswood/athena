@@ -26,6 +26,7 @@ class PushServiceTest {
             .setData(mapOf("origin" to origin, "bindingId" to binding, "kind" to "turnDone", "focusSessionId" to "chat-1"))
             .build()
         MainActivity.foreground = false
+        MainActivity.visibility.clear()
         service.onMessageReceived(message("https://attacker.example", "account-A"))
         service.onMessageReceived(message("https://athena.example", "previous-account"))
         assertEquals(0, shadowOf(manager).allNotifications.size)
@@ -34,8 +35,13 @@ class PushServiceTest {
         manager.cancelAll()
         MainActivity.foreground = true
         service.onMessageReceived(message("https://athena.example", "account-A"))
+        assertEquals("A foreground Activity without a ready chat still receives alerts", 1, shadowOf(manager).allNotifications.size)
+        manager.cancelAll()
+        MainActivity.visibility.acknowledge("chat-1")
+        service.onMessageReceived(message("https://athena.example", "account-A"))
         assertEquals(0, shadowOf(manager).allNotifications.size)
         MainActivity.foreground = false
+        MainActivity.visibility.clear()
         prefs.edit().putBoolean("pushEnabled", false).commit()
         service.onMessageReceived(message("https://athena.example", "account-A"))
         assertEquals(0, shadowOf(manager).allNotifications.size)

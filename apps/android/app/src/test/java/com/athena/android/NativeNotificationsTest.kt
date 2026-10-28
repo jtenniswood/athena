@@ -37,4 +37,18 @@ class NativeNotificationsTest {
         assertEquals("silent", shadowOf(manager).allNotifications.single().channelId)
         assertEquals(NotificationManager.IMPORTANCE_LOW, manager.getNotificationChannel("silent").importance)
     }
+    @Test fun duplicateDeliveryDoesNotReappearAfterDismissalAndExpiredEventsAreIgnored() {
+        val notifications = NativeNotifications(app)
+        val manager = app.getSystemService(NotificationManager::class.java)
+        val payload = JSONObject().put("eventId", "event-one").put("tag", "event-one")
+            .put("expiresAt", (System.currentTimeMillis() + 60000).toString())
+        assertTrue(notifications.show("https://athena.example", payload))
+        manager.cancelAll()
+        assertTrue(notifications.show("https://athena.example", payload))
+        assertEquals(0, shadowOf(manager).allNotifications.size)
+        payload.put("eventId", "expired").put("expiresAt", "1")
+        assertFalse(notifications.show("https://athena.example", payload))
+        assertEquals(0, shadowOf(manager).allNotifications.size)
+    }
+
 }

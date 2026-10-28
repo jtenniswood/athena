@@ -49,7 +49,7 @@ RUN apk add --no-cache nodejs
 # the shared validated configuration generator at container start.
 COPY nginx.conf.template /etc/nginx/hermes.conf.template
 COPY scripts/runtime-config.mjs /opt/hermes/runtime-config.mjs
-COPY scripts/preference-schema.mjs scripts/browser-preference-contract.mjs scripts/preferences-server.mjs scripts/android-auth.mjs scripts/android-access.mjs scripts/android-push.mjs scripts/firebase-messaging.mjs scripts/serve.mjs /opt/hermes/
+COPY scripts/preference-schema.mjs scripts/browser-preference-contract.mjs scripts/preferences-server.mjs scripts/android-auth.mjs scripts/android-access.mjs scripts/android-push.mjs scripts/android-push-store.mjs scripts/firebase-messaging.mjs scripts/serve.mjs /opt/hermes/
 COPY --from=dependencies /runtime-ws /opt/hermes/node_modules/ws
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh

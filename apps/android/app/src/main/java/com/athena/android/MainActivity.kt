@@ -37,8 +37,9 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 
 class MainActivity : AppCompatActivity() {
-    companion object { @Volatile var foreground = false }
+    companion object { @Volatile var foreground = false; val visibility = WebVisibility() }
     private val prefs by lazy { getSharedPreferences("athena", MODE_PRIVATE) }
+    private val pushRegistration by lazy { NativePushRegistration(this) }
     private val notifications by lazy { NativeNotifications(this) }
     private val connection = ConnectionCoordinator { renderConnection(it) }
     private var connectionStatus: TextView? = null
@@ -106,6 +107,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setup() {
+        visibility.clear()
         connection.setup()
         connectionStatus = null
         editingServer = origin.isNotEmpty()
@@ -124,7 +126,11 @@ class MainActivity : AppCompatActivity() {
         val connect = {
             try {
                 val next = ServerAddress.normalize(address.text.toString())
-                if (next != origin) { signIn.cancel(); accessSignIn.cancel() }
+                if (next != origin) {
+                    signIn.cancel(); accessSignIn.cancel()
+                    prefs.edit().putBoolean("pushEnabled", false).remove("pushRefreshKey")
+                        .remove("pushBinding").remove("pushSyncedToken").remove("pushSyncStatus").apply()
+                }
                 prefs.edit().putString("origin", next).apply()
                 origin = next
                 (getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
@@ -204,6 +210,7 @@ class MainActivity : AppCompatActivity() {
         }
         view.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
+                visibility.clear()
                 pageGeneration++
                 navigationAction = null; navigationId = null
                 connection.loading()
@@ -303,7 +310,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 respond(JSONObject().put("protocol", 1)
                     .put("appVersion", packageManager.getPackageInfo(packageName, 0).versionName)
-                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state")))
+                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state", "web-visibility", "push-token-refresh", "push-diagnostics")))
                     .put("insets", "native").put("typography", "platform"))
             }
             "webState" -> {
@@ -317,6 +324,16 @@ class MainActivity : AppCompatActivity() {
             "appSettingsMenu" -> {
                 connection.settings(payload.optBoolean("mounted"), payload.optBoolean("rendered"))
                 renderConnection(connection.state)
+                respond(true)
+            }
+            "webVisibility" -> {
+                if (connection.state.stage == ConnectionCoordinator.Stage.READY) visibility.acknowledge(payload.optString("sessionId"))
+                else visibility.clear()
+                respond(true)
+            }
+            "pushDiagnostics" -> {
+                val status = payload.optString("status").take(200)
+                prefs.edit().putString("pushDeliveryStatus", status).apply()
                 respond(true)
             }
             "permission" -> respond(notifications.permission())
@@ -343,13 +360,18 @@ class MainActivity : AppCompatActivity() {
                         prefs.edit().putString("deviceId", it).apply()
                     }
                     prefs.edit().putString("pushToken", task.result).apply()
-                    respond(JSONObject().put("deviceId", deviceId).put("token", task.result))
+                    respond(JSONObject().put("deviceId", deviceId).put("token", task.result).put("refreshKey", pushRegistration.refreshKey()))
                 }
             }
             "pushEnabled" -> {
                 val state = payload
                 prefs.edit().putBoolean("pushEnabled", state.optBoolean("enabled"))
                     .putString("pushBinding", state.optString("bindingId")).apply()
+                val token = state.optString("token")
+                if (state.optBoolean("enabled") && token.isNotEmpty()) {
+                    prefs.edit().putString("pushSyncedToken", token).putString("pushSyncStatus", "Token registered").apply()
+                    pushRegistration.schedule()
+                }
                 respond(true)
             }
             "navigationReady" -> {
@@ -455,6 +477,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun errorScreen(message: String) {
+        visibility.clear()
         connection.recover("web-unreachable", message)
         connectionStatus = null
         container.removeAllViews()
@@ -482,6 +505,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private fun startSignIn(access: Boolean, path: String = "/login", started: (Boolean) -> Unit = {}) {
+        visibility.clear()
         lastAccessSignIn = access
         connection.authenticate(access)
         if (access) { signIn.cancel(); accessSignIn.start(origin) }
@@ -502,7 +526,9 @@ class MainActivity : AppCompatActivity() {
         val firebase = if (FirebaseApp.getApps(this).isEmpty()) "Not configured" else "Configured"
         return "Connection: ${connection.state.stage.name}\nBridge: ${connection.protocol ?: "Legacy"} · Server protocol: $serverProtocol" +
             "\nWeb build: $webRevision\nWebView: $webView\nFirebase: $firebase\nNotifications: ${notifications.permission()}" +
-            "\nPush registration: ${if (prefs.getBoolean("pushEnabled", false)) "Active" else "Inactive"}"
+            "\nPush registration: ${if (prefs.getBoolean("pushEnabled", false)) "Active" else "Inactive"}" +
+            "\nToken sync: ${prefs.getString("pushSyncStatus", "Not registered")}" +
+            "\nDelivery: ${prefs.getString("pushDeliveryStatus", "No delivery status")}"
     }
 
     override fun onConfigurationChanged(configuration: android.content.res.Configuration) {
@@ -533,8 +559,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); if (accessSignIn.receive(intent.data, origin)) intent.data = null else openNotification(intent) }
     override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); web?.saveState(outState) }
-    override fun onResume() { super.onResume(); foreground = true; web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) { signIn.resume(origin); accessSignIn.resume(origin) } }
-    override fun onPause() { foreground = false; CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
+    override fun onResume() { super.onResume(); foreground = true; pushRegistration.schedule(); web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) { signIn.resume(origin); accessSignIn.resume(origin) } }
+    override fun onPause() { foreground = false; visibility.clear(); CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
     private fun navigateBack() {
         if (editingServer) { openServer(null); return }
         if (web?.canGoBack() == true) web?.goBack() else moveTaskToBack(true)

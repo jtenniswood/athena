@@ -86,3 +86,34 @@ The Android workflow runs the instrumentation test on API 35 and also responds
 to changes in the shared bridge, settings integration, authentication adapters,
 and nginx routes. Signed release distribution and full sign-in/upgrade checks
 are separate subsequent work, not implied by the bridge fixture.
+
+## Persistent notifications and token refresh
+
+Production uses one private `android-push.json` file in `HERMES_PREFERENCES_DIR`.
+The existing data volume must have a single writer. Atomic, synced replacements
+preserve the previous in-memory state if a write fails. Device registrations expire
+24 hours after their last authenticated web registration. The store is bounded to
+500 devices and 5,000 events. Delivery attempts use capped exponential backoff,
+stop after 12 attempts, and expire after an hour. Firebase acceptance is recorded
+separately from Android display. No chat text, account cookies or refresh-key
+plaintext is persisted by the server relay.
+
+The web client retains an installation seed across page reloads; the server derives
+an account-specific binding from it. The native host accepts only its current
+server and binding. A scoped refresh key, hashed on the server, permits only FCM
+token replacement for that binding through `POST /api/athena/android/push/token`.
+It cannot register another device, change notification preferences, read account
+data, or extend the authenticated registration lifetime. Cloudflare Access remains
+in front of this endpoint. Missing or expired Access cookies require reopening
+Athena; the native status explains that registration is pending.
+
+`webVisibility({ sessionId })` acknowledges a connected, selected conversation.
+The shell refreshes it every three seconds and clears it when hidden, disconnected,
+in navigation or in settings. Native suppression additionally requires an active
+Activity, a matching conversation and an acknowledgement no older than ten
+seconds. Pause, navigation, recovery and process death invalidate it. Duplicate
+and expired FCM events are filtered before display, including after dismissal.
+
+`GET /api/athena/android/push?device=...` authenticates the account and exposes
+registration, relay and delivery-attempt status without device credentials.
+`pushDiagnostics({ status })` supplies that status to native App settings.
