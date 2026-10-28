@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity() {
     private val prefs by lazy { getSharedPreferences("athena", MODE_PRIVATE) }
     private val pushRegistration by lazy { NativePushRegistration(this) }
     private val notifications by lazy { NativeNotifications(this) }
+    private val actionMenus by lazy { NativeActionMenus(this) }
     private val connection = ConnectionCoordinator { renderConnection(it) }
     private var connectionStatus: TextView? = null
     private var pageGeneration = 0
@@ -95,6 +96,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setup() {
+        actionMenus.dismiss()
         visibility.clear()
         connection.setup()
         connectionStatus = null
@@ -141,6 +143,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun openServer(state: Bundle?) {
+        actionMenus.dismiss()
         editingServer = false
         connectionStatus = null
         connection.loading()
@@ -198,6 +201,7 @@ class MainActivity : AppCompatActivity() {
         }
         view.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
+                actionMenus.dismiss()
                 visibility.clear()
                 pageGeneration++
                 navigationAction = null; navigationId = null
@@ -232,6 +236,7 @@ class MainActivity : AppCompatActivity() {
                 if (request.isForMainFrame) errorScreen("Could not reach Athena. Check your connection and server address.")
             }
             override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+                actionMenus.dismiss()
                 container.removeView(view); view.destroy(); web = null
                 errorScreen("Android closed the web renderer. Reopen Athena to reconnect.")
                 return true
@@ -298,7 +303,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 respond(JSONObject().put("protocol", 1)
                     .put("appVersion", packageManager.getPackageInfo(packageName, 0).versionName)
-                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state", "web-visibility", "push-token-refresh", "push-diagnostics")))
+                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state", "web-visibility", "push-token-refresh", "push-diagnostics", "action-menu")))
                     .put("insets", "native").put("typography", "platform"))
             }
             "webState" -> {
@@ -309,6 +314,13 @@ class MainActivity : AppCompatActivity() {
                 respond(true)
             }
             "appSettings" -> { appSettings(); respond(true) }
+            "actionMenu" -> {
+                val model = NativeActionMenus.parse(payload)
+                val view = web
+                if (view == null || !foreground) respond(JSONObject().put("status", "dismissed"))
+                else { visibility.clear(); actionMenus.show(model, view, respond) }
+            }
+            "dismissActionMenu" -> { actionMenus.dismiss(payload.getString("id")); respond(true) }
             "appSettingsMenu" -> {
                 connection.settings(payload.optBoolean("mounted"), payload.optBoolean("rendered"))
                 renderConnection(connection.state)
@@ -435,6 +447,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun errorScreen(message: String) {
+        actionMenus.dismiss()
         visibility.clear()
         connection.recover("web-unreachable", message)
         connectionStatus = null
@@ -514,11 +527,11 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); if (authentication.receive(intent.data, origin)) intent.data = null else openNotification(intent) }
     override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); web?.saveState(outState) }
     override fun onResume() { super.onResume(); foreground = true; pushRegistration.schedule(); web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) { authentication.resume(origin) } }
-    override fun onPause() { foreground = false; visibility.clear(); CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
+    override fun onPause() { actionMenus.dismiss(); foreground = false; visibility.clear(); CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
     private fun navigateBack() {
         if (editingServer) { openServer(null); return }
         if (web?.canGoBack() == true) web?.goBack() else moveTaskToBack(true)
     }
-    override fun onDestroy() { nativeSettings.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); authentication.close(); web?.destroy(); super.onDestroy() }
+    override fun onDestroy() { actionMenus.dismiss(); nativeSettings.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); authentication.close(); web?.destroy(); super.onDestroy() }
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
 }

@@ -1,0 +1,90 @@
+package com.athena.android
+
+import android.os.Looper
+import android.view.View
+import androidx.appcompat.widget.PopupMenu
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import org.json.JSONObject
+import org.junit.Assert.*
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowDialog
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
+class NativeActionMenusTest {
+    private fun payload(id: String = "first", compact: Boolean = true) = JSONObject("""{
+        "id":"$id","title":"Chat actions","compact":$compact,"x":30,"y":50,"viewportWidth":390,
+        "groups":[{"items":[{"id":"rename","label":"Rename"},{"id":"delete","label":"Delete","disabled":true},
+        {"id":"choice","label":"Choose","children":[{"selection":"single","items":[
+        {"id":"one","label":"One","checked":true},{"id":"two","label":"Two","checked":false}]}]}]}]}""")
+
+    @Test fun nestedSelectionOnlyReturnsItsOpaqueIdAfterDismissal() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+        val menus = NativeActionMenus(activity)
+        val replies = mutableListOf<JSONObject>()
+        menus.show(NativeActionMenus.parse(payload()), View(activity)) { replies.add(it as JSONObject) }
+        val dialog = ShadowDialog.getLatestDialog() as BottomSheetDialog
+        val root = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)!!
+        assertFalse(root.findViewWithTag<View>("delete").isEnabled)
+        root.findViewWithTag<View>("choice").performClick()
+        dialog.onBackPressedDispatcher.onBackPressed()
+        assertNotNull(root.findViewWithTag<View>("rename"))
+        root.findViewWithTag<View>("choice").performClick()
+        root.findViewWithTag<View>("two").performClick()
+        assertFalse(dialog.isShowing)
+        assertEquals(1, replies.size)
+        assertEquals("two", replies.single().getString("id"))
+        assertEquals("selected", replies.single().getString("status"))
+        menus.dismiss()
+        assertEquals(1, replies.size)
+        controller.pause().stop().destroy()
+    }
+
+    @Test fun replacementAndStaleCleanupCannotDismissAnotherOwnersMenu() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+        val menus = NativeActionMenus(activity)
+        val first = mutableListOf<JSONObject>(); val second = mutableListOf<JSONObject>()
+        menus.show(NativeActionMenus.parse(payload()), View(activity)) { first.add(it as JSONObject) }
+        menus.show(NativeActionMenus.parse(payload("second")), View(activity)) { second.add(it as JSONObject) }
+        assertEquals("dismissed", first.single().getString("status"))
+        menus.dismiss("first")
+        assertTrue(second.isEmpty())
+        (ShadowDialog.getLatestDialog() as BottomSheetDialog).cancel()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals("dismissed", second.single().getString("status"))
+        controller.pause().stop().destroy()
+    }
+
+    @Test fun popupSelectionUsesTheSameCommandContract() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+        val menus = NativeActionMenus(activity)
+        val replies = mutableListOf<JSONObject>()
+        menus.show(NativeActionMenus.parse(payload(compact = false)), shadowOf(activity).contentView) { replies.add(it as JSONObject) }
+        shadowOf(Looper.getMainLooper()).idle()
+        val field = NativeActionMenus::class.java.getDeclaredField("popup").apply { isAccessible = true }
+        val popup = field.get(menus) as PopupMenu
+        val rename = popup.menu.findItem(2)
+        popup.menu.performIdentifierAction(rename.itemId, 0)
+        assertEquals("rename", replies.single().getString("id"))
+        controller.pause().stop().destroy()
+    }
+
+    @Test fun malformedDuplicateAndUnboundedCommandsAreRejected() {
+        val duplicate = payload().apply {
+            getJSONArray("groups").getJSONObject(0).getJSONArray("items").getJSONObject(1).put("id", "rename")
+        }
+        val tooLong = payload().put("title", "x".repeat(241))
+        val invalidPosition = payload().put("viewportWidth", 0)
+        for (invalid in listOf(duplicate, tooLong, invalidPosition)) {
+            assertThrows(IllegalArgumentException::class.java) { NativeActionMenus.parse(invalid) }
+        }
+    }
+}

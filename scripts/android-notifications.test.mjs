@@ -146,3 +146,30 @@ test('asynchronous navigation approvals retain the originating request ID', asyn
   assert.deepEqual(replies.map(reply => reply.requestId), ['second', 'first'])
   stop()
 })
+
+test('native menus wait for explicit dismissal and do not time out while a user chooses', async () => {
+  const { api, bridge, calls, timers } = native()
+  let pending
+  bridge.postMessage = raw => {
+    const request = JSON.parse(raw)
+    calls.push(request)
+    if (request.method === 'actionMenu') { pending = request; return }
+    if (request.method === 'dismissActionMenu') {
+      bridge.onmessage({ data: JSON.stringify({ id: pending.id, value: { status: 'dismissed' } }) })
+      bridge.onmessage({ data: JSON.stringify({ id: request.id, value: true }) })
+    }
+  }
+  const result = api.androidOpenActionMenu({ id: 'menu-1', title: 'Actions', groups: [] })
+  assert.equal(timers.size, 0)
+  await api.androidDismissActionMenu('menu-1')
+  assert.equal((await result).status, 'dismissed')
+  assert.equal(timers.size, 0)
+})
+
+test('unsupported or oversized native menus allow a web fallback', async () => {
+  const { api, calls } = native({ fail: true })
+  assert.equal((await api.androidOpenActionMenu({ title: 'Actions' })).status, 'unavailable')
+  const count = calls.length
+  assert.equal((await api.androidOpenActionMenu({ title: 'x'.repeat(14001) })).status, 'unavailable')
+  assert.equal(calls.length, count)
+})
