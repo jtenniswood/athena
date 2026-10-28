@@ -18,7 +18,7 @@
     "check:compatibility-registry": "node scripts/compatibility-registry.mjs",
     "docs:compatibility": "node scripts/compatibility-registry.mjs --write"
   },
-  "packageManager": "pnpm@12.15.0",
+  "packageManager": "pnpm@12.16.1",
   "devDependencies": {
     "@playwright/test": "1.64.1",
     "ws": "8.22.0"
