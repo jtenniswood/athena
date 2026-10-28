@@ -68,5 +68,5 @@ val prepareAndroidBridgeTest by tasks.registering(Exec::class) {
     workingDir(rootProject.projectDir.resolve("../.."))
     commandLine(System.getenv("ATHENA_ANDROID_NODE") ?: "node", "scripts/android-test-adapter.mjs", adapter.get().asFile.absolutePath)
 }
-android.sourceSets.getByName("androidTest").assets.srcDir(layout.buildDirectory.dir("generated/androidTestAssets"))
+android.sourceSets.getByName("androidTest").assets.srcDir(layout.buildDirectory.dir("generated/androidTestAssets").get().asFile)
 tasks.matching { it.name == "preDebugAndroidTestBuild" }.configureEach { dependsOn(prepareAndroidBridgeTest) }
