@@ -97,3 +97,52 @@ test('Access reload distinguishes an unloaded page from a mounted app and waits 
   stop()
   assert.equal(window.dispatchEvent(new Event('athena:prepare-native-navigation', { cancelable: true })), true)
 })
+
+test('settings discovery cannot hide native chrome before the web entry is rendered', async () => {
+  const { api, bridge, calls, timers } = native()
+  bridge.postMessage = raw => {
+    const request = JSON.parse(raw)
+    calls.push(request)
+    const value = request.method === 'hello'
+      ? { protocol: 1, appVersion: 'test', capabilities: ['settings-menu'], insets: 'native', typography: 'platform' }
+      : true
+    bridge.onmessage({ data: JSON.stringify({ id: request.id, value }) })
+  }
+  assert.equal(await api.androidAppSettingsMenu(true), true)
+  assert.deepEqual(calls.map(call => call.method), ['hello'])
+  assert.equal(await api.androidAppSettingsMenu(true, true), true)
+  assert.equal(calls.at(-1).payload.rendered, true)
+  assert.equal(await api.androidAppSettingsMenu(false), true)
+  assert.equal(calls.at(-1).payload.mounted, false)
+  assert.equal(timers.size, 0)
+})
+
+test('structured native errors settle requests and keep a usable fallback', async () => {
+  const { api, bridge, timers } = native()
+  bridge.postMessage = raw => {
+    const { id } = JSON.parse(raw)
+    bridge.onmessage({ data: JSON.stringify({ id, error: { code: 'unsupported-method', message: 'Update required' } }) })
+  }
+  assert.equal(await api.androidOpenAppSettings(), false)
+  assert.equal(timers.size, 0)
+})
+
+test('asynchronous navigation approvals retain the originating request ID', async () => {
+  const source = compile('../apps/web-desktop/src/platform/android-navigation.ts')
+  const window = new EventTarget(), replies = [], finishes = []
+  const context = vm.createContext({ exports: {}, window, document: { getElementById: () => null },
+    require: name => name === './android' ? { isAndroidApp: () => true, androidNavigationReady: result => replies.push(result) }
+      : { reloadReadinessAfterSaving: () => new Promise(resolve => finishes.push(resolve)) }
+  })
+  vm.runInContext(source, context)
+  const stop = context.exports.installAndroidNavigationGuard()
+  for (const requestId of ['first', 'second']) {
+    const event = new Event('athena:prepare-native-navigation', { cancelable: true })
+    event.detail = { requestId }
+    window.dispatchEvent(event)
+  }
+  finishes[1]({ ready: true }); finishes[0]({ ready: false })
+  await Promise.resolve(); await Promise.resolve()
+  assert.deepEqual(replies.map(reply => reply.requestId), ['second', 'first'])
+  stop()
+})

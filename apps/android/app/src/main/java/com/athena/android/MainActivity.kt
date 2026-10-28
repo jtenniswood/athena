@@ -40,8 +40,25 @@ class MainActivity : AppCompatActivity() {
     companion object { @Volatile var foreground = false }
     private val prefs by lazy { getSharedPreferences("athena", MODE_PRIVATE) }
     private val notifications by lazy { NativeNotifications(this) }
-    private val signIn by lazy { BrowserSignIn(this) { web?.evaluateJavascript("window.dispatchEvent(new Event('focus'))", null) } }
-    private val accessSignIn by lazy { AccessSignIn(this) { reconnectAthena() } }
+    private val connection = ConnectionCoordinator { renderConnection(it) }
+    private var connectionStatus: TextView? = null
+    private var pageGeneration = 0
+    private var navigationId: String? = null
+    private var webRevision = "Unknown"
+    private var serverProtocol = "Unknown"
+    private var lastAccessSignIn = false
+    private val authProgress: (String, String) -> Unit = { code, message ->
+        when (code) {
+            "waiting" -> connection.pending(lastAccessSignIn)
+            "connected" -> connection.loading()
+            else -> connection.recover(code, message)
+        }
+    }
+    private val signIn by lazy { BrowserSignIn(this, { code, message -> lastAccessSignIn = false; authProgress(code, message) }) {
+        connection.loading()
+        web?.evaluateJavascript("window.dispatchEvent(new Event('focus'))", null)
+    } }
+    private val accessSignIn by lazy { AccessSignIn(this, progress = { code, message -> lastAccessSignIn = true; authProgress(code, message) }) { reconnectAthena() } }
     private var nativeToolbar: View? = null
     private var settingsSheet: BottomSheetDialog? = null
     private var editingServer = false
@@ -89,6 +106,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setup() {
+        connection.setup()
+        connectionStatus = null
         editingServer = origin.isNotEmpty()
         container.removeAllViews()
         val screen = layoutInflater.inflate(R.layout.screen_connect, container, false)
@@ -105,6 +124,7 @@ class MainActivity : AppCompatActivity() {
         val connect = {
             try {
                 val next = ServerAddress.normalize(address.text.toString())
+                if (next != origin) { signIn.cancel(); accessSignIn.cancel() }
                 prefs.edit().putString("origin", next).apply()
                 origin = next
                 (getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
@@ -128,6 +148,10 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     private fun openServer(state: Bundle?) {
         editingServer = false
+        connectionStatus = null
+        connection.loading()
+        web?.destroy()
+        web = null
         container.removeAllViews()
         val toolbar = MaterialToolbar(this).apply {
             setTitle(R.string.app_name)
@@ -136,6 +160,22 @@ class MainActivity : AppCompatActivity() {
         }
         nativeToolbar = toolbar
         container.addView(toolbar)
+        connectionStatus = TextView(this).apply {
+            setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium)
+            setPadding(16.dp(), 8.dp(), 16.dp(), 8.dp())
+            setOnClickListener {
+                MaterialAlertDialogBuilder(this@MainActivity).setTitle("Connection status")
+                    .setMessage(connection.state.message)
+                    .setNegativeButton("Close", null)
+                    .setNeutralButton("App settings") { _, _ -> appSettings() }
+                    .setPositiveButton("Try again") { _, _ ->
+                        if (connection.state.code?.startsWith("auth-") == true) startSignIn(lastAccessSignIn)
+                        else reconnectAthena()
+                    }.show()
+            }
+        }
+        container.addView(connectionStatus)
+        renderConnection(connection.state)
         val progress = LinearProgressIndicator(this).apply { max = 100 }
         container.addView(progress, LinearLayout.LayoutParams(-1, 4.dp()))
         val view = WebView(this)
@@ -164,20 +204,29 @@ class MainActivity : AppCompatActivity() {
         }
         view.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
-                toolbar.visibility = View.VISIBLE
+                pageGeneration++
+                navigationAction = null; navigationId = null
+                connection.loading()
+                renderConnection(connection.state)
+                val generation = pageGeneration
+                view.postDelayed({
+                    if (generation == pageGeneration && connection.state.stage == ConnectionCoordinator.Stage.LOADING) {
+                        connection.recover("web-timeout", "Athena has not finished connecting. Tap here to retry or check App settings.")
+                    }
+                }, 20000)
             }
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 if (request.isForMainFrame && request.url.scheme == "https" &&
                     request.url.path?.startsWith("/cdn-cgi/access/") == true &&
                     (ServerAddress.belongsTo(request.url.toString(), origin) || request.url.host?.endsWith(".cloudflareaccess.com") == true)) {
                     toolbar.visibility = View.VISIBLE
-                    accessSignIn.start(origin)
+                    startSignIn(true)
                     return true
                 }
                 if (request.isForMainFrame && ServerAddress.belongsTo(request.url.toString(), origin) &&
                     request.url.path in listOf("/login", "/auth/login")) {
                     toolbar.visibility = View.VISIBLE
-                    signIn.start(origin, request.url.encodedPath + (request.url.encodedQuery?.let { "?$it" } ?: ""))
+                    startSignIn(false, request.url.encodedPath + (request.url.encodedQuery?.let { "?$it" } ?: ""))
                     return true
                 }
                 if (ServerAddress.belongsTo(request.url.toString(), origin)) return false
@@ -243,63 +292,76 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleMessage(raw: String, reply: JavaScriptReplyProxy) {
-        if (raw.length > 16000) return
-        try {
-            val message = JSONObject(raw)
-            val id = message.getString("id").take(100)
-            val respond: (Any) -> Unit = { value ->
-                try { reply.postMessage(JSONObject().put("id", id).put("value", value).toString()) }
-                catch (_: Exception) { /* The originating page may have closed during an Android prompt. */ }
+        NativeBridge.receive(raw, { reply.postMessage(it) }, ::handleNativeRequest)
+    }
+
+    private fun handleNativeRequest(method: String, payload: JSONObject, respond: (Any) -> Unit) {
+        when (method) {
+            "hello" -> {
+                if (!connection.handshake(payload.optInt("protocol"))) {
+                    respond(false); return
+                }
+                respond(JSONObject().put("protocol", 1)
+                    .put("appVersion", packageManager.getPackageInfo(packageName, 0).versionName)
+                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state")))
+                    .put("insets", "native").put("typography", "platform"))
             }
-            when (message.getString("method")) {
-                "appSettings" -> { appSettings(); respond(true) }
-                "appSettingsMenu" -> {
-                    nativeToolbar?.visibility = if (message.getJSONObject("payload").optBoolean("mounted")) View.GONE else View.VISIBLE
-                    respond(true)
-                }
-                "permission" -> respond(notifications.permission())
-                "requestPermission" -> {
-                    if (notifications.permission() == "default" && Build.VERSION.SDK_INT >= 33) {
-                        if (permissionReply != null) { respond("default"); return }
-                        permissionReply = { respond(it) }
-                        prefs.edit().putBoolean("notificationAsked", true).apply()
-                        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    } else respond(notifications.permission())
-                }
-                "notify" -> respond(notifications.show(origin, message.getJSONObject("payload")))
-                "openSignIn" -> {
-                    val path = message.getJSONObject("payload").getString("path")
-                    if (ServerAddress.belongsTo(origin + path, origin) && Uri.parse(path).path in listOf("/login", "/auth/login")) {
-                        signIn.start(origin, path) { respond(it) }
-                    } else respond(false)
-                }
-                "pushRegistration" -> {
-                    if (FirebaseApp.getApps(this).isEmpty()) { respond(JSONObject.NULL); return }
-                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                        if (!task.isSuccessful) { respond(JSONObject.NULL); return@addOnCompleteListener }
-                        val deviceId = prefs.getString("deviceId", null) ?: java.util.UUID.randomUUID().toString().also {
-                            prefs.edit().putString("deviceId", it).apply()
-                        }
-                        prefs.edit().putString("pushToken", task.result).apply()
-                        respond(JSONObject().put("deviceId", deviceId).put("token", task.result))
+            "webState" -> {
+                webRevision = payload.optString("revision", "Unknown").take(80)
+                serverProtocol = payload.optString("serverProtocol", "Unknown").take(40)
+                if (payload.optBoolean("ready")) connection.ready()
+                else connection.recover("web-startup", "Athena could not finish loading. Tap here to retry or check App settings.")
+                respond(true)
+            }
+            "appSettings" -> { appSettings(); respond(true) }
+            "appSettingsMenu" -> {
+                connection.settings(payload.optBoolean("mounted"), payload.optBoolean("rendered"))
+                renderConnection(connection.state)
+                respond(true)
+            }
+            "permission" -> respond(notifications.permission())
+            "requestPermission" -> {
+                if (notifications.permission() == "default" && Build.VERSION.SDK_INT >= 33) {
+                    if (permissionReply != null) { respond("default"); return }
+                    permissionReply = { respond(it) }
+                    prefs.edit().putBoolean("notificationAsked", true).apply()
+                    notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else respond(notifications.permission())
+            }
+            "notify" -> respond(notifications.show(origin, payload))
+            "openSignIn" -> {
+                val path = payload.getString("path")
+                if (ServerAddress.belongsTo(origin + path, origin) && Uri.parse(path).path in listOf("/login", "/auth/login")) {
+                    startSignIn(false, path) { respond(it) }
+                } else respond(false)
+            }
+            "pushRegistration" -> {
+                if (FirebaseApp.getApps(this).isEmpty()) { respond(JSONObject.NULL); return }
+                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                    if (!task.isSuccessful) { respond(JSONObject.NULL); return@addOnCompleteListener }
+                    val deviceId = prefs.getString("deviceId", null) ?: java.util.UUID.randomUUID().toString().also {
+                        prefs.edit().putString("deviceId", it).apply()
                     }
+                    prefs.edit().putString("pushToken", task.result).apply()
+                    respond(JSONObject().put("deviceId", deviceId).put("token", task.result))
                 }
-                "pushEnabled" -> {
-                    val state = message.getJSONObject("payload")
-                    prefs.edit().putBoolean("pushEnabled", state.optBoolean("enabled"))
-                        .putString("pushBinding", state.optString("bindingId")).apply()
-                    respond(true)
-                }
-                "navigationReady" -> {
-                    val action = navigationAction; navigationAction = null
-                    val result = message.getJSONObject("payload")
-                    respond(true)
-                    if (result.optBoolean("ready")) action?.invoke()
-                    else if (action != null) Toast.makeText(this, result.optString("reason", "Finish active work before leaving."), Toast.LENGTH_LONG).show()
-                }
-                else -> respond(false)
             }
-        } catch (_: Exception) { /* Ignore malformed or stale bridge requests. */ }
+            "pushEnabled" -> {
+                val state = payload
+                prefs.edit().putBoolean("pushEnabled", state.optBoolean("enabled"))
+                    .putString("pushBinding", state.optString("bindingId")).apply()
+                respond(true)
+            }
+            "navigationReady" -> {
+                val result = payload
+                if (result.optString("requestId") != navigationId) { respond(false); return }
+                val action = navigationAction; navigationAction = null; navigationId = null
+                respond(true)
+                if (result.optBoolean("ready")) action?.invoke()
+                else if (action != null) Toast.makeText(this, result.optString("reason", "Finish active work before leaving."), Toast.LENGTH_LONG).show()
+            }
+            else -> throw NativeBridge.UnsupportedMethod()
+        }
     }
 
     private fun appSettings() {
@@ -310,6 +372,7 @@ class MainActivity : AppCompatActivity() {
         ViewCompat.setAccessibilityHeading(content.findViewById(R.id.settings_title), true)
         content.findViewById<TextView>(R.id.connected_server).text = origin
         content.findViewById<TextView>(R.id.app_version).text = getString(R.string.version, packageManager.getPackageInfo(packageName, 0).versionName)
+        content.findViewById<TextView>(R.id.app_version).append("\n" + diagnostics())
         val rows = content.findViewById<LinearLayout>(R.id.settings_rows)
         fun row(title: Int, description: Int, icon: Int, action: () -> Unit) {
             val item = layoutInflater.inflate(R.layout.app_settings_row, rows, false)
@@ -337,7 +400,7 @@ class MainActivity : AppCompatActivity() {
                     prepareNavigation(allowUnloaded = true) { web?.destroy(); web = null; setup() }
                 }.show()
         }
-        row(R.string.browser_sign_in, R.string.browser_sign_in_description, R.drawable.ic_open_browser) { accessSignIn.start(origin) }
+        row(R.string.browser_sign_in, R.string.browser_sign_in_description, R.drawable.ic_open_browser) { startSignIn(true) }
         row(R.string.reload, R.string.reload_description, R.drawable.ic_refresh) {
             MaterialAlertDialogBuilder(this).setTitle("Reload Athena?")
                 .setMessage("Finish active replies and recordings first.")
@@ -365,27 +428,35 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun prepareNavigation(allowUnloaded: Boolean = false, action: () -> Unit) {
-        val view = web ?: return
+        val view = web ?: run { action(); return }
+        if (navigationAction != null) {
+            Toast.makeText(this, "Wait for the current navigation check to finish.", Toast.LENGTH_SHORT).show()
+            return
+        }
         if (allowUnloaded && (view.url.isNullOrBlank() || view.url == "about:blank")) {
             navigationAction = null
             action()
             return
         }
         navigationAction = action
-        view.evaluateJavascript("window.dispatchEvent(new Event('athena:prepare-native-navigation', {cancelable:true}))") { unhandled ->
+        val requestId = java.util.UUID.randomUUID().toString()
+        navigationId = requestId
+        view.evaluateJavascript("window.dispatchEvent(new CustomEvent('athena:prepare-native-navigation', {cancelable:true,detail:{requestId:'$requestId'}}))") { unhandled ->
             if (allowUnloaded && unhandled == "true" && navigationAction === action) {
-                navigationAction = null; action()
+                navigationAction = null; navigationId = null; action()
             }
         }
         view.postDelayed({
             if (navigationAction === action) {
-                navigationAction = null
+                navigationAction = null; navigationId = null
                 Toast.makeText(this, "Athena did not confirm your draft is saved. Update the server or finish connecting before leaving.", Toast.LENGTH_LONG).show()
             }
         }, 6000)
     }
 
     private fun errorScreen(message: String) {
+        connection.recover("web-unreachable", message)
+        connectionStatus = null
         container.removeAllViews()
         val screen = layoutInflater.inflate(R.layout.screen_recovery, container, false)
         screen.findViewById<TextView>(R.id.recovery_message).text = message
@@ -404,10 +475,36 @@ class MainActivity : AppCompatActivity() {
         val target = intent?.dataString ?: return
         if (intent.action == "com.athena.android.OPEN_CONVERSATION" && ServerAddress.belongsTo(target, origin) &&
             Uri.parse(target).path == "/" && Uri.parse(target).query == null) {
-            web?.loadUrl(target)
-            intent.data = null
+            prepareNavigation(allowUnloaded = true) {
+                web?.loadUrl(target)
+                intent.data = null
+            }
         }
     }
+    private fun startSignIn(access: Boolean, path: String = "/login", started: (Boolean) -> Unit = {}) {
+        lastAccessSignIn = access
+        connection.authenticate(access)
+        if (access) { signIn.cancel(); accessSignIn.start(origin) }
+        else { accessSignIn.cancel(); signIn.start(origin, path, started) }
+    }
+
+    private fun renderConnection(state: ConnectionCoordinator.State) {
+        nativeToolbar?.visibility = if (connection.settingsReady && state.stage == ConnectionCoordinator.Stage.READY) View.GONE else View.VISIBLE
+        connectionStatus?.apply {
+            text = state.message
+            visibility = if (state.stage in listOf(ConnectionCoordinator.Stage.READY, ConnectionCoordinator.Stage.SETUP)) View.GONE else View.VISIBLE
+            contentDescription = state.message + ". Tap for connection actions."
+        }
+    }
+
+    private fun diagnostics(): String {
+        val webView = WebViewCompat.getCurrentWebViewPackage(this)?.versionName ?: "Unavailable"
+        val firebase = if (FirebaseApp.getApps(this).isEmpty()) "Not configured" else "Configured"
+        return "Connection: ${connection.state.stage.name}\nBridge: ${connection.protocol ?: "Legacy"} · Server protocol: $serverProtocol" +
+            "\nWeb build: $webRevision\nWebView: $webView\nFirebase: $firebase\nNotifications: ${notifications.permission()}" +
+            "\nPush registration: ${if (prefs.getBoolean("pushEnabled", false)) "Active" else "Inactive"}"
+    }
+
     override fun onConfigurationChanged(configuration: android.content.res.Configuration) {
         super.onConfigurationChanged(configuration)
         val nextMode = configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
@@ -436,12 +533,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); if (accessSignIn.receive(intent.data, origin)) intent.data = null else openNotification(intent) }
     override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); web?.saveState(outState) }
-    override fun onResume() { super.onResume(); foreground = true; web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) signIn.resume(origin) }
+    override fun onResume() { super.onResume(); foreground = true; web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) { signIn.resume(origin); accessSignIn.resume(origin) } }
     override fun onPause() { foreground = false; CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
     private fun navigateBack() {
         if (editingServer) { openServer(null); return }
         if (web?.canGoBack() == true) web?.goBack() else moveTaskToBack(true)
     }
-    override fun onDestroy() { settingsSheet?.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); signIn.close(); web?.destroy(); super.onDestroy() }
+    override fun onDestroy() { settingsSheet?.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); signIn.close(); accessSignIn.close(); web?.destroy(); super.onDestroy() }
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
 }

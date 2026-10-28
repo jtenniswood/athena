@@ -1,12 +1,11 @@
 package com.athena.android
 
 import android.app.Activity
-import android.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.Context
 import android.net.Uri
 import android.util.Base64
 import android.webkit.CookieManager
-import android.widget.Toast
 import androidx.browser.customtabs.CustomTabsIntent
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -16,13 +15,25 @@ import java.security.SecureRandom
 import java.util.concurrent.Executors
 
 /** A one-use PKCE handoff keeps OAuth in the browser and credentials out of URLs and JavaScript. */
-class BrowserSignIn(private val activity: Activity, private val connected: () -> Unit) {
+class BrowserSignIn(
+    private val activity: Activity,
+    private val progress: (String, String) -> Unit = { _, _ -> },
+    private val connected: () -> Unit
+) {
     private val prefs = activity.getSharedPreferences("android-sign-in", Context.MODE_PRIVATE)
     private val executor = Executors.newSingleThreadExecutor()
     private var exchanging = false
+    private var generation = 0
+    private var confirmation: androidx.appcompat.app.AlertDialog? = null
+    private fun active(origin: String, request: Int) = !activity.isDestroyed && request == generation &&
+        activity.getSharedPreferences("athena", Context.MODE_PRIVATE).getString("origin", "") == origin
+    fun cancel() { generation++; confirmation?.dismiss(); confirmation = null; prefs.edit().clear().apply() }
+    private fun report(code: String, message: String) {
+        if (!activity.isDestroyed) progress(code, message)
+    }
 
     private fun encode(bytes: ByteArray) = Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
-    fun close() { executor.shutdownNow() }
+    fun close() { generation++; confirmation?.dismiss(); executor.shutdownNow() }
     private fun post(origin: String, route: String, body: JSONObject): Pair<Int, HttpURLConnection> {
         val connection = URL(origin + route).openConnection() as HttpURLConnection
         connection.requestMethod = "POST"
@@ -37,6 +48,8 @@ class BrowserSignIn(private val activity: Activity, private val connected: () ->
     }
 
     fun start(origin: String, loginPath: String, started: (Boolean) -> Unit = {}) {
+        cancel()
+        val request = generation
         executor.execute {
             try {
                 val verifier = encode(ByteArray(32).also { SecureRandom().nextBytes(it) })
@@ -46,24 +59,28 @@ class BrowserSignIn(private val activity: Activity, private val connected: () ->
                 require(status == 200)
                 val id = body.getString("id"); val path = body.getString("loginPath")
                 require(ServerAddress.belongsTo(origin + path, origin) && path.startsWith("/"))
-                prefs.edit().putString("origin", origin).putString("id", id).putString("verifier", verifier)
-                    .putLong("started", System.currentTimeMillis()).apply()
                 activity.runOnUiThread {
-                    if (!activity.isFinishing && !activity.isDestroyed) {
-                        AlertDialog.Builder(activity).setTitle("Sign in to Athena")
+                    if (!activity.isFinishing && active(origin, request)) {
+                        prefs.edit().putString("origin", origin).putString("id", id).putString("verifier", verifier)
+                            .putLong("started", System.currentTimeMillis()).apply()
+                        fun cancelled() { if (!active(origin, request)) return; cancel(); report("auth-cancelled", "Sign-in cancelled. Tap here to try again."); started(false) }
+                        confirmation = MaterialAlertDialogBuilder(activity).setTitle("Sign in to Athena")
                             .setMessage("Check that the browser shows code ${body.getString("code")}. This moves that browser’s Athena sign-in to this app. After approving, return here.")
-                            .setNegativeButton("Cancel") { _, _ -> prefs.edit().clear().apply(); started(false) }
-                            .setOnCancelListener { prefs.edit().clear().apply(); started(false) }
+                            .setNegativeButton("Cancel") { _, _ -> cancelled() }
+                            .setOnCancelListener { cancelled() }
                             .setPositiveButton("Open browser") { _, _ ->
-                                try { CustomTabsIntent.Builder().build().launchUrl(activity, Uri.parse(origin + path)); started(true) }
-                                catch (_: Exception) { prefs.edit().clear().apply(); started(false) }
+                                if (!active(origin, request)) return@setPositiveButton
+                                try { CustomTabsIntent.Builder().build().launchUrl(activity, Uri.parse(origin + path)); report("waiting", ""); started(true) }
+                                catch (_: Exception) { cancel(); report("auth-browser", "No browser could open sign-in. Tap here to retry."); started(false) }
                             }.show()
                     }
                 }
             } catch (_: Exception) {
                 activity.runOnUiThread {
-                    started(false)
-                    if (!activity.isDestroyed) Toast.makeText(activity, "Browser sign-in could not start. Update the Athena server, or use a session token.", Toast.LENGTH_LONG).show()
+                    if (active(origin, request)) {
+                        report("auth-start", "Browser sign-in could not start. Check the connection and update the Athena server, then tap here to retry.")
+                        started(false)
+                    }
                 }
             }
         }
@@ -71,31 +88,46 @@ class BrowserSignIn(private val activity: Activity, private val connected: () ->
 
     fun resume(origin: String) {
         if (exchanging || prefs.getString("origin", "") != origin) return
-        if (System.currentTimeMillis() - prefs.getLong("started", 0) > 300000) { prefs.edit().clear().apply(); return }
+        if (System.currentTimeMillis() - prefs.getLong("started", 0) !in 0..300000) {
+            cancel(); report("auth-expired", "Sign-in expired. Tap here to start again."); return
+        }
         val id = prefs.getString("id", null) ?: return
         val verifier = prefs.getString("verifier", null) ?: return
         exchanging = true
+        val request = generation
+        report("waiting", "")
         executor.execute {
             try {
                 val (status, response) = post(origin, "/api/athena/android/auth/exchange", JSONObject().put("id", id).put("verifier", verifier))
                 val cookies = try { response.headerFields.filterKeys { it?.equals("Set-Cookie", true) == true }.values.flatten() } finally { response.disconnect() }
                 if (status == 200) {
                     activity.runOnUiThread {
-                        if (activity.isDestroyed) return@runOnUiThread
+                        if (!active(origin, request)) return@runOnUiThread
                         val manager = CookieManager.getInstance()
                         var remaining = cookies.size
-                        if (remaining == 0) return@runOnUiThread
+                        if (remaining == 0) {
+                            cancel(); report("auth-cookies", "The server returned no sign-in session. Update Athena and try again.")
+                            return@runOnUiThread
+                        }
                         for (cookie in cookies) manager.setCookie(origin, cookie) {
                             remaining--
-                            if (remaining == 0) {
-                                manager.flush(); prefs.edit().clear().apply(); connected()
+                            if (remaining == 0 && active(origin, request)) {
+                                manager.flush(); prefs.edit().clear().apply(); report("connected", ""); connected()
                             }
                         }
                     }
                 } else if (status == 202) activity.runOnUiThread {
-                    activity.window.decorView.postDelayed({ if (!activity.isDestroyed && MainActivity.foreground) resume(origin) }, 1000)
-                } else prefs.edit().clear().apply()
-            } catch (_: Exception) { /* A network interruption can be retried on the next resume. */ }
+                    activity.window.decorView.postDelayed({ if (active(origin, request) && MainActivity.foreground) resume(origin) }, 1000)
+                } else activity.runOnUiThread {
+                    if (active(origin, request)) {
+                        cancel(); report("auth-exchange", "Sign-in expired or the server restarted. Tap here to start again.")
+                    }
+                }
+            } catch (_: Exception) {
+                activity.runOnUiThread {
+                    if (active(origin, request)) report("auth-network", "Could not finish sign-in. Check your connection, then return to Athena or tap here to retry.")
+                }
+            }
             finally { activity.runOnUiThread { exchanging = false } }
         }
     }

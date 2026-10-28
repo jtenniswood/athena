@@ -1,4 +1,4 @@
-import { isAndroidApp } from './platform/android'
+import { androidWebState, isAndroidApp } from './platform/android'
 import { buildInfo } from './build-info'
 import { completeStartup, recoverStartupChunk, restoreStartupLocation, showStartupRecovery } from './platform/startup-recovery'
 import { startBrowserApplication } from './startup'
@@ -30,8 +30,10 @@ async function start(): Promise<void> {
     restoreStartupLocation()
     await startBrowserApplication()
     completeStartup()
+    void androidWebState(true, buildInfo.wrapperRevision)
   } catch (error) {
     if (recoverStartupChunk(error, buildInfo.wrapperRevision)) return
+    void androidWebState(false, buildInfo.wrapperRevision)
     console.error('Athena startup failed', error)
     showStartupRecovery(error, buildInfo.wrapperRevision)
   }

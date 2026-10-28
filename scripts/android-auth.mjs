@@ -11,6 +11,11 @@ export function createAndroidAuthHandler({ target, fetch: request = globalThis.f
   const pending = new Map()
   return async (req, res) => {
     const url = new URL(req.url, 'http://local.invalid')
+    if (url.pathname === '/api/athena/android/capabilities' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
+      res.end(JSON.stringify({ protocol: 1, capabilities: ['access-sign-in', 'browser-sign-in', 'push-relay'] }))
+      return true
+    }
     if (!url.pathname.startsWith(prefix) && url.pathname !== completePath) return false
     const scheme = req.headers['x-forwarded-proto'] === 'https' || req.socket.encrypted ? 'https' : 'http'
     const host = req.headers['x-forwarded-host'] || req.headers.host

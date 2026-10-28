@@ -68,3 +68,14 @@ test('sign-in rejects cross-origin approval, redirects to other sites, and expir
   advance()
   assert.equal((await post('exchange', { id: request.id, verifier })).status, 410)
 })
+
+test('Android capabilities can be discovered without moving session credentials', async t => {
+  const { origin } = await fixture(t)
+  const response = await fetch(origin + '/api/athena/android/capabilities')
+  assert.equal(response.status, 200)
+  assert.equal(response.headers.get('cache-control'), 'no-store')
+  assert.deepEqual(response.headers.getSetCookie(), [])
+  assert.deepEqual(await response.json(), {
+    protocol: 1, capabilities: ['access-sign-in', 'browser-sign-in', 'push-relay']
+  })
+})

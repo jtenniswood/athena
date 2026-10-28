@@ -23,6 +23,14 @@ export function SettingsMenu({ triggerRef, onOpenRoute, additionalGroups = [], t
     void androidAppSettingsMenu(true).then(available => { if (mounted) setAppSettingsAvailable(available) })
     return () => { mounted = false; void androidAppSettingsMenu(false) }
   }, [])
+  useEffect(() => {
+    if (!appSettingsAvailable) return
+    let mounted = true
+    void androidAppSettingsMenu(true, true).then(available => {
+      if (mounted && !available) setAppSettingsAvailable(false)
+    })
+    return () => { mounted = false }
+  }, [appSettingsAvailable])
   const [anchor, setAnchor] = useState<BrowserActionAnchor | null>(null)
   useEffect(() => { if (navigationOpen === false) setAnchor(null) }, [navigationOpen])
   const groups: BrowserActionGroup[] = [
