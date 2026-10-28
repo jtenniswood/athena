@@ -45,7 +45,7 @@ dependencies {
     implementation("androidx.fragment:fragment:1.9.1")
     implementation("androidx.browser:browser:1.10.0")
     implementation("androidx.webkit:webkit:1.18.0")
-    implementation("com.google.firebase:firebase-messaging:25.0.1")
+    implementation("com.google.firebase:firebase-messaging:25.1.3")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.17")
 }
