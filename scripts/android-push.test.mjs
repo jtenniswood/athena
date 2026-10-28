@@ -48,7 +48,7 @@ async function fixture(t, options = {}) {
   const origin = `http://127.0.0.1:${server.address().port}`
   const register = (changes = {}, account = 'A', method = 'POST') => fetch(origin + '/api/athena/android/push', {
     method, headers: { Origin: origin, Cookie: `session=${account}`, 'Content-Type': 'application/json', 'X-Forwarded-Proto': 'http' },
-    body: JSON.stringify({ deviceId, bindingId, token: 'fake-device-token-for-testing-only', enabled: true, foreground: false, ...changes })
+    body: JSON.stringify({ deviceId, bindingId, tokenVersion: 0, token: 'fake-device-token-for-testing-only', enabled: true, foreground: false, ...changes })
   })
   const connect = () => new WebSocket(origin.replace('http:', 'ws:') + `/api/athena/android/ws?ticket=one-use&device=${deviceId}`,
     { headers: { Origin: origin, Cookie: 'session=A', 'X-Forwarded-Proto': 'http' } })
@@ -195,4 +195,28 @@ test('native token refresh does not extend the authenticated registration lifeti
   assert.equal((await app.rotate()).status, 200)
   app.advance(2 * 3600000)
   assert.equal((await app.rotate()).status, 400)
+})
+
+
+test('out-of-order native and web registrations cannot roll back a newer FCM token', async t => {
+  const app = await fixture(t, { persist: true })
+  await app.register({ refreshKey: 'k'.repeat(43), tokenVersion: 1 })
+  assert.equal((await app.rotate({ tokenVersion: 2 })).status, 200)
+  assert.equal((await app.rotate({ tokenVersion: 1, token: 'older-token-for-testing-only' })).status, 409)
+  assert.equal((await app.register({ refreshKey: 'k'.repeat(43), tokenVersion: 1 })).status, 200)
+  await app.restart()
+  const client = app.connect(); await once(client, 'open')
+  const pending = app.nextPush(); app.emit(20, 'ok'); await pending
+  assert.equal(app.sent[0][0], 'rotated-device-token-for-testing-only')
+})
+
+
+test('an unversioned older web client still updates its token but revokes incompatible native refresh', async t => {
+  const app = await fixture(t)
+  await app.register({ refreshKey: 'k'.repeat(43), tokenVersion: 2 })
+  await app.register({ refreshKey: 'k'.repeat(43), tokenVersion: undefined, token: 'legacy-current-token-for-testing' })
+  assert.equal((await app.rotate({ tokenVersion: 3 })).status, 400)
+  const client = app.connect(); await once(client, 'open')
+  const pending = app.nextPush(); app.emit(21, 'ok'); await pending
+  assert.equal(app.sent[0][0], 'legacy-current-token-for-testing')
 })

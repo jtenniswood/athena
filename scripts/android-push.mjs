@@ -97,6 +97,8 @@ export function createAndroidPush({ target, sender, fetch: request = globalThis.
         for await (const chunk of req) { raw += chunk; if (raw.length > 8192) throw new Error('Request too large') }
         body = JSON.parse(raw)
       }
+      const tokenVersion = body.tokenVersion ?? 0
+      if (!Number.isSafeInteger(tokenVersion) || tokenVersion < 0) throw new Error('Invalid token version')
       if (url.pathname === root + 'push/token') {
         if (req.method !== 'POST' || !/^[A-Za-z0-9_-]{43}$/.test(body.refreshKey) ||
             typeof body.token !== 'string' || body.token.length < 20 || body.token.length > 4096) throw new Error('Invalid refresh')
@@ -105,7 +107,11 @@ export function createAndroidPush({ target, sender, fetch: request = globalThis.
         const [key, device] = match || []
         if (!device?.enabled || now() - device.updated > retentionMs ||
             device.refreshHash !== createHash('sha256').update(body.refreshKey).digest('hex')) throw new Error('Invalid refresh')
-        store.update(state => Object.assign(state.devices.get(key), { token: body.token, tokenUpdated: now() }))
+        if (tokenVersion < (device.tokenVersion || 0) ||
+            (tokenVersion > 0 && tokenVersion === device.tokenVersion && body.token !== device.token)) {
+          json(409, { error: 'A newer token is already registered' }); return true
+        }
+        store.update(state => Object.assign(state.devices.get(key), { token: body.token, tokenVersion, tokenUpdated: now() }))
         json(200, { ok: true }); deliver(); return true
       }
       const authenticated = await identity(req)
@@ -142,8 +148,11 @@ export function createAndroidPush({ target, sender, fetch: request = globalThis.
         store.update(state => {
           const old = state.devices.get(key)
           if (old && (old.bindingId !== body.bindingId || body.enabled !== true)) removeDevice(state, key)
-          state.devices.set(key, { deviceId: body.deviceId, token: body.token, bindingId: body.bindingId, enabled: body.enabled === true, kinds,
-            refreshHash: typeof body.refreshKey === 'string' && /^[A-Za-z0-9_-]{43}$/.test(body.refreshKey)
+          const keepToken = body.tokenVersion != null && old?.bindingId === body.bindingId && (tokenVersion < (old.tokenVersion || 0) ||
+            (tokenVersion > 0 && tokenVersion === old.tokenVersion && body.token !== old.token))
+          state.devices.set(key, { deviceId: body.deviceId, token: keepToken ? old.token : body.token,
+            tokenVersion: keepToken ? old.tokenVersion : tokenVersion, bindingId: body.bindingId, enabled: body.enabled === true, kinds,
+            refreshHash: body.tokenVersion != null && typeof body.refreshKey === 'string' && /^[A-Za-z0-9_-]{43}$/.test(body.refreshKey)
               ? createHash('sha256').update(body.refreshKey).digest('hex') : null,
             origin: requestOrigin(req), activeUntil: body.foreground === true ? now() + 45000 : 0, updated: now() })
         })

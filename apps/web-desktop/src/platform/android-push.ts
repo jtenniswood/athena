@@ -1,7 +1,7 @@
 import { androidPushRegistration, androidPushDiagnostics, androidVisibleSession, isAndroidApp, setAndroidPushActive } from './android'
 import { apiFetch } from './connection'
 
-let registration: { deviceId: string; token: string; refreshKey?: string } | null = null
+let registration: { deviceId: string; token: string; refreshKey?: string; tokenVersion?: number } | null = null
 let registering: Promise<boolean> | undefined
 let timer: number | undefined
 let stopped = false
@@ -27,7 +27,7 @@ async function register(): Promise<boolean> {
         foreground: Boolean(androidVisibleSession())
       } })
       if (stopped) return false
-      await setAndroidPushActive(prefs.enabled !== false, bound.bindingId || bindingId, registration.token)
+      await setAndroidPushActive(prefs.enabled !== false, bound.bindingId || bindingId, registration.token, registration.tokenVersion)
       const generation = ++diagnosticsGeneration
       void reportDelivery(registration.deviceId, generation)
       return true

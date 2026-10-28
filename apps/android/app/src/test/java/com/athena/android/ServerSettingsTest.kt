@@ -41,7 +41,8 @@ class ServerSettingsTest {
 
     private fun choose(activity: MainActivity, item: Int) {
         MainActivity::class.java.getDeclaredMethod("appSettings").apply { isAccessible = true }.invoke(activity)
-        val sheet = MainActivity::class.java.getDeclaredField("settingsSheet").apply { isAccessible = true }.get(activity) as BottomSheetDialog
+        val delegate = MainActivity::class.java.getDeclaredField("nativeSettings$" + "delegate").apply { isAccessible = true }
+        val sheet = ((delegate.get(activity) as Lazy<*>).value as NativeAppSettings).sheet!!
         sheet.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)!!
             .findViewWithTag<android.view.View>(item).performClick()
         shadowOf(android.os.Looper.getMainLooper()).idle()
@@ -82,12 +83,8 @@ class ServerSettingsTest {
 
 
     private fun returnFromAccess(activity: MainActivity) {
-        // Invoke the connection callback used after the Access cookie is imported.
-        val field = MainActivity::class.java.getDeclaredField("accessSignIn$" + "delegate").apply { isAccessible = true }
-        val access = (field.get(activity) as Lazy<*>).value!!
-        val callback = AccessSignIn::class.java.getDeclaredField("connected").apply { isAccessible = true }.get(access)
-        @Suppress("UNCHECKED_CAST")
-        (callback as () -> Unit).invoke()
+        // Access completion reconnects through the same guarded host action.
+        MainActivity::class.java.getDeclaredMethod("reconnectAthena").apply { isAccessible = true }.invoke(activity)
     }
 
     @Test fun accessReturnLoadsServerWhenInitialNavigationNeverCommitted() {

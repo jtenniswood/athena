@@ -17,7 +17,7 @@ server or changes its data volume.
    version and its commit belongs to `origin/main`. It runs unit tests and release
    lint, builds a Firebase-configured APK, verifies its package/version and pinned
    signing certificate, then publishes it with `SHA256SUMS` and `build-info.json`.
-4. Download the APK from that Android release and install it over the existing
+4. Finish active replies and recordings. Download the APK from that Android release and install it over the existing
    Athena app. Do not uninstall first. Existing published assets are immutable;
    changed APKs need a new version. A manual rerun from `main` can use an existing
    Android tag, subject to the same source and version checks.
@@ -39,7 +39,7 @@ GitHub Actions uses three encrypted repository secrets:
 
 The workflow materializes private build inputs under a temporary runner path and
 an ignored configuration file, removes them on exit, and uploads only the APK,
-checksums and public build metadata. The Firebase service-account credential that
+checksums and public build metadata. Docker contexts exclude the Android tree, local runtime data and signing/Firebase input files. The Firebase service-account credential that
 sends notifications belongs only on the server; it must never be supplied to an
 APK build or included in its artifacts.
 
