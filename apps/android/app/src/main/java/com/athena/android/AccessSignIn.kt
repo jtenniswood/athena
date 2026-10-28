@@ -1,7 +1,7 @@
 package com.athena.android
 
 import android.app.Activity
-import android.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.Context
 import android.net.Uri
 import android.util.Base64
@@ -31,7 +31,7 @@ class AccessSignIn(private val activity: Activity, private val now: () -> Long =
         val state = encode(ByteArray(32).also { SecureRandom().nextBytes(it) })
         val url = Uri.parse("$origin/api/athena/android/auth/access").buildUpon()
             .appendQueryParameter("state", state).appendQueryParameter("key", encode(pair.public.encoded)).build()
-        AlertDialog.Builder(activity).setTitle("Sign in through Cloudflare Access")
+        MaterialAlertDialogBuilder(activity).setTitle("Sign in through Cloudflare Access")
             .setMessage("Sign in with Pocket ID in your browser, then check code ${state.take(6)} and server $origin before approving the app connection.")
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Open browser") { _, _ ->

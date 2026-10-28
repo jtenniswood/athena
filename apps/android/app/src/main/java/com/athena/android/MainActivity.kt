@@ -2,7 +2,6 @@ package com.athena.android
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -15,7 +14,20 @@ import android.view.View
 import android.webkit.*
 import android.widget.*
 import androidx.webkit.JavaScriptReplyProxy
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.enableEdgeToEdge
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.widget.doAfterTextChanged
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.color.DynamicColors
+import com.google.android.material.color.MaterialColors
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.android.material.textfield.TextInputLayout
+import com.google.android.material.textfield.TextInputEditText
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.webkit.WebViewCompat
@@ -24,13 +36,16 @@ import org.json.JSONObject
 import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     companion object { @Volatile var foreground = false }
     private val prefs by lazy { getSharedPreferences("athena", MODE_PRIVATE) }
     private val notifications by lazy { NativeNotifications(this) }
     private val signIn by lazy { BrowserSignIn(this) { web?.evaluateJavascript("window.dispatchEvent(new Event('focus'))", null) } }
     private val accessSignIn by lazy { AccessSignIn(this) { reconnectAthena() } }
     private var nativeToolbar: View? = null
+    private var settingsSheet: BottomSheetDialog? = null
+    private var editingServer = false
+    private var nightMode = 0
     private var web: WebView? = null
     private var origin = ""
     private var permissionReply: ((String) -> Unit)? = null
@@ -51,17 +66,18 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        DynamicColors.applyToActivityIfAvailable(this)
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        nightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.rgb(17, 17, 17))
-            setOnApplyWindowInsetsListener { view, insets ->
-                if (Build.VERSION.SDK_INT >= 30) {
-                    val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.ime())
-                    view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
-                } else view.setPadding(insets.systemWindowInsetLeft, insets.systemWindowInsetTop, insets.systemWindowInsetRight, insets.systemWindowInsetBottom)
-                insets
-            }
+            setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface))
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(container) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
         }
         setContentView(container)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -73,36 +89,55 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setup() {
+        editingServer = origin.isNotEmpty()
         container.removeAllViews()
-        val title = TextView(this).apply { text = "Connect to Athena"; textSize = 24f; setPadding(24, 48, 24, 16) }
-        val help = TextView(this).apply { text = "Enter the HTTPS address of your Athena web app."; setPadding(24, 0, 24, 16) }
-        val address = EditText(this).apply {
-            hint = "https://athena.example.com"
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
-            setSingleLine(); setText(origin)
+        val screen = layoutInflater.inflate(R.layout.screen_connect, container, false)
+        container.addView(screen)
+        val content = screen.findViewById<View>(R.id.connect_content)
+        screen.addOnLayoutChangeListener { _, left, _, right, _, _, _, _, _ ->
+            val width = (right - left - 48.dp()).coerceIn(0, 560.dp())
+            if (content.layoutParams.width != width) content.layoutParams = content.layoutParams.apply { this.width = width }
         }
-        val connect = Button(this).apply {
-            text = "Connect"
-            setOnClickListener {
-                try {
-                    val next = ServerAddress.normalize(address.text.toString())
-                    prefs.edit().putString("origin", next).apply()
-                    origin = next
-                    openServer(null)
-                } catch (error: Exception) { address.error = error.message ?: "Invalid address" }
+        val input = screen.findViewById<TextInputLayout>(R.id.server_input)
+        val address = screen.findViewById<TextInputEditText>(R.id.server_address)
+        address.setText(origin)
+        address.doAfterTextChanged { input.error = null }
+        val connect = {
+            try {
+                val next = ServerAddress.normalize(address.text.toString())
+                prefs.edit().putString("origin", next).apply()
+                origin = next
+                (getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
+                    .hideSoftInputFromWindow(address.windowToken, 0)
+                openServer(null)
+            } catch (error: IllegalArgumentException) {
+                input.error = error.message ?: getString(R.string.server_help)
+                address.requestFocus()
             }
         }
-        container.addView(title); container.addView(help); container.addView(address); container.addView(connect)
+        screen.findViewById<View>(R.id.connect).setOnClickListener { connect() }
+        address.setOnEditorActionListener { _, action, _ ->
+            if (action == android.view.inputmethod.EditorInfo.IME_ACTION_GO) { connect(); true } else false
+        }
+        screen.findViewById<View>(R.id.cancel_connect).apply {
+            visibility = if (editingServer) View.VISIBLE else View.GONE
+            setOnClickListener { openServer(null) }
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun openServer(state: Bundle?) {
+        editingServer = false
         container.removeAllViews()
-        val toolbar = LinearLayout(this).apply { gravity = android.view.Gravity.CENTER_VERTICAL }
-        toolbar.addView(TextView(this).apply { text = "  Athena"; textSize = 16f }, LinearLayout.LayoutParams(0, 48.dp(), 1f))
-        toolbar.addView(Button(this).apply { text = "App settings"; setOnClickListener { appSettings() } })
+        val toolbar = MaterialToolbar(this).apply {
+            setTitle(R.string.app_name)
+            inflateMenu(R.menu.native_toolbar)
+            setOnMenuItemClickListener { appSettings(); true }
+        }
         nativeToolbar = toolbar
         container.addView(toolbar)
+        val progress = LinearProgressIndicator(this).apply { max = 100 }
+        container.addView(progress, LinearLayout.LayoutParams(-1, 4.dp()))
         val view = WebView(this)
         web = view
         view.setBackgroundColor(Color.rgb(17, 17, 17))
@@ -159,6 +194,10 @@ class MainActivity : ComponentActivity() {
             }
         }
         view.webChromeClient = object : WebChromeClient() {
+            override fun onProgressChanged(view: WebView, newProgress: Int) {
+                progress.setProgressCompat(newProgress, false)
+                progress.visibility = if (newProgress < 100) View.VISIBLE else View.GONE
+            }
             override fun onCreateWindow(source: WebView, isDialog: Boolean, isUserGesture: Boolean, result: android.os.Message): Boolean {
                 if (!isUserGesture) return false
                 // A temporary view resolves target=_blank without exposing the native bridge to it.
@@ -264,21 +303,55 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun appSettings() {
-        AlertDialog.Builder(this).setTitle("Athena app settings")
-            .setItems(arrayOf("Android notification settings", "Change Athena server", "Reload Athena", "Sign in through Cloudflare Access")) { _, item ->
-                when (item) {
-                    3 -> accessSignIn.start(origin)
-                    0 -> startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
-                    1 -> AlertDialog.Builder(this).setTitle("Change Athena server?")
-                        .setMessage("Finish active replies and recordings first. Saved drafts remain on this device for the current server.")
-                        .setNegativeButton("Cancel", null).setPositiveButton("Change server") { _, _ ->
-                            prepareNavigation(allowUnloaded = true) { web?.destroy(); web = null; setup() }
-                        }.show()
-                    2 -> AlertDialog.Builder(this).setTitle("Reload Athena?")
-                        .setMessage("Finish active replies and recordings first.")
-                        .setNegativeButton("Cancel", null).setPositiveButton("Reload") { _, _ -> reconnectAthena() }.show()
+        if (settingsSheet?.isShowing == true) return
+        val sheet = BottomSheetDialog(this)
+        settingsSheet = sheet
+        val content = layoutInflater.inflate(R.layout.sheet_app_settings, FrameLayout(this), false)
+        ViewCompat.setAccessibilityHeading(content.findViewById(R.id.settings_title), true)
+        content.findViewById<TextView>(R.id.connected_server).text = origin
+        content.findViewById<TextView>(R.id.app_version).text = getString(R.string.version, packageManager.getPackageInfo(packageName, 0).versionName)
+        val rows = content.findViewById<LinearLayout>(R.id.settings_rows)
+        fun row(title: Int, description: Int, icon: Int, action: () -> Unit) {
+            val item = layoutInflater.inflate(R.layout.app_settings_row, rows, false)
+            item.findViewById<TextView>(R.id.row_title).setText(title)
+            item.findViewById<TextView>(R.id.row_description).setText(description)
+            item.findViewById<ImageView>(R.id.row_icon).setImageResource(icon)
+            item.tag = title
+            item.contentDescription = "${getString(title)}. ${getString(description)}"
+            ViewCompat.setAccessibilityDelegate(item, object : androidx.core.view.AccessibilityDelegateCompat() {
+                override fun onInitializeAccessibilityNodeInfo(host: View, info: androidx.core.view.accessibility.AccessibilityNodeInfoCompat) {
+                    super.onInitializeAccessibilityNodeInfo(host, info)
+                    info.className = "android.widget.Button"
                 }
-            }.show()
+            })
+            item.setOnClickListener { sheet.dismiss(); action() }
+            rows.addView(item)
+        }
+        row(R.string.notifications, if (notifications.permission() == "granted") R.string.notifications_enabled else R.string.notifications_disabled, R.drawable.ic_notifications) {
+            startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+        }
+        row(R.string.change_server, R.string.change_server_description, R.drawable.ic_server) {
+            MaterialAlertDialogBuilder(this).setTitle("Change Athena server?")
+                .setMessage("Finish active replies and recordings first. Saved drafts remain on this device for the current server.")
+                .setNegativeButton(R.string.cancel, null).setPositiveButton(R.string.change_server) { _, _ ->
+                    prepareNavigation(allowUnloaded = true) { web?.destroy(); web = null; setup() }
+                }.show()
+        }
+        row(R.string.browser_sign_in, R.string.browser_sign_in_description, R.drawable.ic_open_browser) { accessSignIn.start(origin) }
+        row(R.string.reload, R.string.reload_description, R.drawable.ic_refresh) {
+            MaterialAlertDialogBuilder(this).setTitle("Reload Athena?")
+                .setMessage("Finish active replies and recordings first.")
+                .setNegativeButton(R.string.cancel, null).setPositiveButton(R.string.reload) { _, _ -> reconnectAthena() }.show()
+        }
+        sheet.setContentView(content)
+        ViewCompat.setOnApplyWindowInsetsListener(content) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(bars.left, 0, bars.right, bars.bottom)
+            insets
+        }
+        sheet.setOnDismissListener { settingsSheet = null }
+        sheet.show()
+        sheet.behavior.state = BottomSheetBehavior.STATE_EXPANDED
     }
 
     private fun reconnectAthena() {
@@ -314,9 +387,11 @@ class MainActivity : ComponentActivity() {
 
     private fun errorScreen(message: String) {
         container.removeAllViews()
-        container.addView(TextView(this).apply { text = message; setPadding(24, 48, 24, 24) })
-        container.addView(Button(this).apply { text = "Reconnect"; setOnClickListener { web?.destroy(); web = null; openServer(null) } })
-        container.addView(Button(this).apply { text = "Server settings"; setOnClickListener { web?.destroy(); web = null; setup() } })
+        val screen = layoutInflater.inflate(R.layout.screen_recovery, container, false)
+        screen.findViewById<TextView>(R.id.recovery_message).text = message
+        screen.findViewById<View>(R.id.reconnect).setOnClickListener { web?.destroy(); web = null; openServer(null) }
+        screen.findViewById<View>(R.id.server_settings).setOnClickListener { web?.destroy(); web = null; setup() }
+        container.addView(screen)
     }
 
     private fun external(uri: Uri) {
@@ -333,13 +408,40 @@ class MainActivity : ComponentActivity() {
             intent.data = null
         }
     }
+    override fun onConfigurationChanged(configuration: android.content.res.Configuration) {
+        super.onConfigurationChanged(configuration)
+        val nextMode = configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        if (nextMode == nightMode) return
+        nightMode = nextMode
+        // Restyle native surfaces without recreating an active chat or recording.
+        theme.setTo(resources.newTheme().apply { applyStyle(R.style.AppTheme, true) })
+        DynamicColors.applyToActivityIfAvailable(this)
+        enableEdgeToEdge()
+        container.setBackgroundColor(MaterialColors.getColor(container, com.google.android.material.R.attr.colorSurface))
+        val input = findViewById<TextInputEditText>(R.id.server_address)
+        val recovery = findViewById<TextView>(R.id.recovery_message)
+        if (input != null) {
+            val value = input.text.toString()
+            val error = findViewById<TextInputLayout>(R.id.server_input).error
+            setup()
+            findViewById<TextInputEditText>(R.id.server_address).setText(value)
+            findViewById<TextInputLayout>(R.id.server_input).error = error
+        } else if (recovery != null) errorScreen(recovery.text.toString())
+        else (nativeToolbar as? MaterialToolbar)?.apply {
+            setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface))
+            setTitleTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface))
+        }
+        if (settingsSheet?.isShowing == true) { settingsSheet?.dismiss(); appSettings() }
+    }
+
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); if (accessSignIn.receive(intent.data, origin)) intent.data = null else openNotification(intent) }
-    override fun onSaveInstanceState(state: Bundle) { super.onSaveInstanceState(state); web?.saveState(state) }
+    override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); web?.saveState(outState) }
     override fun onResume() { super.onResume(); foreground = true; web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) signIn.resume(origin) }
     override fun onPause() { foreground = false; CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
     private fun navigateBack() {
+        if (editingServer) { openServer(null); return }
         if (web?.canGoBack() == true) web?.goBack() else moveTaskToBack(true)
     }
-    override fun onDestroy() { fileReply?.onReceiveValue(null); microphoneRequest?.deny(); signIn.close(); web?.destroy(); super.onDestroy() }
+    override fun onDestroy() { settingsSheet?.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); signIn.close(); web?.destroy(); super.onDestroy() }
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
 }
