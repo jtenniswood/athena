@@ -50,7 +50,7 @@ test.afterAll(async () => {
 
 const editor = page => page.locator('[contenteditable="true"]:visible').first()
 const openNavigation = async page => {
-  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
   await expect(page.locator('.browser-navigation.is-open')).toBeVisible()
   await expect(page.getByRole('main', { name: 'Conversation and workspace' })).toBeHidden()
   await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
@@ -61,11 +61,14 @@ const openNavigation = async page => {
 const settingsTrigger = async page => {
   for (const dismiss of await page.getByRole('button', { name: 'Dismiss notification', exact: true }).all()) await dismiss.click()
   const trigger = page.getByRole('button', { name: 'Navigation tabs', exact: true })
-  if (!await trigger.isVisible()) await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  if (!await trigger.isVisible()) await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
   return trigger
 }
 const open = async (page, session = 'preview-week') => {
   await page.goto(`${origin}/#/${session}`)
+  if (await page.evaluate(() => matchMedia('(pointer: coarse)').matches && (matchMedia('(width < 48rem)').matches || matchMedia('(max-height: 27rem)').matches))) {
+    await page.locator('#browser-navigation').getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().click()
+  }
   // A cold Vite graph can race the first document module request. A single
   // reload exercises the same startup-recovery path users get after a stale
   // chunk and keeps this behavior test deterministic.
@@ -146,7 +149,7 @@ touchTest('the phone profile actions can choose and clear a default without chan
   await page.setViewportSize({ width: 390, height: 844 })
   await open(page)
   await editor(page).fill('Keep the draft while choosing a phone default')
-  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
   await page.getByRole('button', { name: 'Profile actions', exact: true }).click()
   await page.getByRole('button', { name: 'Default for new sessions', exact: true }).click()
   await page.getByRole('radio', { name: 'Research', exact: true }).click()
@@ -154,7 +157,7 @@ touchTest('the phone profile actions can choose and clear a default without chan
   await page.keyboard.press('Escape')
   await expect(editor(page)).toHaveText('Keep the draft while choosing a phone default')
 
-  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
   await page.getByRole('button', { name: 'Profile actions', exact: true }).click()
   await page.getByRole('button', { name: 'Default for new sessions', exact: true }).click()
   await expect(page.getByRole('radio', { name: 'Research', exact: true })).toHaveAttribute('aria-checked', 'true')
@@ -495,7 +498,7 @@ touchTest('phone navigation and action sheets keep touch targets usable across U
     expect(bounds.width, `${name} width`).toBeGreaterThanOrEqual(minSize)
     expect(bounds.height, `${name} height`).toBeGreaterThanOrEqual(minSize)
   }
-  const trigger = page.getByRole('button', { name: 'Open navigation', exact: true })
+  const trigger = page.getByRole('button', { name: /^(Open navigation|Back to home)$/ })
   for (const scale of [50, 75, 100, 125, 150]) {
     await page.evaluate(percent => window.hermesDesktop.zoom.setPercent(percent), scale)
     for (const [name, control] of [
@@ -592,7 +595,7 @@ touchTest('phone navigation and contextual sheets stay tappable at 320px and 200
   for (let index = 1; index < toolbar.length; index++) {
     expect(toolbar[index - 1].right, 'toolbar controls do not overlap').toBeLessThanOrEqual(toolbar[index].left)
   }
-  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
   await expect(page.locator('.browser-navigation')).toBeVisible()
   await expect(page.locator('.browser-main')).toBeHidden()
   expect((await page.locator('.browser-navigation').boundingBox()).width).toBe(320)
@@ -618,7 +621,7 @@ for (const mode of [
     const activate = locator => mode.touch ? locator.tap() : locator.click()
     try {
       await open(page)
-      await activate(page.getByRole('button', { name: 'Open navigation', exact: true }))
+      await activate(page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }))
       await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).toBeVisible()
       const filters = page.getByRole('button', { name: 'Filters', exact: true })
       await activate(filters)
@@ -700,29 +703,43 @@ touchTest('phone long code and tables scroll inside the response at 320px', asyn
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320)
 })
 
-test('phone reselecting the highlighted session returns to the chat and preserves its draft', async ({ browser }) => {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
-  const page = await context.newPage()
-  try {
-    await open(page)
-    await editor(page).fill('Keep this draft when returning to the same chat')
-    const navigation = page.locator('#browser-navigation')
-    const main = page.getByRole('main', { name: 'Conversation and workspace' })
-    for (const activation of ['touch', 'keyboard']) {
-      await page.getByRole('button', { name: 'Open navigation', exact: true }).tap()
-      await expect(navigation).toBeVisible()
-      const row = navigation.getByRole('button', { name: 'Plan a calmer working week', exact: true }).first()
-      await expect(row).toBeVisible()
-      if (activation === 'touch') await row.tap()
-      else await row.press('Enter')
-      await expect(navigation).toBeHidden()
-      await expect(main).toBeVisible()
-      await expect(main).toBeFocused()
-      await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-week')
-      await expect(editor(page)).toHaveText('Keep this draft when returning to the same chat')
-    }
-  } finally { await context.close() }
-})
+for (const startPath of ['', 'preview-week']) {
+  test(`phone reselecting the highlighted session returns to the chat and preserves its draft from /${startPath}`, async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+    const page = await context.newPage()
+    try {
+      await page.goto(`${origin}/#/${startPath}`)
+      const home = page.locator('#browser-navigation')
+      const session = home.getByRole('button', { name: 'Plan a calmer working week', exact: true }).first()
+      await expect(session).toBeVisible({ timeout: 30000 })
+      await expect(page.locator('.browser-main')).toBeHidden()
+      // Wait for startup hydration; it must leave the mobile home visible.
+      if (startPath) await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-week')
+      await expect(home).toBeVisible()
+      await session.tap()
+      await editor(page).fill('Keep this draft when returning to the same chat')
+      await expect(page.getByRole('button', { name: 'Back to home', exact: true }).locator('.codicon-arrow-left')).toBeVisible()
+      const navigation = page.locator('#browser-navigation')
+      const main = page.getByRole('main', { name: 'Conversation and workspace' })
+      for (const activation of ['touch', 'keyboard']) {
+        await page.getByRole('button', { name: 'Back to home', exact: true }).tap()
+        await expect(navigation).toBeVisible()
+        const row = navigation.getByRole('button', { name: 'Plan a calmer working week', exact: true }).first()
+        await expect(row).toBeVisible()
+        if (activation === 'touch') await row.tap()
+        else await row.press('Enter')
+        await expect(navigation).toBeHidden()
+        await expect(main).toBeVisible()
+        await expect(main).toBeFocused()
+        await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-week')
+        await expect(editor(page)).toHaveText('Keep this draft when returning to the same chat')
+      }
+      await page.reload()
+      await expect(page.locator('#browser-navigation')).toBeVisible({ timeout: 30000 })
+      await expect(page.locator('.browser-main')).toBeHidden()
+    } finally { await context.close() }
+  })
+}
 
 test('phone session-row actions stay open without resuming the row', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
@@ -1500,7 +1517,7 @@ for (const width of [390, 1440]) {
 }
 
 const openSectionNavigation = async page => {
-  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
   await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
 }
 
@@ -2578,7 +2595,7 @@ test.describe('touch profile controls', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await open(page)
     await editor(page).fill('Keep the touch draft')
-    await page.getByRole('button', { name: 'Open navigation', exact: true }).tap()
+    await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).tap()
     const trigger = page.getByRole('button', { name: 'Profile actions', exact: true })
     const sheet = page.getByRole('dialog', { name: 'Profile actions', exact: true })
     await trigger.tap()
@@ -2872,7 +2889,7 @@ test.describe('touch Bots controls', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await open(page)
     await editor(page).fill('Keep this touch Bots draft')
-    await page.getByRole('button', { name: 'Open navigation', exact: true }).tap()
+    await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).tap()
     await page.getByRole('tab', { name: 'Bots', exact: true }).tap()
     const filter = page.getByRole('button', { name: /^Filter roster/ })
     await filter.tap()
@@ -3082,7 +3099,7 @@ for (const scenario of [
       await page.screenshot({ path: testInfo.outputPath('shared-styles.png') })
       await page.keyboard.press('Escape')
       await expect(settings).toBeFocused()
-      if (compact) await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+      if (compact) await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
       await page.getByRole('button', { name: 'Filters', exact: true }).click()
       const filters = page.locator('[data-slot="dropdown-menu-content"]:visible').last()
       await expect(filters).toBeVisible()
@@ -3119,7 +3136,7 @@ for (const width of [390, 1440]) {
       await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => route.fulfill({ json: [{ id: 'stable-section-job', name: 'Test job', prompt: 'Check sections', enabled: true }] }))
       await open(page)
       if (width === 390) {
-        await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+        await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
         await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
       }
       const section = page.locator('[data-browser-section-id="cron-jobs"]')
@@ -3141,7 +3158,7 @@ for (const width of [390, 1440]) {
       await page.reload()
       await expect(editor(page)).toBeVisible({ timeout: 30000 })
       if (width === 390) {
-        await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+        await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
         await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
       }
       await expect(section).toBeHidden()
@@ -3201,7 +3218,7 @@ for (const mode of ['android', 'older-android', 'browser', 'android-phone']) {
       await page.goto(`${origin}/#/preview-week`)
       await expect(editor(page)).toBeVisible({ timeout: 30000 })
       if (mode !== 'browser') await expect.poll(() => calls.some(call => call.method === 'appSettingsMenu' && call.payload.mounted)).toBe(true)
-      const open = page.getByRole('button', { name: 'Open navigation', exact: true })
+      const open = page.getByRole('button', { name: /^(Open navigation|Back to home)$/ })
       if (await open.isVisible()) await open.click()
       await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
       const surface = page.getByRole(mode === 'android-phone' ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
