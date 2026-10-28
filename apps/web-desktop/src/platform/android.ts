@@ -64,16 +64,16 @@ export async function androidNotify(payload: HermesNotification): Promise<boolea
   catch { return false }
 }
 
-export async function androidPushRegistration(): Promise<{ deviceId: string; token: string; refreshKey?: string } | null> {
+export async function androidPushRegistration(): Promise<{ deviceId: string; token: string; refreshKey?: string; tokenVersion?: number } | null> {
   try {
-    const value = await call('pushRegistration') as { deviceId?: unknown; token?: unknown; refreshKey?: unknown } | null
+    const value = await call('pushRegistration') as { deviceId?: unknown; token?: unknown; refreshKey?: unknown; tokenVersion?: unknown } | null
     return value && typeof value.deviceId === 'string' && typeof value.token === 'string'
-      ? { deviceId: value.deviceId, token: value.token, ...(typeof value.refreshKey === 'string' ? { refreshKey: value.refreshKey } : {}) } : null
+      ? { deviceId: value.deviceId, token: value.token, ...(typeof value.refreshKey === 'string' ? { refreshKey: value.refreshKey } : {}), ...(typeof value.tokenVersion === 'number' ? { tokenVersion: value.tokenVersion } : {}) } : null
   } catch { return null }
 }
 
-export async function setAndroidPushActive(enabled: boolean, bindingId: string, token?: string): Promise<void> {
-  try { await call('pushEnabled', { enabled, bindingId, token }); pushActive = enabled }
+export async function setAndroidPushActive(enabled: boolean, bindingId: string, token?: string, tokenVersion?: number): Promise<void> {
+  try { await call('pushEnabled', { enabled, bindingId, token, tokenVersion }); pushActive = enabled }
   catch { pushActive = false }
   window.dispatchEvent(new Event('athena:notification-permission'))
 }

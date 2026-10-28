@@ -20,10 +20,30 @@ class NativePushRegistration(context: Context, private val open: (URL) -> HttpUR
         ).also { prefs.edit().putString("pushRefreshKey", it).apply() }
     }
 
+    fun version(): Long = prefs.getLong("pushTokenVersion", 0)
+    fun recordToken(token: String): Long = synchronized(NativePushRegistration::class.java) {
+        val previous = version()
+        if (prefs.getString("pushToken", null) == token && previous > 0) previous
+        else (previous + 1).also { prefs.edit().putString("pushToken", token).putLong("pushTokenVersion", it).apply() }
+    }
+    fun registration(token: String, requestedAtVersion: Long): JSONObject = synchronized(NativePushRegistration::class.java) {
+        // A late Firebase Task must not roll back a newer onNewToken callback.
+        val current = prefs.getString("pushToken", null)
+        val selected = if (version() != requestedAtVersion && current != null) current else token
+        val version = recordToken(selected)
+        JSONObject().put("token", selected).put("tokenVersion", version)
+    }
+    fun acknowledged(token: String, tokenVersion: Long?) = synchronized(NativePushRegistration::class.java) {
+        if (prefs.getString("pushToken", null) == token && (tokenVersion == null || version() == tokenVersion))
+            prefs.edit().putString("pushSyncedToken", token).putLong("pushSyncedTokenVersion", version())
+                .putString("pushSyncStatus", "Token registered").apply()
+    }
+
     fun schedule() {
-        if (!prefs.getBoolean("pushEnabled", false)) return
+        if (!prefs.getBoolean("pushEnabled", false) || !prefs.getBoolean("pushVersioned", false)) return
         val token = prefs.getString("pushToken", null) ?: return
-        if (token == prefs.getString("pushSyncedToken", null)) return
+        val tokenVersion = version()
+        if (token == prefs.getString("pushSyncedToken", null) && tokenVersion == prefs.getLong("pushSyncedTokenVersion", -1)) return
         val origin = prefs.getString("origin", null) ?: return
         val key = prefs.getString("pushRefreshKey", null) ?: return
         val device = prefs.getString("deviceId", null) ?: return
@@ -33,7 +53,10 @@ class NativePushRegistration(context: Context, private val open: (URL) -> HttpUR
         val cookies = CookieManager.getInstance().getCookie(origin)?.split(';')
             ?.map { it.trim() }?.firstOrNull { it.startsWith("CF_Authorization=") }
         executor.execute {
-            if (prefs.getString("origin", null) != origin || prefs.getString("pushBinding", null) != binding) return@execute
+            if (prefs.getString("origin", null) != origin || prefs.getString("pushBinding", null) != binding ||
+                prefs.getString("pushToken", null) != token || version() != tokenVersion ||
+                !prefs.getBoolean("pushEnabled", false) || !prefs.getBoolean("pushVersioned", false) ||
+                (prefs.getString("pushSyncedToken", null) == token && prefs.getLong("pushSyncedTokenVersion", -1) == tokenVersion)) return@execute
             var connection: HttpURLConnection? = null
             try {
                 require(ServerAddress.normalize(origin) == origin)
@@ -46,7 +69,7 @@ class NativePushRegistration(context: Context, private val open: (URL) -> HttpUR
                 if (cookies != null) connection.setRequestProperty("Cookie", cookies)
                 connection.doOutput = true
                 val body = JSONObject().put("deviceId", device).put("bindingId", binding)
-                    .put("refreshKey", key).put("token", token)
+                    .put("refreshKey", key).put("token", token).put("tokenVersion", tokenVersion)
                 connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
                 val ok = connection.responseCode == 200 && connection.contentType?.startsWith("application/json") == true &&
                     connection.inputStream.bufferedReader().use { reader ->
@@ -62,15 +85,16 @@ class NativePushRegistration(context: Context, private val open: (URL) -> HttpUR
                     }
                 synchronized(NativePushRegistration::class.java) {
                     if (prefs.getString("origin", null) == origin && prefs.getString("pushBinding", null) == binding &&
-                        prefs.getString("pushToken", null) == token && prefs.getBoolean("pushEnabled", false)) {
+                        prefs.getString("pushToken", null) == token && version() == tokenVersion && prefs.getBoolean("pushEnabled", false)) {
                         prefs.edit().apply {
-                            if (ok) putString("pushSyncedToken", token)
+                            if (ok) { putString("pushSyncedToken", token); putLong("pushSyncedTokenVersion", tokenVersion) }
                             putString("pushSyncStatus", if (ok) "Token registered" else "Open Athena to refresh registration")
                         }.apply()
                     }
                 }
             } catch (_: Exception) {
-                if (prefs.getString("origin", null) == origin && prefs.getString("pushBinding", null) == binding)
+                if (prefs.getString("origin", null) == origin && prefs.getString("pushBinding", null) == binding &&
+                    prefs.getString("pushToken", null) == token && version() == tokenVersion)
                     prefs.edit().putString("pushSyncStatus", "Waiting for connection; retries when Athena resumes").apply()
             } finally { connection?.disconnect() }
         }

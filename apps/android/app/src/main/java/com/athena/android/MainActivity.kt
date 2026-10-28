@@ -117,7 +117,7 @@ class MainActivity : AppCompatActivity() {
                 if (next != origin) {
                     authentication.cancel()
                     prefs.edit().putBoolean("pushEnabled", false).remove("pushRefreshKey")
-                        .remove("pushBinding").remove("pushSyncedToken").remove("pushSyncStatus").apply()
+                        .remove("pushBinding").remove("pushSyncedToken").remove("pushSyncedTokenVersion").remove("pushSyncStatus").apply()
                 }
                 prefs.edit().putString("origin", next).apply()
                 origin = next
@@ -343,22 +343,24 @@ class MainActivity : AppCompatActivity() {
             }
             "pushRegistration" -> {
                 if (FirebaseApp.getApps(this).isEmpty()) { respond(JSONObject.NULL); return }
+                val tokenVersion = pushRegistration.version()
                 FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                     if (!task.isSuccessful) { respond(JSONObject.NULL); return@addOnCompleteListener }
                     val deviceId = prefs.getString("deviceId", null) ?: java.util.UUID.randomUUID().toString().also {
                         prefs.edit().putString("deviceId", it).apply()
                     }
-                    prefs.edit().putString("pushToken", task.result).apply()
-                    respond(JSONObject().put("deviceId", deviceId).put("token", task.result).put("refreshKey", pushRegistration.refreshKey()))
+                    respond(pushRegistration.registration(task.result, tokenVersion).put("deviceId", deviceId)
+                        .put("refreshKey", pushRegistration.refreshKey()))
                 }
             }
             "pushEnabled" -> {
                 val state = payload
                 prefs.edit().putBoolean("pushEnabled", state.optBoolean("enabled"))
+                    .putBoolean("pushVersioned", state.has("tokenVersion"))
                     .putString("pushBinding", state.optString("bindingId")).apply()
                 val token = state.optString("token")
                 if (state.optBoolean("enabled") && token.isNotEmpty()) {
-                    prefs.edit().putString("pushSyncedToken", token).putString("pushSyncStatus", "Token registered").apply()
+                    pushRegistration.acknowledged(token, if (state.has("tokenVersion")) state.getLong("tokenVersion") else null)
                     pushRegistration.schedule()
                 }
                 respond(true)

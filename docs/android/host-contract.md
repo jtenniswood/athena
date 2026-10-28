@@ -98,7 +98,7 @@ The web client retains an installation seed across page reloads; the server deri
 an account-specific binding from it. The native host accepts only its current
 server and binding. A scoped refresh key, hashed on the server, permits only FCM
 token replacement for that binding through `POST /api/athena/android/push/token`.
-It cannot register another device, change notification preferences, read account
+Older unversioned web clients retain ordinary foreground registration but revoke native refresh until the versioned contract is available. A monotonic native token version prevents late SDK results, refresh requests and web registrations from rolling back a newer token. It cannot register another device, change notification preferences, read account
 data, or extend the authenticated registration lifetime. Cloudflare Access remains
 in front of this endpoint. Missing or expired Access cookies require reopening
 Athena; the native status explains that registration is pending.

@@ -14,7 +14,7 @@ class PushService : FirebaseMessagingService() {
         NativeNotifications(this).show(origin, JSONObject(message.data as Map<*, *>))
     }
     override fun onNewToken(token: String) {
-        getSharedPreferences("athena", MODE_PRIVATE).edit().putString("pushToken", token).apply()
+        NativePushRegistration(this).recordToken(token)
         android.os.Handler(android.os.Looper.getMainLooper()).post { NativePushRegistration(this).schedule() }
     }
 }
