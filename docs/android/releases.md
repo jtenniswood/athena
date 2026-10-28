@@ -39,7 +39,7 @@ GitHub Actions uses three encrypted repository secrets:
 
 The workflow materializes private build inputs under a temporary runner path and
 an ignored configuration file, removes them on exit, and uploads only the APK,
-checksums and public build metadata. The Firebase service-account credential that
+checksums and public build metadata. Docker contexts exclude the Android tree, local runtime data and signing/Firebase input files. The Firebase service-account credential that
 sends notifications belongs only on the server; it must never be supplied to an
 APK build or included in its artifacts.
 
