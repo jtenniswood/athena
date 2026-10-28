@@ -32,6 +32,9 @@ test.afterAll(async () => {
 const editor = page => page.locator('[contenteditable="true"]:visible').first()
 const open = async page => {
   await page.goto(`${origin}/#/preview-week`)
+  if (await page.evaluate(() => matchMedia('(pointer: coarse)').matches && (matchMedia('(width < 48rem)').matches || matchMedia('(max-height: 27rem)').matches))) {
+    await page.locator('#browser-navigation').getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().click()
+  }
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
   await expect(page.getByText('Help me make a thoughtful plan.', { exact: true }).first()).toBeVisible({ timeout: 30000 })
 }
@@ -44,13 +47,13 @@ test('WebKit starts cleanly and keeps drafts isolated while switching conversati
   await open(page)
   await expect(page.locator('.browser-chat-title')).toHaveCount(0)
   await editor(page).fill('session draft')
-  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
   await page.getByRole('tab', { name: 'Bots', exact: true }).click()
   await page.getByRole('button', { name: /Research · @/ }).click()
   await expect(editor(page)).toBeVisible()
   await expect(editor(page)).not.toHaveText('session draft')
   await editor(page).fill('bot draft')
-  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
   await page.getByRole('tab', { name: 'Sessions', exact: true }).click()
   await page.locator('.browser-sessions-pane button[data-slot="row-button"]').filter({ hasText: 'Plan a calmer working week' }).click()
   await expect(editor(page)).toHaveText('session draft')

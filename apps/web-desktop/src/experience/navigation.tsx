@@ -18,7 +18,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
   const drawer = useRef<HTMLElement>(null)
   const compact = useCompactBrowser()
   const mobile = useMobileBrowser()
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(mobile)
   const [collapsed, setCollapsed] = useState(false)
   const [width, setWidth] = useState(readNavigationWidth)
   const [tab, setTab] = useState<NavigationTab>(readNavigationTab)
@@ -42,7 +42,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
     document.addEventListener('click', preserveProjectChat, true)
     return () => document.removeEventListener('click', preserveProjectChat, true)
   }, [compact])
-  useEffect(() => { setDrawerOpen(false) }, [compact, mobile])
+  useEffect(() => { setDrawerOpen(mobile) }, [compact, mobile])
   useEffect(() => $conversationOpenRequest.listen(() => {
     if (!drawerOpen) return
     setDrawerOpen(false)
@@ -53,13 +53,15 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
       if (preserveNextSelection.current) {
         preserveNextSelection.current = false
         window.clearTimeout(preserveTimeout.current)
-      } else {
+      } else if (!mobile || previous.current.path !== path) {
+        // Session hydration can change the selection behind the mobile home.
+        // Explicit row activation closes it through the conversation-open request.
         setDrawerOpen(false)
         if (drawerOpen) requestAnimationFrame(() => main.current?.focus())
       }
     }
     previous.current = { selectionKey, path }
-  }, [selectionKey, path])
+  }, [selectionKey, path, mobile])
   useEffect(() => { writeBrowserPreference('activeTab', tab) }, [tab])
   useEffect(() => { writeBrowserPreference('navigationTabs', JSON.stringify(visibleTabs)) }, [visibleTabs])
   useEffect(() => { if (!visibleTabs.includes(tab)) setTab(visibleTabs[0]) }, [tab, visibleTabs])

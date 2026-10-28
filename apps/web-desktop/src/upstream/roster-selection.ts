@@ -6,6 +6,7 @@ import { $canonicalGroupBindings, type CanonicalGroupOrigin } from '@/plugins/he
 import { openRosterBot } from '@/plugins/hermes-bots/roster-actions'
 import { getBotOpenGeneration } from '@/plugins/hermes-bots/shared'
 import { reportActionFailure } from '../experience/action-errors'
+import { notifyConversationOpen } from '../experience/conversation-navigation'
 
 /** Resolve the exact connection-qualified owner from the authoritative roster. */
 export async function selectBrowserBot(key: string): Promise<void> {
@@ -19,6 +20,7 @@ export async function selectBrowserBot(key: string): Promise<void> {
     const opening = openRosterBot(bot)
     generation = getBotOpenGeneration()
     const opened = await opening
+    if (opened && generation === getBotOpenGeneration()) notifyConversationOpen()
     if (!opened && generation === getBotOpenGeneration()) reportActionFailure('Could not open Bot conversation.')
   } catch {
     if (generation === getBotOpenGeneration()) reportActionFailure('Could not open Bot conversation.')
@@ -36,6 +38,7 @@ export function selectBrowserGroup(name: string, origin: CanonicalGroupOrigin = 
   }
   try {
     openGroupChat(name, origin)
+    notifyConversationOpen()
   } catch {
     reportActionFailure('Could not open group conversation.')
   }
