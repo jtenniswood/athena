@@ -67,3 +67,10 @@
     --web-menu-row-padding: var(--web-space-1);
   }
 }
+
+/* Match native Android typography across chat, chrome, and portalled surfaces.
+   Themes write this token inline, so the app preference must take precedence.
+   Code and terminal typography continue to use the separate monospace token. */
+:root[data-android-app] {
+  --dt-font-sans: system-ui, Roboto, Helvetica, Arial, sans-serif !important;
+}
