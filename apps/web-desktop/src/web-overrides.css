@@ -330,10 +330,26 @@ body > [data-slot='fan-menu'] {
   }
 
   /* Keep frequent composer actions large enough to tap after app zoom. */
-  [data-slot='composer-dock']:not([data-popped-out]) :is([data-browser-composer-action], [data-browser-approval-control]) {
+  [data-slot='composer-dock']:not([data-popped-out]) [data-slot='composer-root'] button:has(> svg, > .codicon) {
     box-sizing: border-box;
     min-width: var(--web-touch-min);
     min-height: var(--web-touch-min);
+  }
+
+  /* Size the visible glyphs as well as their targets, independent of app zoom. */
+  [data-slot='composer-dock']:not([data-popped-out]) [data-slot='composer-root'] button > :is(svg, .codicon),
+  [data-slot='composer-dock']:not([data-popped-out]) [data-slot='composer-root'] :is([data-browser-model-pill], [data-testid='reasoning-pill'])::before {
+    width: calc(1.375rem / var(--web-ui-scale, 1)) !important;
+    height: calc(1.375rem / var(--web-ui-scale, 1)) !important;
+    font-size: calc(1.375rem / var(--web-ui-scale, 1)) !important;
+    flex: 0 0 calc(1.375rem / var(--web-ui-scale, 1)) !important;
+  }
+
+  [data-slot='composer-dock']:not([data-popped-out]) [data-slot='composer-root'] :is(button > .codicon-chevron-down, button > .codicon-chevron-up, [data-slot='fan-menu-anchor'] > .codicon-chevron-up) {
+    width: calc(.875rem / var(--web-ui-scale, 1)) !important;
+    height: calc(.875rem / var(--web-ui-scale, 1)) !important;
+    font-size: calc(.875rem / var(--web-ui-scale, 1)) !important;
+    flex: 0 0 calc(.875rem / var(--web-ui-scale, 1)) !important;
   }
 
   /* Status-row actions are otherwise hover-only and can collapse to the icon
