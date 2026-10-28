@@ -1,4 +1,4 @@
-import { androidWebState } from './platform/android'
+import { androidWebState, isAndroidApp } from './platform/android'
 import { buildInfo } from './build-info'
 import { completeStartup, recoverStartupChunk, restoreStartupLocation, showStartupRecovery } from './platform/startup-recovery'
 import { startBrowserApplication } from './startup'
@@ -12,6 +12,9 @@ import { installTimelineRailScrubbing } from './experience/ui/timeline-rail-scru
 import { trackVisualViewport } from './platform/viewport'
 import { installComposerKeyboard } from './platform/composer-keyboard'
 import { installAndroidNavigationGuard } from './platform/android-navigation'
+
+// The native bridge is injected before this entry point, including sign-in.
+if (isAndroidApp()) document.documentElement.dataset.androidApp = 'true'
 
 const stopTrackingViewport = trackVisualViewport()
 if (import.meta.hot) import.meta.hot.dispose(stopTrackingViewport)
