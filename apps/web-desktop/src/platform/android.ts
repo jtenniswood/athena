@@ -37,7 +37,8 @@ async function call(method: string, payload?: unknown): Promise<unknown> {
   }
   return new Promise((resolve, reject) => {
     const id = String(++nextId)
-    const timer = window.setTimeout(() => {
+    // Menus settle on selection, dismissal or host lifecycle cleanup, not a timer.
+    const timer = method === 'actionMenu' ? 0 : window.setTimeout(() => {
       requests.delete(id)
       reject(new Error('Android request timed out'))
     }, method === 'requestPermission' || method === 'openSignIn' ? 120_000 : 5_000)
@@ -116,6 +117,45 @@ export async function androidAppSettingsMenu(mounted: boolean, rendered = false)
 
 export async function androidOpenAppSettings(): Promise<boolean> {
   try { return await call('appSettings') === true } catch { return false }
+}
+
+export interface AndroidMenuItem {
+  id: string
+  label: string
+  description?: string
+  disabled?: boolean
+  destructive?: boolean
+  checked?: boolean
+  children?: AndroidMenuGroup[]
+}
+export interface AndroidMenuGroup {
+  label?: string
+  selection?: 'single'
+  items: AndroidMenuItem[]
+}
+export interface AndroidActionMenu {
+  id: string
+  title: string
+  compact: boolean
+  x: number
+  y: number
+  viewportWidth: number
+  groups: AndroidMenuGroup[]
+}
+export type AndroidMenuResult = { status: 'selected'; id: string } | { status: 'dismissed' } | { status: 'unavailable' }
+
+export async function androidOpenActionMenu(menu: AndroidActionMenu): Promise<AndroidMenuResult> {
+  // Stay inside the bridge envelope limit; large command lists keep the web UI.
+  if (JSON.stringify(menu).length > 14000) return { status: 'unavailable' }
+  try {
+    const result = await call('actionMenu', menu) as AndroidMenuResult | null
+    if (result?.status === 'dismissed' || (result?.status === 'selected' && typeof result.id === 'string')) return result
+  } catch { /* Unsupported hosts and invalid menus retain their web presentation. */ }
+  return { status: 'unavailable' }
+}
+
+export async function androidDismissActionMenu(id: string): Promise<void> {
+  try { await call('dismissActionMenu', { id }) } catch { /* A closed page may no longer have a host. */ }
 }
 
 export async function androidWebState(ready: boolean, revision: string): Promise<void> {

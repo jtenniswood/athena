@@ -27,4 +27,5 @@
     <string name="connection_details">Connection details</string>
     <string name="connection_details_description">App, server and notification status</string>
     <string name="copy_details">Copy details</string>
+    <string name="menu_back">Back</string>
 </resources>
