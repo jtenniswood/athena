@@ -1,12 +1,10 @@
 package com.athena.android
 
-import android.content.res.ColorStateList
-import android.graphics.Color
-import android.view.Gravity
 import android.view.Menu
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
@@ -104,63 +102,86 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
     private fun showSheet(model: Model) {
         val dialog = BottomSheetDialog(activity)
         sheet = dialog
-        val column = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL; setPadding(16.dp(), 0, 16.dp(), 16.dp()) }
-        val scroll = NestedScrollView(activity).apply { addView(column) }
+        val content = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+        content.addView(BottomSheetDragHandleView(activity))
+        val header = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL; setPadding(24.dp(), 0, 24.dp(), 16.dp())
+        }
+        content.addView(header)
+        val column = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL; setPadding(8.dp(), 0, 8.dp(), 16.dp())
+        }
+        val scroll = NestedScrollView(activity).apply { isFillViewport = false; addView(column) }
+        content.addView(scroll, LinearLayout.LayoutParams(-1, -2).apply { weight = 1f })
         var goBack: (() -> Unit)? = null
         dialog.onBackPressedDispatcher.addCallback(object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { goBack?.invoke() ?: dialog.cancel() }
         })
-        fun render(groups: List<Group>, title: String, back: (() -> Unit)? = null) {
+        fun render(groups: List<Group>, title: String, back: (() -> Unit)? = null, restoreId: String? = null) {
             goBack = back
+            header.removeAllViews()
             column.removeAllViews()
-            column.addView(BottomSheetDragHandleView(activity))
-            column.addView(TextView(activity).apply {
+            if (back != null) header.addView(MaterialButton(activity, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                setText(R.string.menu_back); isAllCaps = false; minHeight = 48.dp()
+                setOnClickListener { back() }
+            }, LinearLayout.LayoutParams(-2, -2))
+            val heading = TextView(activity).apply {
                 text = title; setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleLarge)
-                setPadding(8.dp(), 8.dp(), 8.dp(), 16.dp()); ViewCompat.setAccessibilityHeading(this, true)
-            })
-            fun row(label: String, action: () -> Unit): MaterialButton {
-                val button = MaterialButton(activity, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                    text = label; isAllCaps = false; gravity = Gravity.START or Gravity.CENTER_VERTICAL; maxLines = 3
-                    minHeight = 56.dp(); minimumHeight = 56.dp(); insetTop = 0; insetBottom = 0
-                    strokeWidth = 0; backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
-                    cornerRadius = 12.dp(); setOnClickListener { action() }
-                }
-                column.addView(button, LinearLayout.LayoutParams(-1, -2))
-                return button
+                ViewCompat.setAccessibilityHeading(this, true)
+                ViewCompat.setAccessibilityPaneTitle(content, title)
             }
-            if (back != null) row(activity.getString(R.string.menu_back), back)
-            for (group in groups) {
+            header.addView(heading)
+            for ((index, group) in groups.withIndex()) {
+                if (index > 0) column.addView(com.google.android.material.divider.MaterialDivider(activity),
+                    LinearLayout.LayoutParams(-1, -2).apply { topMargin = 8.dp(); bottomMargin = 8.dp() })
                 if (group.label.isNotEmpty()) column.addView(TextView(activity).apply {
                     text = group.label; setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_LabelLarge)
-                    setPadding(8.dp(), 16.dp(), 8.dp(), 4.dp()); ViewCompat.setAccessibilityHeading(this, true)
+                    setPadding(16.dp(), 16.dp(), 16.dp(), 8.dp()); ViewCompat.setAccessibilityHeading(this, true)
                 })
                 for (item in group.items) {
-                    val button = row(item.label + if (item.description.isNotEmpty()) "\n${item.description}" else "") {
-                        if (item.children != null) render(item.children, item.label) { render(groups, title, back) }
+                    val row = activity.layoutInflater.inflate(R.layout.action_menu_row, column, false)
+                    row.tag = item.id; row.isEnabled = !item.disabled
+                    row.alpha = if (item.disabled) 0.38f else 1f
+                    val label = row.findViewById<TextView>(R.id.menu_label).apply { text = item.label }
+                    row.findViewById<TextView>(R.id.menu_description).apply {
+                        text = item.description; visibility = if (item.description.isEmpty()) View.GONE else View.VISIBLE
+                    }
+                    row.findViewById<ImageView>(R.id.menu_submenu).visibility = if (item.children != null) View.VISIBLE else View.GONE
+                    row.contentDescription = listOf(item.label, item.description).filter { it.isNotEmpty() }.joinToString(". ")
+                    if (item.children != null) row.contentDescription = activity.getString(R.string.menu_open_submenu, row.contentDescription)
+                    if (item.checked != null) row.findViewById<ImageView>(R.id.menu_selection).apply {
+                        visibility = View.VISIBLE
+                        setImageResource(if (group.single) {
+                            if (item.checked) R.drawable.ic_radio_selected else R.drawable.ic_radio_unselected
+                        } else if (item.checked) R.drawable.ic_checkbox_selected else R.drawable.ic_menu_unchecked)
+                    }
+                    ViewCompat.setAccessibilityDelegate(row, object : androidx.core.view.AccessibilityDelegateCompat() {
+                        override fun onInitializeAccessibilityNodeInfo(host: View, info: androidx.core.view.accessibility.AccessibilityNodeInfoCompat) {
+                            super.onInitializeAccessibilityNodeInfo(host, info)
+                            info.className = if (item.checked == null) "android.widget.Button"
+                                else if (group.single) "android.widget.RadioButton" else "android.widget.CheckBox"
+                            info.isCheckable = item.checked != null; info.isChecked = item.checked == true
+                        }
+                    })
+                    if (item.destructive) label.setTextColor(MaterialColors.getColor(label, androidx.appcompat.R.attr.colorError))
+                    row.setOnClickListener {
+                        if (item.children != null) render(item.children, item.label, { render(groups, title, back, item.id) })
                         else selected(item)
                     }
-                    button.tag = item.id; button.isEnabled = !item.disabled
-                    if (item.children != null) button.setIconResource(R.drawable.ic_chevron_right)
-                    if (item.checked != null) {
-                        button.isCheckable = true; button.isChecked = item.checked
-                        button.setIconResource(if (item.checked) R.drawable.ic_menu_checked else R.drawable.ic_menu_unchecked)
-                        ViewCompat.setAccessibilityDelegate(button, object : androidx.core.view.AccessibilityDelegateCompat() {
-                            override fun onInitializeAccessibilityNodeInfo(host: View, info: androidx.core.view.accessibility.AccessibilityNodeInfoCompat) {
-                                super.onInitializeAccessibilityNodeInfo(host, info)
-                                info.className = if (group.single) "android.widget.RadioButton" else "android.widget.CheckBox"
-                            }
-                        })
-                    }
-                    if (item.destructive) button.setTextColor(MaterialColors.getColor(button, android.R.attr.colorError))
+                    column.addView(row)
                 }
             }
-            scroll.scrollTo(0, 0)
+            scroll.post {
+                val target = restoreId?.let { column.findViewWithTag<View>(it) }
+                if (target != null) { target.requestFocus(); target.requestRectangleOnScreen(android.graphics.Rect(0, 0, target.width, target.height)) }
+                else scroll.scrollTo(0, 0)
+            }
         }
         render(model.groups, model.title)
-        dialog.setContentView(scroll)
-        ViewCompat.setOnApplyWindowInsetsListener(column) { view, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(16.dp() + bars.left, 0, 16.dp() + bars.right, 16.dp() + bars.bottom); insets
+        dialog.setContentView(content)
+        ViewCompat.setOnApplyWindowInsetsListener(content) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            view.setPadding(bars.left, 0, bars.right, bars.bottom); insets
         }
         dialog.setOnDismissListener { if (sheet === dialog) dismiss() }
         dialog.show()

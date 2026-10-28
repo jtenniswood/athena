@@ -28,4 +28,13 @@
     <string name="connection_details_description">App, server and notification status</string>
     <string name="copy_details">Copy details</string>
     <string name="menu_back">Back</string>
+    <string name="sign_in_title">Continue in your browser</string>
+    <string name="sign_in_description">Your browser will connect this app to your Athena account. You may be asked to sign in.</string>
+    <string name="verification_code">Verification code</string>
+    <string name="verification_code_spoken">Verification code: %1$s</string>
+    <string name="sign_in_verify">Before approving, check that the browser shows this server and code. Only approve if both match. Then return to Athena.</string>
+    <string name="open_browser">Open browser</string>
+    <string name="menu_open_submenu">%1$s, opens submenu</string>
+    <string name="cancel_sign_in">Cancel sign-in</string>
+    <string name="sign_in_cancelled">Sign-in cancelled. You can try again when you’re ready.</string>
 </resources>
