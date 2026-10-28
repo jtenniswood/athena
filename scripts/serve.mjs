@@ -9,7 +9,7 @@ import { createFirebaseSender } from './firebase-messaging.mjs'
 const config = runtimeConfiguration()
 const handler = createPreferencesHandler({ target: config.target, directory: config.preferencesDir })
 const androidAuth = createAndroidAuthHandler({ target: config.target })
-const push = createAndroidPush({ target: config.target, sender: createFirebaseSender() })
+const push = createAndroidPush({ target: config.target, sender: createFirebaseSender(), directory: config.preferencesDir })
 const server = createServer((req, res) => { void androidAuth(req, res).then(handled => handled || push.handle(req, res)).then(handled => handled || handler(req, res)).then(handled => { if (!handled) { res.writeHead(404); res.end() } }) })
 push.attach(server)
 server.requestTimeout = 15000

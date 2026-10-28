@@ -64,16 +64,16 @@ export async function androidNotify(payload: HermesNotification): Promise<boolea
   catch { return false }
 }
 
-export async function androidPushRegistration(): Promise<{ deviceId: string; token: string } | null> {
+export async function androidPushRegistration(): Promise<{ deviceId: string; token: string; refreshKey?: string } | null> {
   try {
-    const value = await call('pushRegistration') as { deviceId?: unknown; token?: unknown } | null
+    const value = await call('pushRegistration') as { deviceId?: unknown; token?: unknown; refreshKey?: unknown } | null
     return value && typeof value.deviceId === 'string' && typeof value.token === 'string'
-      ? { deviceId: value.deviceId, token: value.token } : null
+      ? { deviceId: value.deviceId, token: value.token, ...(typeof value.refreshKey === 'string' ? { refreshKey: value.refreshKey } : {}) } : null
   } catch { return null }
 }
 
-export async function setAndroidPushActive(enabled: boolean, bindingId: string): Promise<void> {
-  try { await call('pushEnabled', { enabled, bindingId }); pushActive = enabled }
+export async function setAndroidPushActive(enabled: boolean, bindingId: string, token?: string): Promise<void> {
+  try { await call('pushEnabled', { enabled, bindingId, token }); pushActive = enabled }
   catch { pushActive = false }
   window.dispatchEvent(new Event('athena:notification-permission'))
 }
@@ -133,4 +133,20 @@ export async function androidWebState(ready: boolean, revision: string): Promise
     }
   } catch { /* Old servers remain usable, with compatibility visible in diagnostics. */ }
   try { await call('webState', { ready, revision, serverProtocol }) } catch { /* Native recovery stays available. */ }
+}
+
+let visibleSession: string | null = null
+export function androidVisibleSession(): string | null { return visibleSession }
+export async function androidWebVisibility(sessionId: string | null): Promise<void> {
+  visibleSession = sessionId
+  if (!isAndroidApp()) return
+  const host = await androidHost()
+  if (!host?.capabilities.includes('web-visibility')) return
+  try { await call('webVisibility', { sessionId: sessionId || '' }) } catch { /* Expiring native leases restore alerts. */ }
+}
+
+export async function androidPushDiagnostics(status: string): Promise<void> {
+  const host = await androidHost()
+  if (!host?.capabilities.includes('push-diagnostics')) return
+  try { await call('pushDiagnostics', { status }) } catch { /* Keep diagnostics optional for older APKs. */ }
 }

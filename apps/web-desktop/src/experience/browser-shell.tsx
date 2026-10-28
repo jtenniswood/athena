@@ -1,3 +1,4 @@
+import { useAndroidVisibleConversation } from '../upstream/android-host'
 import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
 import { BrowserToolbarButton } from './ui/toolbar-button'
@@ -173,6 +174,8 @@ function BrowserLayout() {
   const panels = useBrowserHostPanels()
   const main = useRef<HTMLElement>(null), menu = useRef<HTMLButtonElement>(null)
   const navigation = useBrowserNavigation({ selectionKey: conversation.selectionKey, path: location.pathname, main, trigger: menu })
+  useAndroidVisibleConversation(conversation.status === 'ready' ? conversation.sessionId : null,
+    !((navigation.mobile || navigation.compact) && navigation.drawerOpen) && !location.pathname.startsWith('/settings'))
   const { tab } = navigation
   const [updateNotice, setUpdateNotice] = useState<PwaUpdateNotice | null>(() => currentPwaUpdate())
   const [updateDismissed, setUpdateDismissed] = useState(false)

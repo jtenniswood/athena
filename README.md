@@ -204,9 +204,22 @@ are not included in push payloads. Notification taps open the conversation.
 Signing out disables native push and removes the server's device registration.
 
 The relay keeps a disconnected active response for up to 24 hours and closes
-idle disconnected sockets after a minute. It keeps no conversation history or
-durable notification queue: restarting the Athena container interrupts these
-connections, and delivery resumes when the app reconnects. Force-stopping the
+idle disconnected sockets after a minute. Device bindings and a bounded delivery
+queue are stored privately in the existing `/data/athena` volume; no conversation
+history or response text is stored. Observed completion events survive a restart
+and retry up to 12 times, expiring after one hour. Restarting the container still
+interrupts the retained upstream connections: events that occur while disconnected
+cannot be recovered until a supported server event source is available.
+
+App settings shows token-registration and delivery-attempt status. “Accepted by
+Firebase” does not prove Android displayed an alert. A short-lived acknowledgement
+from a connected, visible conversation suppresses its foreground alerts; the
+navigation list and other conversations still receive notifications. Token rotation
+uses a credential restricted to updating that installation's token, with retry on
+app resume when connectivity or Cloudflare Access is unavailable. Sign-out revokes
+the binding; changing servers also discards its native refresh credential.
+
+Force-stopping the
 app, disabling notifications, or Android battery restrictions can prevent or
 delay alerts. Background approvals and plugin alerts still depend on the
 running web app; background push currently covers response completion and errors.

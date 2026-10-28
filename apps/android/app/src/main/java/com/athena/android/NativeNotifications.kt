@@ -12,6 +12,7 @@ import android.os.Build
 import org.json.JSONObject
 
 class NativeNotifications(private val context: Context) {
+    companion object { private val receiptsLock = Any() }
     private val manager = context.getSystemService(NotificationManager::class.java)
 
     init {
@@ -26,8 +27,14 @@ class NativeNotifications(private val context: Context) {
         return if (manager.areNotificationsEnabled()) "granted" else "denied"
     }
 
-    fun show(origin: String, payload: JSONObject): Boolean {
-        if (permission() != "granted") return false
+    fun show(origin: String, payload: JSONObject): Boolean = synchronized(receiptsLock) {
+        if (permission() != "granted") return@synchronized false
+        val expires = payload.optString("expiresAt").toLongOrNull()
+        if (expires != null && expires <= System.currentTimeMillis()) return@synchronized false
+        val event = payload.optString("eventId")
+        val prefs = context.getSharedPreferences("athena", Context.MODE_PRIVATE)
+        val receipts = prefs.getStringSet("pushReceipts", emptySet()) ?: emptySet()
+        if (event.isNotEmpty() && event in receipts) return@synchronized true
         val tag = payload.optString("tag").take(256).ifBlank { "athena" }
         val target = ServerAddress.conversationUrl(origin, payload.optString("focusSessionId"))
         val intent = Intent(context, MainActivity::class.java)
@@ -45,7 +52,8 @@ class NativeNotifications(private val context: Context) {
             .setContentIntent(pending).setAutoCancel(true).setOnlyAlertOnce(true)
             .setVisibility(Notification.VISIBILITY_PRIVATE)
             .build()
-        manager.notify(tag, 0, notification)
-        return true
+        try { manager.notify(tag, 0, notification) } catch (_: SecurityException) { return@synchronized false }
+        if (event.isNotEmpty()) prefs.edit().putStringSet("pushReceipts", (receipts.toList().takeLast(199) + event).toSet()).apply()
+        return@synchronized true
     }
 }

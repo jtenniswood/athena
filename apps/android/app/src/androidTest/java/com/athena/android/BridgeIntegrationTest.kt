@@ -77,6 +77,14 @@ class BridgeIntegrationTest {
                 request(web, "appSettingsMenu", JSONObject().put("mounted", true).put("rendered", true))
                 scenario.onActivity { assertEquals(View.GONE, (field(it, "nativeToolbar") as View).visibility) }
 
+                request(web, "webVisibility", JSONObject().put("sessionId", "chat-1"))
+                assertTrue(MainActivity.visibility.shouldSuppress(true, "chat-1"))
+                assertFalse(MainActivity.visibility.shouldSuppress(true, "chat-2"))
+                evaluate(web, "document.getElementById('settings').textContent = 'Draft remains on resume'")
+                scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+                assertFalse(MainActivity.visibility.shouldSuppress(true, "chat-1"))
+                scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+                assertEquals("\"Draft remains on resume\"", evaluate(web, "document.getElementById('settings').textContent"))
                 var navigated = false
                 scenario.onActivity {
                     val action: () -> Unit = { navigated = true }
