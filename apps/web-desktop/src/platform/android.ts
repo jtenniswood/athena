@@ -137,12 +137,12 @@ export async function androidWebState(ready: boolean, revision: string): Promise
 
 let visibleSession: string | null = null
 export function androidVisibleSession(): string | null { return visibleSession }
-export async function androidWebVisibility(sessionId: string | null): Promise<void> {
+export async function androidWebVisibility(sessionId: string | null, connected = false): Promise<void> {
   visibleSession = sessionId
   if (!isAndroidApp()) return
   const host = await androidHost()
   if (!host?.capabilities.includes('web-visibility')) return
-  try { await call('webVisibility', { sessionId: sessionId || '' }) } catch { /* Expiring native leases restore alerts. */ }
+  try { await call('webVisibility', { sessionId: sessionId || '', connected }) } catch { /* Expiring native leases restore alerts. */ }
 }
 
 export async function androidPushDiagnostics(status: string): Promise<void> {

@@ -7,6 +7,8 @@ on:
       - 'apps/web-desktop/src/platform/android*'
       - 'apps/web-desktop/src/experience/settings-menu.tsx'
       - 'apps/web-desktop/src/entry.ts'
+      - 'apps/web-desktop/src/upstream/android-host.ts'
+      - 'apps/web-desktop/src/experience/browser-shell.tsx'
       - 'scripts/android*'
       - '.github/workflows/android-release.yml'
       - 'scripts/firebase-messaging*'
@@ -27,6 +29,9 @@ jobs:
         working-directory: apps/android
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
       - uses: actions/setup-java@v6
         with:
           distribution: temurin

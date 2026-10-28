@@ -20,8 +20,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.doAfterTextChanged
 import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -47,21 +45,11 @@ class MainActivity : AppCompatActivity() {
     private var navigationId: String? = null
     private var webRevision = "Unknown"
     private var serverProtocol = "Unknown"
-    private var lastAccessSignIn = false
-    private val authProgress: (String, String) -> Unit = { code, message ->
-        when (code) {
-            "waiting" -> connection.pending(lastAccessSignIn)
-            "connected" -> connection.loading()
-            else -> connection.recover(code, message)
-        }
-    }
-    private val signIn by lazy { BrowserSignIn(this, { code, message -> lastAccessSignIn = false; authProgress(code, message) }) {
-        connection.loading()
+    private val authentication by lazy { NativeAuthentication(this, connection, {
         web?.evaluateJavascript("window.dispatchEvent(new Event('focus'))", null)
-    } }
-    private val accessSignIn by lazy { AccessSignIn(this, progress = { code, message -> lastAccessSignIn = true; authProgress(code, message) }) { reconnectAthena() } }
+    }, { reconnectAthena() }) }
+    private val nativeSettings by lazy { NativeAppSettings(this) }
     private var nativeToolbar: View? = null
-    private var settingsSheet: BottomSheetDialog? = null
     private var editingServer = false
     private var nightMode = 0
     private var web: WebView? = null
@@ -103,7 +91,7 @@ class MainActivity : AppCompatActivity() {
         })
         origin = prefs.getString("origin", "") ?: ""
         if (origin.isEmpty()) setup() else openServer(savedInstanceState)
-        accessSignIn.receive(intent?.data, origin)
+        authentication.receive(intent?.data, origin)
     }
 
     private fun setup() {
@@ -127,7 +115,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 val next = ServerAddress.normalize(address.text.toString())
                 if (next != origin) {
-                    signIn.cancel(); accessSignIn.cancel()
+                    authentication.cancel()
                     prefs.edit().putBoolean("pushEnabled", false).remove("pushRefreshKey")
                         .remove("pushBinding").remove("pushSyncedToken").remove("pushSyncStatus").apply()
                 }
@@ -175,7 +163,7 @@ class MainActivity : AppCompatActivity() {
                     .setNegativeButton("Close", null)
                     .setNeutralButton("App settings") { _, _ -> appSettings() }
                     .setPositiveButton("Try again") { _, _ ->
-                        if (connection.state.code?.startsWith("auth-") == true) startSignIn(lastAccessSignIn)
+                        if (connection.state.code?.startsWith("auth-") == true) authentication.retry(origin)
                         else reconnectAthena()
                     }.show()
             }
@@ -327,7 +315,8 @@ class MainActivity : AppCompatActivity() {
                 respond(true)
             }
             "webVisibility" -> {
-                if (connection.state.stage == ConnectionCoordinator.Stage.READY) visibility.acknowledge(payload.optString("sessionId"))
+                connection.sessionConnected(payload.optBoolean("connected", connection.state.stage == ConnectionCoordinator.Stage.READY))
+                if (connection.state.stage == ConnectionCoordinator.Stage.READY && web?.hasWindowFocus() == true) visibility.acknowledge(payload.optString("sessionId"))
                 else visibility.clear()
                 respond(true)
             }
@@ -387,56 +376,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun appSettings() {
-        if (settingsSheet?.isShowing == true) return
-        val sheet = BottomSheetDialog(this)
-        settingsSheet = sheet
-        val content = layoutInflater.inflate(R.layout.sheet_app_settings, FrameLayout(this), false)
-        ViewCompat.setAccessibilityHeading(content.findViewById(R.id.settings_title), true)
-        content.findViewById<TextView>(R.id.connected_server).text = origin
-        content.findViewById<TextView>(R.id.app_version).text = getString(R.string.version, packageManager.getPackageInfo(packageName, 0).versionName)
-        content.findViewById<TextView>(R.id.app_version).append("\n" + diagnostics())
-        val rows = content.findViewById<LinearLayout>(R.id.settings_rows)
-        fun row(title: Int, description: Int, icon: Int, action: () -> Unit) {
-            val item = layoutInflater.inflate(R.layout.app_settings_row, rows, false)
-            item.findViewById<TextView>(R.id.row_title).setText(title)
-            item.findViewById<TextView>(R.id.row_description).setText(description)
-            item.findViewById<ImageView>(R.id.row_icon).setImageResource(icon)
-            item.tag = title
-            item.contentDescription = "${getString(title)}. ${getString(description)}"
-            ViewCompat.setAccessibilityDelegate(item, object : androidx.core.view.AccessibilityDelegateCompat() {
-                override fun onInitializeAccessibilityNodeInfo(host: View, info: androidx.core.view.accessibility.AccessibilityNodeInfoCompat) {
-                    super.onInitializeAccessibilityNodeInfo(host, info)
-                    info.className = "android.widget.Button"
-                }
-            })
-            item.setOnClickListener { sheet.dismiss(); action() }
-            rows.addView(item)
-        }
-        row(R.string.notifications, if (notifications.permission() == "granted") R.string.notifications_enabled else R.string.notifications_disabled, R.drawable.ic_notifications) {
-            startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
-        }
-        row(R.string.change_server, R.string.change_server_description, R.drawable.ic_server) {
-            MaterialAlertDialogBuilder(this).setTitle("Change Athena server?")
-                .setMessage("Finish active replies and recordings first. Saved drafts remain on this device for the current server.")
-                .setNegativeButton(R.string.cancel, null).setPositiveButton(R.string.change_server) { _, _ ->
-                    prepareNavigation(allowUnloaded = true) { web?.destroy(); web = null; setup() }
-                }.show()
-        }
-        row(R.string.browser_sign_in, R.string.browser_sign_in_description, R.drawable.ic_open_browser) { startSignIn(true) }
-        row(R.string.reload, R.string.reload_description, R.drawable.ic_refresh) {
-            MaterialAlertDialogBuilder(this).setTitle("Reload Athena?")
-                .setMessage("Finish active replies and recordings first.")
-                .setNegativeButton(R.string.cancel, null).setPositiveButton(R.string.reload) { _, _ -> reconnectAthena() }.show()
-        }
-        sheet.setContentView(content)
-        ViewCompat.setOnApplyWindowInsetsListener(content) { view, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(bars.left, 0, bars.right, bars.bottom)
-            insets
-        }
-        sheet.setOnDismissListener { settingsSheet = null }
-        sheet.show()
-        sheet.behavior.state = BottomSheetBehavior.STATE_EXPANDED
+        visibility.clear()
+        nativeSettings.show(origin, ::diagnostics, NativeAppSettings.Actions(
+            notifications = { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) },
+            changeServer = {
+                MaterialAlertDialogBuilder(this).setTitle("Change Athena server?")
+                    .setMessage("Finish active replies and recordings first. Saved drafts remain on this device for the current server.")
+                    .setNegativeButton(R.string.cancel, null).setPositiveButton(R.string.change_server) { _, _ ->
+                        prepareNavigation(allowUnloaded = true) { web?.destroy(); web = null; setup() }
+                    }.show()
+            },
+            signIn = { startSignIn(true) },
+            reload = {
+                MaterialAlertDialogBuilder(this).setTitle("Reload Athena?")
+                    .setMessage("Finish active replies and recordings first.")
+                    .setNegativeButton(R.string.cancel, null).setPositiveButton(R.string.reload) { _, _ -> reconnectAthena() }.show()
+            }
+        ))
     }
 
     private fun reconnectAthena() {
@@ -506,10 +462,7 @@ class MainActivity : AppCompatActivity() {
     }
     private fun startSignIn(access: Boolean, path: String = "/login", started: (Boolean) -> Unit = {}) {
         visibility.clear()
-        lastAccessSignIn = access
-        connection.authenticate(access)
-        if (access) { signIn.cancel(); accessSignIn.start(origin) }
-        else { accessSignIn.cancel(); signIn.start(origin, path, started) }
+        authentication.start(origin, access, path, started)
     }
 
     private fun renderConnection(state: ConnectionCoordinator.State) {
@@ -521,15 +474,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun diagnostics(): String {
-        val webView = WebViewCompat.getCurrentWebViewPackage(this)?.versionName ?: "Unavailable"
-        val firebase = if (FirebaseApp.getApps(this).isEmpty()) "Not configured" else "Configured"
-        return "Connection: ${connection.state.stage.name}\nBridge: ${connection.protocol ?: "Legacy"} · Server protocol: $serverProtocol" +
-            "\nAPK build: ${BuildConfig.BUILD_REVISION}\nWeb build: $webRevision\nWebView: $webView\nFirebase: $firebase\nNotifications: ${notifications.permission()}" +
-            "\nPush registration: ${if (prefs.getBoolean("pushEnabled", false)) "Active" else "Inactive"}" +
-            "\nToken sync: ${prefs.getString("pushSyncStatus", "Not registered")}" +
-            "\nDelivery: ${prefs.getString("pushDeliveryStatus", "No delivery status")}"
-    }
+    private fun diagnostics(): AppDiagnostics = AppDiagnostics.capture(this, origin, connection, webRevision, serverProtocol)
 
     override fun onConfigurationChanged(configuration: android.content.res.Configuration) {
         super.onConfigurationChanged(configuration)
@@ -554,17 +499,24 @@ class MainActivity : AppCompatActivity() {
             setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface))
             setTitleTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface))
         }
-        if (settingsSheet?.isShowing == true) { settingsSheet?.dismiss(); appSettings() }
+        val showSettings = nativeSettings.isShowing
+        val showDetails = nativeSettings.detailsShowing
+        nativeSettings.dismiss()
+        if (showDetails) nativeSettings.showDetails(diagnostics()) else if (showSettings) appSettings()
     }
 
-    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); if (accessSignIn.receive(intent.data, origin)) intent.data = null else openNotification(intent) }
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus) visibility.clear()
+    }
+    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); if (authentication.receive(intent.data, origin)) intent.data = null else openNotification(intent) }
     override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); web?.saveState(outState) }
-    override fun onResume() { super.onResume(); foreground = true; pushRegistration.schedule(); web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) { signIn.resume(origin); accessSignIn.resume(origin) } }
+    override fun onResume() { super.onResume(); foreground = true; pushRegistration.schedule(); web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) { authentication.resume(origin) } }
     override fun onPause() { foreground = false; visibility.clear(); CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
     private fun navigateBack() {
         if (editingServer) { openServer(null); return }
         if (web?.canGoBack() == true) web?.goBack() else moveTaskToBack(true)
     }
-    override fun onDestroy() { settingsSheet?.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); signIn.close(); accessSignIn.close(); web?.destroy(); super.onDestroy() }
+    override fun onDestroy() { nativeSettings.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); authentication.close(); web?.destroy(); super.onDestroy() }
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
 }

@@ -17,7 +17,7 @@ server or changes its data volume.
    version and its commit belongs to `origin/main`. It runs unit tests and release
    lint, builds a Firebase-configured APK, verifies its package/version and pinned
    signing certificate, then publishes it with `SHA256SUMS` and `build-info.json`.
-4. Download the APK from that Android release and install it over the existing
+4. Finish active replies and recordings. Download the APK from that Android release and install it over the existing
    Athena app. Do not uninstall first. Existing published assets are immutable;
    changed APKs need a new version. A manual rerun from `main` can use an existing
    Android tag, subject to the same source and version checks.

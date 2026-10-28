@@ -18,6 +18,7 @@ import java.util.concurrent.Executors
 class BrowserSignIn(
     private val activity: Activity,
     private val progress: (String, String) -> Unit = { _, _ -> },
+    private val open: (URL) -> HttpURLConnection = { it.openConnection() as HttpURLConnection },
     private val connected: () -> Unit
 ) {
     private val prefs = activity.getSharedPreferences("android-sign-in", Context.MODE_PRIVATE)
@@ -35,7 +36,7 @@ class BrowserSignIn(
     private fun encode(bytes: ByteArray) = Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
     fun close() { generation++; confirmation?.dismiss(); executor.shutdownNow() }
     private fun post(origin: String, route: String, body: JSONObject): Pair<Int, HttpURLConnection> {
-        val connection = URL(origin + route).openConnection() as HttpURLConnection
+        val connection = open(URL(origin + route))
         connection.requestMethod = "POST"
         connection.instanceFollowRedirects = false
         connection.connectTimeout = 10000; connection.readTimeout = 10000

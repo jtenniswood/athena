@@ -45,21 +45,33 @@ class BridgeIntegrationTest {
         val context = instrumentation.targetContext
         val prefs = context.getSharedPreferences("athena", Context.MODE_PRIVATE)
         val previousOrigin = prefs.getString("origin", null)
-        prefs.edit().putString("origin", "https://athena.example").commit()
+        val adapter = instrumentation.context.assets.open("android-adapter.js").bufferedReader().use { it.readText() }
+        prefs.edit().putString("origin", "").commit()
         try {
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 lateinit var activity: MainActivity
                 lateinit var web: WebView
                 scenario.onActivity {
                     activity = it
+                    prefs.edit().putString("origin", "https://athena.example").commit()
+                    MainActivity::class.java.getDeclaredField("origin").apply { isAccessible = true }.set(it, "https://athena.example")
+                    MainActivity::class.java.getDeclaredMethod("openServer", android.os.Bundle::class.java)
+                        .apply { isAccessible = true }.invoke(it, null)
                     web = field(it, "web") as WebView
                     web.stopLoading()
                     web.loadDataWithBaseURL("https://athena.example/", """
                         <!doctype html><meta name="viewport" content="width=device-width">
                         <button id="settings">App settings</button>
-                        <script>
+                        <script type="module">
+                          $adapter
+                          window.adapter = { androidAppSettingsMenu, androidOpenAppSettings, androidWebVisibility };
+                          window.productionHello = await androidHost();
+                          const nativeReceiver = AthenaAndroid.onmessage;
                           window.result = null;
-                          AthenaAndroid.onmessage = function(event) { window.result = JSON.parse(event.data); };
+                          AthenaAndroid.onmessage = function(event) {
+                            if (JSON.parse(event.data).id === 'test') window.result = JSON.parse(event.data);
+                            else nativeReceiver(event);
+                          };
                           window.addEventListener('athena:prepare-native-navigation', function(event) {
                             event.preventDefault(); window.navigationId = event.detail.requestId;
                           });
@@ -69,14 +81,16 @@ class BridgeIntegrationTest {
                 }
                 waitUntil { evaluate(web, "window.fixtureReady === true") == "true" }
                 scenario.onActivity { assertEquals("https://athena.example/", web.url) }
-                val hello = request(web, "hello", JSONObject().put("protocol", 1))
-                assertEquals(1, hello.getJSONObject("value").getInt("protocol"))
+                assertEquals("1", evaluate(web, "window.productionHello.protocol"))
                 request(web, "webState", JSONObject().put("ready", true).put("revision", "fixture").put("serverProtocol", 1))
-                request(web, "appSettingsMenu", JSONObject().put("mounted", true).put("rendered", false))
+                evaluate(web, "window.discovered = null; window.adapter.androidAppSettingsMenu(true).then(value => window.discovered = value)")
+                waitUntil { evaluate(web, "window.discovered === true") == "true" }
                 scenario.onActivity { assertEquals(View.VISIBLE, (field(it, "nativeToolbar") as View).visibility) }
-                request(web, "appSettingsMenu", JSONObject().put("mounted", true).put("rendered", true))
+                evaluate(web, "window.handedOver = null; window.adapter.androidAppSettingsMenu(true, true).then(value => window.handedOver = value)")
+                waitUntil { evaluate(web, "window.handedOver === true") == "true" }
                 scenario.onActivity { assertEquals(View.GONE, (field(it, "nativeToolbar") as View).visibility) }
 
+                waitUntil { var focused = false; scenario.onActivity { focused = web.hasWindowFocus() }; focused }
                 request(web, "webVisibility", JSONObject().put("sessionId", "chat-1"))
                 assertTrue(MainActivity.visibility.shouldSuppress(true, "chat-1"))
                 assertFalse(MainActivity.visibility.shouldSuppress(true, "chat-2"))
@@ -99,8 +113,29 @@ class BridgeIntegrationTest {
                 request(web, "navigationReady", JSONObject().put("requestId", id).put("ready", false).put("reason", "Recording in progress"))
                 scenario.onActivity { assertNull(field(it, "navigationAction")) }
                 assertFalse(navigated)
-                request(web, "appSettingsMenu", JSONObject().put("mounted", false))
+                evaluate(web, "window.unmounted = null; window.adapter.androidAppSettingsMenu(false).then(value => window.unmounted = value)")
+                waitUntil { evaluate(web, "window.unmounted === true") == "true" }
                 scenario.onActivity { assertEquals(View.VISIBLE, (field(it, "nativeToolbar") as View).visibility) }
+                waitUntil { var focused = false; scenario.onActivity { focused = web.hasWindowFocus() }; focused }
+                request(web, "webVisibility", JSONObject().put("sessionId", "chat-1").put("connected", true))
+                assertTrue(MainActivity.visibility.shouldSuppress(true, "chat-1"))
+                evaluate(web, "window.settingsOpened = null; window.adapter.androidOpenAppSettings().then(value => window.settingsOpened = value)")
+                waitUntil { evaluate(web, "window.settingsOpened === true") == "true" }
+                assertFalse(MainActivity.visibility.shouldSuppress(true, "chat-1"))
+                val settingsDelegate = MainActivity::class.java.getDeclaredField("nativeSettings$" + "delegate").apply { isAccessible = true }
+                scenario.onActivity {
+                    val settings = (settingsDelegate.get(it) as Lazy<*>).value as NativeAppSettings
+                    settings.sheet!!.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)!!
+                        .findViewWithTag<android.view.View>(R.string.connection_details).performClick()
+                    assertTrue(settings.detailsShowing)
+                }
+                instrumentation.waitForIdleSync()
+                Thread.sleep(400) // Let the native dialog's enter animation settle before visual verification.
+                instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
+                    java.io.File(context.getExternalFilesDir(null), "connection-details.png").outputStream().use {
+                        bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+                    }
+                }
             }
         } finally {
             prefs.edit().apply { if (previousOrigin == null) remove("origin") else putString("origin", previousOrigin) }.commit()

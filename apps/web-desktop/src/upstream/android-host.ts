@@ -8,7 +8,7 @@ export function useAndroidVisibleConversation(sessionId: string | null, visible:
   const gateway = useStore($gatewayState)
   useEffect(() => {
     if (!isAndroidApp()) return
-    const update = () => { void androidWebVisibility(visible && gateway === 'open' && document.visibilityState === 'visible' ? sessionId : null) }
+    const update = () => { void androidWebVisibility(visible && gateway === 'open' && document.visibilityState === 'visible' ? sessionId : null, gateway === 'open') }
     update()
     const timer = window.setInterval(update, 3000)
     document.addEventListener('visibilitychange', update)

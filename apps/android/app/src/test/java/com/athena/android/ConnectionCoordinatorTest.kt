@@ -15,7 +15,7 @@ class ConnectionCoordinatorTest {
         assertFalse(host.settings(false, true))
     }
 
-    @Test fun reloadAndRecoveryRestoreNativeControlsAndClearPageReadiness() {
+    @Test fun pageNavigationResetsFeaturesAndRecoveryPreservesTheCurrentMenuHandover() {
         val host = ConnectionCoordinator()
         host.handshake(1); host.settings(true, true); host.ready()
         host.loading()
@@ -23,7 +23,8 @@ class ConnectionCoordinatorTest {
         assertNull(host.protocol)
         host.handshake(1); host.settings(true, true)
         host.recover("auth-expired", "Sign in again")
-        assertFalse(host.settingsReady)
+        assertTrue(host.settingsReady)
+        assertEquals(ConnectionCoordinator.Stage.RECOVERY, host.state.stage)
         assertEquals("auth-expired", host.state.code)
         host.authenticate(true)
         assertEquals(ConnectionCoordinator.Stage.ACCESS_SIGN_IN, host.state.stage)
@@ -32,4 +33,18 @@ class ConnectionCoordinatorTest {
         host.ready()
         assertNull(host.state.code)
     }
+    @Test fun sessionReconnectDoesNotForgetTheRenderedNativeSettingsReplacement() {
+        val host = ConnectionCoordinator()
+        host.loading(); host.handshake(1); host.settings(true, true); host.ready()
+        host.sessionConnected(false)
+        assertEquals(ConnectionCoordinator.Stage.LOADING, host.state.stage)
+        assertTrue(host.settingsReady)
+        host.sessionConnected(true)
+        assertEquals(ConnectionCoordinator.Stage.READY, host.state.stage)
+        assertTrue(host.settingsReady)
+        host.authenticate(true)
+        host.sessionConnected(true)
+        assertEquals(ConnectionCoordinator.Stage.ACCESS_SIGN_IN, host.state.stage)
+    }
+
 }
