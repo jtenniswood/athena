@@ -12,10 +12,14 @@ android {
         applicationId = "com.athena.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.1.3"
+        versionCode = 5
+        versionName = "0.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+    buildFeatures { buildConfig = true }
+    val buildRevision = System.getenv("ATHENA_ANDROID_BUILD_REVISION") ?: "local"
+    require(buildRevision == "local" || Regex("[a-f0-9]{40}").matches(buildRevision))
+    defaultConfig { buildConfigField("String", "BUILD_REVISION", "\"$buildRevision\"") }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -26,7 +30,7 @@ android {
             storeFile = file(releaseKeystore)
             storePassword = System.getenv("ATHENA_ANDROID_STORE_PASSWORD")
             keyAlias = System.getenv("ATHENA_ANDROID_KEY_ALIAS") ?: "athena"
-            keyPassword = System.getenv("ATHENA_ANDROID_KEY_PASSWORD")
+            keyPassword = System.getenv("ATHENA_ANDROID_KEY_PASSWORD") ?: System.getenv("ATHENA_ANDROID_STORE_PASSWORD")
         }
     }
     buildTypes {
