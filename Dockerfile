@@ -6,7 +6,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml flake.lock renovate.json ./
-RUN corepack enable && corepack prepare "$(node -p 'require("./package.json").packageManager')" --activate
+RUN npm install --global "$(node -p 'require("./package.json").packageManager')"
 COPY scripts ./scripts
 COPY apps/web-desktop/package.json apps/web-desktop/package.json
 RUN node scripts/renderer.mjs \
