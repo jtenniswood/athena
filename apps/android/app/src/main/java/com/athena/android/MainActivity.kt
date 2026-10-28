@@ -525,7 +525,7 @@ class MainActivity : AppCompatActivity() {
         val webView = WebViewCompat.getCurrentWebViewPackage(this)?.versionName ?: "Unavailable"
         val firebase = if (FirebaseApp.getApps(this).isEmpty()) "Not configured" else "Configured"
         return "Connection: ${connection.state.stage.name}\nBridge: ${connection.protocol ?: "Legacy"} · Server protocol: $serverProtocol" +
-            "\nWeb build: $webRevision\nWebView: $webView\nFirebase: $firebase\nNotifications: ${notifications.permission()}" +
+            "\nAPK build: ${BuildConfig.BUILD_REVISION}\nWeb build: $webRevision\nWebView: $webView\nFirebase: $firebase\nNotifications: ${notifications.permission()}" +
             "\nPush registration: ${if (prefs.getBoolean("pushEnabled", false)) "Active" else "Inactive"}" +
             "\nToken sync: ${prefs.getString("pushSyncStatus", "Not registered")}" +
             "\nDelivery: ${prefs.getString("pushDeliveryStatus", "No delivery status")}"

@@ -8,6 +8,7 @@ on:
       - 'apps/web-desktop/src/experience/settings-menu.tsx'
       - 'apps/web-desktop/src/entry.ts'
       - 'scripts/android*'
+      - '.github/workflows/android-release.yml'
       - 'scripts/firebase-messaging*'
       - 'nginx.conf.template'
       - '.github/workflows/android.yml'

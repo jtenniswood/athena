@@ -1,0 +1,113 @@
+name: Android signed release
+on:
+  push:
+    tags: ['android-v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing Android version tag on main
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: android-release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    outputs:
+      tag: ${{ steps.identity.outputs.tag }}
+      version: ${{ steps.identity.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - name: Validate the tag and reviewed source
+        id: identity
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: node scripts/android-release.mjs identify
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.identity.outputs.commit }}
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+      - name: Install Android platform
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Verify Gradle wrapper
+        working-directory: apps/android
+        run: echo '81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f  gradle/wrapper/gradle-wrapper.jar' | sha256sum --check
+      - name: Build, sign and verify the release APK
+        env:
+          ATHENA_ANDROID_KEYSTORE_BASE64: ${{ secrets.ATHENA_ANDROID_KEYSTORE_BASE64 }}
+          ATHENA_ANDROID_STORE_PASSWORD: ${{ secrets.ATHENA_ANDROID_STORE_PASSWORD }}
+          ATHENA_ANDROID_GOOGLE_SERVICES: ${{ secrets.ATHENA_ANDROID_GOOGLE_SERVICES }}
+          ATHENA_ANDROID_BUILD_REVISION: ${{ steps.identity.outputs.commit }}
+          APK_NAME: ${{ steps.identity.outputs.filename }}
+        run: |
+          set -euo pipefail
+          export ATHENA_ANDROID_KEYSTORE="$RUNNER_TEMP/athena-release.jks"
+          trap 'rm -f "$ATHENA_ANDROID_KEYSTORE" apps/android/app/google-services.json' EXIT
+          node --input-type=module <<'JS'
+          import { writeFileSync } from 'node:fs'
+          for (const key of ['ATHENA_ANDROID_KEYSTORE_BASE64', 'ATHENA_ANDROID_STORE_PASSWORD', 'ATHENA_ANDROID_GOOGLE_SERVICES']) {
+            if (!process.env[key]) throw new Error(`Missing release secret: ${key}`)
+          }
+          const config = JSON.parse(process.env.ATHENA_ANDROID_GOOGLE_SERVICES)
+          if (!config.client?.some(client => client.client_info?.android_client_info?.package_name === 'com.athena.android'))
+            throw new Error('Firebase configuration must match com.athena.android')
+          writeFileSync(process.env.ATHENA_ANDROID_KEYSTORE, Buffer.from(process.env.ATHENA_ANDROID_KEYSTORE_BASE64, 'base64'), { mode: 0o600 })
+          writeFileSync('apps/android/app/google-services.json', JSON.stringify(config), { mode: 0o600 })
+          JS
+          apps/android/gradlew -p apps/android :app:testDebugUnitTest :app:lintRelease :app:assembleRelease --no-daemon --console=plain
+          mkdir -p android-release
+          cp apps/android/app/build/outputs/apk/release/app-release.apk "android-release/$APK_NAME"
+          node scripts/android-release.mjs manifest "android-release/$APK_NAME" android-release/build-info.json
+          (cd android-release && sha256sum "$APK_NAME" build-info.json > SHA256SUMS)
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android-signed-release
+          path: android-release/
+          retention-days: 30
+  publish:
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: android-signed-release
+          path: android-release
+      - name: Publish the verified Android release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          cat > "$RUNNER_TEMP/android-release-notes.md" <<'NOTES'
+          Signed Athena Android app with Firebase messaging enabled.
+
+          Install the APK over the existing app to preserve its server settings and local data. SHA256SUMS and build-info.json identify the APK, source revision, bridge compatibility and signing certificate. Server deployment is separate from this APK release.
+          NOTES
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            mkdir -p "$RUNNER_TEMP/published-android"
+            gh release download "$RELEASE_TAG" --pattern SHA256SUMS --dir "$RUNNER_TEMP/published-android"
+            if ! cmp android-release/SHA256SUMS "$RUNNER_TEMP/published-android/SHA256SUMS"; then
+              echo 'Published release differs. Use a new version; existing APKs are immutable.' >&2
+              exit 1
+            fi
+          else
+            gh release create "$RELEASE_TAG" android-release/* --verify-tag --title "Athena Android $RELEASE_VERSION" --notes-file "$RUNNER_TEMP/android-release-notes.md" --latest=false
+          fi

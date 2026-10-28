@@ -224,6 +224,8 @@ app, disabling notifications, or Android battery restrictions can prevent or
 delay alerts. Background approvals and plugin alerts still depend on the
 running web app; background push currently covers response completion and errors.
 
+Signed APK releases include checksums and build metadata; see [Android releases](docs/android/releases.md).
+
 ### Sign in
 
 Athena checks the configured Hermes server before opening chat. If authentication
