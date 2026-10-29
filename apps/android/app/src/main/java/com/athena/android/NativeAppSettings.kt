@@ -18,7 +18,7 @@ import com.google.android.material.button.MaterialButton
 
 /** Native presentation only: connection and navigation actions remain owned by the host. */
 class NativeAppSettings(private val activity: Activity) {
-    data class Actions(val notifications: () -> Unit, val changeServer: () -> Unit, val signIn: () -> Unit, val reload: () -> Unit, val updates: () -> Unit = {})
+    data class Actions(val notifications: () -> Unit, val changeServer: () -> Unit, val signIn: () -> Unit, val reload: () -> Unit, val updates: () -> Unit = {}, val connectionTesting: () -> Unit = {})
     private var host: FrameLayout? = null
     private var settingsPage: View? = null
     private var detailsPage: View? = null
@@ -123,6 +123,7 @@ class NativeAppSettings(private val activity: Activity) {
         row(R.string.browser_sign_in, R.string.browser_sign_in_description, R.drawable.ic_open_browser) { dismiss(); actions.signIn() }
         row(R.string.reload, R.string.reload_description, R.drawable.ic_refresh) { dismiss(); actions.reload() }
         row(R.string.app_updates, R.string.app_updates_description, R.drawable.ic_refresh, actions.updates)
+        row(R.string.connection_testing, R.string.connection_testing_description, R.drawable.ic_server, actions.connectionTesting)
         row(R.string.connection_details, R.string.connection_details_description, R.drawable.ic_server) { showDetails(diagnostics()) }
     }
 
