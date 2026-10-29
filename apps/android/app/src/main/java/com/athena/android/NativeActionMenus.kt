@@ -24,10 +24,11 @@ import org.json.JSONObject
 class NativeActionMenus(private val activity: AppCompatActivity) {
     data class Item(val id: String, val label: String, val description: String, val disabled: Boolean,
         val destructive: Boolean, val checked: Boolean?, val children: List<Group>?, val keepOpen: Boolean = false,
-        val submenu: Boolean = false, val color: String = "")
+        val submenu: Boolean = false, val color: String = "", val selectable: Boolean = false)
     data class Group(val label: String, val single: Boolean, val items: List<Item>)
     data class Model(val id: String, val title: String, val compact: Boolean, val x: Double, val y: Double,
-        val viewportWidth: Double, val groups: List<Group>, val backId: String = "")
+        val viewportWidth: Double, val groups: List<Group>, val backId: String = "", val search: Search? = null)
+    data class Search(val id: String, val value: String, val label: String)
 
     companion object {
         fun parse(payload: JSONObject): Model {
@@ -56,7 +57,7 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
                         require(color.isEmpty() || Regex("#[a-fA-F0-9]{6}").matches(color))
                         Item(id, text(item, "label", 240, true), text(item, "description", 500),
                             item.optBoolean("disabled"), item.optBoolean("destructive"),
-                            if (item.has("checked")) item.getBoolean("checked") else null, children, item.optBoolean("keepOpen"), item.optBoolean("submenu"), color)
+                            if (item.has("checked")) item.getBoolean("checked") else null, children, item.optBoolean("keepOpen"), item.optBoolean("submenu"), color, item.optBoolean("selectable"))
                     })
                 }
             }
@@ -66,7 +67,10 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
             val x = payload.getDouble("x")
             val y = payload.getDouble("y")
             require(width.isFinite() && width > 0 && x.isFinite() && y.isFinite())
-            return Model(text(payload, "id", 100, true), text(payload, "title", 240, true), payload.optBoolean("compact"), x, y, width, sections, text(payload, "backId", 512))
+            val search = payload.optJSONObject("search")?.let {
+                Search(text(it, "id", 100, true), text(it, "value", 240), text(it, "label", 240, true)).also { search -> require(ids.add(search.id)) }
+            }
+            return Model(text(payload, "id", 100, true), text(payload, "title", 240, true), payload.optBoolean("compact"), x, y, width, sections, text(payload, "backId", 512), search)
         }
     }
 
@@ -107,7 +111,8 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
     }
 
     private fun selected(item: Item) {
-        if (item.disabled || item.children != null) return
+        sheet?.currentFocus?.let { focus -> focus.clearFocus(); (activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager).hideSoftInputFromWindow(focus.windowToken, 0) }
+        if (item.disabled || (item.children != null && !item.selectable)) return
         val result = JSONObject().put("status", if (item.keepOpen && sheet != null) "changed" else "selected").put("id", item.id)
         if (item.keepOpen && sheet != null) completion?.invoke(result) else finish(result)
     }
@@ -121,6 +126,25 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
             orientation = LinearLayout.VERTICAL; setPadding(24.dp(), 0, 24.dp(), 16.dp())
         }
         content.addView(header)
+        val searchInput = com.google.android.material.textfield.TextInputEditText(activity).apply {
+            isSingleLine = true
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            filters = arrayOf(android.text.InputFilter.LengthFilter(240))
+            isSaveEnabled = false
+        }
+        val searchField = com.google.android.material.textfield.TextInputLayout(activity).apply {
+            setPadding(24.dp(), 0, 24.dp(), 12.dp()); addView(searchInput)
+        }
+        content.addView(searchField)
+        var updatingSearch = false
+        var currentSearch = model.search
+        searchInput.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                if (!updatingSearch) currentSearch?.let { completion?.invoke(JSONObject().put("status", "changed").put("id", it.id).put("value", s.toString())) }
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
         val column = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL; setPadding(8.dp(), 0, 8.dp(), 16.dp())
         }
@@ -149,6 +173,16 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
             val back: (() -> Unit)? = if (path.isNotEmpty()) ({ val id = path.removeAt(path.lastIndex); render(id) })
                 else if (currentModel.backId.isNotEmpty()) ({ completion?.invoke(JSONObject().put("status", "changed").put("id", currentModel.backId)) }) else null
             goBack = back
+            currentSearch = currentModel.search
+            searchField.visibility = if (currentModel.search == null || path.isNotEmpty()) View.GONE else View.VISIBLE
+            currentModel.search?.let { search ->
+                searchField.hint = search.label
+                // Responses may arrive after a later keystroke. Keep the native
+                // query while focused, including its selection and composing text.
+                if (!searchInput.hasFocus() && searchInput.text.toString() != search.value) {
+                    updatingSearch = true; searchInput.setText(search.value); updatingSearch = false
+                }
+            }
             val newLayout = groups.flatMap { group -> listOf("group:${group.label}") + group.items.map { it.id } }
             val rebuild = newLayout != layout
             val scrollY = scroll.scrollY
@@ -198,7 +232,7 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
                         }
                     }
                     row.contentDescription = listOf(item.label, item.description).filter { it.isNotEmpty() }.joinToString(". ")
-                    if (item.children != null || item.submenu) row.contentDescription = activity.getString(R.string.menu_open_submenu, row.contentDescription)
+                    if ((item.children != null && !item.selectable) || item.submenu) row.contentDescription = activity.getString(R.string.menu_open_submenu, row.contentDescription)
                     row.findViewById<ImageView>(R.id.menu_selection).apply {
                         visibility = if (item.checked == null) View.GONE else View.VISIBLE
                         setImageResource(if (group.single) {
@@ -215,8 +249,25 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
                     })
                     label.setTextColor(MaterialColors.getColor(label, if (item.destructive) androidx.appcompat.R.attr.colorError else com.google.android.material.R.attr.colorOnSurface))
                     row.setOnClickListener {
-                        if (item.children != null) { path.add(item.id); render(null) }
+                        if (item.children != null && !item.selectable) { path.add(item.id); render(null) }
                         else selected(item)
+                    }
+                    if (item.children != null && item.selectable) {
+                        val expand = { searchInput.clearFocus(); path.add(item.id); render(null) }
+                        row.setOnLongClickListener { expand(); true }
+                        row.findViewById<View>(R.id.menu_submenu).apply {
+                            layoutParams = layoutParams.apply { width = 48.dp(); height = 48.dp() }
+                            setOnClickListener { expand() }
+                        }
+                        ViewCompat.replaceAccessibilityAction(row, androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_EXPAND,
+                            activity.getString(R.string.menu_open_submenu, item.label)) { _, _ -> expand(); true }
+                    } else {
+                        row.findViewById<View>(R.id.menu_submenu).apply {
+                            layoutParams = layoutParams.apply { width = 24.dp(); height = 24.dp() }
+                            setOnClickListener(null)
+                        }
+                        row.setOnLongClickListener(null)
+                        ViewCompat.removeAccessibilityAction(row, android.view.accessibility.AccessibilityNodeInfo.ACTION_EXPAND)
                     }
                     if (rebuild) column.addView(row)
                 }

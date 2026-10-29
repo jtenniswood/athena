@@ -135,6 +135,7 @@ export interface AndroidMenuItem {
   submenu?: boolean
   color?: string
   children?: AndroidMenuGroup[]
+  selectable?: boolean
 }
 export interface AndroidMenuGroup {
   label?: string
@@ -150,6 +151,7 @@ export interface AndroidActionMenu {
   viewportWidth: number
   groups: AndroidMenuGroup[]
   backId?: string
+  search?: { id: string; value: string; label: string }
 }
 export type AndroidMenuResult = { status: 'selected'; id: string } | { status: 'dismissed' } | { status: 'unavailable' }
 

@@ -29,7 +29,7 @@ test.beforeEach(async ({ page }) => {
         respond(openRequest, { status: 'dismissed' }); respond(request.id, true)
       } else respond(request.id, true)
     } }
-    window.nativeSelect = (status, id) => respond(openRequest, { status, id })
+    window.nativeSelect = (status, id, value) => respond(openRequest, { status, id, value })
     const platform = {}
     new Function('exports', bridge)(platform)
     const menus = {}
@@ -54,7 +54,8 @@ test.beforeEach(async ({ page }) => {
         window.selections.push('blue'); event.currentTarget.style.boxShadow = '0 0 0 2px currentColor'
       }
     }
-    window.stopNativeMenus = menus.installNativeRendererMenus()
+    window.startNativeMenus = supported => menus.installNativeRendererMenus(supported)
+    window.stopNativeMenus = window.startNativeMenus(false)
   }, { bridge, adapter })
 })
 
@@ -120,4 +121,96 @@ test('native menus reject removed commands and restore the web menu when unavail
   await expect(page.locator('#menu')).toHaveCount(1)
   await page.locator('#pin').evaluate(node => node.setAttribute('aria-checked', 'true'))
   expect(await page.evaluate(() => window.calls.filter(call => call.method === 'actionMenu').length)).toBe(1)
+})
+
+async function modelFixture(page, supported = true) {
+  await page.evaluate(supported => {
+    window.stopNativeMenus(); window.calls = []; window.selections = []
+    document.body.innerHTML = `<button id="model-trigger" aria-label="Switch model"></button>
+      <div id="model-menu" data-slot="dropdown-menu-content" data-state="open" aria-labelledby="model-trigger" role="menu">
+      <div data-slot="dropdown-menu-search"><input aria-label="Search models" placeholder="Search models"></div>
+      <div id="models"></div></div>`
+    const root = document.getElementById('model-menu')
+    root.onkeydown = event => { if (event.key === 'Escape') root.remove() }
+    const render = query => {
+      const list = document.getElementById('models'); list.replaceChildren()
+      for(let index=0;index<40;index++) {
+        const name = 'Model '+index
+        if (!name.toLowerCase().includes(query.toLowerCase())) continue
+        const row = document.createElement('div'); row.id = 'model-'+index; row.role='menuitem'
+        row.dataset.slot='dropdown-menu-sub-trigger'; row.setAttribute('aria-haspopup','menu')
+        row.innerHTML = `<button aria-label="Favorite ${name}" aria-pressed="false"></button><span>${name}</span>${index===0?'<i class="codicon-check" aria-hidden="true"></i>':''}`
+        row.onclick = () => { window.selections.push(name); root.remove() }
+        row.firstChild.onclick = event => { event.stopPropagation(); event.target.setAttribute('aria-pressed','true'); window.selections.push('favorite '+name) }
+        row.onkeydown = event => {
+          if (event.key !== 'ArrowRight') return
+          const sub = document.createElement('div'); sub.dataset.slot='dropdown-menu-sub-content';sub.dataset.state='open';sub.setAttribute('aria-labelledby',row.id)
+          sub.innerHTML='<div role="menuitem">Thinking<button role="switch" aria-checked="false"></button></div>'
+          sub.firstChild.firstElementChild.onclick = event => { event.target.setAttribute('aria-checked','true'); window.selections.push('thinking') }
+          sub.onkeydown = event => { if (event.key === 'ArrowLeft') sub.remove() }
+          document.body.append(sub)
+        }
+        list.append(row)
+      }
+    }
+    root.querySelector('input').oninput = event => render(event.target.value)
+    render('')
+    const refresh = document.createElement('div'); refresh.role='menuitem'; refresh.textContent='Refresh models'
+    refresh.onclick=()=>window.selections.push('refresh')
+    root.append(refresh)
+    window.stopNativeMenus = window.startNativeMenus(supported)
+  }, supported)
+}
+
+test('native model search filters through the original input and chooses the original model', async ({ page }) => {
+  await modelFixture(page)
+  let menu = await page.evaluate(() => window.calls.at(-1).payload)
+  expect(menu.search.label).toBe('Search models')
+  expect(items(menu).find(item => item.label === 'Model 0').checked).toBe(true)
+  await page.evaluate(() => window.nativeSelect('changed','search', 'Model 39'))
+  await expect.poll(()=>page.evaluate(()=>window.calls.at(-1).payload.groups.flatMap(group=>group.items).filter(item=>item.label.startsWith('Model ')).map(item=>item.label))).toEqual(['Model 39'])
+  await select(page,'Model 39')
+  await expect.poll(()=>page.evaluate(()=>window.selections)).toEqual(['Model 39'])
+})
+
+test('native model catalogs page through every row within the menu envelope', async ({ page }) => {
+  await modelFixture(page)
+  const names = new Set()
+  for (let index=0;index<3;index++) {
+    const menu = await page.evaluate(() => window.calls.filter(call=>['actionMenu','updateActionMenu'].includes(call.method)).at(-1).payload)
+    expect(JSON.stringify(menu).length).toBeLessThan(14000)
+    items(menu).filter(item=>item.label.startsWith('Model ')).forEach(item=>names.add(item.label))
+    if(index<2) await select(page,'Next page')
+  }
+  expect(names.size).toBe(40)
+})
+
+test('native model details retain favorites, options and working nested switches', async ({ page }) => {
+  await modelFixture(page)
+  const model = await page.evaluate(() => window.calls.at(-1).payload.groups.flatMap(group=>group.items).find(item=>item.label==='Model 0'))
+  expect(model.selectable).toBe(true)
+  await page.evaluate(id=>window.nativeSelect('changed',id),model.children[0].items[0].id)
+  await expect.poll(()=>page.evaluate(()=>window.selections)).toEqual(['favorite Model 0'])
+  await page.evaluate(id=>window.nativeSelect('changed',id),model.children[0].items[1].id)
+  await expect.poll(()=>page.evaluate(()=>window.calls.at(-1).payload.backId)).toBe('back')
+  await select(page,'Thinking')
+  await expect.poll(()=>page.evaluate(()=>window.selections)).toEqual(['favorite Model 0','thinking'])
+  await select(page,'back')
+  await expect.poll(()=>page.evaluate(()=>window.calls.at(-1).payload.search?.id)).toBe('search')
+})
+
+test('older APKs keep searchable model menus on the web', async ({ page }) => {
+  await modelFixture(page,false)
+  expect(await page.evaluate(()=>window.calls.filter(call=>call.method==='actionMenu').length)).toBe(0)
+  await expect(page.locator('#model-menu')).not.toHaveAttribute('data-native-menu')
+})
+
+test('native refresh preserves the original model menu instead of dismissing it', async ({ page }) => {
+  await modelFixture(page)
+  await select(page,'Next page'); await select(page,'Next page')
+  const refresh = await page.evaluate(()=>window.calls.at(-1).payload.groups.flatMap(group=>group.items).find(item=>item.label==='Refresh models'))
+  expect(refresh.keepOpen).toBe(true)
+  await select(page,'Refresh models')
+  await expect(page.locator('#model-menu')).toHaveCount(1)
+  expect(await page.evaluate(()=>window.selections)).toEqual(['refresh'])
 })
