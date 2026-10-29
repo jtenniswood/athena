@@ -60,6 +60,8 @@ export function installNativeRendererMenus(searchSupported = false): () => void 
   const sync = () => {
     scheduled = false
     if (disposed) return
+    // Settings use their original web controls, including portalled menus.
+    if (document.querySelector('[data-browser-settings-frame]')) { release(); return }
     if (owner && (!owner.isConnected || owner.dataset.state !== 'open')) release()
     const root = owner ?? [...document.querySelectorAll<HTMLElement>(rootSelector)].find(node => !webOnly.has(node) && !node.hasAttribute('data-browser-action-surface'))
     if (!root) return

@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { useLocation } from 'react-router'
-import { isAndroidApp } from '../../platform/android'
 import { useBrowserSettingsEscapeClose } from '../../upstream/settings-interactions'
 import { OverlayView } from '../../upstream/browser-api'
 import { useBrowserOverlayFocus } from '../ui/overlay-focus'
@@ -15,13 +14,11 @@ const queries: Record<SettingsFrameVariant, string> = {
 export function useSettingsFrame(variant: SettingsFrameVariant, activeIdentity: string) {
   const location = useLocation()
   const query = queries[variant]
-  const narrow = useSyncExternalStore(change => {
+  const compact = useSyncExternalStore(change => {
     const media = window.matchMedia(query)
     media.addEventListener('change', change)
     return () => media.removeEventListener('change', change)
   }, () => window.matchMedia(query).matches, () => false)
-  // The native presenter has one destination per screen, including on tablets.
-  const compact = narrow || (variant === 'fullscreen' && isAndroidApp())
   const navigation = useRef<HTMLElement>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const focus = useRef(false)
