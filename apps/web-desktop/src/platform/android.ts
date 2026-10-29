@@ -212,6 +212,9 @@ export interface AndroidSettingsRow {
   kind: 'heading' | 'text' | 'action' | 'toggle' | 'radio' | 'input' | 'select'
   label: string
   description?: string
+  presentation?: 'navigation' | 'choice' | 'primary' | 'destructive' | 'secondary' | 'value'
+  group?: string
+  icon?: string
   value?: string
   inputType?: string
   checked?: boolean

@@ -135,3 +135,36 @@ test('segmented choices retain their own labels within a setting field', async (
   })
   await expect.poll(() => page.evaluate(() => window.models.at(-1).rows.filter(row => ['Ask','Always','Off'].includes(row.label)).map(row => [row.label,row.checked]))).toEqual([['Ask',true],['Always',false],['Off',false]])
 })
+
+test('native presentation preserves field hierarchy, current values and exclusive choice ownership', async ({ page }) => {
+  await fixture(page)
+  await page.evaluate(() => {
+    const section = document.createElement('section')
+    section.innerHTML = `<div id="setting-field-scale"><div class="font-medium"><span>Interface scale</span></div>
+      <div class="mt-1">Resize the interface.</div><div class="inline-grid">
+      <button aria-pressed="false">90%</button><button aria-pressed="true">100%</button><button aria-pressed="false">125%</button></div></div>
+      <div id="setting-field-language"><div class="font-medium"><span>Language</span></div>
+      <div class="mt-1">Choose the interface language.</div><button aria-label="Switch language" aria-haspopup="dialog">English</button></div>
+      <button data-variant="destructive">Delete configuration</button>
+      <div><button aria-pressed="true">Independent option</button></div>`
+    section.querySelectorAll('.inline-grid button').forEach(button => button.onclick = () => {
+      section.querySelectorAll('.inline-grid button').forEach(item => item.setAttribute('aria-pressed',String(item === button)))
+      window.events.push(['scale',button.textContent])
+    })
+    document.querySelector('[data-browser-settings-frame]').append(section)
+  })
+  await expect.poll(() => page.evaluate(() => window.models.at(-1).rows.some(row=>row.label==='Language'))).toBe(true)
+  const rows = await page.evaluate(() => window.models.at(-1).rows)
+  expect(rows.filter(row=>row.label==='Interface scale')).toEqual([{kind:'heading',label:'Interface scale'}])
+  expect(rows.filter(row=>row.label==='Resize the interface.')).toHaveLength(1)
+  const choices = rows.filter(row=>['90%','100%','125%'].includes(row.label))
+  expect(new Set(choices.map(row=>row.group)).size).toBe(1)
+  expect(choices[0].group).toBeTruthy()
+  expect(choices.every(row=>row.kind==='action' && row.presentation==='choice')).toBe(true)
+  expect(rows.find(row=>row.label==='Language')).toMatchObject({kind:'action',presentation:'value',value:'English',description:'Choose the interface language.'})
+  expect(rows.find(row=>row.label==='Delete configuration').presentation).toBe('destructive')
+  expect(rows.find(row=>row.label==='Independent option')).toMatchObject({kind:'toggle',checked:true})
+  await activate(page,'125%')
+  await expect.poll(() => page.evaluate(() => window.models.at(-1).rows.find(row=>row.label==='125%').checked)).toBe(true)
+  expect(await page.evaluate(()=>window.events)).toEqual([['scale','125%']])
+})

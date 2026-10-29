@@ -85,6 +85,7 @@ class NativeAppSettings(private val activity: Activity) {
             screen.tag = title
             screen.findViewById<MaterialToolbar>(R.id.settings_toolbar).apply {
                 setTitle(title)
+                setNavigationIconTint(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface))
                 setNavigationOnClickListener { navigateBack() }
                 ViewCompat.setAccessibilityHeading(this, true)
             }
@@ -116,13 +117,25 @@ class NativeAppSettings(private val activity: Activity) {
                 }
             })
             item.setOnClickListener { action() }
-            rows.addView(item)
+            rows.addView(item, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 2.dp() })
         }
+        fun section(title: Int) {
+            rows.addView(TextView(activity).apply {
+                setText(title)
+                setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleSmall)
+                setTextColor(MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary))
+                setPadding(16.dp(), 24.dp(), 16.dp(), 8.dp())
+                ViewCompat.setAccessibilityHeading(this, true)
+            })
+        }
+        section(R.string.settings_section_app)
         row(R.string.notifications, if (NativeNotifications(activity).permission() == "granted") R.string.notifications_enabled else R.string.notifications_disabled, R.drawable.ic_notifications) { actions.notifications() }
+        row(R.string.app_updates, R.string.app_updates_description, R.drawable.ic_refresh, actions.updates)
+        section(R.string.settings_section_server)
         row(R.string.change_server, R.string.change_server_description, R.drawable.ic_server) { dismiss(); actions.changeServer() }
         row(R.string.browser_sign_in, R.string.browser_sign_in_description, R.drawable.ic_open_browser) { dismiss(); actions.signIn() }
         row(R.string.reload, R.string.reload_description, R.drawable.ic_refresh) { dismiss(); actions.reload() }
-        row(R.string.app_updates, R.string.app_updates_description, R.drawable.ic_refresh, actions.updates)
+        section(R.string.settings_section_diagnostics)
         row(R.string.connection_testing, R.string.connection_testing_description, R.drawable.ic_server, actions.connectionTesting)
         row(R.string.connection_details, R.string.connection_details_description, R.drawable.ic_server) { showDetails(diagnostics()) }
     }
@@ -155,7 +168,9 @@ class NativeAppSettings(private val activity: Activity) {
                 })
             }
             column.addView(MaterialCardView(activity).apply {
-                radius = 20.dp().toFloat(); cardElevation = 0f; addView(rows)
+                radius = 16.dp().toFloat(); cardElevation = 0f; strokeWidth = 0
+                setCardBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerLow))
+                addView(rows)
             }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 12.dp() })
         }
         column.addView(MaterialButton(activity, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
