@@ -310,7 +310,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 respond(JSONObject().put("protocol", 1)
                     .put("appVersion", packageManager.getPackageInfo(packageName, 0).versionName)
-                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state", "web-visibility", "push-token-refresh", "push-diagnostics", "action-menu")))
+                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state", "web-visibility", "push-token-refresh", "push-diagnostics", "action-menu", "action-menu-live")))
                     .put("insets", "native").put("typography", "platform"))
             }
             "webState" -> {
@@ -328,6 +328,7 @@ class MainActivity : AppCompatActivity() {
                 else { visibility.clear(); actionMenus.show(model, view, respond) }
             }
             "dismissActionMenu" -> { actionMenus.dismiss(payload.getString("id")); respond(true) }
+            "updateActionMenu" -> { respond(actionMenus.update(NativeActionMenus.parse(payload))) }
             "appSettingsMenu" -> {
                 connection.settings(payload.optBoolean("mounted"), payload.optBoolean("rendered"))
                 renderConnection(connection.state)

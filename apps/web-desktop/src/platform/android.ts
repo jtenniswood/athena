@@ -10,7 +10,7 @@ let permission: Permission = 'default'
 let activePort: AndroidPort | undefined
 let nextId = 0
 let pushActive = false
-const requests = new Map<string, { resolve: (value: unknown) => void; timer: number; reject: (error: Error) => void }>()
+const requests = new Map<string, { resolve: (value: unknown) => void; timer: number; reject: (error: Error) => void; onChange?: (id: string) => void }>()
 
 function port(): AndroidPort | undefined {
   return (window as Window & { AthenaAndroid?: AndroidPort }).AthenaAndroid
@@ -18,7 +18,7 @@ function port(): AndroidPort | undefined {
 
 export function isAndroidApp(): boolean { return Boolean(port()) }
 
-async function call(method: string, payload?: unknown): Promise<unknown> {
+async function call(method: string, payload?: unknown, onChange?: (id: string) => void): Promise<unknown> {
   const bridge = port()
   if (!bridge) throw new Error('Android bridge unavailable')
   if (activePort !== bridge) {
@@ -28,6 +28,11 @@ async function call(method: string, payload?: unknown): Promise<unknown> {
         const message = JSON.parse(event.data) as { id: string; value: unknown; error?: { code: string; message: string } }
         const request = requests.get(message.id)
         if (!request) return
+        const change = message.value as { status?: string; id?: unknown } | null
+        if (!message.error && change?.status === 'changed' && typeof change.id === 'string' && request.onChange) {
+          request.onChange(change.id)
+          return
+        }
         window.clearTimeout(request.timer)
         requests.delete(message.id)
         if (message.error) request.reject(new Error(`${message.error.code}: ${message.error.message}`))
@@ -42,7 +47,7 @@ async function call(method: string, payload?: unknown): Promise<unknown> {
       requests.delete(id)
       reject(new Error('Android request timed out'))
     }, method === 'requestPermission' || method === 'openSignIn' ? 120_000 : 5_000)
-    requests.set(id, { resolve, reject, timer })
+    requests.set(id, { resolve, reject, timer, onChange })
     try { bridge.postMessage(JSON.stringify({ id, protocol: 1, method, payload })) }
     catch { window.clearTimeout(timer); requests.delete(id); reject(new Error('Android bridge unavailable')) }
   })
@@ -126,6 +131,9 @@ export interface AndroidMenuItem {
   disabled?: boolean
   destructive?: boolean
   checked?: boolean
+  keepOpen?: boolean
+  submenu?: boolean
+  color?: string
   children?: AndroidMenuGroup[]
 }
 export interface AndroidMenuGroup {
@@ -141,17 +149,23 @@ export interface AndroidActionMenu {
   y: number
   viewportWidth: number
   groups: AndroidMenuGroup[]
+  backId?: string
 }
 export type AndroidMenuResult = { status: 'selected'; id: string } | { status: 'dismissed' } | { status: 'unavailable' }
 
-export async function androidOpenActionMenu(menu: AndroidActionMenu): Promise<AndroidMenuResult> {
+export async function androidOpenActionMenu(menu: AndroidActionMenu, onChange?: (id: string) => void): Promise<AndroidMenuResult> {
   // Stay inside the bridge envelope limit; large command lists keep the web UI.
   if (JSON.stringify(menu).length > 14000) return { status: 'unavailable' }
   try {
-    const result = await call('actionMenu', menu) as AndroidMenuResult | null
+    const result = await call('actionMenu', menu, onChange) as AndroidMenuResult | null
     if (result?.status === 'dismissed' || (result?.status === 'selected' && typeof result.id === 'string')) return result
   } catch { /* Unsupported hosts and invalid menus retain their web presentation. */ }
   return { status: 'unavailable' }
+}
+
+export async function androidUpdateActionMenu(menu: AndroidActionMenu): Promise<boolean> {
+  if (JSON.stringify(menu).length > 14000) return false
+  try { return await call('updateActionMenu', menu) === true } catch { return false }
 }
 
 export async function androidDismissActionMenu(id: string): Promise<void> {

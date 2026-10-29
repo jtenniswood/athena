@@ -23,10 +23,11 @@ import org.json.JSONObject
 /** Presents bounded command descriptions. Only the originating web owner executes commands. */
 class NativeActionMenus(private val activity: AppCompatActivity) {
     data class Item(val id: String, val label: String, val description: String, val disabled: Boolean,
-        val destructive: Boolean, val checked: Boolean?, val children: List<Group>?)
+        val destructive: Boolean, val checked: Boolean?, val children: List<Group>?, val keepOpen: Boolean = false,
+        val submenu: Boolean = false, val color: String = "")
     data class Group(val label: String, val single: Boolean, val items: List<Item>)
     data class Model(val id: String, val title: String, val compact: Boolean, val x: Double, val y: Double,
-        val viewportWidth: Double, val groups: List<Group>)
+        val viewportWidth: Double, val groups: List<Group>, val backId: String = "")
 
     companion object {
         fun parse(payload: JSONObject): Model {
@@ -51,9 +52,11 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
                         require(ids.add(id))
                         val children = if (item.has("children")) groups(item.getJSONArray("children"), depth + 1) else null
                         require(children == null || children.any { it.items.isNotEmpty() })
+                        val color = text(item, "color", 7)
+                        require(color.isEmpty() || Regex("#[a-fA-F0-9]{6}").matches(color))
                         Item(id, text(item, "label", 240, true), text(item, "description", 500),
                             item.optBoolean("disabled"), item.optBoolean("destructive"),
-                            if (item.has("checked")) item.getBoolean("checked") else null, children)
+                            if (item.has("checked")) item.getBoolean("checked") else null, children, item.optBoolean("keepOpen"), item.optBoolean("submenu"), color)
                     })
                 }
             }
@@ -63,7 +66,7 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
             val x = payload.getDouble("x")
             val y = payload.getDouble("y")
             require(width.isFinite() && width > 0 && x.isFinite() && y.isFinite())
-            return Model(text(payload, "id", 100, true), text(payload, "title", 240, true), payload.optBoolean("compact"), x, y, width, sections)
+            return Model(text(payload, "id", 100, true), text(payload, "title", 240, true), payload.optBoolean("compact"), x, y, width, sections, text(payload, "backId", 512))
         }
     }
 
@@ -72,6 +75,13 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
     private var sheet: BottomSheetDialog? = null
     private var popup: PopupMenu? = null
     private var anchorView: View? = null
+    private var updateSheet: ((Model) -> Unit)? = null
+
+    fun update(model: Model): Boolean {
+        if (model.id != requestId || updateSheet == null || !model.compact) return false
+        updateSheet?.invoke(model)
+        return true
+    }
 
     fun dismiss(id: String? = null) {
         if (id != null && id != requestId) return
@@ -81,6 +91,7 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
     private fun finish(value: JSONObject) {
         val reply = completion
         completion = null; requestId = null
+        updateSheet = null
         val oldSheet = sheet; sheet = null
         val oldPopup = popup; popup = null
         oldSheet?.setOnDismissListener(null); oldSheet?.dismiss()
@@ -96,7 +107,9 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
     }
 
     private fun selected(item: Item) {
-        if (!item.disabled && item.children == null) finish(JSONObject().put("status", "selected").put("id", item.id))
+        if (item.disabled || item.children != null) return
+        val result = JSONObject().put("status", if (item.keepOpen && sheet != null) "changed" else "selected").put("id", item.id)
+        if (item.keepOpen && sheet != null) completion?.invoke(result) else finish(result)
     }
 
     private fun showSheet(model: Model) {
@@ -117,43 +130,80 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
         dialog.onBackPressedDispatcher.addCallback(object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { goBack?.invoke() ?: dialog.cancel() }
         })
-        fun render(groups: List<Group>, title: String, back: (() -> Unit)? = null, restoreId: String? = null) {
-            goBack = back
-            header.removeAllViews()
-            column.removeAllViews()
-            if (back != null) header.addView(MaterialButton(activity, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                setText(R.string.menu_back); isAllCaps = false; minHeight = 48.dp()
-                setOnClickListener { back() }
-            }, LinearLayout.LayoutParams(-2, -2))
-            val heading = TextView(activity).apply {
-                text = title; setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleLarge)
-                ViewCompat.setAccessibilityHeading(this, true)
-                ViewCompat.setAccessibilityPaneTitle(content, title)
+        var currentModel = model
+        val path = mutableListOf<String>()
+        var renderedTitle: String? = null
+        var renderedBack = false
+        val rows = mutableMapOf<String, View>()
+        var layout: List<String> = emptyList()
+        lateinit var render: (String?) -> Unit
+        render = { restoreId ->
+            var groups = currentModel.groups
+            var title = currentModel.title
+            var validDepth = 0
+            for (id in path) {
+                val parent = groups.flatMap { it.items }.find { it.id == id && !it.disabled && it.children != null } ?: break
+                groups = parent.children!!; title = parent.label; validDepth++
             }
-            header.addView(heading)
+            while (path.size > validDepth) path.removeAt(path.lastIndex)
+            val back: (() -> Unit)? = if (path.isNotEmpty()) ({ val id = path.removeAt(path.lastIndex); render(id) })
+                else if (currentModel.backId.isNotEmpty()) ({ completion?.invoke(JSONObject().put("status", "changed").put("id", currentModel.backId)) }) else null
+            goBack = back
+            val newLayout = groups.flatMap { group -> listOf("group:${group.label}") + group.items.map { it.id } }
+            val rebuild = newLayout != layout
+            val scrollY = scroll.scrollY
+            if (rebuild) { column.removeAllViews(); rows.clear(); layout = newLayout }
+            if (title != renderedTitle || (back != null) != renderedBack) {
+                renderedTitle = title; renderedBack = back != null
+                header.removeAllViews()
+                if (back != null) header.addView(MaterialButton(activity, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                    setText(R.string.menu_back); isAllCaps = false; minHeight = 48.dp()
+                    setOnClickListener { goBack?.invoke() }
+                }, LinearLayout.LayoutParams(-2, -2))
+                val heading = TextView(activity).apply {
+                    text = title; setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleLarge)
+                    ViewCompat.setAccessibilityHeading(this, true)
+                    ViewCompat.setAccessibilityPaneTitle(content, title)
+                }
+                header.addView(heading)
+            }
             for ((index, group) in groups.withIndex()) {
-                if (index > 0) column.addView(com.google.android.material.divider.MaterialDivider(activity),
+                if (rebuild && index > 0) column.addView(com.google.android.material.divider.MaterialDivider(activity),
                     LinearLayout.LayoutParams(-1, -2).apply { topMargin = 8.dp(); bottomMargin = 8.dp() })
-                if (group.label.isNotEmpty()) column.addView(TextView(activity).apply {
+                if (rebuild && group.label.isNotEmpty()) column.addView(TextView(activity).apply {
                     text = group.label; setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_LabelLarge)
                     setPadding(16.dp(), 16.dp(), 16.dp(), 8.dp()); ViewCompat.setAccessibilityHeading(this, true)
                 })
                 for (item in group.items) {
-                    val row = activity.layoutInflater.inflate(R.layout.action_menu_row, column, false)
-                    row.tag = item.id; row.isEnabled = !item.disabled
+                    val row = rows.getOrPut(item.id) { activity.layoutInflater.inflate(R.layout.action_menu_row, column, false) }
+                    row.tag = item.id
+                    (row as com.google.android.material.card.MaterialCardView).apply {
+                        // MaterialCardView applies checked changes only while enabled and checkable.
+                        isEnabled = true; isCheckable = true
+                        checkedIcon = null
+                        isChecked = item.checked == true
+                        isCheckable = item.checked != null; isEnabled = !item.disabled
+                    }
                     row.alpha = if (item.disabled) 0.38f else 1f
                     val label = row.findViewById<TextView>(R.id.menu_label).apply { text = item.label }
                     row.findViewById<TextView>(R.id.menu_description).apply {
                         text = item.description; visibility = if (item.description.isEmpty()) View.GONE else View.VISIBLE
                     }
-                    row.findViewById<ImageView>(R.id.menu_submenu).visibility = if (item.children != null) View.VISIBLE else View.GONE
+                    row.findViewById<ImageView>(R.id.menu_submenu).visibility = if (item.children != null || item.submenu) View.VISIBLE else View.GONE
+                    row.findViewById<View>(R.id.menu_color).apply {
+                        visibility = if (item.color.isEmpty()) View.GONE else View.VISIBLE
+                        background = if (item.color.isEmpty()) null else android.graphics.drawable.GradientDrawable().apply {
+                            shape = android.graphics.drawable.GradientDrawable.OVAL
+                            setColor(android.graphics.Color.parseColor(item.color))
+                        }
+                    }
                     row.contentDescription = listOf(item.label, item.description).filter { it.isNotEmpty() }.joinToString(". ")
-                    if (item.children != null) row.contentDescription = activity.getString(R.string.menu_open_submenu, row.contentDescription)
-                    if (item.checked != null) row.findViewById<ImageView>(R.id.menu_selection).apply {
-                        visibility = View.VISIBLE
+                    if (item.children != null || item.submenu) row.contentDescription = activity.getString(R.string.menu_open_submenu, row.contentDescription)
+                    row.findViewById<ImageView>(R.id.menu_selection).apply {
+                        visibility = if (item.checked == null) View.GONE else View.VISIBLE
                         setImageResource(if (group.single) {
-                            if (item.checked) R.drawable.ic_radio_selected else R.drawable.ic_radio_unselected
-                        } else if (item.checked) R.drawable.ic_checkbox_selected else R.drawable.ic_menu_unchecked)
+                            if (item.checked == true) R.drawable.ic_radio_selected else R.drawable.ic_radio_unselected
+                        } else if (item.checked == true) R.drawable.ic_checkbox_selected else R.drawable.ic_menu_unchecked)
                     }
                     ViewCompat.setAccessibilityDelegate(row, object : androidx.core.view.AccessibilityDelegateCompat() {
                         override fun onInitializeAccessibilityNodeInfo(host: View, info: androidx.core.view.accessibility.AccessibilityNodeInfoCompat) {
@@ -163,21 +213,22 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
                             info.isCheckable = item.checked != null; info.isChecked = item.checked == true
                         }
                     })
-                    if (item.destructive) label.setTextColor(MaterialColors.getColor(label, androidx.appcompat.R.attr.colorError))
+                    label.setTextColor(MaterialColors.getColor(label, if (item.destructive) androidx.appcompat.R.attr.colorError else com.google.android.material.R.attr.colorOnSurface))
                     row.setOnClickListener {
-                        if (item.children != null) render(item.children, item.label, { render(groups, title, back, item.id) })
+                        if (item.children != null) { path.add(item.id); render(null) }
                         else selected(item)
                     }
-                    column.addView(row)
+                    if (rebuild) column.addView(row)
                 }
             }
             scroll.post {
                 val target = restoreId?.let { column.findViewWithTag<View>(it) }
                 if (target != null) { target.requestFocus(); target.requestRectangleOnScreen(android.graphics.Rect(0, 0, target.width, target.height)) }
-                else scroll.scrollTo(0, 0)
+                else if (rebuild) scroll.scrollTo(0, if (restoreId == null && path.isEmpty()) scrollY else 0)
             }
         }
-        render(model.groups, model.title)
+        updateSheet = { currentModel = it; render(null) }
+        render(null)
         dialog.setContentView(content)
         ViewCompat.setOnApplyWindowInsetsListener(content) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
