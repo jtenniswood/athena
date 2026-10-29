@@ -3313,3 +3313,47 @@ for (const nativeMenus of [true, false]) {
     })
   })
 }
+
+test.describe('Bots touch refresh', () => {
+  test.use({ hasTouch: true, isMobile: true })
+  test('pulling Bots refreshes roster and groups while preserving the chat draft', async ({ page }) => {
+    const calls = []
+    let documents = 0
+    page.on('domcontentloaded',()=>documents++)
+    page.on('websocket',socket=>socket.on('framesent',frame=>{
+      try { calls.push(JSON.parse(String(frame.payload)).method) } catch {}
+    }))
+    await page.setViewportSize({ width:390,height:844 })
+    await page.goto(`${origin}/#/preview-week`)
+    const session = page.locator('#browser-navigation').getByRole('button',{name:'Plan a calmer working week',exact:true})
+    const sessionsTab = page.getByRole('tab',{name:'Sessions',exact:true})
+    await expect.poll(async()=>await editor(page).isVisible() || await sessionsTab.isVisible(),{timeout:30000}).toBe(true)
+    if(!await editor(page).isVisible()) { await sessionsTab.click(); await session.click() }
+    await expect(editor(page)).toBeVisible()
+    await editor(page).fill('Keep this draft while refreshing Bots')
+    await page.getByRole('button',{name:/^(Open navigation|Back to home)$/}).click()
+    await expect(page.getByRole('dialog',{name:'Navigation',exact:true})).toBeVisible()
+    await page.getByRole('tab',{name:'Bots',exact:true}).click()
+    const surface = page.locator('[data-browser-bots-refresh]')
+    await expect(surface).toBeVisible()
+    await expect(page.getByRole('button',{name:'New bot or group chat',exact:true})).toBeVisible()
+    await expect.poll(()=>calls.includes('profiles.list')).toBe(true)
+    const documentsBefore = documents
+    const rosterBefore = calls.filter(method=>method==='profiles.list').length
+    const groupsBefore = calls.filter(method=>method==='groups.list').length
+    await surface.evaluate(root=>{
+      const target=root.querySelector('[data-slot="bots-roster"]') || root
+      for(const [type,y] of [['touchstart',40],['touchmove',155],['touchend',155]]) {
+        const touches=type==='touchend'?[]:[new Touch({identifier:0,target,clientX:100,clientY:y})]
+        target.dispatchEvent(new TouchEvent(type,{bubbles:true,cancelable:true,touches}))
+      }
+    })
+    await expect.poll(()=>calls.filter(method=>method==='profiles.list').length).toBeGreaterThan(rosterBefore)
+    await expect.poll(()=>calls.filter(method=>method==='groups.list').length).toBeGreaterThan(groupsBefore)
+    await expect(surface).not.toHaveAttribute('aria-busy','true')
+    expect(documents).toBe(documentsBefore)
+    await page.getByRole('tab',{name:'Sessions',exact:true}).click()
+    await page.locator('#browser-navigation').getByRole('button',{name:'Plan a calmer working week',exact:true}).click()
+    await expect(editor(page)).toHaveText('Keep this draft while refreshing Bots')
+  })
+})
