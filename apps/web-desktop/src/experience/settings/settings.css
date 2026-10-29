@@ -132,6 +132,11 @@
   --settings-header-height: max(3.25rem, var(--web-touch-min));
 }
 
+/* Android's native host already applies system-bar insets around the WebView. */
+:root[data-android-app] .browser-settings-fullscreen-card {
+  --settings-safe-top: 0px;
+}
+
 /* Align the existing overlay close control with the browser toolbar. */
 .browser-settings-fullscreen-card > .pointer-events-none > .pointer-events-auto {
   top: calc(var(--settings-safe-top) + var(--settings-header-height) / 2);
