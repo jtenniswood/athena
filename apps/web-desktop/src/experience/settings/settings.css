@@ -385,12 +385,6 @@ body:has([data-browser-settings-frame]) [data-slot='select-item'][data-highlight
 }
 .browser-advanced-settings[open] > summary { margin-bottom: var(--web-space-2); }
 
-/* Native settings keep list/detail navigation at every Android window size. */
-.browser-settings-layout.is-compact { display: flex; flex-direction: column; }
-.browser-settings-layout.is-compact .browser-settings-navigation[hidden] { display: none; }
-.browser-settings-layout.is-compact:not(.show-detail) .browser-settings-detail { display: none; }
-.browser-settings-layout.is-compact.show-detail .browser-settings-detail { display: flex; }
-
 @media (max-width: 55.999rem), (pointer: coarse) and (max-height: 27rem) {
   .browser-settings-header { gap: var(--web-space-2); padding-right: calc(var(--web-sheet-padding-end) + var(--web-touch-min) + var(--web-space-2)); }
   .browser-settings-heading { flex: 1; min-height: var(--settings-header-height); }
@@ -628,6 +622,3 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
 }
 .browser-settings-search-button kbd { margin-left: auto; font-size: .75rem; }
 .browser-settings-search-button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-
-/* Keep source controls mounted for their existing owners behind the native page. */
-[data-browser-settings-frame][data-native-settings] { opacity: 0; pointer-events: none; }

@@ -1,4 +1,3 @@
-import { installNativeSettings } from './upstream/native-settings'
 import { androidWebState, isAndroidApp } from './platform/android'
 import { buildInfo } from './build-info'
 import { completeStartup, recoverStartupChunk, restoreStartupLocation, showStartupRecovery } from './platform/startup-recovery'
@@ -25,9 +24,6 @@ const stopComposerKeyboard = installComposerKeyboard()
 if (import.meta.hot) import.meta.hot.dispose(stopComposerKeyboard)
 const stopAndroidNavigationGuard = installAndroidNavigationGuard()
 if (import.meta.hot) import.meta.hot.dispose(stopAndroidNavigationGuard)
-
-const stopNativeSettings = installNativeSettings()
-if (import.meta.hot) import.meta.hot.dispose(stopNativeSettings)
 
 async function start(): Promise<void> {
   try {

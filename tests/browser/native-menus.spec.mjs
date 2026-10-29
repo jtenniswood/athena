@@ -214,3 +214,26 @@ test('native refresh preserves the original model menu instead of dismissing it'
   await expect(page.locator('#model-menu')).toHaveCount(1)
   expect(await page.evaluate(()=>window.selections)).toEqual(['refresh'])
 })
+
+test('Settings menus stay on the web and chat menus return to Android after closing Settings', async ({ page }) => {
+  await page.evaluate(() => {
+    window.stopNativeMenus()
+    const settings = document.createElement('div')
+    settings.setAttribute('data-browser-settings-frame', '')
+    document.body.append(settings)
+    document.getElementById('trigger').setAttribute('aria-label', 'Settings actions')
+    window.calls = []
+    window.stopNativeMenus = window.startNativeMenus(false)
+  })
+  await expect(page.locator('#menu')).not.toHaveAttribute('data-native-menu')
+  await page.locator('#pin').click()
+  expect(await page.evaluate(() => window.selections)).toEqual(['pin'])
+  expect(await page.evaluate(() => window.calls.filter(call => call.method === 'actionMenu'))).toEqual([])
+  await page.evaluate(() => {
+    document.querySelector('[data-browser-settings-frame]').remove()
+    document.getElementById('trigger').setAttribute('aria-label', 'Chat actions')
+  })
+  await expect.poll(() => page.evaluate(() => window.calls.filter(call => call.method === 'actionMenu').length)).toBe(1)
+  expect(await page.evaluate(() => window.calls.find(call => call.method === 'actionMenu').payload.title)).toBe('Chat actions')
+  await expect(page.locator('#menu')).toHaveAttribute('data-native-menu', '')
+})
