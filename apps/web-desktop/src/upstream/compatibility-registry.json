@@ -1472,16 +1472,25 @@
       {
         "file": "tests/browser/interruptions.spec.mjs",
         "scenario": "group selection survives delayed Bot activation and preserves both composers"
+      },
+      {
+        "file": "tests/browser/pull-to-refresh.spec.mjs",
+        "scenario": "downward pull at the top refreshes once"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "pulling Bots refreshes roster and groups while preserving the chat draft"
       }
     ],
     "removal": "Remove when upstream roster surfaces accept browser-owned selection callbacks.",
     "handlers": [
-      "useBrowserGroupSelection"
+      "useBrowserGroupSelection",
+      "useBrowserBotsPullRefresh"
     ],
     "sourceHash": "d9f864d1034b326a0b386d85d39d024a7fa05f08c075cefb09c564559e670176",
     "sourceRoot": "renderer",
     "inputHash": "d9f864d1034b326a0b386d85d39d024a7fa05f08c075cefb09c564559e670176",
-    "outputHash": "83f1e47d0b152150f9399610e574adcac32eb6ed0a7b05044c9ce68e0f87f58c"
+    "outputHash": "01c6ca8cb3c19efa76a3b160e375e12c13343ca49d9fab1a6d90184e7d4d2881"
   },
   {
     "name": "browser-created-group-selection",
@@ -2973,12 +2982,20 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "plugins/hermes-bots/canonical-group-registry.tsx",
-    "reason": "Remove the manual gateway groups refresh control above the Bots toolbar while retaining automatic group discovery.",
+    "reason": "Replace manual gateway groups refresh with a scoped Bots pull-to-refresh signal while retaining the existing loader.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "Bots keeps filters beside the rightmost add button"
+      },
+      {
+        "file": "tests/browser/pull-to-refresh.spec.mjs",
+        "scenario": "downward pull at the top refreshes once"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "pulling Bots refreshes roster and groups while preserving the chat draft"
       }
     ],
     "removal": "Remove when upstream exposes a presentation option for the gateway groups refresh control.",
@@ -2988,6 +3005,6 @@
     "sourceHash": "98e82fe10e1ef518bfbd4275b3febddb76f0f5bbbfc1fab7df9dd632d64e0429",
     "sourceRoot": "renderer",
     "inputHash": "98e82fe10e1ef518bfbd4275b3febddb76f0f5bbbfc1fab7df9dd632d64e0429",
-    "outputHash": "691b42cbbbc5d87bada5a0ea8d9eb0326d9d07a126e18446b5c0ea0725272073"
+    "outputHash": "30868165dcb6d2ff561a31d1fc8cf7f29d4138035c783dd659573b83ea28e335"
   }
 ]
