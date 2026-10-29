@@ -462,11 +462,11 @@
       },
       {
         "file": "scripts/default-session-profile.test.mjs",
-        "scenario": "new sessions in All profiles capture the saved owner before activating its gateway"
+        "scenario": "new sessions in All profiles capture the first enabled owner before activating its gateway"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "the default new-session profile persists and routes All profiles drafts without changing scope"
+        "scenario": "the first enabled profile routes All profiles drafts without changing scope"
       },
       {
         "file": "scripts/renderer-update.test.mjs",
@@ -2094,29 +2094,39 @@
   },
   {
     "name": "browser-semantic-voice-menu",
-    "kind": "browser-transform",
-    "order": 20,
+    "kind": "replacement",
+    "order": 10,
     "module": "app/chat/composer/voice-menu.tsx",
-    "reason": "Remove the full voice-conversation entry while preserving dictation and other voice controls.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "reason": "Use a direct dictation button without a voice popup or extra voice controls.",
+    "owner": "apps/web-desktop/src/overrides/voice-input.tsx",
     "tests": [
       {
-        "file": "scripts/sidebar-contracts.test.mjs",
-        "scenario": "semantic adapters preserve identity and reject upstream drift"
-      },
-      {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "browser touch hooks survive control label and icon changes"
+        "scenario": "records once permission is granted and releases the mic after transcription"
       }
     ],
     "removal": "Remove when upstream exposes equivalent stable browser hooks.",
-    "handlers": [
-      "removeBrowserConversationalVoiceEntry"
-    ],
     "sourceRoot": "renderer",
     "sourceHash": "392cff54e8ea488091c1ec952742b1119e8bcafbd6276756682085312853ef45",
-    "inputHash": "392cff54e8ea488091c1ec952742b1119e8bcafbd6276756682085312853ef45",
-    "outputHash": "b42c0593c9b2020ece4dbb857c9847360188883c8b9cc05e580edc3b0fad7784"
+    "replacement": "src/overrides/voice-input.tsx"
+  },
+  {
+    "name": "browser-semantic-voice-fan",
+    "kind": "replacement",
+    "order": 10,
+    "module": "app/chat/composer/voice-fan.tsx",
+    "reason": "Use a direct dictation button without a voice popup or extra voice controls.",
+    "owner": "apps/web-desktop/src/overrides/voice-input.tsx",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "records once permission is granted and releases the mic after transcription"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "sourceRoot": "renderer",
+    "sourceHash": "6d84693c920e2058bebdc53160d8f4f64ec5206c8ab3f14085e6a46bb4cdea9d",
+    "replacement": "src/overrides/voice-input.tsx"
   },
   {
     "name": "browser-semantic-start-voice-button",
@@ -2669,18 +2679,18 @@
     "sourceHash": "89b0fc40d4ab94f61c68a7bbeb0afb47179facfda43ab0574f1947af7e6dca46",
     "replacement": "src/upstream/default-session-profile.ts",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
-    "reason": "Use the browser preference for generic new sessions in All profiles while preserving explicit profile targets and single-profile scope.",
+    "reason": "Use the first enabled profile in rail order for generic new sessions in All profiles while preserving explicit profile targets and single-profile scope.",
     "tests": [
       {
         "file": "scripts/default-session-profile.test.mjs",
-        "scenario": "new sessions in All profiles capture the saved owner before activating its gateway"
+        "scenario": "new sessions in All profiles capture the first enabled owner before activating its gateway"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "the default new-session profile persists and routes All profiles drafts without changing scope"
+        "scenario": "the first enabled profile routes All profiles drafts without changing scope"
       }
     ],
-    "removal": "Remove when upstream default session routing supports an All profiles preference scope."
+    "removal": "Remove when upstream default session routing supports the enabled profile rail order in All profiles."
   },
   {
     "name": "browser-alternate-composer-submit",

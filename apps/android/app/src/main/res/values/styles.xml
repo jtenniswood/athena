@@ -12,10 +12,4 @@
         <item name="android:windowActionModeOverlay">true</item>
         <item name="android:fontFamily">sans</item>
     </style>
-    <style name="AthenaSettingsRow" parent="Widget.Material3.CardView.Filled">
-        <item name="cardCornerRadius">20dp</item>
-        <item name="cardElevation">0dp</item>
-        <item name="cardBackgroundColor">?attr/colorSurfaceContainerHigh</item>
-        <item name="strokeWidth">0dp</item>
-    </style>
 </resources>

@@ -98,7 +98,7 @@ narrowDesktopChecks(test, open)
 
 const touchTest = test.extend({ hasTouch: true })
 
-test('the default new-session profile persists and routes All profiles drafts without changing scope', async ({ page }) => {
+test('the first enabled profile routes All profiles drafts without changing scope', async ({ page }) => {
   const creates = []
   await page.routeWebSocket(/\/api\/ws/, socket => {
     const server = socket.connectToServer()
@@ -109,14 +109,12 @@ test('the default new-session profile persists and routes All profiles drafts wi
     })
     server.onMessage(message => socket.send(message))
   })
+  await page.route('**/api/athena/preferences', route => route.abort())
+  await page.addInitScript(() => {
+    localStorage.setItem('hermes.desktop.profileOrder', JSON.stringify(['research', 'writer', 'default']))
+    localStorage.setItem('hermes-web.default-profile-route.v1', JSON.stringify({ connectionId: 'web-single', profile: 'writer' }))
+  })
   await open(page)
-  await editor(page).fill('Keep this conversation draft while choosing a default')
-  await page.getByRole('button', { name: 'Profile actions', exact: true }).click()
-  await page.getByRole('menuitem', { name: 'Default for new sessions', exact: true }).hover()
-  await page.getByRole('menuitemradio', { name: 'Research', exact: true }).click()
-  await expect(editor(page)).toHaveText('Keep this conversation draft while choosing a default')
-  await page.reload()
-  await expect(editor(page)).toBeVisible({ timeout: 30000 })
   const all = page.getByRole('button', { name: 'All profiles', exact: true })
   await all.click()
   await page.getByRole('button', { name: 'New session', exact: true }).first().click()
@@ -145,26 +143,18 @@ test('the default new-session profile persists and routes All profiles drafts wi
   await expect(all).toHaveAttribute('aria-pressed', 'true')
 })
 
-touchTest('the phone profile actions can choose and clear a default without changing the conversation draft', async ({ page }) => {
+touchTest('the phone profile actions only manage enabled profiles and preserve the draft', async ({ page }) => {
+  await page.route('**/api/athena/preferences', route => route.abort())
   await page.setViewportSize({ width: 390, height: 844 })
   await open(page)
-  await editor(page).fill('Keep the draft while choosing a phone default')
+  await editor(page).fill('Keep the draft while managing phone profiles')
   await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
   await page.getByRole('button', { name: 'Profile actions', exact: true }).click()
-  await page.getByRole('button', { name: 'Default for new sessions', exact: true }).click()
-  await page.getByRole('radio', { name: 'Research', exact: true }).click()
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('hermes-web.default-profile-route.v1'))?.profile)).toBe('research')
+  await expect(page.getByRole('button', { name: 'Default for new sessions', exact: true })).toHaveCount(0)
+  await page.getByRole('checkbox', { name: 'Research', exact: true }).click()
   await page.keyboard.press('Escape')
-  await expect(editor(page)).toHaveText('Keep the draft while choosing a phone default')
-
-  await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
-  await page.getByRole('button', { name: 'Profile actions', exact: true }).click()
-  await page.getByRole('button', { name: 'Default for new sessions', exact: true }).click()
-  await expect(page.getByRole('radio', { name: 'Research', exact: true })).toHaveAttribute('aria-checked', 'true')
-  await page.getByRole('radio', { name: 'Last active profile', exact: true }).click()
-  await expect.poll(() => page.evaluate(() => localStorage.getItem('hermes-web.default-profile-route.v1'))).toBeNull()
-  await page.keyboard.press('Escape')
-  await expect(editor(page)).toHaveText('Keep the draft while choosing a phone default')
+  await expect(page.locator('[data-profile-key="research"]')).toHaveCount(0)
+  await expect(page.locator('[contenteditable="true"]').first()).toHaveText('Keep the draft while managing phone profiles')
 })
 
 for (const preference of ['queue', 'steer']) {
