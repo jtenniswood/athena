@@ -19,20 +19,6 @@
             android:text="@string/settings_description"
             android:textAppearance="?attr/textAppearanceBodyMedium"
             android:textColor="?attr/colorOnSurfaceVariant" />
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/connected_server"
-            android:textAppearance="?attr/textAppearanceLabelLarge"
-            android:textColor="?attr/colorPrimary" />
-        <TextView
-            android:id="@+id/connected_server"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="0dp"
-            android:textAppearance="?attr/textAppearanceBodyLarge"
-            android:textIsSelectable="true" />
         <LinearLayout
             android:id="@+id/settings_rows"
             android:layout_width="match_parent"
