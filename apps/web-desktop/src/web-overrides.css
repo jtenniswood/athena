@@ -600,3 +600,10 @@ body > [data-slot='fan-menu'] {
 [id="setting-field-appearance.vibe-hearts"] {
   display: none !important;
 }
+
+/* Hide response hover actions and empty reaction pickers in browser chats.
+   Existing reactions remain visible. */
+[data-slot='aui_assistant-message-root'] [data-slot='aui_msg-actions'],
+[data-slot='aui_assistant-message-root'] [data-slot='aui_msg-reactions']:not([data-reacted]) {
+  display: none !important;
+}
