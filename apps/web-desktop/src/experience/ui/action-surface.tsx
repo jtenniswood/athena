@@ -35,6 +35,10 @@ export type BrowserActionAnchor = {
   returnFocus: HTMLElement
 }
 
+function needsLiveMenu(groups: BrowserActionGroup[]): boolean {
+  return groups.some(group => group.actions.some(action => action.keepOpen || (action.children && needsLiveMenu(action.children))))
+}
+
 /** One command list, with keyboard menus on desktop and a modal phone sheet. */
 export function BrowserActionSurface({ title, hideTitle = false, actions = [], groups, anchor, compact, onClose, fallbackFocus, className = '' }: {
   title: string
@@ -55,6 +59,9 @@ export function BrowserActionSurface({ title, hideTitle = false, actions = [], g
   const nativeMenus = useNativeActionMenus()
   const [nativeUnavailable, setNativeUnavailable] = useState(false)
   const sections = (groups ?? [{ key: 'actions', actions }]).filter(group => group.actions.length)
+  // Native menus return a single selection and dismiss. Keep persistent controls
+  // in React so checks, disabled rows and submenu position update in place.
+  const useNative = nativeMenus && !nativeUnavailable && !needsLiveMenu(sections)
   // Read live action props so an open sheet reflects changed checks and callbacks.
   const submenu = sections.flatMap(group => group.actions).find(action => action.key === submenuKey)
   useEffect(() => {
@@ -62,7 +69,7 @@ export function BrowserActionSurface({ title, hideTitle = false, actions = [], g
   }, [anchor])
   useEffect(() => { if (anchor) returnToTrigger.current = true }, [anchor])
   useEffect(() => {
-    if (!compact || !anchor || (nativeMenus !== false && !nativeUnavailable)) return
+    if (!compact || !anchor || useNative || (nativeMenus === null && !nativeUnavailable)) return
     const frame = requestAnimationFrame(() => {
       const returnKey = pendingFocusKey.current
       pendingFocusKey.current = null
@@ -74,10 +81,10 @@ export function BrowserActionSurface({ title, hideTitle = false, actions = [], g
       target?.focus({ preventScroll: true })
     })
     return () => cancelAnimationFrame(frame)
-  }, [anchor, compact, submenuKey, nativeMenus, nativeUnavailable])
+  }, [anchor, compact, submenuKey, nativeMenus, nativeUnavailable, useNative])
   if (!anchor) return null
   if (nativeMenus === null && !nativeUnavailable) return null
-  if (nativeMenus && !nativeUnavailable) return <NativeActionSurface title={title} groups={sections} anchor={anchor} compact={compact} onClose={onClose} fallbackFocus={fallbackFocus} onUnavailable={() => setNativeUnavailable(true)} />
+  if (useNative) return <NativeActionSurface title={title} groups={sections} anchor={anchor} compact={compact} onClose={onClose} fallbackFocus={fallbackFocus} onUnavailable={() => setNativeUnavailable(true)} />
   const restoreFocus = (event: Event) => {
     event.preventDefault()
     // Clicking another control expresses a new focus target. Escape and
