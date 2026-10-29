@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ComponentProps, type PointerEvent, type RefObject, type MouseEvent } from 'react'
 import { useBrowserSidebarSections } from './sidebar-sections'
+import { browserRouteCoversWorkspace } from '../upstream/browser-routes'
 import { Codicon } from '../upstream/browser-api'
 import { SettingsMenu } from './settings-menu'
 import { BrowserToolbarButton } from './ui/toolbar-button'
@@ -53,9 +54,9 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
       if (preserveNextSelection.current) {
         preserveNextSelection.current = false
         window.clearTimeout(preserveTimeout.current)
-      } else if (!mobile || previous.current.path !== path) {
-        // Session hydration can change the selection behind the mobile home.
-        // Explicit row activation closes it through the conversation-open request.
+      } else if (!mobile || (previous.current.path !== path && browserRouteCoversWorkspace(path))) {
+        // Startup can restore both a session selection and its route. Keep the
+        // mobile chat list visible until an explicit conversation-open request.
         setDrawerOpen(false)
         if (drawerOpen) requestAnimationFrame(() => main.current?.focus())
       }
