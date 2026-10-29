@@ -42,6 +42,7 @@ class MainActivity : AppCompatActivity() {
     private val actionMenus by lazy { NativeActionMenus(this) }
     private val connection = ConnectionCoordinator { renderConnection(it) }
     private var connectionStatus: TextView? = null
+    private var connectionAction: com.google.android.material.button.MaterialButton? = null
     private var pageGeneration = 0
     private var navigationId: String? = null
     private var webRevision = "Unknown"
@@ -100,6 +101,7 @@ class MainActivity : AppCompatActivity() {
         visibility.clear()
         connection.setup()
         connectionStatus = null
+        connectionAction = null
         editingServer = origin.isNotEmpty()
         container.removeAllViews()
         val screen = layoutInflater.inflate(R.layout.screen_connect, container, false)
@@ -146,6 +148,7 @@ class MainActivity : AppCompatActivity() {
         actionMenus.dismiss()
         editingServer = false
         connectionStatus = null
+        connectionAction = null
         connection.loading()
         web?.destroy()
         web = null
@@ -160,18 +163,23 @@ class MainActivity : AppCompatActivity() {
         connectionStatus = TextView(this).apply {
             setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium)
             setPadding(16.dp(), 8.dp(), 16.dp(), 8.dp())
-            setOnClickListener {
-                MaterialAlertDialogBuilder(this@MainActivity).setTitle("Connection status")
-                    .setMessage(connection.state.message)
-                    .setNegativeButton("Close", null)
-                    .setNeutralButton("App settings") { _, _ -> appSettings() }
-                    .setPositiveButton("Try again") { _, _ ->
-                        if (connection.state.code?.startsWith("auth-") == true) authentication.retry(origin)
-                        else reconnectAthena()
-                    }.show()
-            }
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
         container.addView(connectionStatus)
+        connectionAction = com.google.android.material.button.MaterialButton(this, null,
+            com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            setOnClickListener {
+                val current = connection.state
+                if (current.stage in listOf(ConnectionCoordinator.Stage.ACCESS_SIGN_IN, ConnectionCoordinator.Stage.ATHENA_SIGN_IN)) {
+                    authentication.cancel()
+                    connection.recover("auth-cancelled", getString(R.string.sign_in_cancelled))
+                } else if (current.code?.startsWith("auth-") == true) authentication.retry(origin)
+                else reconnectAthena()
+            }
+        }
+        container.addView(connectionAction, LinearLayout.LayoutParams(-2, -2).apply {
+            marginStart = 16.dp(); marginEnd = 16.dp(); bottomMargin = 8.dp()
+        })
         renderConnection(connection.state)
         val progress = LinearProgressIndicator(this).apply { max = 100 }
         container.addView(progress, LinearLayout.LayoutParams(-1, 4.dp()))
@@ -210,7 +218,7 @@ class MainActivity : AppCompatActivity() {
                 val generation = pageGeneration
                 view.postDelayed({
                     if (generation == pageGeneration && connection.state.stage == ConnectionCoordinator.Stage.LOADING) {
-                        connection.recover("web-timeout", "Athena has not finished connecting. Tap here to retry or check App settings.")
+                        connection.recover("web-timeout", "Athena has not finished connecting. Choose Try again or check App settings.")
                     }
                 }, 20000)
             }
@@ -310,7 +318,7 @@ class MainActivity : AppCompatActivity() {
                 webRevision = payload.optString("revision", "Unknown").take(80)
                 serverProtocol = payload.optString("serverProtocol", "Unknown").take(40)
                 if (payload.optBoolean("ready")) connection.ready()
-                else connection.recover("web-startup", "Athena could not finish loading. Tap here to retry or check App settings.")
+                else connection.recover("web-startup", "Athena could not finish loading. Choose Try again or check App settings.")
                 respond(true)
             }
             "appSettings" -> { appSettings(); respond(true) }
@@ -451,6 +459,7 @@ class MainActivity : AppCompatActivity() {
         visibility.clear()
         connection.recover("web-unreachable", message)
         connectionStatus = null
+        connectionAction = null
         container.removeAllViews()
         val screen = layoutInflater.inflate(R.layout.screen_recovery, container, false)
         screen.findViewById<TextView>(R.id.recovery_message).text = message
@@ -485,7 +494,11 @@ class MainActivity : AppCompatActivity() {
         connectionStatus?.apply {
             text = state.message
             visibility = if (state.stage in listOf(ConnectionCoordinator.Stage.READY, ConnectionCoordinator.Stage.SETUP)) View.GONE else View.VISIBLE
-            contentDescription = state.message + ". Tap for connection actions."
+        }
+        connectionAction?.apply {
+            val signingIn = state.stage in listOf(ConnectionCoordinator.Stage.ACCESS_SIGN_IN, ConnectionCoordinator.Stage.ATHENA_SIGN_IN)
+            visibility = if (signingIn || state.stage == ConnectionCoordinator.Stage.RECOVERY) View.VISIBLE else View.GONE
+            setText(if (signingIn) R.string.cancel_sign_in else R.string.reconnect)
         }
     }
 

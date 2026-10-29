@@ -1,7 +1,6 @@
 package com.athena.android
 
 import android.app.Activity
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.Context
 import android.net.Uri
 import android.util.Base64
@@ -32,7 +31,7 @@ class AccessSignIn(private val activity: Activity, private val now: () -> Long =
     fun resume(origin: String) {
         if (prefs.getString("origin", null) != origin) return
         if (now() - prefs.getLong("started", 0) !in 0..300000) {
-            cancel(); progress("auth-expired", "Access sign-in expired. Tap here to start again.")
+            cancel(); progress("auth-expired", "Access sign-in expired. Choose Try again to start again.")
         } else progress("waiting", "")
     }
 
@@ -43,17 +42,16 @@ class AccessSignIn(private val activity: Activity, private val now: () -> Long =
         val state = encode(ByteArray(32).also { SecureRandom().nextBytes(it) })
         val url = Uri.parse("$origin/api/athena/android/auth/access").buildUpon()
             .appendQueryParameter("state", state).appendQueryParameter("key", encode(pair.public.encoded)).build()
-        confirmation = MaterialAlertDialogBuilder(activity).setTitle("Sign in through Cloudflare Access")
-            .setMessage("Sign in with Pocket ID in your browser, then check code ${state.take(6)} and server $origin before approving the app connection.")
-            .setNegativeButton("Cancel") { _, _ -> progress("auth-cancelled", "Access sign-in cancelled. Tap here to try again.") }
-            .setOnCancelListener { progress("auth-cancelled", "Access sign-in cancelled. Tap here to try again.") }
-            .setPositiveButton("Open browser") { _, _ ->
+        confirmation = SignInConfirmation.builder(activity, origin, state.take(6))
+            .setNegativeButton(R.string.cancel) { _, _ -> progress("auth-cancelled", "Access sign-in cancelled. Choose Try again when you’re ready.") }
+            .setOnCancelListener { progress("auth-cancelled", "Access sign-in cancelled. Choose Try again when you’re ready.") }
+            .setPositiveButton(R.string.open_browser) { _, _ ->
                 if (activity.isDestroyed || request != generation) return@setPositiveButton
                 // Private app storage, excluded from backups. The short-lived key never leaves this device.
                 prefs.edit().putString("origin", origin).putString("state", state)
                     .putString("private", encode(pair.private.encoded)).putLong("started", now()).apply()
                 try { CustomTabsIntent.Builder().build().launchUrl(activity, url); progress("waiting", "") }
-                catch (_: Exception) { cancel(); progress("auth-browser", "No browser could open Access sign-in. Tap here to retry.") }
+                catch (_: Exception) { cancel(); progress("auth-browser", "No browser could open Access sign-in. Choose Try again to retry.") }
             }.show()
     }
 
