@@ -848,15 +848,7 @@ export function useBrowserAlternateSubmit(source: string, root: string): string 
 }
 
 
-export function removeBrowserConversationalVoiceEntry(source: string, module: 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'): string {
-  if (module.endsWith('voice-menu.tsx')) {
-    const start = source.indexOf('        <DropdownMenuItem\n', source.indexOf('<DropdownMenuContent'))
-    const end = source.indexOf('        <VoiceEngineRows', start)
-    if (start < 0 || end < 0) throw new Error('Browser conversational voice menu boundary changed')
-    const itemStart = source.indexOf('        <DropdownMenuSeparator />\n', start)
-    if (itemStart < 0 || itemStart > end) throw new Error('Browser conversational voice separator boundary changed')
-    return source.slice(0, start) + source.slice(end)
-  }
+export function removeBrowserConversationalVoiceEntry(source: string): string {
   const start = source.indexOf('export function StartVoiceButton(')
   if (start < 0) throw new Error('Browser conversational voice button boundary changed')
   return 'export function StartVoiceButton(_props: { disabled: boolean; label: string; onStart: () => void }) {\n  return null\n}\n'
@@ -1337,7 +1329,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserTouchHooks: source => useBrowserTouchHooks(source, root), useBrowserAcceptedSubmit: source => useBrowserAcceptedSubmit(source, root),
     useBrowserFollowupSubmit: source => useBrowserFollowupSubmit(source, root), useBrowserAlternateSubmit: source => useBrowserAlternateSubmit(source, root),
     useBrowserCodingActionHooks, useBrowserSectionIds, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
-    removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source, entry.module as 'app/chat/composer/voice-menu.tsx' | 'app/chat/composer/start-voice-button.tsx'),
+    removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     useBrowserProjectDisclosure,
     exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut, removeBrowserTopCapabilitiesLink,
