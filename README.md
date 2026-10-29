@@ -127,6 +127,11 @@ controls. The separate Android header is hidden once that menu is ready and
 returns during page loading or sign-in. Older APKs and older server versions
 retain their native App settings button.
 
+On supported APKs, the chat model menu uses a native searchable sheet. Tap a
+model to select it; tap its arrow or long-press for favorites and model options.
+Search retains Hermes model matching and large catalogs remain available across
+pages. Browsers and older APKs retain the web menu.
+
 The native setup, settings sheet, and confirmation dialogs use Material 3, follow
 the system light/dark theme, and use wallpaper colours on Android 12 and later.
 Server setup includes inline address validation and a keyboard Connect action.

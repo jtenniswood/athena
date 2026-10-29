@@ -140,4 +140,39 @@ class NativeActionMenusTest {
         menus.dismiss()
         controller.pause().stop().destroy()
     }
+    @Test fun nativeSearchKeepsTheEditorsQueryDuringLiveRowUpdates() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get(); val menus = NativeActionMenus(activity)
+        val data = payload().put("search", JSONObject().put("id", "query").put("label", "Search models").put("value", ""))
+        val replies = mutableListOf<JSONObject>()
+        menus.show(NativeActionMenus.parse(data), View(activity)) { replies.add(it as JSONObject) }
+        val dialog = ShadowDialog.getLatestDialog() as BottomSheetDialog
+        fun all(view: View): List<View> = listOf(view) + if(view is android.view.ViewGroup) (0 until view.childCount).flatMap { all(view.getChildAt(it)) } else emptyList()
+        val input = all(dialog.window!!.decorView).filterIsInstance<android.widget.EditText>().single()
+        input.requestFocus(); input.setText("Model 39")
+        assertEquals("query", replies.last().getString("id"))
+        assertEquals("Model 39", replies.last().getString("value"))
+        assertTrue(menus.update(NativeActionMenus.parse(data)))
+        assertEquals("Model 39", input.text.toString())
+        assertTrue(dialog.isShowing)
+        menus.dismiss(); controller.pause().stop().destroy()
+    }
+
+    @Test fun modelRowsSelectDirectlyAndExposeTheirOptionsSeparately() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get(); val menus = NativeActionMenus(activity)
+        val data = payload()
+        val row = data.getJSONArray("groups").getJSONObject(0).getJSONArray("items").getJSONObject(2)
+        row.put("selectable", true).put("keepOpen", true)
+        val replies = mutableListOf<JSONObject>()
+        menus.show(NativeActionMenus.parse(data), View(activity)) { replies.add(it as JSONObject) }
+        val dialog = ShadowDialog.getLatestDialog() as BottomSheetDialog
+        val root = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)!!
+        root.findViewWithTag<View>("choice").performClick()
+        assertEquals("choice", replies.single().getString("id"))
+        assertNotNull(root.findViewWithTag<View>("rename"))
+        root.findViewWithTag<View>("choice").findViewById<View>(R.id.menu_submenu).performClick()
+        assertNotNull(root.findViewWithTag<View>("one"))
+        menus.dismiss(); controller.pause().stop().destroy()
+    }
 }

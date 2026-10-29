@@ -137,3 +137,19 @@ Large or unsupported payloads, ordinary browsers and older APKs retain the web
 menu. Native presentation currently covers the shared action surface (chat,
 roster, profiles, filters and navigation). Upstream model/provider pickers,
 text-selection controls and bespoke editor menus retain their existing UI.
+
+## Searchable model menus
+
+The optional `action-menu-search` capability extends action menus with
+`search: { id, value, label }`. Native query changes send a `changed` event with
+that ID and a string `value`; the mounted renderer search input retains fuzzy
+matching, custom model entry, provider routing, and catalog ownership. The native
+editor keeps its text and selection while result rows update.
+
+A row with `children` and `selectable: true` selects on its primary tap and opens
+its detail actions from the arrow, long-press, or accessibility Expand action.
+Model details retain the original favorite button and keyboard-opened options
+submenu. All model menu actions stay open until their renderer owner closes, so
+refresh and failed selections do not dismiss prematurely. Large catalogs use
+15-row pages within the existing transport and command-count limits. Old hosts
+continue to use web search menus.

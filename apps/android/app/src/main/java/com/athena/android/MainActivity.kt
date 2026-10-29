@@ -310,7 +310,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 respond(JSONObject().put("protocol", 1)
                     .put("appVersion", packageManager.getPackageInfo(packageName, 0).versionName)
-                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state", "web-visibility", "push-token-refresh", "push-diagnostics", "action-menu", "action-menu-live")))
+                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state", "web-visibility", "push-token-refresh", "push-diagnostics", "action-menu", "action-menu-live", "action-menu-search")))
                     .put("insets", "native").put("typography", "platform"))
             }
             "webState" -> {

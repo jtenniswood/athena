@@ -14,7 +14,7 @@ export function useRendererMenuCompatibility() {
     let active = true
     let cleanup: (() => void) | undefined
     void androidHost().then(host => {
-      if (active && host?.capabilities.includes('action-menu-live')) cleanup = installNativeRendererMenus()
+      if (active && host?.capabilities.includes('action-menu-live')) cleanup = installNativeRendererMenus(host.capabilities.includes('action-menu-search'))
     })
     return () => { active = false; cleanup?.() }
   }, [])

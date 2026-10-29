@@ -10,7 +10,7 @@ let permission: Permission = 'default'
 let activePort: AndroidPort | undefined
 let nextId = 0
 let pushActive = false
-const requests = new Map<string, { resolve: (value: unknown) => void; timer: number; reject: (error: Error) => void; onChange?: (id: string) => void }>()
+const requests = new Map<string, { resolve: (value: unknown) => void; timer: number; reject: (error: Error) => void; onChange?: (id: string, value?: unknown) => void }>()
 
 function port(): AndroidPort | undefined {
   return (window as Window & { AthenaAndroid?: AndroidPort }).AthenaAndroid
@@ -18,7 +18,7 @@ function port(): AndroidPort | undefined {
 
 export function isAndroidApp(): boolean { return Boolean(port()) }
 
-async function call(method: string, payload?: unknown, onChange?: (id: string) => void): Promise<unknown> {
+async function call(method: string, payload?: unknown, onChange?: (id: string, value?: unknown) => void): Promise<unknown> {
   const bridge = port()
   if (!bridge) throw new Error('Android bridge unavailable')
   if (activePort !== bridge) {
@@ -28,9 +28,9 @@ async function call(method: string, payload?: unknown, onChange?: (id: string) =
         const message = JSON.parse(event.data) as { id: string; value: unknown; error?: { code: string; message: string } }
         const request = requests.get(message.id)
         if (!request) return
-        const change = message.value as { status?: string; id?: unknown } | null
+        const change = message.value as { status?: string; id?: unknown; value?: unknown } | null
         if (!message.error && change?.status === 'changed' && typeof change.id === 'string' && request.onChange) {
-          request.onChange(change.id)
+          request.onChange(change.id, change.value)
           return
         }
         window.clearTimeout(request.timer)
@@ -135,6 +135,7 @@ export interface AndroidMenuItem {
   submenu?: boolean
   color?: string
   children?: AndroidMenuGroup[]
+  selectable?: boolean
 }
 export interface AndroidMenuGroup {
   label?: string
@@ -150,10 +151,11 @@ export interface AndroidActionMenu {
   viewportWidth: number
   groups: AndroidMenuGroup[]
   backId?: string
+  search?: { id: string; value: string; label: string }
 }
 export type AndroidMenuResult = { status: 'selected'; id: string } | { status: 'dismissed' } | { status: 'unavailable' }
 
-export async function androidOpenActionMenu(menu: AndroidActionMenu, onChange?: (id: string) => void): Promise<AndroidMenuResult> {
+export async function androidOpenActionMenu(menu: AndroidActionMenu, onChange?: (id: string, value?: unknown) => void): Promise<AndroidMenuResult> {
   // Stay inside the bridge envelope limit; large command lists keep the web UI.
   if (JSON.stringify(menu).length > 14000) return { status: 'unavailable' }
   try {
