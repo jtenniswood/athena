@@ -20,7 +20,7 @@
 .browser-navigation[hidden],.browser-navigation-resizer[hidden] { display:none; }
 .browser-navigation-resizer { position:relative; width:.35rem; flex:0 0 .35rem; z-index:2; margin-left:-.175rem; cursor:col-resize; background:transparent; touch-action:none; }
 .browser-navigation-resizer::after { position:absolute; inset:0 auto 0 50%; width:1px; transform:translateX(-50%); background:transparent; content:""; }
-.browser-navigation-resizer:hover::after,.browser-navigation-resizer:focus-visible::after,.browser-navigation-resizer:active::after { width:.2rem; border-radius:999px; background:var(--web-accent); box-shadow:0 0 .45rem color-mix(in srgb,var(--web-accent) 70%,transparent); }
+.browser-navigation-resizer:focus-visible::after,.browser-navigation-resizer:active::after { width:.2rem; border-radius:999px; background:var(--web-accent); box-shadow:0 0 .45rem color-mix(in srgb,var(--web-accent) 70%,transparent); }
 .browser-navigation-resizer:focus-visible { outline:none; }
 .browser-navigation-tabs { display:flex; flex:1; gap:0; min-width:0; overflow-x:auto; background:var(--web-sidebar); scrollbar-width:none; }
 .browser-navigation-tabs::-webkit-scrollbar { display:none; }
