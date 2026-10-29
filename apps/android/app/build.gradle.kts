@@ -12,8 +12,9 @@ android {
         applicationId = "com.athena.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "0.2.1"
+        versionCode = 7
+        System.getenv("ATHENA_ANDROID_VERSION_CODE")?.let { versionCode = it.toInt().also { code -> require(code > 7) } }
+        versionName = "0.2.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { buildConfig = true }

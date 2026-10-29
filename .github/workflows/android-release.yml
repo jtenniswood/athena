@@ -35,6 +35,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ steps.identity.outputs.commit }}
+          fetch-depth: 0
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -47,6 +48,8 @@ jobs:
       - name: Verify Gradle wrapper
         working-directory: apps/android
         run: echo '81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f  gradle/wrapper/gradle-wrapper.jar' | sha256sum --check
+      - name: Assign an increasing APK version code
+        run: echo "ATHENA_ANDROID_VERSION_CODE=$((1000 + $(git rev-list --count HEAD)))" >> "$GITHUB_ENV"
       - name: Build, sign and verify the release APK
         env:
           ATHENA_ANDROID_KEYSTORE_BASE64: ${{ secrets.ATHENA_ANDROID_KEYSTORE_BASE64 }}
