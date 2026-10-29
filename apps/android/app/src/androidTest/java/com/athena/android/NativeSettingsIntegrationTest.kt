@@ -79,8 +79,9 @@ class NativeSettingsIntegrationTest {
                 fun views(view: View): List<View> = listOf(view) + if (view is android.view.ViewGroup)
                     (0 until view.childCount).flatMap { views(view.getChildAt(it)) } else emptyList()
                 fun click(label: String) = scenario.onActivity { activity ->
-                    views(activity.findViewById(android.R.id.content)).filterIsInstance<android.widget.TextView>()
-                        .first { it.text.toString() == label && it.isClickable }.performClick()
+                    val text = views(activity.findViewById(android.R.id.content)).filterIsInstance<android.widget.TextView>()
+                        .first { it.text.toString() == label }
+                    generateSequence(text as View) { it.parent as? View }.first { it.isClickable }.performClick()
                 }
                 click("Original")
                 scenario.onActivity {

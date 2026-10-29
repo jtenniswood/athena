@@ -29,9 +29,9 @@ export function createBrowserConfigurationCommands(
 }
 
 /** Keep upstream action handlers and confirmation flows on labelled controls. */
-export function BrowserConfigurationAction({ command }: { command: BrowserConfigurationCommand }) {
+export function BrowserConfigurationAction({ command, destructive = false }: { command: BrowserConfigurationCommand; destructive?: boolean }) {
   const descriptionId = useId()
-  return <button type="button" className="browser-configuration-action" aria-label={command.label} aria-describedby={descriptionId} onClick={() => void command.run()}>
+  return <button type="button" className="browser-configuration-action" data-variant={destructive ? 'destructive' : 'outline'} aria-label={command.label} aria-describedby={descriptionId} onClick={() => void command.run()}>
     <span>
       <span className="browser-configuration-action-label">{command.label}</span>
       <span className="browser-configuration-action-description" id={descriptionId}>{command.description}</span>
@@ -73,7 +73,7 @@ export function BrowserConfigurationPage({ commands }: { commands: BrowserConfig
     <div className="browser-configuration-actions">
       <BrowserConfigurationAction command={commands.export} />
       <BrowserConfigurationAction command={commands.import} />
-      <BrowserConfigurationAction command={commands.reset} />
+      <BrowserConfigurationAction command={commands.reset} destructive />
     </div>
   </section>
 }

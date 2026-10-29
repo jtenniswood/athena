@@ -1,5 +1,6 @@
-import { lazy, Suspense, type ComponentType, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from 'react'
 import { useLocation } from 'react-router'
+import { isAndroidApp } from '../../platform/android'
 import { Codicon, NotificationsSettings } from '../../upstream/browser-api'
 import { groupSettingsSections, isSettingsSectionVisible, orderSettingsSections, settingsPageLabel, settingsPageDescription, settingsScopeDescription } from './policy'
 import { BrowserToolbarButton } from '../ui/toolbar-button'
@@ -54,6 +55,13 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
   // the parent destination instead.
   const activeChildren = orderedActiveChildren.length > 1 ? orderedActiveChildren : []
   const { compact, showingDetail: showDetail, heading, navigation, select, back } = useSettingsFrame('fullscreen', activeGroup?.id ?? '')
+  const nativeApp = isAndroidApp()
+  const selectedChild = activeChildren.find(child => child.active)
+  useEffect(() => {
+    // A hidden desktop-only default must not leave the native picker pointing
+    // at a different subsection from the content it presents.
+    if (nativeApp && showDetail && activeGroup?.id.startsWith('config:') && activeChildren.length > 0 && !selectedChild) activeChildren[0].onSelect()
+  }, [nativeApp, showDetail, activeGroup?.id, activeChildren, selectedChild])
   return <SettingsFrameSurface variant="fullscreen" title={title}
     closeLabel={closeLabel}
     onClose={onClose}
@@ -86,6 +94,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
                   className={`browser-settings-category-button${group.active ? ' is-active' : ''}`}
                   aria-current={group.active ? 'page' : undefined}
                   data-tour={`nav-${group.id}`}
+                  data-native-settings-icon={group.id}
                   onClick={() => select(group.onSelect)}
                 >
                   <Icon className="browser-settings-category-icon" />
@@ -100,6 +109,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
                     aria-current={child.active ? 'page' : undefined}
                     key={child.id}
                     data-tour={`nav-${child.id}`}
+                    data-native-settings-icon={child.id}
                     onClick={() => select(child.onSelect)}
                   >
                     <ChildIcon className="browser-settings-category-icon" />
@@ -121,6 +131,18 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
               <h2 className="browser-settings-page-title">{activeGroup.label}</h2>
               {activeView !== 'notifications' && <p className="browser-settings-page-description">{pageDescription}</p>}
             </header>}
+            {nativeApp && activeChildren.length > 0 && <label>
+              <span>Section</span>
+              <select aria-label="Section" value={selectedChild?.id ?? (activeGroup?.id === 'plugins' ? '' : activeChildren[0].id)}
+                onChange={event => {
+                  if (!event.currentTarget.value && activeGroup) { select(activeGroup.onSelect); return }
+                  const child = activeChildren.find(item => item.id === event.currentTarget.value)
+                  if (child) select(child.onSelect)
+                }}>
+                {activeGroup?.id === 'plugins' && <option value="">Overview</option>}
+                {activeChildren.map(child => <option key={child.id} value={child.id}>{child.label}</option>)}
+              </select>
+            </label>}
             {pageVisible && pageNotice && <p className="browser-settings-page-notice" role="note">{pageNotice}</p>}
             {pageVisible && managingPlugins
               ? <Suspense fallback={<p role="status">Loading…</p>}><PluginManager /></Suspense>

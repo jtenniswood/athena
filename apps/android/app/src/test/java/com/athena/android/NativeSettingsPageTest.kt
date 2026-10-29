@@ -6,7 +6,6 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import com.google.android.material.button.MaterialButton
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
@@ -37,7 +36,7 @@ class NativeSettingsPageTest {
             page.show(model()) { replies.add(it as JSONObject) }
             val root = activity.findViewById<View>(android.R.id.content)
             val row = root.findViewWithTag<View>("name")
-            all(row).filterIsInstance<MaterialButton>().single().performClick()
+            row.performClick()
             val dialog = ShadowDialog.getLatestDialog() as AlertDialog
             val input = all(dialog.window!!.decorView).filterIsInstance<EditText>().single()
             input.setText("Unsaved native edit")
@@ -67,6 +66,28 @@ class NativeSettingsPageTest {
             page.dismiss("page-1")
             assertTrue(original.isShown)
             assertFalse(page.back())
+        } finally { page.dismiss(); controller.pause().stop().destroy() }
+    }
+    @Test fun presetPreferenceUsesOriginalOptionIdsAndRetainsTheSelectedValue() {
+        val controller = activity(); val activity = controller.get(); val page = NativeSettingsPage(activity)
+        val data = JSONObject("""{"id":"page","scope":"appearance","title":"Appearance","rows":[
+          {"kind":"heading","label":"Interface scale"},{"kind":"text","label":"Resize all controls."},
+          {"kind":"action","id":"scale-90","label":"90%","presentation":"choice","group":"scale","disabled":true},
+          {"kind":"action","id":"scale-100","label":"100%","presentation":"choice","group":"scale","checked":true},
+          {"kind":"action","id":"scale-125","label":"125%","presentation":"choice","group":"scale"},
+          {"kind":"action","id":"scale-150","label":"150%","presentation":"choice","group":"scale"}
+        ]}""")
+        val replies = mutableListOf<JSONObject>()
+        try {
+            page.show(NativeSettingsPage.parse(data)) { replies.add(it as JSONObject) }
+            val row = activity.findViewById<View>(android.R.id.content).findViewWithTag<View>("scale")
+            assertTrue(all(row).filterIsInstance<TextView>().any { it.text == "100%" })
+            assertTrue(row.isEnabled)
+            row.performClick()
+            val dialog = ShadowDialog.getLatestDialog() as AlertDialog
+            dialog.listView.performItemClick(dialog.listView.getChildAt(1),1,1)
+            assertEquals("scale-125",replies.last().getString("id"))
+            assertFalse(replies.last().has("value"))
         } finally { page.dismiss(); controller.pause().stop().destroy() }
     }
     @Test fun malformedOrAmbiguousRowsAreRejected() {

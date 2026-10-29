@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/selectableItemBackground"
+    android:background="@drawable/settings_list_background"
+    android:foreground="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true">
     <LinearLayout
@@ -12,8 +13,8 @@
         android:minHeight="72dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingStart="0dp"
-        android:paddingEnd="0dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
         android:paddingTop="12dp"
         android:paddingBottom="12dp"
         android:importantForAccessibility="noHideDescendants">
@@ -23,7 +24,7 @@
             android:importantForAccessibility="no"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            app:tint="?attr/colorPrimary"
+            app:tint="?attr/colorOnSurfaceVariant"
             android:layout_marginEnd="16dp" />
         <LinearLayout
             android:layout_width="0dp"
@@ -43,5 +44,13 @@
                 android:textAppearance="?attr/textAppearanceBodyMedium"
                 android:textColor="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="16dp"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_chevron_right"
+            app:tint="?attr/colorOnSurfaceVariant" />
     </LinearLayout>
 </FrameLayout>
