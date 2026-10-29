@@ -482,7 +482,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun appSettings() {
         visibility.clear()
-        nativeSettings.show(origin, ::diagnostics, NativeAppSettings.Actions(
+        nativeSettings.show(::diagnostics, NativeAppSettings.Actions(
             updates = { appUpdates.settings() },
             connectionTesting = { showConnectionTests() },
             notifications = { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) },

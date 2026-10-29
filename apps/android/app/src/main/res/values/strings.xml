@@ -10,7 +10,6 @@
     <string name="browser_sign_in_help">Protected by Cloudflare Access? You’ll sign in securely in your browser, then return here.</string>
     <string name="app_settings">App settings</string>
     <string name="settings_description">Manage this Android app and its connection.</string>
-    <string name="connected_server">Connected server</string>
     <string name="notifications">Notifications</string>
     <string name="notifications_enabled">Allowed · manage in Android settings</string>
     <string name="notifications_disabled">Not allowed · manage in Android settings</string>
