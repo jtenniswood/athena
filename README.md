@@ -280,11 +280,11 @@ and troubleshooting, see [Set up OIDC in the wiki](https://github.com/jtenniswoo
 
 ### New sessions in All profiles
 
-Open **Profile actions → Default for new sessions** below the session list to
-choose which profile receives new sessions while **All profiles** is selected.
-The choice is saved in this browser. Choose **Last active profile** to restore
-the previous behavior. When viewing a single profile, new sessions use that
-profile; starting a session explicitly for a profile keeps that choice.
+New sessions in **All profiles** use the first enabled profile in the profile
+rail's saved order. Profiles hidden through **Profile actions** are skipped;
+reordering the rail changes which profile is used first. When viewing a single
+profile, new sessions use that profile; starting a session explicitly for a
+profile keeps that choice.
 
 ### Development
 

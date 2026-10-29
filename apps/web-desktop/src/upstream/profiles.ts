@@ -1,13 +1,9 @@
 import { useStore } from '@nanostores/react'
-import { useEffect, useState } from 'react'
 import { $activeGatewayProfile, $profileOrder, $profiles, $showAllProfiles, selectProfile, setProfileOrder, setShowAllProfiles, sortByProfileOrder } from '@/store/profile'
 import { $botMeta, $lastRoster } from '@/plugins/hermes-bots/data'
 import { botRosterMeta } from '@/plugins/hermes-bots/routing'
 import { botAppearance } from '@/plugins/hermes-bots/avatar'
 import type { BrowserProfile, BrowserProfiles } from '../experience/contracts/profiles'
-import { browserDefaultProfile } from '../platform/browser-default-profile'
-import { WEB_CONNECTION_ID } from '../platform/connection'
-import { reportActionFailure } from '../experience/action-errors'
 import { readHiddenProfiles } from '../experience/browser-preferences'
 
 function label(value: string) {
@@ -70,8 +66,6 @@ export function restoreBrowserProfile(): () => void {
 
 /** A read-only profile projection with commands delegated to upstream owners. */
 export function useBrowserProfiles(): BrowserProfiles {
-  const [defaultRoute, setDefaultRoute] = useState(browserDefaultProfile.getSnapshot)
-  useEffect(() => browserDefaultProfile.onDefaultChanged(setDefaultRoute), [])
   const profiles = useStore($profiles), order = useStore($profileOrder)
   const active = useStore($activeGatewayProfile), all = useStore($showAllProfiles)
   const roster = useStore($lastRoster), metadata = useStore($botMeta)
@@ -85,15 +79,8 @@ export function useBrowserProfiles(): BrowserProfiles {
   return {
     active,
     all,
-    defaultNewSessionProfile: profiles.some(profile => profile.name === defaultRoute?.profile) ? defaultRoute!.profile : null,
     items: ordered.map(profile => item(profile.name, profile.display_name)),
     fallback: all || profiles.some(profile => profile.name === active) ? null : item(active),
-    setDefaultNewSessionProfile(profile) {
-      const save = profile === null
-        ? browserDefaultProfile.clearDefault()
-        : browserDefaultProfile.setDefault({ connectionId: WEB_CONNECTION_ID, profile })
-      void save.catch(() => reportActionFailure('Could not save the default profile for new sessions.'))
-    },
     select(profile) {
       if (profile === null) {
         window.__HERMES_WEB_ACTIVE_PROFILE__ = null

@@ -1,13 +1,19 @@
-import { $activeGatewayProfile, $newChatRoute, $profiles, $showAllProfiles, ensureGatewayAgent, pinNewChatProfile, type AgentProfileRoute } from '@/store/profile'
-import { browserDefaultProfile } from '../platform/browser-default-profile'
+import { $activeGatewayProfile, $newChatRoute, $profileOrder, $profiles, $showAllProfiles, ensureGatewayAgent, pinNewChatProfile, sortByProfileOrder, type AgentProfileRoute } from '@/store/profile'
+import { WEB_CONNECTION_ID } from '../platform/connection'
+import { readHiddenProfiles } from '../experience/browser-preferences'
 import { reportActionFailure } from '../experience/action-errors'
 
-/** The browser default applies only to generic creation in All profiles. */
+/** Generic creation in All profiles uses the first enabled profile in rail order. */
 export function defaultNewSessionTarget(): { profile: string; route: AgentProfileRoute } | null {
   if (!$showAllProfiles.get()) return null
-  const route = browserDefaultProfile.getSnapshot()
-  if (!route?.connectionId || !$profiles.get().some(profile => profile.name === route.profile)) return null
-  return { profile: route.profile, route: { connectionId: route.connectionId, profile: route.profile } }
+  const profiles = $profiles.get()
+  const order = $profileOrder.get()
+  const defaultProfile = profiles.find(profile => profile.is_default)
+  const ordered = sortByProfileOrder(profiles, defaultProfile && !order.includes(defaultProfile.name) ? [defaultProfile.name, ...order] : order)
+  const hidden = readHiddenProfiles()
+  const first = ordered.find(profile => !hidden.includes(profile.name))
+  if (!first) return null
+  return { profile: first.name, route: { connectionId: WEB_CONNECTION_ID, profile: first.name } }
 }
 
 /** Capture the preferred owner before starting a new draft. */
