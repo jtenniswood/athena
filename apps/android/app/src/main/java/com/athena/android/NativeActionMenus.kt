@@ -147,7 +147,7 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
             }
             while (path.size > validDepth) path.removeAt(path.lastIndex)
             val back: (() -> Unit)? = if (path.isNotEmpty()) ({ val id = path.removeAt(path.lastIndex); render(id) })
-                else if (currentModel.backId.isNotEmpty()) ({ completion?.invoke(JSONObject().put("status", "changed").put("id", currentModel.backId)); Unit }) else null
+                else if (currentModel.backId.isNotEmpty()) ({ completion?.invoke(JSONObject().put("status", "changed").put("id", currentModel.backId)) }) else null
             goBack = back
             val newLayout = groups.flatMap { group -> listOf("group:${group.label}") + group.items.map { it.id } }
             val rebuild = newLayout != layout
@@ -176,7 +176,14 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
                 })
                 for (item in group.items) {
                     val row = rows.getOrPut(item.id) { activity.layoutInflater.inflate(R.layout.action_menu_row, column, false) }
-                    row.tag = item.id; row.isEnabled = !item.disabled
+                    row.tag = item.id
+                    (row as com.google.android.material.card.MaterialCardView).apply {
+                        // MaterialCardView applies checked changes only while enabled and checkable.
+                        isEnabled = true; isCheckable = true
+                        checkedIcon = null
+                        isChecked = item.checked == true
+                        isCheckable = item.checked != null; isEnabled = !item.disabled
+                    }
                     row.alpha = if (item.disabled) 0.38f else 1f
                     val label = row.findViewById<TextView>(R.id.menu_label).apply { text = item.label }
                     row.findViewById<TextView>(R.id.menu_description).apply {
