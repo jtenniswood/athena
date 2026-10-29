@@ -11,6 +11,7 @@ on:
       - 'apps/web-desktop/src/experience/browser-shell.tsx'
       - 'scripts/android*'
       - '.github/workflows/android-release.yml'
+      - '.github/workflows/android-apk.yml'
       - 'scripts/firebase-messaging*'
       - 'nginx.conf.template'
       - '.github/workflows/android.yml'

@@ -37,4 +37,6 @@
     <string name="menu_open_submenu">%1$s, opens submenu</string>
     <string name="cancel_sign_in">Cancel sign-in</string>
     <string name="sign_in_cancelled">Sign-in cancelled. You can try again when you’re ready.</string>
+    <string name="app_updates">App updates</string>
+    <string name="app_updates_description">Check for updates and choose a release channel</string>
 </resources>

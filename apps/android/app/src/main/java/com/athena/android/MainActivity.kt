@@ -50,6 +50,7 @@ class MainActivity : AppCompatActivity() {
     private val authentication by lazy { NativeAuthentication(this, connection, {
         web?.evaluateJavascript("window.dispatchEvent(new Event('focus'))", null)
     }, { reconnectAthena() }) }
+    private val appUpdates by lazy { AppUpdates(this) { action -> prepareNavigation(allowUnloaded = true, action = action) } }
     private val nativeSettings by lazy { NativeAppSettings(this) }
     private var nativeToolbar: View? = null
     private var editingServer = false
@@ -400,6 +401,7 @@ class MainActivity : AppCompatActivity() {
     private fun appSettings() {
         visibility.clear()
         nativeSettings.show(origin, ::diagnostics, NativeAppSettings.Actions(
+            updates = { appUpdates.settings() },
             notifications = { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) },
             changeServer = {
                 MaterialAlertDialogBuilder(this).setTitle("Change Athena server?")
@@ -559,13 +561,13 @@ class MainActivity : AppCompatActivity() {
     }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); if (authentication.receive(intent.data, origin)) intent.data = null else openNotification(intent) }
     override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); web?.saveState(outState) }
-    override fun onResume() { super.onResume(); foreground = true; pushRegistration.schedule(); nativeSettings.refreshNotifications(); web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) { authentication.resume(origin) } }
+    override fun onResume() { super.onResume(); foreground = true; appUpdates.check(); pushRegistration.schedule(); nativeSettings.refreshNotifications(); web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) { authentication.resume(origin) } }
     override fun onPause() { actionMenus.dismiss(); foreground = false; visibility.clear(); CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
     private fun navigateBack() {
         if (nativeSettings.navigateBack()) return
         if (editingServer) { openServer(null); return }
         if (web?.canGoBack() == true) web?.goBack() else moveTaskToBack(true)
     }
-    override fun onDestroy() { actionMenus.dismiss(); nativeSettings.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); authentication.close(); web?.destroy(); super.onDestroy() }
+    override fun onDestroy() { appUpdates.close(); actionMenus.dismiss(); nativeSettings.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); authentication.close(); web?.destroy(); super.onDestroy() }
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
 }

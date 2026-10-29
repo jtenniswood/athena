@@ -44,7 +44,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       for (const [key, value] of Object.entries(identity)) writeFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`, { flag: 'a' })
     } else if (process.argv[2] === 'manifest') {
       const [apk, output] = process.argv.slice(3)
-      const { version, code } = androidVersion(readFileSync('apps/android/app/build.gradle.kts', 'utf8'))
+      const { version, code: sourceCode } = androidVersion(readFileSync('apps/android/app/build.gradle.kts', 'utf8'))
+      const code = Number(process.env.ATHENA_ANDROID_VERSION_CODE || sourceCode)
+      if (!Number.isSafeInteger(code) || code < sourceCode) throw new Error('Invalid build version code')
       const sdk = path.join(process.env.ANDROID_HOME, 'build-tools', '35.0.0')
       const certificates = execFileSync(path.join(sdk, 'apksigner'), ['verify', '--print-certs', apk], { encoding: 'utf8' })
       const badging = execFileSync(path.join(sdk, 'aapt2'), ['dump', 'badging', apk], { encoding: 'utf8' })

@@ -75,8 +75,11 @@ artifact ID; the browser link is
 Artifacts expire after 30 days and may require GitHub sign-in.
 
 Explain that it installs over an existing Athena app signed with the same key,
-preserving its data. The workflow keeps `main`'s version code; if the installed
-app has a higher code, report that a version bump must be merged first. Never
-suggest uninstalling or clearing storage to force an update. The workflow creates
-no version tag or GitHub release and does not build or deploy a server image.
+preserving its data. The workflow assigns a version code from
+`1000 + git rev-list --count HEAD`; if the installed app has a higher code, report
+that a newer main commit is needed first. Never suggest uninstalling or clearing
+storage to force an update. The workflow publishes an immutable
+`android-main-<commit>` GitHub prerelease for
+the optional in-app latest-main update channel. It also runs after pushes to main.
+It does not create an Android version tag or build or deploy a server image.
 See `docs/android/releases.md` for the versioned release process.

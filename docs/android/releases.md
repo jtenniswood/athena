@@ -7,8 +7,11 @@ server or changes its data volume.
 
 ## Build and publish
 
-1. Update `versionName` and increase `versionCode` in
-   `apps/android/app/build.gradle.kts` through a PR. Preserve the application ID
+1. Update `versionName` in
+   `apps/android/app/build.gradle.kts` through a PR. CI assigns an increasing
+   version code from `1000 + git rev-list --count HEAD` using full history, shared
+   by both update channels. Local builds retain the source version code.
+   Preserve the application ID
    and signing identity so Android can update the installed app without clearing
    its settings, cookies or web storage.
 2. Merge after the Android and compatibility checks pass. Create and push
@@ -34,8 +37,10 @@ Use the `athena-apk-build` project skill, or open **Actions → Build latest
 Android APK → Run workflow** with `main` selected. The manual workflow builds
 and signs the commit on `main` at dispatch time, runs unit tests and release lint,
 and verifies the same package, Firebase configuration and pinned signing
-certificate as a versioned release. It does not create a tag, publish a GitHub
-release or deploy the server.
+certificate as a versioned release. It also runs automatically after each push to
+`main`. After verification it
+publishes an immutable `android-main-<commit>` prerelease for the opt-in update
+channel. It does not deploy the server.
 
 Download the `android-signed-apk` artifact from the completed run. It contains
 `athena-android-latest.apk`, `SHA256SUMS` and `build-info.json`, and is retained
@@ -43,12 +48,29 @@ for 30 days. Each run has its own artifact; use its recorded source revision to
 identify the APK. The skill downloads the files and checks their hashes and
 revision before returning the APK.
 
-The APK keeps the app version and version code from `main`. Android can install
-it over an existing app signed with the same key and an equal or lower version
-code; this is a manual update rather than an automatic version upgrade. If a
-higher version code is already installed, increase the version through a PR
-first. Do not uninstall to bypass that check, because uninstalling clears local
-data. Use versioned releases when publishing a new Android version.
+## In-app updates
+
+App settings → **App updates** lets you check now and choose **Stable releases**
+(the default) or **Latest main builds**. Signed production apps also check on open,
+at most once every six hours after a successful check. Checks use public GitHub
+release metadata without a GitHub account or embedded token. Stable checks select
+`android-v...` releases and ignore Docker releases and prereleases. Latest main
+checks select `android-main-<commit>` prereleases. Each successful main build gets
+its own persistent release downloads; reruns keep the already published assets.
+
+When a higher version code is available, choose **Download update**. Android may
+first ask you to allow installs from Athena; return and check again after granting
+permission. Athena verifies the APK checksum, package, version, protocol metadata
+and signing certificate against the installed app before opening Android's
+installer. The existing native navigation check saves drafts and blocks leaving
+while a reply or recording is active. Installation still requires Android's
+confirmation. Declining an update keeps the current app and its data intact.
+
+A newer main build can have a higher code than the most recent stable release.
+Switching back to Stable waits for a newer stable build; it never downgrades or
+clears storage. Install the first updater-enabled APK manually over the current
+app, signed with the same key. Future updates can then start inside the app.
+APK updates and server deployment remain independent.
 
 ## CI credentials
 
