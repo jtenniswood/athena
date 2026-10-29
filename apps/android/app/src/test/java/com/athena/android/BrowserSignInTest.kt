@@ -87,7 +87,10 @@ class BrowserSignInTest {
         val signIn = BrowserSignIn(host, { code, _ -> status = code }, open = { response }) {}
         signIn.start(origin, "/login")
         until { ShadowDialog.getLatestDialog()?.isShowing == true }
-        (ShadowDialog.getLatestDialog() as AlertDialog).getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
+        val dialog = ShadowDialog.getLatestDialog() as AlertDialog
+        assertEquals(origin, dialog.findViewById<android.widget.TextView>(R.id.sign_in_server)!!.text.toString())
+        assertEquals("ABC123", dialog.findViewById<android.widget.TextView>(R.id.sign_in_code)!!.text.toString())
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
         shadowOf(Looper.getMainLooper()).idle()
         assertEquals("auth-cancelled", status)
         assertFalse(host.getSharedPreferences("android-sign-in", Context.MODE_PRIVATE).contains("verifier"))

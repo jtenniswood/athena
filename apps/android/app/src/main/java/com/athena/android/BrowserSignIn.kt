@@ -1,7 +1,6 @@
 package com.athena.android
 
 import android.app.Activity
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.Context
 import android.net.Uri
 import android.util.Base64
@@ -64,22 +63,21 @@ class BrowserSignIn(
                     if (!activity.isFinishing && active(origin, request)) {
                         prefs.edit().putString("origin", origin).putString("id", id).putString("verifier", verifier)
                             .putLong("started", System.currentTimeMillis()).apply()
-                        fun cancelled() { if (!active(origin, request)) return; cancel(); report("auth-cancelled", "Sign-in cancelled. Tap here to try again."); started(false) }
-                        confirmation = MaterialAlertDialogBuilder(activity).setTitle("Sign in to Athena")
-                            .setMessage("Check that the browser shows code ${body.getString("code")}. This moves that browser’s Athena sign-in to this app. After approving, return here.")
-                            .setNegativeButton("Cancel") { _, _ -> cancelled() }
+                        fun cancelled() { if (!active(origin, request)) return; cancel(); report("auth-cancelled", "Sign-in cancelled. Choose Try again when you’re ready."); started(false) }
+                        confirmation = SignInConfirmation.builder(activity, origin, body.getString("code"))
+                            .setNegativeButton(R.string.cancel) { _, _ -> cancelled() }
                             .setOnCancelListener { cancelled() }
-                            .setPositiveButton("Open browser") { _, _ ->
+                            .setPositiveButton(R.string.open_browser) { _, _ ->
                                 if (!active(origin, request)) return@setPositiveButton
                                 try { CustomTabsIntent.Builder().build().launchUrl(activity, Uri.parse(origin + path)); report("waiting", ""); started(true) }
-                                catch (_: Exception) { cancel(); report("auth-browser", "No browser could open sign-in. Tap here to retry."); started(false) }
+                                catch (_: Exception) { cancel(); report("auth-browser", "No browser could open sign-in. Choose Try again to retry."); started(false) }
                             }.show()
                     }
                 }
             } catch (_: Exception) {
                 activity.runOnUiThread {
                     if (active(origin, request)) {
-                        report("auth-start", "Browser sign-in could not start. Check the connection and update the Athena server, then tap here to retry.")
+                        report("auth-start", "Browser sign-in could not start. Check the connection and update the Athena server, then choose Try again.")
                         started(false)
                     }
                 }
@@ -90,7 +88,7 @@ class BrowserSignIn(
     fun resume(origin: String) {
         if (exchanging || prefs.getString("origin", "") != origin) return
         if (System.currentTimeMillis() - prefs.getLong("started", 0) !in 0..300000) {
-            cancel(); report("auth-expired", "Sign-in expired. Tap here to start again."); return
+            cancel(); report("auth-expired", "Sign-in expired. Choose Try again to start again."); return
         }
         val id = prefs.getString("id", null) ?: return
         val verifier = prefs.getString("verifier", null) ?: return
@@ -121,12 +119,12 @@ class BrowserSignIn(
                     activity.window.decorView.postDelayed({ if (active(origin, request) && MainActivity.foreground) resume(origin) }, 1000)
                 } else activity.runOnUiThread {
                     if (active(origin, request)) {
-                        cancel(); report("auth-exchange", "Sign-in expired or the server restarted. Tap here to start again.")
+                        cancel(); report("auth-exchange", "Sign-in expired or the server restarted. Choose Try again to start again.")
                     }
                 }
             } catch (_: Exception) {
                 activity.runOnUiThread {
-                    if (active(origin, request)) report("auth-network", "Could not finish sign-in. Check your connection, then return to Athena or tap here to retry.")
+                    if (active(origin, request)) report("auth-network", "Could not finish sign-in. Check your connection, then return to Athena or choose Try again.")
                 }
             }
             finally { activity.runOnUiThread { exchanging = false } }
