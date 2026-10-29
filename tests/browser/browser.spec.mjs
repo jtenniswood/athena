@@ -693,6 +693,25 @@ touchTest('phone long code and tables scroll inside the response at 320px', asyn
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320)
 })
 
+test('phone startup session-route restoration keeps the chat list visible until a chat is chosen', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  const page = await context.newPage()
+  try {
+    await page.goto(`${origin}/#/`)
+    const home = page.locator('#browser-navigation')
+    const session = home.getByRole('button', { name: 'Plan a calmer working week', exact: true }).first()
+    await expect(session).toBeVisible({ timeout: 30000 })
+    // Restoring a saved session can update the route after the shell has mounted.
+    await page.evaluate(() => { window.location.hash = '/preview-week' })
+    await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-week')
+    await expect(home).toBeVisible()
+    await expect(page.locator('.browser-main')).toBeHidden()
+    await session.tap()
+    await expect(home).toBeHidden()
+    await expect(editor(page)).toBeVisible()
+  } finally { await context.close() }
+})
+
 for (const startPath of ['', 'preview-week']) {
   test(`phone reselecting the highlighted session returns to the chat and preserves its draft from /${startPath}`, async ({ browser }) => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
