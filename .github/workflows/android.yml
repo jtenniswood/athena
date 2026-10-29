@@ -8,6 +8,7 @@ on:
       - 'apps/web-desktop/src/experience/settings-menu.tsx'
       - 'apps/web-desktop/src/entry.ts'
       - 'apps/web-desktop/src/upstream/android-host.ts'
+      - 'apps/web-desktop/src/upstream/native-settings.ts'
       - 'apps/web-desktop/src/experience/browser-shell.tsx'
       - 'scripts/android*'
       - '.github/workflows/android-release.yml'

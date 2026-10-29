@@ -689,6 +689,31 @@ export function removeBrowserNewBotChatAction(source: string): string {
   return output
 }
 
+export function removeBrowserGatewayGroupsRefresh(source: string, root: string): string {
+  const changes: [string, string][] = [
+    ["import { useCanonicalGroupLabels } from './canonical-group-labels'\n", ''],
+    ['  const labels = useCanonicalGroupLabels()\n', ''],
+    ['  const [refresh, setRefresh] = useState(0)\n', '  const [refresh, finishRefresh] = useBotsRefreshSignal()\n'],
+    ['[connectionId, profile, refresh]', '[connectionId, profile, refresh, finishRefresh]'],
+    ["})().catch(e => { if (!cancelled) {setError(e instanceof Error ? e.message : String(e))} })", "})().catch(e => { if (!cancelled) {setError(e instanceof Error ? e.message : String(e))} }).finally(finishRefresh)"],
+    ['    <Button onClick={() => setRefresh(value => value + 1)} variant="ghost">{labels.refreshGroups}</Button>\n', '']
+  ]
+  for (const [before] of changes) {
+    if (source.split(before).length !== 2) throw new Error('Browser gateway groups refresh target changed')
+  }
+  return `import { useBotsRefreshSignal } from ${JSON.stringify(path.join(root, 'src/experience/browser-bots-refresh'))}\n` +
+    changes.reduce((output, [before, after]) => output.replace(before, after), source)
+}
+
+export function useBrowserBotsPullRefresh(source: string, root: string): string {
+  const opening = '    <div className="flex h-full flex-col">'
+  const end = source.lastIndexOf('    </div>')
+  if (source.split(opening).length !== 2 || end < source.indexOf(opening)) throw new Error('Browser Bots refresh owner changed')
+  const output = source.slice(0, end) + '    </BrowserBotsRefresh>' + source.slice(end + '    </div>'.length)
+  return `import { BrowserBotsRefresh } from ${JSON.stringify(path.join(root, 'src/experience/browser-bots-refresh'))}\n` +
+    output.replace(opening, '    <BrowserBotsRefresh refreshRoster={refetch}>')
+}
+
 export function removeBrowserOpenBotChatAction(source: string): string {
   const action = '<ContextMenuItem onSelect={() => void openRosterBot(bot)}>{b.bot.openBotChat}</ContextMenuItem>'
   if (!source.includes('b.bot.openBotChat')) return source
@@ -1334,6 +1359,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserProjectDisclosure,
     exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut, removeBrowserTopCapabilitiesLink,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
+    removeBrowserGatewayGroupsRefresh: source => removeBrowserGatewayGroupsRefresh(source, root),
+    useBrowserBotsPullRefresh: source => useBrowserBotsPullRefresh(source, root),
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth,
     filterBrowserSessionMenu: source => filterBrowserSessionMenu(source, root),
     showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,

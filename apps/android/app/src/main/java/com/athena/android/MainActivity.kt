@@ -51,14 +51,19 @@ class MainActivity : AppCompatActivity() {
         web?.evaluateJavascript("window.dispatchEvent(new Event('focus'))", null)
     }, { reconnectAthena() }) }
     private val appUpdates by lazy { AppUpdates(this) { action -> prepareNavigation(allowUnloaded = true, action = action) } }
+    private val settingsPage by lazy { NativeSettingsPage(this) }
     private val nativeSettings by lazy { NativeAppSettings(this) }
     private var nativeToolbar: View? = null
+    @Volatile private var connectionTest: ConnectionTest? = null
+    private var connectionTestDialog: androidx.appcompat.app.AlertDialog? = null
     private var editingServer = false
     private var nightMode = 0
     private var web: WebView? = null
     private var origin = ""
     private var permissionReply: ((String) -> Unit)? = null
     private var microphoneRequest: PermissionRequest? = null
+    private var settingsFilesMultiple = false
+    private var settingsFilesReply: ((Any) -> Unit)? = null
     private var fileReply: ValueCallback<Array<Uri>>? = null
     private var navigationAction: (() -> Unit)? = null
     private lateinit var container: LinearLayout
@@ -72,6 +77,39 @@ class MainActivity : AppCompatActivity() {
     }
     private val filePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         fileReply?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(it.resultCode, it.data)); fileReply = null
+    }
+
+    private val settingsFilePicker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        val callback = settingsFilesReply; settingsFilesReply = null
+        Thread {
+            val files = org.json.JSONArray()
+            try {
+                var total = 0
+                for (uri in if (settingsFilesMultiple) uris else uris.take(1)) {
+                    val bytes = contentResolver.openInputStream(uri)?.use { stream ->
+                        val output = java.io.ByteArrayOutputStream()
+                        val buffer = ByteArray(8192)
+                        while (output.size() <= 2 * 1024 * 1024) {
+                            val count = stream.read(buffer); if (count < 0) break
+                            output.write(buffer, 0, count)
+                        }
+                        output.toByteArray() } ?: continue
+                    total += bytes.size
+                    require(total <= 2 * 1024 * 1024) { "Configuration import exceeds 2 MiB." }
+                    val name = contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+                        if (it.moveToFirst()) it.getString(0) else null
+                    } ?: "configuration"
+                    files.put(JSONObject().put("name", name).put("type", contentResolver.getType(uri) ?: "application/octet-stream")
+                        .put("data", android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)))
+                }
+                runOnUiThread { callback?.invoke(files) }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    callback?.invoke(org.json.JSONArray())
+                    android.widget.Toast.makeText(this, "Could not import files. Choose files totalling 2 MiB or less.", android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -100,6 +138,7 @@ class MainActivity : AppCompatActivity() {
     private fun setup() {
         actionMenus.dismiss()
         visibility.clear()
+        connectionTest = null
         connection.setup()
         connectionScreen = null
         nativeToolbar = null
@@ -140,6 +179,7 @@ class MainActivity : AppCompatActivity() {
         address.setOnEditorActionListener { _, action, _ ->
             if (action == android.view.inputmethod.EditorInfo.IME_ACTION_GO) { connect(); true } else false
         }
+        screen.findViewById<View>(R.id.connection_testing).setOnClickListener { showConnectionTests() }
         screen.findViewById<View>(R.id.cancel_connect).apply {
             visibility = if (editingServer) View.VISIBLE else View.GONE
             setOnClickListener { openServer(null) }
@@ -158,6 +198,25 @@ class MainActivity : AppCompatActivity() {
         web?.destroy()
         web = null
         container.removeAllViews()
+        connectionTest?.let { test ->
+            val banner = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(16.dp(), 8.dp(), 16.dp(), 8.dp())
+                setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSecondaryContainer))
+            }
+            banner.addView(TextView(this).apply {
+                text = getString(R.string.connection_test_active, test.title)
+                setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSecondaryContainer))
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+            banner.addView(com.google.android.material.button.MaterialButton(this).apply {
+                id = R.id.end_connection_test
+                setText(R.string.end_connection_test)
+                setOnClickListener { endConnectionTest() }
+            })
+            container.addView(banner)
+        }
+        val documentOrigin = if (connectionTest != null) ConnectionTest.ORIGIN else origin
         val toolbar = MaterialToolbar(this).apply {
             setTitle(R.string.app_name)
             inflateMenu(R.menu.native_toolbar)
@@ -190,13 +249,19 @@ class MainActivity : AppCompatActivity() {
             errorScreen("Update Android System WebView to use Athena’s native integration.")
             return
         }
-        WebViewCompat.addWebMessageListener(view, "AthenaAndroid", setOf(origin)) { _, message, sourceOrigin, mainFrame, reply ->
-            if (mainFrame && ServerAddress.belongsTo(sourceOrigin.toString(), origin) && ServerAddress.belongsTo(view.url, origin)) {
+        WebViewCompat.addWebMessageListener(view, "AthenaAndroid", setOf(documentOrigin)) { _, message, sourceOrigin, mainFrame, reply ->
+            if (view === web && mainFrame && ServerAddress.belongsTo(sourceOrigin.toString(), documentOrigin) && ServerAddress.belongsTo(view.url, documentOrigin)) {
                 handleMessage(message.data ?: "", reply)
             }
         }
         view.webViewClient = object : WebViewClient() {
+            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                if (ServerAddress.belongsTo(request.url.toString(), ConnectionTest.ORIGIN)) return connectionTest?.response()
+                return null
+            }
             override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
+                if (view !== web) return
+                settingsPage.dismiss()
                 actionMenus.dismiss()
                 visibility.clear()
                 documentReady = false
@@ -221,12 +286,13 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-                if (request.isForMainFrame) errorScreen("Could not reach Athena. Check your connection and server address.")
+                if (view === web && request.isForMainFrame) errorScreen("Could not reach Athena. Check your connection and server address.")
             }
             override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
-                if (request.isForMainFrame) errorScreen("The server returned HTTP ${response.statusCode}. Try again or check your server address and configuration.")
+                if (view === web && request.isForMainFrame) errorScreen("The server returned HTTP ${response.statusCode}. Try again or check your server address and configuration.")
             }
             override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+                if (view !== web) return true
                 actionMenus.dismiss()
                 (view.parent as? android.view.ViewGroup)?.removeView(view); view.destroy(); web = null
                 errorScreen("Android closed the web renderer. Reopen Athena to reconnect.")
@@ -275,7 +341,7 @@ class MainActivity : AppCompatActivity() {
         view.setDownloadListener { url, _, _, _, _ -> external(Uri.parse(url)) }
         body.addView(view, 0, FrameLayout.LayoutParams(-1, -1))
         renderConnection(connection.state)
-        if (state == null || view.restoreState(state) == null) view.loadUrl(origin + "/")
+        if (connectionTest != null || state == null || view.restoreState(state) == null) view.loadUrl(documentOrigin + "/")
         openNotification(intent)
     }
 
@@ -311,7 +377,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 respond(JSONObject().put("protocol", 1)
                     .put("appVersion", packageManager.getPackageInfo(packageName, 0).versionName)
-                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state", "web-visibility", "push-token-refresh", "push-diagnostics", "action-menu", "action-menu-live")))
+                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state", "web-visibility", "push-token-refresh", "push-diagnostics", "action-menu", "action-menu-live", "settings-page", "action-menu-search")))
                     .put("insets", "native").put("typography", "platform"))
             }
             "webState" -> {
@@ -321,6 +387,22 @@ class MainActivity : AppCompatActivity() {
                 else connection.recover("web-startup", "Athena could not finish loading. Choose Try again or check App settings.")
                 respond(true)
             }
+            "settingsFiles" -> {
+                if (!settingsPage.isShowing || !foreground) respond(org.json.JSONArray())
+                else {
+                    settingsFilesReply?.invoke(org.json.JSONArray()); settingsFilesReply = respond
+                    settingsFilesMultiple = payload.optBoolean("multiple")
+                    try { settingsFilePicker.launch(arrayOf("*/*")) }
+                    catch (_: ActivityNotFoundException) { settingsFilesReply = null; respond(org.json.JSONArray()) }
+                }
+            }
+            "settingsPage" -> {
+                val model = NativeSettingsPage.parse(payload)
+                if (web == null || !foreground) respond(JSONObject().put("status", "dismissed"))
+                else { visibility.clear(); settingsPage.show(model, respond) }
+            }
+            "updateSettingsPage" -> respond(settingsPage.update(NativeSettingsPage.parse(payload)))
+            "dismissSettingsPage" -> { settingsPage.dismiss(payload.getString("id")); respond(true) }
             "appSettings" -> { appSettings(); respond(true) }
             "actionMenu" -> {
                 val model = NativeActionMenus.parse(payload)
@@ -402,6 +484,7 @@ class MainActivity : AppCompatActivity() {
         visibility.clear()
         nativeSettings.show(origin, ::diagnostics, NativeAppSettings.Actions(
             updates = { appUpdates.settings() },
+            connectionTesting = { showConnectionTests() },
             notifications = { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) },
             changeServer = {
                 MaterialAlertDialogBuilder(this).setTitle("Change Athena server?")
@@ -419,7 +502,31 @@ class MainActivity : AppCompatActivity() {
         ))
     }
 
+    private fun showConnectionTests() {
+        connectionTestDialog?.dismiss()
+        val scenarios = ConnectionTest.entries
+        connectionTestDialog = MaterialAlertDialogBuilder(this).setTitle(R.string.connection_testing)
+            .setItems(scenarios.map { it.title }.toTypedArray()) { _, index -> startConnectionTest(scenarios[index]) }
+            .setNegativeButton(R.string.cancel, null).show()
+    }
+
+    private fun startConnectionTest(test: ConnectionTest) {
+        prepareNavigation(allowUnloaded = true) {
+            authentication.cancel()
+            nativeSettings.dismiss()
+            connectionTest = test
+            openServer(null)
+        }
+    }
+
+    private fun endConnectionTest() {
+        nativeSettings.dismiss()
+        connectionTest = null
+        if (origin.isBlank()) { web?.destroy(); web = null; setup() } else openServer(null)
+    }
+
     private fun reconnectAthena() {
+        if (connectionTest != null) { openServer(null); return }
         val view = web
         if (view == null) { openServer(null); return }
         // Access can interrupt the first navigation before WebView has a page to reload.
@@ -430,6 +537,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun prepareNavigation(allowUnloaded: Boolean = false, action: () -> Unit) {
+        // Test documents have no chat or composer; entering testing already saved real drafts.
+        if (connectionTest != null) { action(); return }
         val view = web ?: run { action(); return }
         if (navigationAction != null) {
             Toast.makeText(this, "Wait for the current navigation check to finish.", Toast.LENGTH_SHORT).show()
@@ -458,6 +567,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun errorScreen(message: String) {
+        settingsPage.dismiss()
         actionMenus.dismiss()
         visibility.clear()
         connection.recover("web-unreachable", message)
@@ -477,6 +587,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openNotification(intent: Intent?) {
+        if (connectionTest != null) return
         val target = intent?.dataString ?: return
         if (intent.action == "com.athena.android.OPEN_CONVERSATION" && ServerAddress.belongsTo(target, origin) &&
             Uri.parse(target).path == "/" && Uri.parse(target).query == null) {
@@ -516,7 +627,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun diagnostics(): AppDiagnostics = AppDiagnostics.capture(this, origin, connection, webRevision, serverProtocol)
+    private fun diagnostics(): AppDiagnostics = AppDiagnostics.capture(this, origin, connection, webRevision, serverProtocol, connectionTest?.title)
 
     override fun onConfigurationChanged(configuration: android.content.res.Configuration) {
         super.onConfigurationChanged(configuration)
@@ -553,6 +664,7 @@ class MainActivity : AppCompatActivity() {
             setTitleTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface))
         }
         nativeSettings.refresh()
+        settingsPage.refresh()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -560,14 +672,15 @@ class MainActivity : AppCompatActivity() {
         if (!hasFocus) visibility.clear()
     }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); if (authentication.receive(intent.data, origin)) intent.data = null else openNotification(intent) }
-    override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); web?.saveState(outState) }
+    override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); if (connectionTest == null) web?.saveState(outState) }
     override fun onResume() { super.onResume(); foreground = true; appUpdates.check(); pushRegistration.schedule(); nativeSettings.refreshNotifications(); web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) { authentication.resume(origin) } }
     override fun onPause() { actionMenus.dismiss(); foreground = false; visibility.clear(); CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
     private fun navigateBack() {
         if (nativeSettings.navigateBack()) return
+        if (settingsPage.back()) return
         if (editingServer) { openServer(null); return }
         if (web?.canGoBack() == true) web?.goBack() else moveTaskToBack(true)
     }
-    override fun onDestroy() { appUpdates.close(); actionMenus.dismiss(); nativeSettings.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); authentication.close(); web?.destroy(); super.onDestroy() }
+    override fun onDestroy() { connectionTestDialog?.dismiss(); appUpdates.close(); settingsFilesReply?.invoke(org.json.JSONArray()); settingsFilesReply = null; settingsPage.dismiss(); actionMenus.dismiss(); nativeSettings.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); authentication.close(); web?.destroy(); super.onDestroy() }
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
 }

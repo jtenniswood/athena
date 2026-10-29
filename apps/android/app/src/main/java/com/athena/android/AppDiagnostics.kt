@@ -11,13 +11,14 @@ data class AppDiagnostics(val sections: List<Section>) {
         section.title + "\n" + section.rows.joinToString("\n") { (label, value) -> "$label: $value" }
     }
     companion object {
-        fun capture(context: Context, origin: String, connection: ConnectionCoordinator, webRevision: String, serverProtocol: String): AppDiagnostics {
+        fun capture(context: Context, origin: String, connection: ConnectionCoordinator, webRevision: String, serverProtocol: String, connectionTest: String? = null): AppDiagnostics {
             val prefs = context.getSharedPreferences("athena", Context.MODE_PRIVATE)
             return AppDiagnostics(listOf(
                 Section("Connection", listOf(
                     "Server" to origin,
                     "State" to connection.state.stage.name.lowercase().replace('_', ' '),
                     "Status" to connection.state.message,
+                    "Connection test" to (connectionTest ?: "Off"),
                     "Bridge protocol" to (connection.protocol?.toString() ?: "Legacy"),
                     "Server protocol" to serverProtocol
                 )),

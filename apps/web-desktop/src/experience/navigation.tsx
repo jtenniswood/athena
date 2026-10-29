@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ComponentProps, type PointerEvent, type RefObject, type MouseEvent } from 'react'
 import { useBrowserSidebarSections } from './sidebar-sections'
+import { browserRouteCoversWorkspace } from '../upstream/browser-routes'
 import { Codicon } from '../upstream/browser-api'
 import { SettingsMenu } from './settings-menu'
 import { BrowserToolbarButton } from './ui/toolbar-button'
@@ -24,6 +25,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
   const [tab, setTab] = useState<NavigationTab>(readNavigationTab)
   const [visibleTabs, setVisibleTabs] = useState<NavigationTab[]>(readVisibleNavigationTabs)
   const previous = useRef({ selectionKey, path })
+  const focusDrawerOnOpen = useRef(false)
   const preserveNextSelection = useRef(false)
   const preserveTimeout = useRef(0)
   useEffect(() => $preserveNavigationRequest.listen(() => {
@@ -53,9 +55,9 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
       if (preserveNextSelection.current) {
         preserveNextSelection.current = false
         window.clearTimeout(preserveTimeout.current)
-      } else if (!mobile || previous.current.path !== path) {
-        // Session hydration can change the selection behind the mobile home.
-        // Explicit row activation closes it through the conversation-open request.
+      } else if (!mobile || (previous.current.path !== path && browserRouteCoversWorkspace(path))) {
+        // Startup can restore both a session selection and its route. Keep the
+        // mobile chat list visible until an explicit conversation-open request.
         setDrawerOpen(false)
         if (drawerOpen) requestAnimationFrame(() => main.current?.focus())
       }
@@ -67,8 +69,11 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
   useEffect(() => { if (!visibleTabs.includes(tab)) setTab(visibleTabs[0]) }, [tab, visibleTabs])
   useEffect(() => { writeBrowserPreference('navigationWidth', String(width)) }, [width])
   useEffect(() => {
-    if (!drawerOpen) return
-    drawer.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus()
+    if (!drawerOpen) { focusDrawerOnOpen.current = false; return }
+    if (focusDrawerOnOpen.current) {
+      focusDrawerOnOpen.current = false
+      drawer.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus()
+    }
     const keydown = (event: KeyboardEvent) => {
       // Portaled controls own focus and Escape until they are dismissed.
       if (event.defaultPrevented || (event.target instanceof Element && event.target.closest('[role="menu"], [data-browser-action-surface]'))) return
@@ -85,7 +90,12 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
   return {
     sections, drawer, compact, mobile, drawerOpen, collapsed, width, setWidth, tab, setTab, visibleTabs,
     open: compact ? drawerOpen : !collapsed,
-    toggle: () => compact ? setDrawerOpen(open => !open) : setCollapsed(value => !value),
+    toggle: () => {
+      if (compact) {
+        focusDrawerOnOpen.current = !drawerOpen
+        setDrawerOpen(open => !open)
+      } else setCollapsed(value => !value)
+    },
     closeDrawer: () => setDrawerOpen(false),
     dismissDrawer: () => { setDrawerOpen(false); requestAnimationFrame(() => trigger.current?.focus()) },
     toggleTab(value: NavigationTab) {

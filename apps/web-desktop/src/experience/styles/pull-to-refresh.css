@@ -1,0 +1,4 @@
+.browser-bots-refresh { display: flex; flex-direction: column; position: relative; min-height: 0; height: 100%; overflow: hidden; overscroll-behavior-y: contain; }
+.browser-bots-refresh-content { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.browser-pull-refresh-indicator { display: grid; flex-shrink: 0; place-items: center; overflow: hidden; color: var(--web-text-subtle); font-size: 0.8125rem; text-align: center; }
+.browser-pull-refresh-indicator > span { padding-inline: 1rem; }

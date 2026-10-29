@@ -127,9 +127,29 @@ controls. The separate Android header is hidden once that menu is ready and
 returns during page loading or sign-in. Older APKs and older server versions
 retain their native App settings button.
 
-The native setup, settings sheet, and confirmation dialogs use Material 3, follow
+On APKs supporting native Settings, the main Settings page also uses Android
+controls for categories, fields, switches, choices, and actions. The hosted
+settings code still validates and saves changes. Browsers and older APKs retain
+the web Settings page; both the APK and server need this feature.
+
+On supported APKs, the chat model menu uses a native searchable sheet. Tap a
+model to select it; tap its arrow or long-press for favorites and model options.
+Search retains Hermes model matching and large catalogs remain available across
+pages. Browsers and older APKs retain the web menu.
+
+The native setup, settings pages, and confirmation dialogs use Material 3, follow
 the system light/dark theme, and use wallpaper colours on Android 12 and later.
 Server setup includes inline address validation and a keyboard Connect action.
+
+To exercise connection failures, open **App settings → Connection testing**, or
+choose **Connection testing** on the initial server setup screen. Choose a server
+that is unavailable, returns HTTP 503, does not provide Athena, or uses an
+incompatible Android integration. The wrong-server case waits for the normal
+20-second startup timeout. **Try again** repeats the chosen failure; **End test**
+returns to your saved server, or setup if none is saved. These temporary scenarios
+use an isolated test address and real WebView failure handling. They do not change
+your saved server address or take your actual server offline. Entering testing
+uses the same draft-saving, reply and recording checks as changing servers.
 
 Build with Java 17 and the Android SDK (platform 36 and build tools 35.0.0):
 

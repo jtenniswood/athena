@@ -65,7 +65,9 @@ val prepareAndroidBridgeTest by tasks.registering(Exec::class) {
     val adapter = layout.buildDirectory.file("generated/androidTestAssets/android-adapter.js")
     inputs.file(rootProject.file("../web-desktop/src/platform/android.ts"))
     inputs.file(rootProject.file("../../scripts/android-test-adapter.mjs"))
+    inputs.file(rootProject.file("../web-desktop/src/upstream/native-settings.ts"))
     outputs.file(adapter)
+    outputs.file(layout.buildDirectory.file("generated/androidTestAssets/native-settings.js"))
     workingDir(rootProject.projectDir.resolve("../.."))
     commandLine(System.getenv("ATHENA_ANDROID_NODE") ?: "node", "scripts/android-test-adapter.mjs", adapter.get().asFile.absolutePath)
 }

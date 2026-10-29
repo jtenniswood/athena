@@ -132,6 +132,11 @@
   --settings-header-height: max(3.25rem, var(--web-touch-min));
 }
 
+/* Android's native host already applies system-bar insets around the WebView. */
+:root[data-android-app] .browser-settings-fullscreen-card {
+  --settings-safe-top: 0px;
+}
+
 /* Align the existing overlay close control with the browser toolbar. */
 .browser-settings-fullscreen-card > .pointer-events-none > .pointer-events-auto {
   top: calc(var(--settings-safe-top) + var(--settings-header-height) / 2);
@@ -617,3 +622,6 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
 }
 .browser-settings-search-button kbd { margin-left: auto; font-size: .75rem; }
 .browser-settings-search-button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* Keep source controls mounted for their existing owners behind the native page. */
+[data-browser-settings-frame][data-native-settings] { opacity: 0; pointer-events: none; }
