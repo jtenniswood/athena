@@ -131,6 +131,16 @@ The native setup, settings sheet, and confirmation dialogs use Material 3, follo
 the system light/dark theme, and use wallpaper colours on Android 12 and later.
 Server setup includes inline address validation and a keyboard Connect action.
 
+To exercise connection failures, open **App settings → Connection testing**, or
+choose **Connection testing** on the initial server setup screen. Choose a server
+that is unavailable, returns HTTP 503, does not provide Athena, or uses an
+incompatible Android integration. The wrong-server case waits for the normal
+20-second startup timeout. **Try again** repeats the chosen failure; **End test**
+returns to your saved server, or setup if none is saved. These temporary scenarios
+use an isolated test address and real WebView failure handling. They do not change
+your saved server address or take your actual server offline. Entering testing
+uses the same draft-saving, reply and recording checks as changing servers.
+
 Build with Java 17 and the Android SDK (platform 36 and build tools 35.0.0):
 
 ```bash

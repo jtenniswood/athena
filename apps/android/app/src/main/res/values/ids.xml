@@ -1,3 +1,4 @@
 <resources>
     <item name="copy_details" type="id" />
+    <item name="end_connection_test" type="id" />
 </resources>

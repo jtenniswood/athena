@@ -37,4 +37,8 @@
     <string name="menu_open_submenu">%1$s, opens submenu</string>
     <string name="cancel_sign_in">Cancel sign-in</string>
     <string name="sign_in_cancelled">Sign-in cancelled. You can try again when you’re ready.</string>
+    <string name="connection_testing">Connection testing</string>
+    <string name="connection_testing_description">Test unavailable and misconfigured server states</string>
+    <string name="connection_test_active">Connection test: %1$s</string>
+    <string name="end_connection_test">End test</string>
 </resources>
