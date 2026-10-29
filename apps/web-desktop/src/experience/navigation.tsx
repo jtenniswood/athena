@@ -24,6 +24,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
   const [tab, setTab] = useState<NavigationTab>(readNavigationTab)
   const [visibleTabs, setVisibleTabs] = useState<NavigationTab[]>(readVisibleNavigationTabs)
   const previous = useRef({ selectionKey, path })
+  const focusDrawerOnOpen = useRef(false)
   const preserveNextSelection = useRef(false)
   const preserveTimeout = useRef(0)
   useEffect(() => $preserveNavigationRequest.listen(() => {
@@ -67,8 +68,11 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
   useEffect(() => { if (!visibleTabs.includes(tab)) setTab(visibleTabs[0]) }, [tab, visibleTabs])
   useEffect(() => { writeBrowserPreference('navigationWidth', String(width)) }, [width])
   useEffect(() => {
-    if (!drawerOpen) return
-    drawer.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus()
+    if (!drawerOpen) { focusDrawerOnOpen.current = false; return }
+    if (focusDrawerOnOpen.current) {
+      focusDrawerOnOpen.current = false
+      drawer.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus()
+    }
     const keydown = (event: KeyboardEvent) => {
       // Portaled controls own focus and Escape until they are dismissed.
       if (event.defaultPrevented || (event.target instanceof Element && event.target.closest('[role="menu"], [data-browser-action-surface]'))) return
@@ -85,7 +89,12 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
   return {
     sections, drawer, compact, mobile, drawerOpen, collapsed, width, setWidth, tab, setTab, visibleTabs,
     open: compact ? drawerOpen : !collapsed,
-    toggle: () => compact ? setDrawerOpen(open => !open) : setCollapsed(value => !value),
+    toggle: () => {
+      if (compact) {
+        focusDrawerOnOpen.current = !drawerOpen
+        setDrawerOpen(open => !open)
+      } else setCollapsed(value => !value)
+    },
     closeDrawer: () => setDrawerOpen(false),
     dismissDrawer: () => { setDrawerOpen(false); requestAnimationFrame(() => trigger.current?.focus()) },
     toggleTab(value: NavigationTab) {
