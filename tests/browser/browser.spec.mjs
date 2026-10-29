@@ -727,11 +727,11 @@ for (const startPath of ['', 'preview-week']) {
       await expect(home).toBeVisible()
       await session.tap()
       await editor(page).fill('Keep this draft when returning to the same chat')
-      await expect(page.getByRole('button', { name: 'Back to home', exact: true }).locator('.codicon-arrow-left')).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Open navigation', exact: true }).locator('.codicon-three-bars')).toBeVisible()
       const navigation = page.locator('#browser-navigation')
       const main = page.getByRole('main', { name: 'Conversation and workspace' })
       for (const activation of ['touch', 'keyboard']) {
-        await page.getByRole('button', { name: 'Back to home', exact: true }).tap()
+        await page.getByRole('button', { name: 'Open navigation', exact: true }).tap()
         await expect(navigation).toBeVisible()
         const row = navigation.getByRole('button', { name: 'Plan a calmer working week', exact: true }).first()
         await expect(row).toBeVisible()
