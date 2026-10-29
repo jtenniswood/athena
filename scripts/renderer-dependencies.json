@@ -8,15 +8,15 @@
   ],
   "overrides": {
     "@assistant-ui/core": {
-      "upstream": "0.2.23", "version": "0.3.31",
+      "upstream": "0.2.23", "version": "0.3.32",
       "reason": "Use upstream-corrected thread-list snapshot caching; verify stable subscriptions, selection changes and draft retention without the old dependency transform."
     },
     "@assistant-ui/react": {
-      "upstream": "0.14.24", "version": "0.15.31",
+      "upstream": "0.14.24", "version": "0.15.32",
       "reason": "Use the matching 0.15 React integration with core 0.3; verify renderer hooks, chat submission and draft retention."
     },
     "@assistant-ui/react-streamdown": {
-      "upstream": "0.3.5", "version": "0.3.20",
+      "upstream": "0.3.5", "version": "0.3.21",
       "reason": "Use the matching assistant-ui React 0.15 integration; verify highlighted code, math and transcript rendering."
     },
     "@nanostores/react": {
@@ -44,7 +44,7 @@
       "reason": "Use upstream-corrected batch side effects and the 1.5 equality API; verify plugin stores and production state writes without the old batch transform."
     },
     "react-router": {
-      "upstream": "8.3.0", "version": "8.5.0",
+      "upstream": "8.3.0", "version": "8.5.1",
       "reason": "Retain Athena's current routing version; verify conversation, profile and settings navigation against the pinned renderer."
     },
     "radix-ui": {
