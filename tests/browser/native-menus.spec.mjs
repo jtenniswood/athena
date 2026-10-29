@@ -47,10 +47,12 @@ test.beforeEach(async ({ page }) => {
       const sub = document.createElement('div')
       sub.id = 'submenu'; sub.dataset.slot = 'dropdown-menu-sub-content'; sub.dataset.state = 'open'
       sub.setAttribute('aria-labelledby', 'appearance')
-      sub.innerHTML = '<button aria-label="Blue" id="blue">Blue</button>'
+      sub.innerHTML = '<button aria-label="hsl(240 68% 58%)" style="background-color:hsl(240 68% 58%)" id="blue"></button>'
       sub.onkeydown = event => { if (event.key === 'ArrowLeft') sub.remove() }
       document.body.append(sub)
-      document.getElementById('blue').onclick = () => { window.selections.push('blue') }
+      document.getElementById('blue').onclick = event => {
+        window.selections.push('blue'); event.currentTarget.style.boxShadow = '0 0 0 2px currentColor'
+      }
     }
     window.stopNativeMenus = menus.installNativeRendererMenus()
   }, { bridge, adapter })
@@ -96,6 +98,10 @@ test('renderer submenus and back navigation update the same native modal', async
   await expect.poll(() => page.evaluate(() => window.calls.at(-1).payload.backId)).toBe('back')
   await select(page, 'Blue')
   expect(await page.evaluate(() => window.selections)).toEqual(['blue'])
+  await expect.poll(() => page.evaluate(() => window.calls.filter(call => call.method === 'updateActionMenu').at(-1).payload.groups[0].items[0].checked)).toBe(true)
+  const swatch = await page.evaluate(() => window.calls.filter(call => call.method === 'updateActionMenu').at(-1).payload.groups[0].items[0])
+  expect(swatch.label).toBe('Blue')
+  expect(swatch.color).toMatch(/^#[a-f0-9]{6}$/)
   await select(page, 'back')
   await expect(page.locator('#submenu')).toHaveCount(0)
   await expect.poll(() => page.evaluate(() => window.calls.filter(call => call.method === 'updateActionMenu').at(-1).payload.title)).toBe('Chat actions')

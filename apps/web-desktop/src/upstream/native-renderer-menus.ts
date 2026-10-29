@@ -4,6 +4,7 @@ const rootSelector = '[data-slot="dropdown-menu-content"][data-state="open"], [d
 const subSelector = '[data-slot="dropdown-menu-sub-content"][data-state="open"], [data-slot="context-menu-sub-content"][data-state="open"]'
 const contentSelector = `${rootSelector}, ${subSelector}`
 let nextMenu = 0
+const swatchNames = ['Red', 'Orange', 'Yellow', 'Lime', 'Green', 'Mint', 'Cyan', 'Sky blue', 'Blue', 'Purple', 'Magenta', 'Pink']
 
 /** Mirror mounted renderer commands; their original React owners still execute them. */
 export function installNativeRendererMenus(): () => void {
@@ -74,9 +75,15 @@ export function installNativeRendererMenus(): () => void {
       if (!id) { id = `item-${++nextItem}`; ids.set(row, id) }
       const text = row.cloneNode(true) as HTMLElement
       text.querySelectorAll('[aria-hidden="true"], kbd, [data-slot$="-shortcut"]').forEach(node => node.remove())
-      const label = row.getAttribute('aria-label') || text.textContent?.trim() || ''
+      let label = row.getAttribute('aria-label') || text.textContent?.trim() || ''
       if (!label) continue
-      const single = row.getAttribute('role') === 'menuitemradio'
+      // The renderer's color buttons expose HSL as their default accessible
+      // label. Keep the color visible and give its native control a plain name.
+      const swatch = row.tagName === 'BUTTON' && row.style.backgroundColor && /^hsl\((\d+) 68% 58%\)$/.exec(label)
+      const rgb = swatch ? getComputedStyle(row).backgroundColor.match(/^rgb\((\d+), (\d+), (\d+)\)$/) : null
+      const color = rgb ? '#' + rgb.slice(1).map(value => Number(value).toString(16).padStart(2, '0')).join('') : undefined
+      if (swatch) label = swatchNames[Math.round(Number(swatch[1]) / 30) % swatchNames.length]
+      const single = Boolean(swatch) || row.getAttribute('role') === 'menuitemradio'
       if (group.items.length && (group.selection === 'single') !== single) {
         group = { items: [] }; groups.push(group)
       }
@@ -86,7 +93,8 @@ export function installNativeRendererMenus(): () => void {
       group.items.push({ id, label: label.slice(0, 240), disabled: !enabled(row),
         destructive: row.dataset.variant === 'destructive' || row.classList.contains('text-destructive'),
         submenu: row.hasAttribute('aria-haspopup'),
-        checked: checked === null ? undefined : checked === 'true',
+        checked: swatch ? Boolean(row.style.boxShadow) : checked === null ? undefined : checked === 'true',
+        color,
         // Submenu triggers, check controls and embedded buttons update in place.
         keepOpen: row.hasAttribute('aria-haspopup') || checked !== null || row.tagName === 'BUTTON'
       })
@@ -119,11 +127,13 @@ export function installNativeRendererMenus(): () => void {
       void androidUpdateActionMenu(menu).then(ok => { if (!ok && menuId === id) { webOnly.add(root); release() } })
     }
   }
-  const observer = new MutationObserver(() => {
+  const observer = new MutationObserver(records => {
+    if (!records.some(record => record.attributeName !== 'style' ||
+      (record.target instanceof HTMLButtonElement && record.target.closest(contentSelector)))) return
     if (!scheduled) { scheduled = true; queueMicrotask(sync) }
   })
   observer.observe(document.body, { subtree: true, childList: true, characterData: true,
-    attributes: true, attributeFilter: ['data-state', 'aria-checked', 'aria-disabled', 'disabled', 'data-disabled', 'aria-label'] })
+    attributes: true, attributeFilter: ['data-state', 'aria-checked', 'aria-disabled', 'disabled', 'data-disabled', 'aria-label', 'style'] })
   sync()
   return () => { disposed = true; observer.disconnect(); release() }
 }

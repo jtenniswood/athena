@@ -83,7 +83,10 @@ class NativeActionMenusTest {
         }
         val tooLong = payload().put("title", "x".repeat(241))
         val invalidPosition = payload().put("viewportWidth", 0)
-        for (invalid in listOf(duplicate, tooLong, invalidPosition)) {
+        val invalidColor = payload().apply {
+            getJSONArray("groups").getJSONObject(0).getJSONArray("items").getJSONObject(0).put("color", "invalid")
+        }
+        for (invalid in listOf(duplicate, tooLong, invalidPosition, invalidColor)) {
             assertThrows(IllegalArgumentException::class.java) { NativeActionMenus.parse(invalid) }
         }
     }
@@ -95,22 +98,25 @@ class NativeActionMenusTest {
         val model = payload()
         val choices = model.getJSONArray("groups").getJSONObject(0).getJSONArray("items")
             .getJSONObject(2).getJSONArray("children").getJSONObject(0).getJSONArray("items")
-        choices.getJSONObject(1).put("keepOpen", true)
+        choices.getJSONObject(1).put("keepOpen", true).put("color", "#4b4bdd")
         val replies = mutableListOf<JSONObject>()
         menus.show(NativeActionMenus.parse(model), View(activity)) { replies.add(it as JSONObject) }
         val dialog = ShadowDialog.getLatestDialog() as BottomSheetDialog
         val root = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)!!
         root.findViewWithTag<View>("choice").performClick()
         val row = root.findViewWithTag<View>("two")
+        assertEquals(View.VISIBLE, row.findViewById<View>(R.id.menu_color).visibility)
         row.performClick()
         assertTrue(dialog.isShowing)
         assertEquals("changed", replies.single().getString("status"))
         choices.getJSONObject(0).put("checked", false)
-        choices.getJSONObject(1).put("checked", true).put("disabled", true)
+        choices.getJSONObject(1).put("checked", true).put("disabled", true).put("color", "")
         assertTrue(menus.update(NativeActionMenus.parse(model)))
         assertSame(dialog, ShadowDialog.getLatestDialog())
         assertSame(row, root.findViewWithTag<View>("two"))
         assertFalse(row.isEnabled)
+        assertTrue(row.createAccessibilityNodeInfo().isChecked)
+        assertEquals(View.GONE, row.findViewById<View>(R.id.menu_color).visibility)
         assertNull(root.findViewWithTag<View>("choice"))
         assertFalse(menus.update(NativeActionMenus.parse(payload("stale"))))
         dialog.onBackPressedDispatcher.onBackPressed()

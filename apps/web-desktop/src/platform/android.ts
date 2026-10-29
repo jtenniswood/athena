@@ -133,6 +133,7 @@ export interface AndroidMenuItem {
   checked?: boolean
   keepOpen?: boolean
   submenu?: boolean
+  color?: string
   children?: AndroidMenuGroup[]
 }
 export interface AndroidMenuGroup {

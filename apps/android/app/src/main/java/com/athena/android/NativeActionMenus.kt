@@ -24,7 +24,7 @@ import org.json.JSONObject
 class NativeActionMenus(private val activity: AppCompatActivity) {
     data class Item(val id: String, val label: String, val description: String, val disabled: Boolean,
         val destructive: Boolean, val checked: Boolean?, val children: List<Group>?, val keepOpen: Boolean = false,
-        val submenu: Boolean = false)
+        val submenu: Boolean = false, val color: String = "")
     data class Group(val label: String, val single: Boolean, val items: List<Item>)
     data class Model(val id: String, val title: String, val compact: Boolean, val x: Double, val y: Double,
         val viewportWidth: Double, val groups: List<Group>, val backId: String = "")
@@ -52,9 +52,11 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
                         require(ids.add(id))
                         val children = if (item.has("children")) groups(item.getJSONArray("children"), depth + 1) else null
                         require(children == null || children.any { it.items.isNotEmpty() })
+                        val color = text(item, "color", 7)
+                        require(color.isEmpty() || Regex("#[a-fA-F0-9]{6}").matches(color))
                         Item(id, text(item, "label", 240, true), text(item, "description", 500),
                             item.optBoolean("disabled"), item.optBoolean("destructive"),
-                            if (item.has("checked")) item.getBoolean("checked") else null, children, item.optBoolean("keepOpen"), item.optBoolean("submenu"))
+                            if (item.has("checked")) item.getBoolean("checked") else null, children, item.optBoolean("keepOpen"), item.optBoolean("submenu"), color)
                     })
                 }
             }
@@ -181,6 +183,13 @@ class NativeActionMenus(private val activity: AppCompatActivity) {
                         text = item.description; visibility = if (item.description.isEmpty()) View.GONE else View.VISIBLE
                     }
                     row.findViewById<ImageView>(R.id.menu_submenu).visibility = if (item.children != null || item.submenu) View.VISIBLE else View.GONE
+                    row.findViewById<View>(R.id.menu_color).apply {
+                        visibility = if (item.color.isEmpty()) View.GONE else View.VISIBLE
+                        background = if (item.color.isEmpty()) null else android.graphics.drawable.GradientDrawable().apply {
+                            shape = android.graphics.drawable.GradientDrawable.OVAL
+                            setColor(android.graphics.Color.parseColor(item.color))
+                        }
+                    }
                     row.contentDescription = listOf(item.label, item.description).filter { it.isNotEmpty() }.joinToString(". ")
                     if (item.children != null || item.submenu) row.contentDescription = activity.getString(R.string.menu_open_submenu, row.contentDescription)
                     row.findViewById<ImageView>(R.id.menu_selection).apply {
