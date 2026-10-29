@@ -35,6 +35,8 @@ class ServerSettingsTest {
         val activity = Robolectric.buildActivity(MainActivity::class.java).setup().get()
         val page = Page(activity, guarded, url)
         MainActivity::class.java.getDeclaredField("web").apply { isAccessible = true }.set(activity, page)
+        // Guarded fixtures represent an already loaded chat with potentially unsaved work.
+        MainActivity::class.java.getDeclaredField("documentReady").apply { isAccessible = true }.setBoolean(activity, guarded)
         return activity to page
     }
 
@@ -123,6 +125,48 @@ class ServerSettingsTest {
         (pending as () -> Unit).invoke()
         assertEquals(target, page.loadedUrl)
         assertNull(intent.data)
+    }
+
+    private fun connection(activity: MainActivity) = MainActivity::class.java.getDeclaredField("connection")
+        .apply { isAccessible = true }.get(activity) as ConnectionCoordinator
+
+    @Test fun failedStartupCanEditServerWithoutWaitingForAnUnloadedPage() {
+        val (activity, page) = fixture(guarded = true)
+        MainActivity::class.java.getDeclaredField("documentReady").apply { isAccessible = true }.setBoolean(activity, false)
+        connection(activity).recover("web-timeout", "Server did not respond")
+        activity.findViewById<android.view.View>(R.id.server_settings).performClick()
+        assertTrue(page.destroyed)
+        assertEquals("https://old.example.com", activity.findViewById<EditText>(R.id.server_address).text.toString())
+    }
+
+    @Test fun recoveryStillChecksDraftSafetyAfterTheDocumentHasBeenReady() {
+        val (activity, page) = fixture(guarded = true)
+        MainActivity::class.java.getDeclaredField("documentReady").apply { isAccessible = true }.setBoolean(activity, true)
+        connection(activity).recover("web-timeout", "Session disconnected")
+        activity.findViewById<android.view.View>(R.id.server_settings).performClick()
+        assertFalse(page.destroyed)
+        assertNull(activity.findViewById<EditText>(R.id.server_address))
+    }
+
+    @Test fun connectionRecoveryAndReadinessReuseTheSameLoadingSurface() {
+        val (activity, _) = fixture(guarded = false)
+        val status = activity.findViewById<android.widget.TextView>(R.id.recovery_message)
+        val screen = MainActivity::class.java.getDeclaredField("connectionScreen").apply { isAccessible = true }.get(activity) as android.view.View
+        val host = connection(activity)
+        host.recover("web-unreachable", "Server unavailable")
+        assertEquals("Server unavailable", status.text.toString())
+        assertEquals(android.view.View.VISIBLE, screen.visibility)
+        assertEquals(android.view.View.VISIBLE, activity.findViewById<android.view.View>(R.id.server_settings).visibility)
+        host.ready()
+        assertEquals(android.view.View.GONE, screen.visibility)
+        host.sessionConnected(false)
+        assertEquals(android.view.View.VISIBLE, screen.visibility)
+        shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(21))
+        assertEquals(ConnectionCoordinator.Stage.RECOVERY, host.state.stage)
+        assertSame(status, activity.findViewById(R.id.recovery_message))
+        host.sessionConnected(true)
+        assertEquals(ConnectionCoordinator.Stage.READY, host.state.stage)
+        assertEquals(android.view.View.GONE, screen.visibility)
     }
 
     private fun <T : android.view.View> android.view.View.findViewByPredicate(predicate: (android.view.View) -> Boolean): T? {

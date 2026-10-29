@@ -26,7 +26,8 @@ class ConnectionCoordinator(private val changed: (State) -> Unit = {}) {
     fun ready() = update(Stage.READY, "Connected to Athena")
     fun waitingForSession() = update(Stage.LOADING, "Reconnecting to your Athena session…")
     fun sessionConnected(connected: Boolean) {
-        if (connected && state.stage == Stage.LOADING) ready()
+        if (connected && (state.stage == Stage.LOADING ||
+                (state.stage == Stage.RECOVERY && state.code == "web-timeout"))) ready()
         else if (!connected && state.stage == Stage.READY) waitingForSession()
     }
     fun recover(code: String, message: String) {

@@ -23,7 +23,6 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.textfield.TextInputEditText
 import androidx.activity.OnBackPressedCallback
@@ -41,9 +40,10 @@ class MainActivity : AppCompatActivity() {
     private val notifications by lazy { NativeNotifications(this) }
     private val actionMenus by lazy { NativeActionMenus(this) }
     private val connection = ConnectionCoordinator { renderConnection(it) }
+    private var connectionScreen: View? = null
     private var connectionStatus: TextView? = null
     private var connectionAction: com.google.android.material.button.MaterialButton? = null
-    private var pageGeneration = 0
+    private var documentReady = false
     private var navigationId: String? = null
     private var webRevision = "Unknown"
     private var serverProtocol = "Unknown"
@@ -100,6 +100,8 @@ class MainActivity : AppCompatActivity() {
         actionMenus.dismiss()
         visibility.clear()
         connection.setup()
+        connectionScreen = null
+        nativeToolbar = null
         connectionStatus = null
         connectionAction = null
         editingServer = origin.isNotEmpty()
@@ -147,6 +149,8 @@ class MainActivity : AppCompatActivity() {
     private fun openServer(state: Bundle?) {
         actionMenus.dismiss()
         editingServer = false
+        documentReady = false
+        connectionScreen = null
         connectionStatus = null
         connectionAction = null
         connection.loading()
@@ -160,29 +164,12 @@ class MainActivity : AppCompatActivity() {
         }
         nativeToolbar = toolbar
         container.addView(toolbar)
-        connectionStatus = TextView(this).apply {
-            setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium)
-            setPadding(16.dp(), 8.dp(), 16.dp(), 8.dp())
-            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
-        }
-        container.addView(connectionStatus)
-        connectionAction = com.google.android.material.button.MaterialButton(this, null,
-            com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            setOnClickListener {
-                val current = connection.state
-                if (current.stage in listOf(ConnectionCoordinator.Stage.ACCESS_SIGN_IN, ConnectionCoordinator.Stage.ATHENA_SIGN_IN)) {
-                    authentication.cancel()
-                    connection.recover("auth-cancelled", getString(R.string.sign_in_cancelled))
-                } else if (current.code?.startsWith("auth-") == true) authentication.retry(origin)
-                else reconnectAthena()
-            }
-        }
-        container.addView(connectionAction, LinearLayout.LayoutParams(-2, -2).apply {
-            marginStart = 16.dp(); marginEnd = 16.dp(); bottomMargin = 8.dp()
-        })
+        val body = FrameLayout(this)
+        container.addView(body, LinearLayout.LayoutParams(-1, 0, 1f))
+        val screen = layoutInflater.inflate(R.layout.screen_recovery, body, false)
+        bindConnectionScreen(screen)
+        body.addView(screen)
         renderConnection(connection.state)
-        val progress = LinearProgressIndicator(this).apply { max = 100 }
-        container.addView(progress, LinearLayout.LayoutParams(-1, 4.dp()))
         val view = WebView(this)
         web = view
         view.setBackgroundColor(Color.rgb(17, 17, 17))
@@ -211,28 +198,20 @@ class MainActivity : AppCompatActivity() {
             override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
                 actionMenus.dismiss()
                 visibility.clear()
-                pageGeneration++
+                documentReady = false
                 navigationAction = null; navigationId = null
                 connection.loading()
                 renderConnection(connection.state)
-                val generation = pageGeneration
-                view.postDelayed({
-                    if (generation == pageGeneration && connection.state.stage == ConnectionCoordinator.Stage.LOADING) {
-                        connection.recover("web-timeout", "Athena has not finished connecting. Choose Try again or check App settings.")
-                    }
-                }, 20000)
             }
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 if (request.isForMainFrame && request.url.scheme == "https" &&
                     request.url.path?.startsWith("/cdn-cgi/access/") == true &&
                     (ServerAddress.belongsTo(request.url.toString(), origin) || request.url.host?.endsWith(".cloudflareaccess.com") == true)) {
-                    toolbar.visibility = View.VISIBLE
                     startSignIn(true)
                     return true
                 }
                 if (request.isForMainFrame && ServerAddress.belongsTo(request.url.toString(), origin) &&
                     request.url.path in listOf("/login", "/auth/login")) {
-                    toolbar.visibility = View.VISIBLE
                     startSignIn(false, request.url.encodedPath + (request.url.encodedQuery?.let { "?$it" } ?: ""))
                     return true
                 }
@@ -243,18 +222,17 @@ class MainActivity : AppCompatActivity() {
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                 if (request.isForMainFrame) errorScreen("Could not reach Athena. Check your connection and server address.")
             }
+            override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
+                if (request.isForMainFrame) errorScreen("The server returned HTTP ${response.statusCode}. Try again or check your server address and configuration.")
+            }
             override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
                 actionMenus.dismiss()
-                container.removeView(view); view.destroy(); web = null
+                (view.parent as? android.view.ViewGroup)?.removeView(view); view.destroy(); web = null
                 errorScreen("Android closed the web renderer. Reopen Athena to reconnect.")
                 return true
             }
         }
         view.webChromeClient = object : WebChromeClient() {
-            override fun onProgressChanged(view: WebView, newProgress: Int) {
-                progress.setProgressCompat(newProgress, false)
-                progress.visibility = if (newProgress < 100) View.VISIBLE else View.GONE
-            }
             override fun onCreateWindow(source: WebView, isDialog: Boolean, isUserGesture: Boolean, result: android.os.Message): Boolean {
                 if (!isUserGesture) return false
                 // A temporary view resolves target=_blank without exposing the native bridge to it.
@@ -294,9 +272,29 @@ class MainActivity : AppCompatActivity() {
             }
         }
         view.setDownloadListener { url, _, _, _, _ -> external(Uri.parse(url)) }
-        container.addView(view, LinearLayout.LayoutParams(-1, 0, 1f))
+        body.addView(view, 0, FrameLayout.LayoutParams(-1, -1))
+        renderConnection(connection.state)
         if (state == null || view.restoreState(state) == null) view.loadUrl(origin + "/")
         openNotification(intent)
+    }
+
+    private fun bindConnectionScreen(screen: View) {
+        connectionScreen = screen
+        connectionStatus = screen.findViewById(R.id.recovery_message)
+        connectionAction = screen.findViewById<com.google.android.material.button.MaterialButton>(R.id.reconnect).apply {
+            setOnClickListener {
+                val current = connection.state
+                if (current.stage in listOf(ConnectionCoordinator.Stage.ACCESS_SIGN_IN, ConnectionCoordinator.Stage.ATHENA_SIGN_IN)) {
+                    authentication.cancel()
+                    connection.recover("auth-cancelled", getString(R.string.sign_in_cancelled))
+                } else if (current.code?.startsWith("auth-") == true) authentication.retry(origin)
+                else reconnectAthena()
+            }
+        }
+        screen.findViewById<View>(R.id.server_settings).setOnClickListener {
+            prepareNavigation(allowUnloaded = true) { web?.destroy(); web = null; setup() }
+        }
+        screen.findViewById<View>(R.id.app_settings).setOnClickListener { appSettings() }
     }
 
     private fun handleMessage(raw: String, reply: JavaScriptReplyProxy) {
@@ -307,6 +305,7 @@ class MainActivity : AppCompatActivity() {
         when (method) {
             "hello" -> {
                 if (!connection.handshake(payload.optInt("protocol"))) {
+                    connection.recover("web-protocol", "This server uses an unsupported Android integration. Check the server version and configuration.")
                     respond(false); return
                 }
                 respond(JSONObject().put("protocol", 1)
@@ -317,7 +316,7 @@ class MainActivity : AppCompatActivity() {
             "webState" -> {
                 webRevision = payload.optString("revision", "Unknown").take(80)
                 serverProtocol = payload.optString("serverProtocol", "Unknown").take(40)
-                if (payload.optBoolean("ready")) connection.ready()
+                if (payload.optBoolean("ready")) { documentReady = true; connection.ready() }
                 else connection.recover("web-startup", "Athena could not finish loading. Choose Try again or check App settings.")
                 respond(true)
             }
@@ -433,7 +432,8 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Wait for the current navigation check to finish.", Toast.LENGTH_SHORT).show()
             return
         }
-        if (allowUnloaded && (view.url.isNullOrBlank() || view.url == "about:blank")) {
+        if (allowUnloaded && ((!documentReady && connection.state.stage == ConnectionCoordinator.Stage.RECOVERY) ||
+                view.url.isNullOrBlank() || view.url == "about:blank")) {
             navigationAction = null
             action()
             return
@@ -458,14 +458,13 @@ class MainActivity : AppCompatActivity() {
         actionMenus.dismiss()
         visibility.clear()
         connection.recover("web-unreachable", message)
-        connectionStatus = null
-        connectionAction = null
-        container.removeAllViews()
-        val screen = layoutInflater.inflate(R.layout.screen_recovery, container, false)
-        screen.findViewById<TextView>(R.id.recovery_message).text = message
-        screen.findViewById<View>(R.id.reconnect).setOnClickListener { web?.destroy(); web = null; openServer(null) }
-        screen.findViewById<View>(R.id.server_settings).setOnClickListener { web?.destroy(); web = null; setup() }
-        container.addView(screen)
+        if (!documentReady) {
+            web?.let { view ->
+                (view.parent as? android.view.ViewGroup)?.removeView(view)
+                view.destroy()
+            }
+            web = null
+        }
     }
 
     private fun external(uri: Uri) {
@@ -490,15 +489,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderConnection(state: ConnectionCoordinator.State) {
-        nativeToolbar?.visibility = if (connection.settingsReady && state.stage == ConnectionCoordinator.Stage.READY) View.GONE else View.VISIBLE
-        connectionStatus?.apply {
-            text = state.message
-            visibility = if (state.stage in listOf(ConnectionCoordinator.Stage.READY, ConnectionCoordinator.Stage.SETUP)) View.GONE else View.VISIBLE
+        val ready = state.stage == ConnectionCoordinator.Stage.READY
+        val recovery = state.stage == ConnectionCoordinator.Stage.RECOVERY
+        val signingIn = state.stage in listOf(ConnectionCoordinator.Stage.ACCESS_SIGN_IN, ConnectionCoordinator.Stage.ATHENA_SIGN_IN)
+        nativeToolbar?.visibility = if (ready && !connection.settingsReady) View.VISIBLE else View.GONE
+        connectionScreen?.apply {
+            visibility = if (ready) View.GONE else View.VISIBLE
+            findViewById<View>(R.id.connection_progress).visibility = if (state.stage == ConnectionCoordinator.Stage.LOADING) View.VISIBLE else View.GONE
+            findViewById<View>(R.id.server_settings).visibility = if (recovery) View.VISIBLE else View.GONE
+            findViewById<View>(R.id.app_settings).visibility = if (recovery) View.VISIBLE else View.GONE
         }
+        connectionStatus?.text = state.message
         connectionAction?.apply {
-            val signingIn = state.stage in listOf(ConnectionCoordinator.Stage.ACCESS_SIGN_IN, ConnectionCoordinator.Stage.ATHENA_SIGN_IN)
-            visibility = if (signingIn || state.stage == ConnectionCoordinator.Stage.RECOVERY) View.VISIBLE else View.GONE
+            visibility = if (signingIn || recovery) View.VISIBLE else View.GONE
             setText(if (signingIn) R.string.cancel_sign_in else R.string.reconnect)
+        }
+        if (state.stage == ConnectionCoordinator.Stage.LOADING) {
+            container.postDelayed({
+                if (connection.state === state) {
+                    connection.recover("web-timeout", "Athena has not finished connecting. Try again or check your server settings.")
+                }
+            }, 20000)
         }
     }
 
@@ -515,15 +526,26 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         container.setBackgroundColor(MaterialColors.getColor(container, com.google.android.material.R.attr.colorSurface))
         val input = findViewById<TextInputEditText>(R.id.server_address)
-        val recovery = findViewById<TextView>(R.id.recovery_message)
         if (input != null) {
             val value = input.text.toString()
             val error = findViewById<TextInputLayout>(R.id.server_input).error
             setup()
             findViewById<TextInputEditText>(R.id.server_address).setText(value)
             findViewById<TextInputLayout>(R.id.server_input).error = error
-        } else if (recovery != null) errorScreen(recovery.text.toString())
-        else (nativeToolbar as? MaterialToolbar)?.apply {
+        } else {
+            // Reinflate the host overlay without reloading the page or discarding drafts.
+            connectionScreen?.let { previous ->
+                val parent = previous.parent as? FrameLayout
+                if (parent != null) {
+                    val replacement = layoutInflater.inflate(R.layout.screen_recovery, parent, false)
+                    parent.removeView(previous)
+                    parent.addView(replacement)
+                    bindConnectionScreen(replacement)
+                    renderConnection(connection.state)
+                }
+            }
+        }
+        (nativeToolbar as? MaterialToolbar)?.apply {
             setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface))
             setTitleTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface))
         }

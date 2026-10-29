@@ -1,5 +1,6 @@
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
+    android:background="?attr/colorSurface"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -7,15 +8,26 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:gravity="center_vertical"
+        android:gravity="center"
         android:padding="24dp">
-        <TextView
-            android:layout_width="match_parent"
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/athena_loading"
+            android:importantForAccessibility="no"
+            android:layout_marginBottom="24dp" />
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            android:id="@+id/connection_progress"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/recovery_title"
-            android:textAppearance="?attr/textAppearanceHeadlineLarge" />
+            android:indeterminate="true"
+            android:importantForAccessibility="no"
+            app:indicatorSize="20dp"
+            app:trackThickness="2dp" />
         <TextView
             android:id="@+id/recovery_message"
+            android:gravity="center"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
@@ -36,5 +48,12 @@
             android:layout_height="wrap_content"
             android:minHeight="56dp"
             android:text="@string/server_settings" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/app_settings"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/app_settings" />
     </LinearLayout>
 </ScrollView>
