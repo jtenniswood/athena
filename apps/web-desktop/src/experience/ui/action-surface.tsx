@@ -56,12 +56,10 @@ export function BrowserActionSurface({ title, hideTitle = false, actions = [], g
   const list = useRef<HTMLDivElement>(null)
   const pendingFocusKey = useRef<string | null>(null)
   const [submenuKey, setSubmenuKey] = useState<string | null>(null)
-  const nativeMenus = useNativeActionMenus()
   const [nativeUnavailable, setNativeUnavailable] = useState(false)
   const sections = (groups ?? [{ key: 'actions', actions }]).filter(group => group.actions.length)
-  // Native menus return a single selection and dismiss. Keep persistent controls
-  // in React so checks, disabled rows and submenu position update in place.
-  const useNative = nativeMenus && !nativeUnavailable && !needsLiveMenu(sections)
+  const nativeMenus = useNativeActionMenus(needsLiveMenu(sections))
+  const useNative = nativeMenus && !nativeUnavailable
   // Read live action props so an open sheet reflects changed checks and callbacks.
   const submenu = sections.flatMap(group => group.actions).find(action => action.key === submenuKey)
   useEffect(() => {

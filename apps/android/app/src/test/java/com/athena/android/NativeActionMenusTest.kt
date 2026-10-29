@@ -87,4 +87,51 @@ class NativeActionMenusTest {
             assertThrows(IllegalArgumentException::class.java) { NativeActionMenus.parse(invalid) }
         }
     }
+
+    @Test fun persistentSelectionUpdatesTheSameSheetAndRowsInsideItsSubmenu() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+        val menus = NativeActionMenus(activity)
+        val model = payload()
+        val choices = model.getJSONArray("groups").getJSONObject(0).getJSONArray("items")
+            .getJSONObject(2).getJSONArray("children").getJSONObject(0).getJSONArray("items")
+        choices.getJSONObject(1).put("keepOpen", true)
+        val replies = mutableListOf<JSONObject>()
+        menus.show(NativeActionMenus.parse(model), View(activity)) { replies.add(it as JSONObject) }
+        val dialog = ShadowDialog.getLatestDialog() as BottomSheetDialog
+        val root = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)!!
+        root.findViewWithTag<View>("choice").performClick()
+        val row = root.findViewWithTag<View>("two")
+        row.performClick()
+        assertTrue(dialog.isShowing)
+        assertEquals("changed", replies.single().getString("status"))
+        choices.getJSONObject(0).put("checked", false)
+        choices.getJSONObject(1).put("checked", true).put("disabled", true)
+        assertTrue(menus.update(NativeActionMenus.parse(model)))
+        assertSame(dialog, ShadowDialog.getLatestDialog())
+        assertSame(row, root.findViewWithTag<View>("two"))
+        assertFalse(row.isEnabled)
+        assertNull(root.findViewWithTag<View>("choice"))
+        assertFalse(menus.update(NativeActionMenus.parse(payload("stale"))))
+        dialog.onBackPressedDispatcher.onBackPressed()
+        assertNotNull(root.findViewWithTag<View>("choice"))
+        menus.dismiss()
+        assertEquals(listOf("changed", "dismissed"), replies.map { it.getString("status") })
+        controller.pause().stop().destroy()
+    }
+
+    @Test fun rendererSubmenuBackReturnsAnEventWithoutDismissingTheSheet() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+        val menus = NativeActionMenus(activity)
+        val replies = mutableListOf<JSONObject>()
+        menus.show(NativeActionMenus.parse(payload().put("backId", "back")), View(activity)) { replies.add(it as JSONObject) }
+        val dialog = ShadowDialog.getLatestDialog() as BottomSheetDialog
+        dialog.onBackPressedDispatcher.onBackPressed()
+        assertTrue(dialog.isShowing)
+        assertEquals("changed", replies.single().getString("status"))
+        assertEquals("back", replies.single().getString("id"))
+        menus.dismiss()
+        controller.pause().stop().destroy()
+    }
 }

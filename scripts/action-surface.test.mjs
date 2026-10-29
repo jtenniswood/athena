@@ -4,7 +4,7 @@ import vm from 'node:vm'
 import { test } from 'node:test'
 import ts from 'typescript'
 
-function surface() {
+function surface({ live = false } = {}) {
   const state = []
   let cursor = 0
   let closes = 0
@@ -18,7 +18,7 @@ function surface() {
       return [state[index], value => { state[index] = value }]
     },
     useEffect: () => {},
-    useNativeActionMenus: () => true,
+    useNativeActionMenus: persistent => !persistent || live,
     NativeActionSurface: 'native',
     Dialog: { Root: 'dialog', Portal: 'portal', Overlay: 'overlay', Content: 'content', Title: 'title' }
   }
@@ -83,4 +83,10 @@ test('nested persistent selections stay in their submenu after a change', () => 
 
 test('Android menus with only closing commands keep the native presentation', () => {
   assert.equal(surface().render([{ key: 'actions', actions: [{ key: 'rename', label: 'Rename', run() {} }] }]).type, 'native')
+})
+
+test('Android hosts with live controls use native sheets for persistent menus too', () => {
+  assert.equal(surface({ live: true }).render([{ key: 'filters', actions: [{
+    key: 'bots', label: 'Bots', checked: true, keepOpen: true, run() {}
+  }] }]).type, 'native')
 })

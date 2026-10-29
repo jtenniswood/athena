@@ -1,18 +1,22 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
-import { androidDismissActionMenu, androidHost, androidOpenActionMenu, isAndroidApp, type AndroidMenuGroup } from '../../platform/android'
+import { androidDismissActionMenu, androidHost, androidOpenActionMenu, androidUpdateActionMenu, isAndroidApp, type AndroidMenuGroup, type AndroidActionMenu } from '../../platform/android'
 import type { BrowserAction, BrowserActionAnchor, BrowserActionGroup } from './action-surface'
 import { restoreBrowserControlFocus } from './dialog-focus'
 
 /** Detect once per surface. Older APKs and ordinary browsers keep Radix menus. */
-export function useNativeActionMenus(): boolean | null {
+export function useNativeActionMenus(persistent = false): boolean | null {
   const [supported, setSupported] = useState<boolean | null>(() => isAndroidApp() ? null : false)
+  const [live, setLive] = useState(false)
   useEffect(() => {
     if (!isAndroidApp()) return
     let active = true
-    void androidHost().then(host => { if (active) setSupported(Boolean(host?.capabilities.includes('action-menu'))) })
+    void androidHost().then(host => { if (active) {
+      setSupported(Boolean(host?.capabilities.includes('action-menu')))
+      setLive(Boolean(host?.capabilities.includes('action-menu-live')))
+    } })
     return () => { active = false }
   }, [])
-  return supported
+  return supported === null ? null : supported && (!persistent || live)
 }
 
 let nextMenuId = 0
@@ -28,7 +32,8 @@ export function NativeActionSurface({ title, groups, anchor, compact, onClose, f
 }) {
   const latest = useRef({ groups, onClose, onUnavailable })
   latest.current = { groups, onClose, onUnavailable }
-  const [iteration, setIteration] = useState(0)
+  const request = useRef<AndroidActionMenu | null>(null)
+  const updateCurrent = useRef<(() => void) | null>(null)
   useEffect(() => {
     let active = true
     const id = `actions-${++nextMenuId}`
@@ -40,16 +45,15 @@ export function NativeActionSurface({ title, groups, anchor, compact, onClose, f
         callbacks.set(key, { ...action, disabled })
         return { id: key, label: action.label, description: action.description, disabled,
           destructive: action.destructive, checked: action.checked,
+          keepOpen: action.keepOpen,
           children: action.children ? serialize(action.children, key, disabled) : undefined }
       }) }))
     }
-    const sections = serialize(latest.current.groups)
-    void androidOpenActionMenu({ id, title, compact, x: anchor.x, y: anchor.y, viewportWidth: window.innerWidth, groups: sections }).then(result => {
+    const menu = { id, title, compact: true, x: anchor.x, y: anchor.y, viewportWidth: window.innerWidth, groups: serialize(latest.current.groups) }
+    request.current = menu
+    const select = (selectedId: string, keepOpen: boolean) => {
       if (!active) return
-      if (result.status === 'unavailable') { latest.current.onUnavailable(); return }
-      const action = result.status === 'selected' ? callbacks.get(result.id) : undefined
-      // An open native menu is a snapshot. Never execute an invented, disabled,
-      // submenu-only, or removed command returned after its web owner changes.
+      // Look up only commands still owned by this mounted surface.
       const live = new Map<string, BrowserAction>()
       function collect(items: BrowserActionGroup[], parent = '', parentDisabled = false) {
         for (const group of items) for (const item of group.actions) {
@@ -60,19 +64,34 @@ export function NativeActionSurface({ title, groups, anchor, compact, onClose, f
         }
       }
       collect(latest.current.groups)
-      const current = result.status === 'selected' ? live.get(result.id) : undefined
+      const action = callbacks.get(selectedId)
+      const current = live.get(selectedId)
       const allowed = action && current && !action.disabled && !current.disabled && !action.children && !current.children
-      if (allowed && action.keepOpen) {
-        action.run()
-        setIteration(value => value + 1)
+      if (keepOpen) {
+        if (allowed && current.keepOpen) current.run()
         return
       }
       latest.current.onClose()
       restoreBrowserControlFocus(anchor.returnFocus, fallbackFocus?.current)
-      // Native dismissal has already completed. Mount confirmations afterwards.
-      if (allowed) queueMicrotask(action.run)
+      if (allowed) queueMicrotask(current.run)
+    }
+    void androidOpenActionMenu(menu, selectedId => select(selectedId, true)).then(result => {
+      if (!active) return
+      if (result.status === 'unavailable') { latest.current.onUnavailable(); return }
+      select(result.status === 'selected' ? result.id : '', false)
     })
-    return () => { active = false; void androidDismissActionMenu(id) }
-  }, [anchor, compact, fallbackFocus, iteration, title])
+    const update = () => {
+      callbacks.clear()
+      menu.groups = serialize(latest.current.groups)
+      void androidHost().then(host => {
+        if (active && host?.capabilities.includes('action-menu-live')) {
+          void androidUpdateActionMenu(menu).then(ok => { if (active && !ok) latest.current.onUnavailable() })
+        }
+      })
+    }
+    updateCurrent.current = update
+    return () => { active = false; request.current = null; updateCurrent.current = null; void androidDismissActionMenu(id) }
+  }, [anchor, compact, fallbackFocus, title])
+  useEffect(() => { if (request.current) updateCurrent.current?.() }, [groups])
   return null
 }

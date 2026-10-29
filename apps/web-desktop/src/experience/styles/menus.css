@@ -1,4 +1,9 @@
 /* Shared desktop menus and mobile action sheets. */
+[data-native-menu] {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 .browser-settings-menu .browser-action-icon {
   color: var(--web-text-subtle);
 }
