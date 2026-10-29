@@ -2967,5 +2967,27 @@
     "replacement": "./src/upstream/assistant-ui-runtime.ts",
     "aliasGroup": "renderer",
     "fingerprintPolicy": "The wrapper hook adapter is exercised by draft, message-action and conversation-switch browser checks."
+  },
+  {
+    "name": "browser-bots-gateway-groups-refresh",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "plugins/hermes-bots/canonical-group-registry.tsx",
+    "reason": "Remove the manual gateway groups refresh control above the Bots toolbar while retaining automatic group discovery.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Bots keeps filters beside the rightmost add button"
+      }
+    ],
+    "removal": "Remove when upstream exposes a presentation option for the gateway groups refresh control.",
+    "handlers": [
+      "removeBrowserGatewayGroupsRefresh"
+    ],
+    "sourceHash": "98e82fe10e1ef518bfbd4275b3febddb76f0f5bbbfc1fab7df9dd632d64e0429",
+    "sourceRoot": "renderer",
+    "inputHash": "98e82fe10e1ef518bfbd4275b3febddb76f0f5bbbfc1fab7df9dd632d64e0429",
+    "outputHash": "691b42cbbbc5d87bada5a0ea8d9eb0326d9d07a126e18446b5c0ea0725272073"
   }
 ]

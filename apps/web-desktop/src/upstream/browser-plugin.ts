@@ -689,6 +689,20 @@ export function removeBrowserNewBotChatAction(source: string): string {
   return output
 }
 
+export function removeBrowserGatewayGroupsRefresh(source: string): string {
+  const changes: [string, string][] = [
+    ["import { useCanonicalGroupLabels } from './canonical-group-labels'\n", ''],
+    ['  const labels = useCanonicalGroupLabels()\n', ''],
+    ['  const [refresh, setRefresh] = useState(0)\n', ''],
+    ['[connectionId, profile, refresh]', '[connectionId, profile]'],
+    ['    <Button onClick={() => setRefresh(value => value + 1)} variant="ghost">{labels.refreshGroups}</Button>\n', '']
+  ]
+  for (const [before] of changes) {
+    if (source.split(before).length !== 2) throw new Error('Browser gateway groups refresh target changed')
+  }
+  return changes.reduce((output, [before, after]) => output.replace(before, after), source)
+}
+
 export function removeBrowserOpenBotChatAction(source: string): string {
   const action = '<ContextMenuItem onSelect={() => void openRosterBot(bot)}>{b.bot.openBotChat}</ContextMenuItem>'
   if (!source.includes('b.bot.openBotChat')) return source
@@ -1333,7 +1347,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     useBrowserProjectDisclosure,
     exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut, removeBrowserTopCapabilitiesLink,
-    removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
+    removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction, removeBrowserGatewayGroupsRefresh,
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth,
     filterBrowserSessionMenu: source => filterBrowserSessionMenu(source, root),
     showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
