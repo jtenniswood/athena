@@ -28,6 +28,28 @@ also shows the APK source revision, web revision and WebView version so independ
 APK and server updates can be diagnosed. The certificate fingerprint is public;
 it is not the signing key.
 
+## Latest APK on demand
+
+Use the `athena-apk-build` project skill, or open **Actions → Build latest
+Android APK → Run workflow** with `main` selected. The manual workflow builds
+and signs the commit on `main` at dispatch time, runs unit tests and release lint,
+and verifies the same package, Firebase configuration and pinned signing
+certificate as a versioned release. It does not create a tag, publish a GitHub
+release or deploy the server.
+
+Download the `android-signed-apk` artifact from the completed run. It contains
+`athena-android-latest.apk`, `SHA256SUMS` and `build-info.json`, and is retained
+for 30 days. Each run has its own artifact; use its recorded source revision to
+identify the APK. The skill downloads the files and checks their hashes and
+revision before returning the APK.
+
+The APK keeps the app version and version code from `main`. Android can install
+it over an existing app signed with the same key and an equal or lower version
+code; this is a manual update rather than an automatic version upgrade. If a
+higher version code is already installed, increase the version through a PR
+first. Do not uninstall to bypass that check, because uninstalling clears local
+data. Use versioned releases when publishing a new Android version.
+
 ## CI credentials
 
 GitHub Actions uses three encrypted repository secrets:

@@ -1,0 +1,65 @@
+name: Build latest Android APK
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-latest-apk
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+      - name: Install Android platform
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Verify Gradle wrapper
+        working-directory: apps/android
+        run: echo '81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f  gradle/wrapper/gradle-wrapper.jar' | sha256sum --check
+      - name: Build, sign and verify the APK
+        env:
+          ATHENA_ANDROID_KEYSTORE_BASE64: ${{ secrets.ATHENA_ANDROID_KEYSTORE_BASE64 }}
+          ATHENA_ANDROID_STORE_PASSWORD: ${{ secrets.ATHENA_ANDROID_STORE_PASSWORD }}
+          ATHENA_ANDROID_GOOGLE_SERVICES: ${{ secrets.ATHENA_ANDROID_GOOGLE_SERVICES }}
+          ATHENA_ANDROID_BUILD_REVISION: ${{ github.sha }}
+          APK_NAME: athena-android-latest.apk
+        run: |
+          set -euo pipefail
+          export ATHENA_ANDROID_KEYSTORE="$RUNNER_TEMP/athena-release.jks"
+          trap 'rm -f "$ATHENA_ANDROID_KEYSTORE" apps/android/app/google-services.json' EXIT
+          node --input-type=module <<'JS'
+          import { writeFileSync } from 'node:fs'
+          for (const key of ['ATHENA_ANDROID_KEYSTORE_BASE64', 'ATHENA_ANDROID_STORE_PASSWORD', 'ATHENA_ANDROID_GOOGLE_SERVICES']) {
+            if (!process.env[key]) throw new Error(`Missing release secret: ${key}`)
+          }
+          const config = JSON.parse(process.env.ATHENA_ANDROID_GOOGLE_SERVICES)
+          if (!config.client?.some(client => client.client_info?.android_client_info?.package_name === 'com.athena.android'))
+            throw new Error('Firebase configuration must match com.athena.android')
+          writeFileSync(process.env.ATHENA_ANDROID_KEYSTORE, Buffer.from(process.env.ATHENA_ANDROID_KEYSTORE_BASE64, 'base64'), { mode: 0o600 })
+          writeFileSync('apps/android/app/google-services.json', JSON.stringify(config), { mode: 0o600 })
+          JS
+          apps/android/gradlew -p apps/android :app:testDebugUnitTest :app:lintRelease :app:assembleRelease --no-daemon --console=plain
+          mkdir -p android-apk
+          cp apps/android/app/build/outputs/apk/release/app-release.apk "android-apk/$APK_NAME"
+          node scripts/android-release.mjs manifest "android-apk/$APK_NAME" android-apk/build-info.json
+          (cd android-apk && sha256sum "$APK_NAME" build-info.json > SHA256SUMS)
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android-signed-apk
+          path: android-apk/
+          retention-days: 30
+          if-no-files-found: error
