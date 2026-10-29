@@ -94,14 +94,13 @@ class NativeAppSettings(private val activity: Activity) {
         }
     }
 
-    fun show(origin: String, diagnostics: () -> AppDiagnostics, actions: Actions) {
+    fun show(diagnostics: () -> AppDiagnostics, actions: Actions) {
         if (isShowing) return
-        refreshSettings = { show(origin, diagnostics, actions) }
+        refreshSettings = { show(diagnostics, actions) }
         val screen = page(R.string.app_settings)
         settingsPage = screen
         val body = screen.findViewById<FrameLayout>(R.id.settings_page_content)
         val content = activity.layoutInflater.inflate(R.layout.screen_app_settings, body, true)
-        content.findViewById<TextView>(R.id.connected_server).text = origin
         content.findViewById<TextView>(R.id.app_version).text = activity.getString(R.string.version, BuildConfig.VERSION_NAME)
         val rows = content.findViewById<LinearLayout>(R.id.settings_rows)
         fun row(title: Int, description: Int, icon: Int, action: () -> Unit) {
