@@ -335,7 +335,7 @@ class MainActivity : AppCompatActivity() {
             }
             "webVisibility" -> {
                 connection.sessionConnected(payload.optBoolean("connected", connection.state.stage == ConnectionCoordinator.Stage.READY))
-                if (connection.state.stage == ConnectionCoordinator.Stage.READY && web?.hasWindowFocus() == true) visibility.acknowledge(payload.optString("sessionId"))
+                if (connection.state.stage == ConnectionCoordinator.Stage.READY && !nativeSettings.isShowing && web?.hasWindowFocus() == true) visibility.acknowledge(payload.optString("sessionId"))
                 else visibility.clear()
                 respond(true)
             }
@@ -549,10 +549,7 @@ class MainActivity : AppCompatActivity() {
             setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface))
             setTitleTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface))
         }
-        val showSettings = nativeSettings.isShowing
-        val showDetails = nativeSettings.detailsShowing
-        nativeSettings.dismiss()
-        if (showDetails) nativeSettings.showDetails(diagnostics()) else if (showSettings) appSettings()
+        nativeSettings.refresh()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -561,9 +558,10 @@ class MainActivity : AppCompatActivity() {
     }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); if (authentication.receive(intent.data, origin)) intent.data = null else openNotification(intent) }
     override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); web?.saveState(outState) }
-    override fun onResume() { super.onResume(); foreground = true; pushRegistration.schedule(); web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) { authentication.resume(origin) } }
+    override fun onResume() { super.onResume(); foreground = true; pushRegistration.schedule(); nativeSettings.refreshNotifications(); web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) { authentication.resume(origin) } }
     override fun onPause() { actionMenus.dismiss(); foreground = false; visibility.clear(); CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
     private fun navigateBack() {
+        if (nativeSettings.navigateBack()) return
         if (editingServer) { openServer(null); return }
         if (web?.canGoBack() == true) web?.goBack() else moveTaskToBack(true)
     }

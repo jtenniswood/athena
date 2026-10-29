@@ -8,8 +8,6 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowDialog
-import androidx.appcompat.app.AlertDialog
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
@@ -23,7 +21,7 @@ class AppDiagnosticsTest {
         val diagnostics = AppDiagnostics.capture(activity, "https://athena.example", ConnectionCoordinator(), "web-revision", "1")
         val settings = NativeAppSettings(activity)
         settings.showDetails(diagnostics)
-        (ShadowDialog.getLatestDialog() as AlertDialog).getButton(AlertDialog.BUTTON_NEUTRAL).performClick()
+        activity.findViewById<android.view.View>(R.id.copy_details).performClick()
         org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
         val copied = activity.getSystemService(ClipboardManager::class.java).primaryClip!!.getItemAt(0).text.toString()
         assertTrue(copied.contains("web-revision"))

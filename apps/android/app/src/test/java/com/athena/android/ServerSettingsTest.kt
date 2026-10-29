@@ -14,7 +14,6 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDialog
-import com.google.android.material.bottomsheet.BottomSheetDialog
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
@@ -43,9 +42,7 @@ class ServerSettingsTest {
 
     private fun choose(activity: MainActivity, item: Int) {
         MainActivity::class.java.getDeclaredMethod("appSettings").apply { isAccessible = true }.invoke(activity)
-        val delegate = MainActivity::class.java.getDeclaredField("nativeSettings$" + "delegate").apply { isAccessible = true }
-        val sheet = ((delegate.get(activity) as Lazy<*>).value as NativeAppSettings).sheet!!
-        sheet.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)!!
+        activity.findViewById<android.view.View>(android.R.id.content)
             .findViewWithTag<android.view.View>(item).performClick()
         shadowOf(android.os.Looper.getMainLooper()).idle()
         (ShadowDialog.getLatestDialog() as AlertDialog).getButton(AlertDialog.BUTTON_POSITIVE).performClick()

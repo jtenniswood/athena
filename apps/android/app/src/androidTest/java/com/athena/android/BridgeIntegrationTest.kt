@@ -152,20 +152,29 @@ class BridgeIntegrationTest {
                 evaluate(web, "window.settingsOpened = null; window.adapter.androidOpenAppSettings().then(value => window.settingsOpened = value)")
                 waitUntil { evaluate(web, "window.settingsOpened === true") == "true" }
                 assertFalse(MainActivity.visibility.shouldSuppress(true, "chat-1"))
+                request(web, "webVisibility", JSONObject().put("sessionId", "chat-1").put("connected", true))
+                assertFalse(MainActivity.visibility.shouldSuppress(true, "chat-1"))
                 val settingsDelegate = MainActivity::class.java.getDeclaredField("nativeSettings$" + "delegate").apply { isAccessible = true }
                 scenario.onActivity {
                     val settings = (settingsDelegate.get(it) as Lazy<*>).value as NativeAppSettings
-                    settings.sheet!!.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)!!
+                    it.findViewById<android.view.View>(android.R.id.content)
                         .findViewWithTag<android.view.View>(R.string.connection_details).performClick()
                     assertTrue(settings.detailsShowing)
                 }
                 instrumentation.waitForIdleSync()
-                Thread.sleep(400) // Let the native dialog's enter animation settle before visual verification.
                 instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
                     java.io.File(context.getExternalFilesDir(null), "connection-details.png").outputStream().use {
                         bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
                     }
                 }
+                scenario.onActivity {
+                    it.onBackPressedDispatcher.onBackPressed()
+                    assertNotNull(it.findViewById<View>(R.id.settings_rows))
+                    it.onBackPressedDispatcher.onBackPressed()
+                    assertNull(it.findViewById<View>(R.id.settings_rows))
+                    assertSame(web, field(it, "web"))
+                }
+                assertEquals("\"Draft remains on resume\"", evaluate(web, "document.getElementById('settings').textContent"))
             }
         } finally {
             prefs.edit().apply { if (previousOrigin == null) remove("origin") else putString("origin", previousOrigin) }.commit()
