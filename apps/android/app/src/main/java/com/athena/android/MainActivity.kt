@@ -50,6 +50,7 @@ class MainActivity : AppCompatActivity() {
     private val authentication by lazy { NativeAuthentication(this, connection, {
         web?.evaluateJavascript("window.dispatchEvent(new Event('focus'))", null)
     }, { reconnectAthena() }) }
+    private val settingsPage by lazy { NativeSettingsPage(this) }
     private val nativeSettings by lazy { NativeAppSettings(this) }
     private var nativeToolbar: View? = null
     private var editingServer = false
@@ -58,6 +59,8 @@ class MainActivity : AppCompatActivity() {
     private var origin = ""
     private var permissionReply: ((String) -> Unit)? = null
     private var microphoneRequest: PermissionRequest? = null
+    private var settingsFilesMultiple = false
+    private var settingsFilesReply: ((Any) -> Unit)? = null
     private var fileReply: ValueCallback<Array<Uri>>? = null
     private var navigationAction: (() -> Unit)? = null
     private lateinit var container: LinearLayout
@@ -71,6 +74,39 @@ class MainActivity : AppCompatActivity() {
     }
     private val filePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         fileReply?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(it.resultCode, it.data)); fileReply = null
+    }
+
+    private val settingsFilePicker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        val callback = settingsFilesReply; settingsFilesReply = null
+        Thread {
+            val files = org.json.JSONArray()
+            try {
+                var total = 0
+                for (uri in if (settingsFilesMultiple) uris else uris.take(1)) {
+                    val bytes = contentResolver.openInputStream(uri)?.use { stream ->
+                        val output = java.io.ByteArrayOutputStream()
+                        val buffer = ByteArray(8192)
+                        while (output.size() <= 2 * 1024 * 1024) {
+                            val count = stream.read(buffer); if (count < 0) break
+                            output.write(buffer, 0, count)
+                        }
+                        output.toByteArray() } ?: continue
+                    total += bytes.size
+                    require(total <= 2 * 1024 * 1024) { "Configuration import exceeds 2 MiB." }
+                    val name = contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+                        if (it.moveToFirst()) it.getString(0) else null
+                    } ?: "configuration"
+                    files.put(JSONObject().put("name", name).put("type", contentResolver.getType(uri) ?: "application/octet-stream")
+                        .put("data", android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)))
+                }
+                runOnUiThread { callback?.invoke(files) }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    callback?.invoke(org.json.JSONArray())
+                    android.widget.Toast.makeText(this, "Could not import files. Choose files totalling 2 MiB or less.", android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -196,6 +232,7 @@ class MainActivity : AppCompatActivity() {
         }
         view.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
+                settingsPage.dismiss()
                 actionMenus.dismiss()
                 visibility.clear()
                 documentReady = false
@@ -310,7 +347,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 respond(JSONObject().put("protocol", 1)
                     .put("appVersion", packageManager.getPackageInfo(packageName, 0).versionName)
-                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state", "web-visibility", "push-token-refresh", "push-diagnostics", "action-menu", "action-menu-live")))
+                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state", "web-visibility", "push-token-refresh", "push-diagnostics", "action-menu", "action-menu-live", "settings-page")))
                     .put("insets", "native").put("typography", "platform"))
             }
             "webState" -> {
@@ -320,6 +357,22 @@ class MainActivity : AppCompatActivity() {
                 else connection.recover("web-startup", "Athena could not finish loading. Choose Try again or check App settings.")
                 respond(true)
             }
+            "settingsFiles" -> {
+                if (!settingsPage.isShowing || !foreground) respond(org.json.JSONArray())
+                else {
+                    settingsFilesReply?.invoke(org.json.JSONArray()); settingsFilesReply = respond
+                    settingsFilesMultiple = payload.optBoolean("multiple")
+                    try { settingsFilePicker.launch(arrayOf("*/*")) }
+                    catch (_: ActivityNotFoundException) { settingsFilesReply = null; respond(org.json.JSONArray()) }
+                }
+            }
+            "settingsPage" -> {
+                val model = NativeSettingsPage.parse(payload)
+                if (web == null || !foreground) respond(JSONObject().put("status", "dismissed"))
+                else { visibility.clear(); settingsPage.show(model, respond) }
+            }
+            "updateSettingsPage" -> respond(settingsPage.update(NativeSettingsPage.parse(payload)))
+            "dismissSettingsPage" -> { settingsPage.dismiss(payload.getString("id")); respond(true) }
             "appSettings" -> { appSettings(); respond(true) }
             "actionMenu" -> {
                 val model = NativeActionMenus.parse(payload)
@@ -456,6 +509,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun errorScreen(message: String) {
+        settingsPage.dismiss()
         actionMenus.dismiss()
         visibility.clear()
         connection.recover("web-unreachable", message)
@@ -551,6 +605,7 @@ class MainActivity : AppCompatActivity() {
             setTitleTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface))
         }
         nativeSettings.refresh()
+        settingsPage.refresh()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -563,9 +618,10 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() { actionMenus.dismiss(); foreground = false; visibility.clear(); CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
     private fun navigateBack() {
         if (nativeSettings.navigateBack()) return
+        if (settingsPage.back()) return
         if (editingServer) { openServer(null); return }
         if (web?.canGoBack() == true) web?.goBack() else moveTaskToBack(true)
     }
-    override fun onDestroy() { actionMenus.dismiss(); nativeSettings.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); authentication.close(); web?.destroy(); super.onDestroy() }
+    override fun onDestroy() { settingsFilesReply?.invoke(org.json.JSONArray()); settingsFilesReply = null; settingsPage.dismiss(); actionMenus.dismiss(); nativeSettings.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); authentication.close(); web?.destroy(); super.onDestroy() }
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
 }

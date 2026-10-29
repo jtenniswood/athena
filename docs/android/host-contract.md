@@ -137,3 +137,28 @@ Large or unsupported payloads, ordinary browsers and older APKs retain the web
 menu. Native presentation currently covers the shared action surface (chat,
 roster, profiles, filters and navigation). Upstream model/provider pickers,
 text-selection controls and bespoke editor menus retain their existing UI.
+
+## Native Settings presentation
+
+The optional `settings-page` capability enables `settingsPage`,
+`updateSettingsPage`, and `dismissSettingsPage`. The web adapter projects mounted
+Settings controls into bounded rows with opaque command IDs. The host presents
+Material views and sends `changed` events with the current command ID and an
+optional string value. `ready` acknowledges presentation; `back` and `close`
+request navigation from the original settings owner. A final `dismissed` event
+ends the request. `settingsFiles` opens the Android document picker and returns
+selected filenames, MIME types, and base64 bytes (2 MiB total maximum) to the
+original file-input handler. Updates preserve an active native editor and same-page scroll.
+
+The original settings components remain mounted and own validation, persistence,
+confirmation, and error messages. Commands must still refer to connected, enabled
+controls in the current page or dialog; removed controls and stale page IDs cannot
+change another setting. Dialogs and listboxes become native snapshots too. Masked
+password values are omitted, and native password editors accept a replacement or
+an explicit clear operation. Native editors do not save input state or use autofill.
+
+Only settings snapshots may exceed the normal 16,000-character request limit;
+the transport rejects all envelopes over 262,144 characters. The adapter retains
+the web presentation if a snapshot exceeds its 240,000-character budget. Older
+hosts without this capability keep the web interface. Page navigation and host
+recovery dismiss native Settings without replacing the conversation WebView.

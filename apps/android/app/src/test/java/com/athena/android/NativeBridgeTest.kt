@@ -34,4 +34,19 @@ class NativeBridgeTest {
         assertEquals("missing", JSONObject(replies.last()).getString("id"))
         assertEquals("unsupported-method", JSONObject(replies.last()).getJSONObject("error").getString("code"))
     }
+    @Test fun onlySettingsSnapshotsMayUseTheLargerEnvelope() {
+        val replies = mutableListOf<String>()
+        val payload = JSONObject().put("value", "x".repeat(20000))
+        var handled = false
+        fun send(method: String) = NativeBridge.receive(JSONObject().put("id", "large").put("method", method).put("payload", payload).toString(), replies::add) { _, _, reply -> handled = true; reply(true) }
+        send("permission")
+        assertFalse(handled)
+        assertEquals("invalid-request", JSONObject(replies.last()).getJSONObject("error").getString("code"))
+        send("settingsPage")
+        assertTrue(handled)
+        handled = false
+        payload.put("value", "x".repeat(270000))
+        send("settingsPage")
+        assertFalse(handled)
+    }
 }

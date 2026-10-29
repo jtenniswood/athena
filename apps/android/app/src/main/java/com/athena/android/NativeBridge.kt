@@ -7,7 +7,7 @@ object NativeBridge {
     class UnsupportedMethod : IllegalArgumentException()
 
     fun receive(raw: String, reply: (String) -> Unit, handle: (String, JSONObject, (Any) -> Unit) -> Unit) {
-        if (raw.length > 16000) return
+        if (raw.length > 262144) return
         var id: String? = null
         fun send(value: JSONObject) {
             try { reply(value.put("id", id).toString()) }
@@ -24,7 +24,11 @@ object NativeBridge {
                 return
             }
             val payload = if (message.isNull("payload")) JSONObject() else message.getJSONObject("payload")
-            handle(message.getString("method"), payload) { send(JSONObject().put("value", it)) }
+            val method = message.getString("method")
+            if (raw.length > 16000 && method !in listOf("settingsPage", "updateSettingsPage")) {
+                fail("invalid-request", "Request is too large."); return
+            }
+            handle(method, payload) { send(JSONObject().put("value", it)) }
         } catch (_: UnsupportedMethod) {
             fail("unsupported-method", "This Android feature is unavailable.")
         } catch (_: Exception) {

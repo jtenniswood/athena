@@ -127,7 +127,12 @@ controls. The separate Android header is hidden once that menu is ready and
 returns during page loading or sign-in. Older APKs and older server versions
 retain their native App settings button.
 
-The native setup, settings sheet, and confirmation dialogs use Material 3, follow
+On APKs supporting native Settings, the main Settings page also uses Android
+controls for categories, fields, switches, choices, and actions. The hosted
+settings code still validates and saves changes. Browsers and older APKs retain
+the web Settings page; both the APK and server need this feature.
+
+The native setup, settings pages, and confirmation dialogs use Material 3, follow
 the system light/dark theme, and use wallpaper colours on Android 12 and later.
 Server setup includes inline address validation and a keyboard Connect action.
 

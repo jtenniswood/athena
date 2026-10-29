@@ -40,6 +40,6 @@ jobs:
       - name: Install browser for Android approval regression checks
         run: pnpm exec playwright install --with-deps chromium
       - name: Verify Android approval forms and native menus in a real browser
-        run: pnpm exec playwright test tests/browser/android-sign-in.spec.mjs tests/browser/native-menus.spec.mjs --project=chromium --reporter=line
+        run: pnpm exec playwright test tests/browser/android-sign-in.spec.mjs tests/browser/native-menus.spec.mjs tests/browser/native-settings.spec.mjs --project=chromium --reporter=line
       - name: Build browser application
         run: pnpm build

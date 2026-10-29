@@ -58,7 +58,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
     closeLabel={closeLabel}
     onClose={onClose}
   >
-    <div className="browser-settings-frame" data-browser-settings-frame="" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="browser-settings-frame" data-browser-settings-frame="" data-browser-settings-close-label={closeLabel} role="dialog" aria-modal="true" aria-label={title}>
       <header className="browser-settings-header">
         <div className={`browser-settings-heading${compact && showDetail ? '' : ' is-settings-home'}`}>
           {compact && showDetail ? <BrowserToolbarButton

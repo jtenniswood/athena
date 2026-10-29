@@ -9,3 +9,7 @@ const destination = process.argv[2]
 if (!destination || path.resolve(destination) === fileURLToPath(import.meta.url)) throw new Error('Provide a generated test asset path')
 mkdirSync(path.dirname(destination), { recursive: true })
 writeFileSync(destination, stripTypeScriptTypes(source, { mode: 'strip' }))
+
+const settings = readFileSync(new URL('../apps/web-desktop/src/upstream/native-settings.ts', import.meta.url), 'utf8')
+writeFileSync(path.join(path.dirname(destination), 'native-settings.js'), stripTypeScriptTypes(settings, { mode: 'strip' })
+  .replace("'../platform/android'", "'./android-adapter.js'"))
