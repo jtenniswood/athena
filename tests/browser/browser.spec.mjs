@@ -345,6 +345,10 @@ test.describe('browser microphone', () => {
     await open(page)
     expect(await page.evaluate(() => window.micRequests)).toBe(0)
     expect(await page.evaluate(async () => (await navigator.permissions.query({ name: 'microphone' })).state)).toBe('prompt')
+    const dictate = page.getByRole('button', { name: 'Voice dictation', exact: true })
+    await dictate.hover()
+    await expect(dictate).not.toHaveAttribute('aria-haspopup')
+    await expect(page.locator('[data-slot="composer-root"] [data-slot="fan-menu-anchor"]')).toHaveCount(0)
     // Chromium's fake permission UI accepts the first-use request from this click.
     await page.getByRole('button', { name: 'Voice dictation', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Stop dictation', exact: true })).toBeVisible()
