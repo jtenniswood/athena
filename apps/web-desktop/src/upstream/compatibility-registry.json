@@ -462,11 +462,11 @@
       },
       {
         "file": "scripts/default-session-profile.test.mjs",
-        "scenario": "new sessions in All profiles capture the saved owner before activating its gateway"
+        "scenario": "new sessions in All profiles capture the first enabled owner before activating its gateway"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "the default new-session profile persists and routes All profiles drafts without changing scope"
+        "scenario": "the first enabled profile routes All profiles drafts without changing scope"
       },
       {
         "file": "scripts/renderer-update.test.mjs",
@@ -2679,18 +2679,18 @@
     "sourceHash": "89b0fc40d4ab94f61c68a7bbeb0afb47179facfda43ab0574f1947af7e6dca46",
     "replacement": "src/upstream/default-session-profile.ts",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
-    "reason": "Use the browser preference for generic new sessions in All profiles while preserving explicit profile targets and single-profile scope.",
+    "reason": "Use the first enabled profile in rail order for generic new sessions in All profiles while preserving explicit profile targets and single-profile scope.",
     "tests": [
       {
         "file": "scripts/default-session-profile.test.mjs",
-        "scenario": "new sessions in All profiles capture the saved owner before activating its gateway"
+        "scenario": "new sessions in All profiles capture the first enabled owner before activating its gateway"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "the default new-session profile persists and routes All profiles drafts without changing scope"
+        "scenario": "the first enabled profile routes All profiles drafts without changing scope"
       }
     ],
-    "removal": "Remove when upstream default session routing supports an All profiles preference scope."
+    "removal": "Remove when upstream default session routing supports the enabled profile rail order in All profiles."
   },
   {
     "name": "browser-alternate-composer-submit",
