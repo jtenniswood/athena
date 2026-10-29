@@ -622,3 +622,6 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
 }
 .browser-settings-search-button kbd { margin-left: auto; font-size: .75rem; }
 .browser-settings-search-button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* Keep source controls mounted for their existing owners behind the native page. */
+[data-browser-settings-frame][data-native-settings] { opacity: 0; pointer-events: none; }
