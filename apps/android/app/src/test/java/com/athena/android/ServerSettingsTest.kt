@@ -40,8 +40,8 @@ class ServerSettingsTest {
         return activity to page
     }
 
-    private fun choose(activity: MainActivity, item: Int) {
-        MainActivity::class.java.getDeclaredMethod("appSettings").apply { isAccessible = true }.invoke(activity)
+    private fun choose(activity: MainActivity, item: Int, openSettings: Boolean = true) {
+        if (openSettings) MainActivity::class.java.getDeclaredMethod("appSettings").apply { isAccessible = true }.invoke(activity)
         activity.findViewById<android.view.View>(android.R.id.content)
             .findViewWithTag<android.view.View>(item).performClick()
         shadowOf(android.os.Looper.getMainLooper()).idle()
@@ -134,7 +134,10 @@ class ServerSettingsTest {
         val (activity, page) = fixture(guarded = true)
         MainActivity::class.java.getDeclaredField("documentReady").apply { isAccessible = true }.setBoolean(activity, false)
         connection(activity).recover("web-timeout", "Server did not respond")
-        activity.findViewById<android.view.View>(R.id.server_settings).performClick()
+        activity.findViewById<android.view.View>(R.id.review_settings).performClick()
+        assertFalse(page.destroyed)
+        assertNotNull(activity.findViewById<android.view.View>(android.R.id.content).findViewWithTag<android.view.View>(R.string.change_server))
+        choose(activity, R.string.change_server, openSettings = false)
         assertTrue(page.destroyed)
         assertEquals("https://old.example.com", activity.findViewById<EditText>(R.id.server_address).text.toString())
     }
@@ -143,7 +146,10 @@ class ServerSettingsTest {
         val (activity, page) = fixture(guarded = true)
         MainActivity::class.java.getDeclaredField("documentReady").apply { isAccessible = true }.setBoolean(activity, true)
         connection(activity).recover("web-timeout", "Session disconnected")
-        activity.findViewById<android.view.View>(R.id.server_settings).performClick()
+        activity.findViewById<android.view.View>(R.id.review_settings).performClick()
+        assertFalse(page.destroyed)
+        assertNotNull(activity.findViewById<android.view.View>(android.R.id.content).findViewWithTag<android.view.View>(R.string.change_server))
+        choose(activity, R.string.change_server, openSettings = false)
         assertFalse(page.destroyed)
         assertNull(activity.findViewById<EditText>(R.id.server_address))
     }
@@ -156,7 +162,7 @@ class ServerSettingsTest {
         host.recover("web-unreachable", "Server unavailable")
         assertEquals("Server unavailable", status.text.toString())
         assertEquals(android.view.View.VISIBLE, screen.visibility)
-        assertEquals(android.view.View.VISIBLE, activity.findViewById<android.view.View>(R.id.server_settings).visibility)
+        assertEquals(android.view.View.VISIBLE, activity.findViewById<android.view.View>(R.id.review_settings).visibility)
         host.ready()
         assertEquals(android.view.View.GONE, screen.visibility)
         host.sessionConnected(false)
