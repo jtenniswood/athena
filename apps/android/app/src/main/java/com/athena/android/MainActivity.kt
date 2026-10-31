@@ -486,6 +486,7 @@ class MainActivity : AppCompatActivity() {
         nativeSettings.show(::diagnostics, NativeAppSettings.Actions(
             updates = { appUpdates.settings() },
             connectionTesting = { showConnectionTests() },
+            testNotification = { testNotification() },
             notifications = { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) },
             changeServer = {
                 MaterialAlertDialogBuilder(this).setTitle("Change Athena server?")
@@ -501,6 +502,31 @@ class MainActivity : AppCompatActivity() {
                     .setNegativeButton(R.string.cancel, null).setPositiveButton(R.string.reload) { _, _ -> reconnectAthena() }.show()
             }
         ))
+    }
+
+    private fun testNotification() {
+        if (notifications.permission() == "default" && Build.VERSION.SDK_INT >= 33) {
+            if (permissionReply != null) return
+            permissionReply = { testNotification() }
+            prefs.edit().putBoolean("notificationAsked", true).apply()
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            return
+        }
+        if (notifications.permission() != "granted") {
+            MaterialAlertDialogBuilder(this).setTitle(R.string.test_notification)
+                .setMessage(R.string.test_notification_blocked)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.notifications) { _, _ ->
+                    startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+                }.show()
+            return
+        }
+        val sent = notifications.show(origin, JSONObject()
+            .put("title", getString(R.string.test_notification_title))
+            .put("body", getString(R.string.test_notification_body))
+            .put("tag", "athena-test-notification"))
+        Toast.makeText(this, if (sent) R.string.test_notification_sent else R.string.test_notification_failed, Toast.LENGTH_LONG).show()
+        nativeSettings.refreshNotifications()
     }
 
     private fun showConnectionTests() {
