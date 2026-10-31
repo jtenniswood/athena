@@ -41,6 +41,24 @@ class ConnectionTestingTest {
         } finally { controller.pause().stop().destroy() }
     }
 
+    @Test fun accessRecoveryOffersBrowserSignInInsteadOfReloadingTheFailedPage() {
+        val prefs = RuntimeEnvironment.getApplication().getSharedPreferences("athena", Context.MODE_PRIVATE)
+        prefs.edit().putString("origin", "https://saved.example").commit()
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+        try {
+            val connection = field("connection").get(activity) as ConnectionCoordinator
+            connection.recover("auth-access-required", "Sign in through Cloudflare Access to reconnect to Athena.")
+            val action = activity.findViewById<com.google.android.material.button.MaterialButton>(R.id.reconnect)
+            assertEquals(activity.getString(R.string.browser_sign_in), action.text.toString())
+            assertEquals(android.view.View.VISIBLE, activity.findViewById<android.view.View>(R.id.review_settings).visibility)
+            action.performClick()
+            assertEquals(ConnectionCoordinator.Stage.ACCESS_SIGN_IN, connection.state.stage)
+            assertEquals(activity.getString(R.string.cancel_sign_in), action.text.toString())
+            assertNotNull(org.robolectric.shadows.ShadowDialog.getLatestDialog())
+        } finally { controller.pause().stop().destroy() }
+    }
+
     @Test fun endingATestReconnectsToTheSavedServerAndDoesNotPersistTestNavigation() {
         val prefs = RuntimeEnvironment.getApplication().getSharedPreferences("athena", Context.MODE_PRIVATE)
         prefs.edit().putString("origin", "https://saved.example").commit()

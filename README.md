@@ -290,7 +290,11 @@ with extensive improvements for web and mobile.
 ### Android with Cloudflare Access and Pocket ID
 
 If Cloudflare Access asks you to sign in before Athena loads, use **App settings →
-Sign in through Cloudflare Access**. Athena also offers this flow when it detects
+Sign in through Cloudflare Access**. On the startup connection-error screen,
+**Review settings** opens the same controls. Athena checks failed or timed-out
+connections for an Access login redirect or page and offers **Sign in through
+Cloudflare Access** when detected. Generic network errors keep **Try again**.
+Athena also offers this flow when it detects
 an Access login redirect. The app opens your browser, where Pocket ID can use its
 normal passkey prompt. Approve the connection, then tap **Return to Athena
 Android**. Athena imports the Access application cookie into its WebView and reloads after checking draft safety.
