@@ -49,11 +49,10 @@ export function createAndroidAuthHandler({ target, fetch: request = globalThis.f
         const login = new URL(loginPath, origin)
         if (login.origin !== origin || !['/login', '/auth/login'].includes(login.pathname)) return json(400, { error: 'Invalid sign-in path' }), true
         const id = randomBytes(32).toString('base64url')
-        const code = randomBytes(3).toString('hex').toUpperCase()
-        pending.set(id, { challenge, code, created: now(), origin, cookies: null })
+        pending.set(id, { challenge, created: now(), origin, cookies: null })
         // Hermes rejects /api/* post-login destinations. The marker also bypasses older app-shell workers.
         login.searchParams.set('next', completePath + '?hermes-reconnect=1&id=' + id)
-        json(200, { id, code, loginPath: login.pathname + login.search })
+        json(200, { id, loginPath: login.pathname + login.search })
         return true
       }
       if ([completePath, prefix + 'complete'].includes(url.pathname) && ['GET', 'POST'].includes(req.method)) {
@@ -68,7 +67,7 @@ export function createAndroidAuthHandler({ target, fetch: request = globalThis.f
         if (req.method === 'GET') {
           const refreshed = identity.headers.getSetCookie()
           if (refreshed.length) res.setHeader('Set-Cookie', refreshed)
-          page(200, `Check that the Android app shows code ${entry.code}. Only continue if you started this sign-in on your device. This moves your Athena sign-in from this browser to the Android app.`,
+          page(200, `Continue if you started this sign-in in your Athena Android app. This moves your Athena sign-in from this browser to the Android app.`,
             `<form method="post" action="${completePath}"><input type="hidden" name="id" value="${escape(id)}"><button type="submit">Sign in to Athena Android</button></form>`)
         } else {
           // Transfer only Hermes's session cookies, never unrelated cookies or the provider's PKCE state.

@@ -28,7 +28,7 @@ test('browser sign-in requires account authentication, explicit approval and the
   const { origin, route, verifier, post, start } = await fixture(t)
   const request = await start()
   assert.match(request.id, /^[A-Za-z0-9_-]{43}$/)
-  assert.match(request.code, /^[A-F0-9]{6}$/)
+  assert.equal('code' in request, false, 'sign-in does not issue a pairing code')
   assert.match(request.loginPath, /^\/login\?next=/)
   assert.equal((await post('exchange', { id: request.id, verifier })).status, 202)
   const landing = new URL(request.loginPath, origin).searchParams.get('next')
@@ -39,7 +39,9 @@ test('browser sign-in requires account authentication, explicit approval and the
   const cookie = '__Host-hermes_session_at=valid; __Host-hermes_session_rt=refresh; analytics=private'
   const preview = await fetch(complete, { headers: { Cookie: cookie } })
   assert.equal(preview.status, 200)
-  assert.match(await preview.text(), new RegExp(request.code))
+  const html = await preview.text()
+  assert.match(html, /Sign in to Athena Android/)
+  assert.doesNotMatch(html, /shows code|matching code|pairing/i)
   assert.equal((await post('exchange', { id: request.id, verifier })).status, 202, 'viewing the page does not approve sign-in')
   const approve = await fetch(origin + '/android/sign-in', {
     method: 'POST', headers: { Origin: origin, Cookie: cookie, 'Content-Type': 'application/x-www-form-urlencoded' },

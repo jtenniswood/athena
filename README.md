@@ -167,7 +167,7 @@ across updates. Release signing reads `ATHENA_ANDROID_KEYSTORE`,
 and `ATHENA_ANDROID_KEY_PASSWORD`. With these set, build `:app:assembleRelease`.
 Keep the keystore and its passwords outside Git and retain a secure backup.
 
-Hermes and OIDC sign-in use an Android Custom Tab. Check the matching code and
+Hermes and OIDC sign-in use an Android Custom Tab. Complete sign-in and
 approve the handoff in the browser, then return to the app. The server transfers
 the session through a one-use PKCE exchange lasting five minutes. This moves
 the browser's Athena session into the app so rotating refresh tokens are not
@@ -323,9 +323,8 @@ with extensive improvements for web and mobile.
 If Cloudflare Access asks you to sign in before Athena loads, use **App settings →
 Sign in through Cloudflare Access**. Athena also offers this flow when it detects
 an Access login redirect. The app opens your browser, where Pocket ID can use its
-normal passkey prompt. Check the server address and matching code, approve the
-connection, then tap **Return to Athena Android**. Athena imports the Access
-application cookie into its WebView and reloads after checking draft safety.
+normal passkey prompt. Approve the connection, then tap **Return to Athena
+Android**. Athena imports the Access application cookie into its WebView and reloads after checking draft safety.
 
 Keep `/api/athena/android/auth/access` behind the same Cloudflare Access policy
 as Athena. No Access bypass rule, client secret, or shared service token is

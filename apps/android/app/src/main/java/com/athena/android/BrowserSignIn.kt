@@ -64,7 +64,7 @@ class BrowserSignIn(
                         prefs.edit().putString("origin", origin).putString("id", id).putString("verifier", verifier)
                             .putLong("started", System.currentTimeMillis()).apply()
                         fun cancelled() { if (!active(origin, request)) return; cancel(); report("auth-cancelled", "Sign-in cancelled. Choose Try again when you’re ready."); started(false) }
-                        confirmation = SignInConfirmation.builder(activity, origin, body.getString("code"))
+                        confirmation = SignInConfirmation.builder(activity, origin)
                             .setNegativeButton(R.string.cancel) { _, _ -> cancelled() }
                             .setOnCancelListener { cancelled() }
                             .setPositiveButton(R.string.open_browser) { _, _ ->
