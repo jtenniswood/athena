@@ -13,9 +13,9 @@ class AccessDetectionTest {
         override fun disconnect() { disconnected = true }
         override fun usingProxy() = false
         override fun getResponseCode() = status
-        override fun getHeaderField(name: String) = when (name) {
-            "Location" -> location
-            "Content-Type" -> "text/html; charset=utf-8"
+        override fun getHeaderField(name: String) = when (name.lowercase()) {
+            "location" -> location
+            "content-type" -> "text/html; charset=utf-8"
             else -> null
         }
         override fun getInputStream() = body.byteInputStream()
