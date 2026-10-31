@@ -44,7 +44,6 @@ class AppUpdates(private val activity: AppCompatActivity, private val prepareIns
     private val prefs = activity.getSharedPreferences("athena", 0)
     private val worker = Executors.newSingleThreadExecutor()
     private var busy = false
-    private var attemptedAt = 0L
     @Volatile private var closed = false
     private var dialog: androidx.appcompat.app.AlertDialog? = null
     private val channel get() = prefs.getString("updateChannel", "stable") ?: "stable"
@@ -58,15 +57,14 @@ class AppUpdates(private val activity: AppCompatActivity, private val prepareIns
         dialog = MaterialAlertDialogBuilder(activity).setTitle("App updates")
             .setSingleChoiceItems(choices, selected) { _, index -> selected = index }
             .setNegativeButton("Cancel", null).setPositiveButton("Check for updates") { _, _ ->
-                prefs.edit().putString("updateChannel", if (selected == 1) "main" else "stable").remove("updateCheckedAt").apply()
+                prefs.edit().putString("updateChannel", if (selected == 1) "main" else "stable").apply()
                 check(true)
             }.show()
     }
 
     fun check(manual: Boolean = false) {
-        if ((!manual && (BuildConfig.DEBUG || System.currentTimeMillis() - attemptedAt < 15 * 60 * 1000)) || busy || (!manual && System.currentTimeMillis() - prefs.getLong("updateCheckedAt", 0) < 6 * 60 * 60 * 1000)) return
+        if ((!manual && BuildConfig.DEBUG) || busy) return
         busy = true
-        attemptedAt = System.currentTimeMillis()
         val requestedChannel = channel
         if (manual) message("Checking for updates…")
         worker.execute {
@@ -92,7 +90,6 @@ class AppUpdates(private val activity: AppCompatActivity, private val prepareIns
                     busy = false
                     // A background check must never open an installer or steal focus from another app.
                     if (!MainActivity.foreground) return@ui
-                    prefs.edit().putLong("updateCheckedAt", System.currentTimeMillis()).apply()
                     if (available) {
                         dialog = MaterialAlertDialogBuilder(activity).setTitle("Athena update available")
                             .setMessage("Version ${metadata.getString("version")} (${metadata.getLong("versionCode")}) is ready. Finish active replies and recordings before installing. Your data will be preserved.")

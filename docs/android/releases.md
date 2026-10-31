@@ -51,9 +51,9 @@ revision before returning the APK.
 ## In-app updates
 
 App settings → **App updates** lets you check now and choose **Stable releases**
-(the default) or **Latest main builds**. Signed production apps also check on open,
-at most once every six hours after a successful check. Checks use public GitHub
-release metadata without a GitHub account or embedded token. Stable checks select
+(the default) or **Latest main builds**. Signed production apps also check every
+time the app opens or returns to the foreground, unless an update check or
+download is already running. Checks use public GitHub release metadata without a GitHub account or embedded token. Stable checks select
 `android-v...` releases and ignore Docker releases and prereleases. Latest main
 checks select `android-main-<commit>` prereleases. Each successful main build gets
 its own persistent release downloads; reruns keep the already published assets.
