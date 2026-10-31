@@ -30,6 +30,18 @@ test('the development publisher keeps even main builds out of stable tags', () =
   assert.ok(publication.tags.every(tag => tag.startsWith(`${image}:dev-`)))
   assert.throws(() => imagePublication({ ...input, ref: 'refs/tags/v1.2.3', developmentOnly: true }))
 })
+test('automatic main development builds publish only development tags without deployment', () => {
+  const publication = imagePublication({ ...input, ref: 'refs/heads/main', event: 'push', developmentOnly: true })
+  assert.deepEqual(publication, {
+    image, channel: 'development', deploy: false,
+    tags: [`${image}:dev-latest`, `${image}:dev-sha-${revision}`]
+  })
+  for (const ref of ['refs/heads/codex/feature', 'refs/tags/v1.2.3', 'refs/pull/1/merge']) {
+    assert.throws(() => imagePublication({ ...input, ref, event: 'push', developmentOnly: true }))
+  }
+  assert.throws(() => imagePublication({ ...input, ref: 'refs/heads/main', event: 'push' }))
+  assert.throws(() => imagePublication({ ...input, ref: 'refs/heads/main', event: 'pull_request', developmentOnly: true }))
+})
 test('unapproved events and malformed or prerelease version tags cannot change stable channels', () => {
   for (const ref of ['refs/pull/1/merge', 'refs/tags/v1.2.3-beta', 'refs/tags/v01.2.3', 'refs/tags/v1.2', 'refs/tags/vanything']) {
     assert.throws(() => imagePublication({ ...input, ref }))

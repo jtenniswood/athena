@@ -8,7 +8,8 @@ export function imagePublication({ repository, revision, ref, event, development
   const branch = /^refs\/heads\/.+/.test(ref)
   const version = /^refs\/tags\/v((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))$/.exec(ref)?.[1]
   if (developmentOnly || (branch && ref !== 'refs/heads/main')) {
-    if (!branch || event !== 'workflow_dispatch') throw new Error('Development publication requires a manual branch build')
+    const mainPush = developmentOnly && ref === 'refs/heads/main' && event === 'push'
+    if (!branch || (event !== 'workflow_dispatch' && !mainPush)) throw new Error('Development publication requires a manual branch build or an automatic main build')
     return { image, channel: 'development', deploy: false, tags: [`${image}:dev-latest`, `${image}:dev-sha-${revision}`] }
   }
   if (ref === 'refs/heads/main' && event === 'workflow_dispatch') {
