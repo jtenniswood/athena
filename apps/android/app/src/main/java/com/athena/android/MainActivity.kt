@@ -358,10 +358,7 @@ class MainActivity : AppCompatActivity() {
                 else reconnectAthena()
             }
         }
-        screen.findViewById<View>(R.id.server_settings).setOnClickListener {
-            prepareNavigation(allowUnloaded = true) { web?.destroy(); web = null; setup() }
-        }
-        screen.findViewById<View>(R.id.app_settings).setOnClickListener { appSettings() }
+        screen.findViewById<View>(R.id.review_settings).setOnClickListener { appSettings() }
     }
 
     private fun handleMessage(raw: String, reply: JavaScriptReplyProxy) {
@@ -610,8 +607,7 @@ class MainActivity : AppCompatActivity() {
         connectionScreen?.apply {
             visibility = if (ready) View.GONE else View.VISIBLE
             findViewById<View>(R.id.connection_progress).visibility = if (state.stage == ConnectionCoordinator.Stage.LOADING) View.VISIBLE else View.GONE
-            findViewById<View>(R.id.server_settings).visibility = if (recovery) View.VISIBLE else View.GONE
-            findViewById<View>(R.id.app_settings).visibility = if (recovery) View.VISIBLE else View.GONE
+            findViewById<View>(R.id.review_settings).visibility = if (recovery) View.VISIBLE else View.GONE
         }
         connectionStatus?.text = state.message
         connectionAction?.apply {

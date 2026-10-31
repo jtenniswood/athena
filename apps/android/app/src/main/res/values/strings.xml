@@ -22,7 +22,7 @@
     <string name="version">Athena for Android · %1$s</string>
     <string name="recovery_title">Let’s reconnect</string>
     <string name="reconnect">Try again</string>
-    <string name="server_settings">Edit server address</string>
+    <string name="review_settings">Review settings</string>
     <string name="connection_details">Connection details</string>
     <string name="connection_details_description">App, server and notification status</string>
     <string name="copy_details">Copy details</string>

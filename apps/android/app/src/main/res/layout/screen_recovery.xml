@@ -42,18 +42,11 @@
             android:minHeight="56dp"
             android:text="@string/reconnect" />
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/server_settings"
+            android:id="@+id/review_settings"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:minHeight="56dp"
-            android:text="@string/server_settings" />
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/app_settings"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="48dp"
-            android:text="@string/app_settings" />
+            android:text="@string/review_settings" />
     </LinearLayout>
 </ScrollView>
