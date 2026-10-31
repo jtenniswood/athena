@@ -30,18 +30,14 @@ test('production and development routes have exact path boundaries', () => {
   assert.throws(() => runtimeConfiguration({ HERMES_HOME: '/tmp/"; include arbitrary;' }), /Hosting paths/)
 })
 
-test('Docker sign-in mode is validated and reaches the browser runtime script', () => {
-  assert.equal(runtimeConfiguration({}).publicConfig.auth.mode, 'auto')
-  const gateway = runtimeConfiguration({}).publicConfig.gateway.id
-  for (const mode of ['auto', 'hermes', 'oidc']) {
+test('retired sign-in mode settings do not select a provider or prevent startup', () => {
+  const expected = runtimeConfiguration({}).publicConfig
+  for (const mode of ['auto', 'hermes', 'oidc', 'disabled']) {
     const config = runtimeConfiguration({ HERMES_AUTH_MODE: mode })
-    assert.equal(config.publicConfig.gateway.id, gateway)
+    assert.deepEqual(config.publicConfig, expected)
     const context = vm.createContext({ window: {} })
     vm.runInContext(runtimeScripts(config)['runtime-config.js'], context)
-    assert.equal(context.window.__HERMES_RUNTIME_CONFIG__.auth.mode, mode)
-  }
-  for (const mode of ['password', 'disabled', 'OIDC', 'oidc\n']) {
-    assert.throws(() => runtimeConfiguration({ HERMES_AUTH_MODE: mode }), /HERMES_AUTH_MODE/)
+    assert.equal(context.window.__HERMES_RUNTIME_CONFIG__.auth, undefined)
   }
 })
 
