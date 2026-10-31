@@ -114,29 +114,16 @@ and expired FCM events are filtered before display, including after dismissal.
 registration, relay and delivery-attempt status without device credentials.
 `pushDiagnostics({ status })` supplies that status to native App settings.
 
-## Native action menus
+## Web menus
 
-APKs advertising `action-menu` accept `actionMenu` and `dismissActionMenu`.
-The web action surface sends an opaque menu ID, title, viewport/anchor geometry,
-and grouped command descriptions with unique IDs, enabled/checked/destructive
-states, descriptions and optional nested groups. Phones use Material bottom
-sheets; larger layouts use native anchored popup menus. System Back navigates
-up a sheet submenu before dismissing its root.
+Android uses the same web action sheets, dropdowns, context menus, and searchable
+model picker as the browser. The web app does not request native menu presentation
+or hide renderer menus, even when an APK advertises `action-menu`,
+`action-menu-live`, or `action-menu-search`. Command handling, focus restoration,
+and confirmation dialogs remain with their existing web owners.
 
-A menu request settles with `selected` plus its command ID, or `dismissed`.
-Only the web owner executes a selected command; the host accepts no executable
-code, URLs or privileged commands from menu content. Existing confirmations and
-draft protection remain in the web app. The web adapter validates the selected
-ID against both the opening snapshot and the current enabled command list.
-Toggle/filter commands reopen with updated web state. Page navigation, renderer
-failure, backgrounding, replacement and owner unmount dismiss pending menus;
-menu IDs prevent stale cleanup from closing a replacement.
-
-The native parser limits menus to 80 items, four group levels and bounded text.
-Large or unsupported payloads, ordinary browsers and older APKs retain the web
-menu. Native presentation currently covers the shared action surface (chat,
-roster, profiles, filters and navigation). Searchable model menus and Settings use the native presenters described below;
-text-selection controls and bespoke editor menus retain their existing UI.
+The APK retains the legacy action-menu bridge for compatibility with older web
+clients. Current web clients do not call it.
 
 ## Native Settings presentation
 
@@ -162,19 +149,3 @@ the transport rejects all envelopes over 262,144 characters. The adapter retains
 the web presentation if a snapshot exceeds its 240,000-character budget. Older
 hosts without this capability keep the web interface. Page navigation and host
 recovery dismiss native Settings without replacing the conversation WebView.
-
-## Searchable model menus
-
-The optional `action-menu-search` capability extends action menus with
-`search: { id, value, label }`. Native query changes send a `changed` event with
-that ID and a string `value`; the mounted renderer search input retains fuzzy
-matching, custom model entry, provider routing, and catalog ownership. The native
-editor keeps its text and selection while result rows update.
-
-A row with `children` and `selectable: true` selects on its primary tap and opens
-its detail actions from the arrow, long-press, or accessibility Expand action.
-Model details retain the original favorite button and keyboard-opened options
-submenu. All model menu actions stay open until their renderer owner closes, so
-refresh and failed selections do not dismiss prematurely. Large catalogs use
-15-row pages within the existing transport and command-count limits. Old hosts
-continue to use web search menus.

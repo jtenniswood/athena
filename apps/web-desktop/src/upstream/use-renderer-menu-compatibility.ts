@@ -1,7 +1,5 @@
 import { useEffect } from 'react'
 import { useMobileBrowser } from '../experience/ui/use-compact-browser'
-import { androidHost, isAndroidApp } from '../platform/android'
-import { installNativeRendererMenus } from './native-renderer-menus'
 
 const subTrigger = '[data-slot="dropdown-menu-sub-trigger"], [data-slot="context-menu-sub-trigger"]'
 const subContent = '[data-slot="dropdown-menu-sub-content"], [data-slot="context-menu-sub-content"]'
@@ -9,15 +7,6 @@ const subContent = '[data-slot="dropdown-menu-sub-content"], [data-slot="context
 /** Keep renderer menu event and focus workarounds out of the browser shell. */
 export function useRendererMenuCompatibility() {
   const compact = useMobileBrowser()
-  useEffect(() => {
-    if (!isAndroidApp()) return
-    let active = true
-    let cleanup: (() => void) | undefined
-    void androidHost().then(host => {
-      if (active && host?.capabilities.includes('action-menu-live')) cleanup = installNativeRendererMenus(host.capabilities.includes('action-menu-search'))
-    })
-    return () => { active = false; cleanup?.() }
-  }, [])
   useEffect(() => {
     if (!compact) return
     let focusFrame = 0
