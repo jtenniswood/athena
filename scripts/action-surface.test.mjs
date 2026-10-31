@@ -4,7 +4,7 @@ import vm from 'node:vm'
 import { test } from 'node:test'
 import ts from 'typescript'
 
-function surface({ live = false } = {}) {
+function surface() {
   const state = []
   let cursor = 0
   let closes = 0
@@ -18,8 +18,6 @@ function surface({ live = false } = {}) {
       return [state[index], value => { state[index] = value }]
     },
     useEffect: () => {},
-    useNativeActionMenus: persistent => !persistent || live,
-    NativeActionSurface: 'native',
     Dialog: { Root: 'dialog', Portal: 'portal', Overlay: 'overlay', Content: 'content', Title: 'title' }
   }
   const context = vm.createContext({ exports: {}, require: () => dependencies })
@@ -81,12 +79,12 @@ test('nested persistent selections stay in their submenu after a change', () => 
   assert.equal(ui.closes(), 0)
 })
 
-test('Android menus with only closing commands keep the native presentation', () => {
-  assert.equal(surface().render([{ key: 'actions', actions: [{ key: 'rename', label: 'Rename', run() {} }] }]).type, 'native')
+test('menus with closing commands use the web presentation', () => {
+  assert.equal(surface().render([{ key: 'actions', actions: [{ key: 'rename', label: 'Rename', run() {} }] }]).type, 'dialog')
 })
 
-test('Android hosts with live controls use native sheets for persistent menus too', () => {
-  assert.equal(surface({ live: true }).render([{ key: 'filters', actions: [{
+test('persistent menus use web sheets', () => {
+  assert.equal(surface().render([{ key: 'filters', actions: [{
     key: 'bots', label: 'Bots', checked: true, keepOpen: true, run() {}
-  }] }]).type, 'native')
+  }] }]).type, 'dialog')
 })
