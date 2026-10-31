@@ -39,6 +39,7 @@ test('semantic adapters preserve identity and reject upstream drift', () => {
   const adapted = api.useBrowserSectionIds(sidebar)
   assert.match(adapted, /browserSectionId="sessions" label=\{sessionsLabel\}/)
   assert.match(adapted, /browserSectionId=\{`messaging:\$\{group.sourceId\}`\}/)
+  assert.doesNotMatch(adapted, /showsAdvancedChrome && cronJobs\.length/)
   assert.throws(() => api.useBrowserSectionIds(sidebar.replace('label={sessionsLabel}', 'label={otherLabel}')), /target changed/)
   for (const name of ['sessions', 'cron-jobs']) {
     const output = api.useBrowserSectionIdentity(source(`app/chat/sidebar/${name}-section.tsx`), root)

@@ -786,6 +786,9 @@ export function useBrowserSectionIdentity(source: string, root: string): string 
 
 export function useBrowserSectionIds(source: string): string {
   return replaceBrowserContract(source, [
+    // Athena's explicit section preference owns Cron visibility in both modes.
+    ['(showsAdvancedChrome && cronJobs.length > 0)', '(cronJobs.length > 0)'],
+    ['!worktreeGroupingActive && showsAdvancedChrome && cronJobs.length > 0', '!worktreeGroupingActive && cronJobs.length > 0'],
     ['label={s.results}', 'browserSectionId="sessions" label={s.results}'],
     ['label={s.pinned}', 'browserSectionId="pinned" label={s.pinned}'],
     ['label={sessionsLabel}', 'browserSectionId="sessions" label={sessionsLabel}'],
