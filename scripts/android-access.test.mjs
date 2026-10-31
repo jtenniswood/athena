@@ -26,6 +26,7 @@ test('Access bootstrap requires explicit approval and encrypts only the Access c
   const html = await preview.text()
   assert.equal(preview.status, 200)
   assert.match(html, /Approve Android connection/)
+  assert.doesNotMatch(html, /shows code|matching code|pairing/i)
   assert.match(html, /xxxxxx/)
   assert.ok(!html.includes('athena-android://'), 'opening the page does not release a session')
   assert.equal(preview.headers.get('referrer-policy'), 'same-origin')

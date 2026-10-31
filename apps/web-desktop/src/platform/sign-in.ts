@@ -1,22 +1,8 @@
 import { connectionState } from './connection-state'
 import { baseUrl, browserLoginUrl, checkBrowserSession, fetchStatus, openOauthLoginPopup, resolveToken } from './connection'
-import { browserSignInTarget, SignInConfigurationError, type SignInProvider } from './sign-in-target'
+import { browserSignInTarget } from './sign-in-target'
 import { createSignInView } from './sign-in-view'
 import { isAndroidApp } from './android'
-
-/** Use Hermes's public provider metadata; credentials and OIDC stay on Hermes. */
-async function signInProviders(): Promise<SignInProvider[]> {
-  try {
-    const response = await fetch(`${baseUrl()}/api/auth/providers`, {
-      credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(6_000)
-    })
-    if (!response.ok) return []
-    const body = await response.json() as { providers?: unknown }
-    if (!Array.isArray(body.providers)) return []
-    return body.providers.filter((item): item is SignInProvider =>
-      item && typeof item.name === 'string' && typeof item.display_name === 'string' && typeof item.supports_password === 'boolean')
-  } catch { return [] }
-}
 
 /** Gate cold startup without evaluating upstream stores or touching saved drafts. */
 export async function waitForSignIn(): Promise<void> {
@@ -94,17 +80,16 @@ export async function waitForSignIn(): Promise<void> {
           connectionState().update({ authMode: 'oauth', token: '' })
           connected(); return
         }
-        const providers = await signInProviders()
         const url = new URL(window.location.href)
         const returnTo = url.pathname.startsWith('//') ? '/' : `${url.pathname}${url.search}${url.hash}`
-        const target = browserSignInTarget(providers, returnTo)
+        const target = browserSignInTarget(returnTo)
         path = target.path
         signIn.textContent = target.label
         setStatus('Sign in to start chatting with Hermes Agent.')
         actions.hidden = advanced.hidden = false
         if (!section.isConnected) root!.replaceChildren(section)
-      } catch (error) {
-        setStatus(error instanceof SignInConfigurationError ? error.message : 'Could not reach your Hermes server. Check your connection and try again.')
+      } catch {
+        setStatus('Could not reach your Hermes server. Check your connection and try again.')
         retry.hidden = false
         if (!section.isConnected) root!.replaceChildren(section)
       } finally { if (!finished) setBusy(false) }
