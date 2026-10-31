@@ -70,6 +70,7 @@ class NativeAppSettingsTest {
         assertTrue(org.robolectric.Shadows.shadowOf(manager).allNotifications.isEmpty())
         val dialog = ShadowDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
         dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).performClick()
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
         val intent = org.robolectric.Shadows.shadowOf(activity).nextStartedActivity
         assertEquals(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS, intent.action)
         assertEquals(activity.packageName, intent.getStringExtra(android.provider.Settings.EXTRA_APP_PACKAGE))
