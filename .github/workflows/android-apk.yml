@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: android-latest-apk
+  group: android-latest-apk-${{ github.sha }}
   cancel-in-progress: false
 jobs:
   build:
