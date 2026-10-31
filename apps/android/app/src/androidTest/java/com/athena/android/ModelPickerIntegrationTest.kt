@@ -34,7 +34,7 @@ class ModelPickerIntegrationTest {
             Thread.sleep(100)
         }
     }
-    @Test fun nativeModelSearchAndSelectionRoundTripThroughTheRealBridge() {
+    @Test fun legacyModelSearchAndSelectionRoundTripThroughTheRealBridge() {
         val context = instrumentation.targetContext
         val prefs = context.getSharedPreferences("athena", Context.MODE_PRIVATE)
         val previous = prefs.getString("origin", null)
@@ -54,10 +54,19 @@ class ModelPickerIntegrationTest {
                       <script type="module">
                       $adapter
                       window.host = await androidHost(); window.query = ''; window.choice = '';
-                      window.openModels = () => androidOpenActionMenu({id:'models',title:'Models',compact:true,x:0,y:0,viewportWidth:390,
+                      // Exercise compatibility with older clients through the raw bridge.
+                      const nativeReceiver = AthenaAndroid.onmessage;
+                      AthenaAndroid.onmessage = event => {
+                        const message = JSON.parse(event.data);
+                        if (message.id !== 'legacy-models') { nativeReceiver(event); return; }
+                        if (message.value?.status === 'changed' && message.value.id === 'search') window.query = message.value.value;
+                        if (message.value?.status === 'selected') window.choice = message.value.id;
+                      };
+                      window.openModels = () => AthenaAndroid.postMessage(JSON.stringify({id:'legacy-models',protocol:1,method:'actionMenu',payload:{
+                        id:'models',title:'Models',compact:true,x:0,y:0,viewportWidth:390,
                         search:{id:'search',label:'Search models',value:''},
                         groups:[{label:'Provider',selection:'single',items:[{id:'model-a',label:'Model A',checked:true},{id:'model-b',label:'Model B',checked:false}]}]
-                      },(id,value)=>{ if(id==='search') window.query=value }).then(result=>window.choice=result.id);
+                      }}));
                       window.fixtureReady = true;
                       </script>
                     """.trimIndent(), "text/html", "UTF-8", "https://athena.example/")
