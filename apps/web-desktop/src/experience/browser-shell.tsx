@@ -4,7 +4,6 @@ import { BrowserToolModal } from './tool-modal'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { useRendererMenuCompatibility } from '../upstream/use-renderer-menu-compatibility'
 import { BrowserNavigationTabs, BrowserNavigationResizer, useBrowserNavigation } from './navigation'
-import { BrowserProfileNavigation } from './profile-navigation'
 import { BrowserActionError } from './action-errors'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useLocation, useNavigate } from 'react-router'
@@ -202,7 +201,6 @@ function BrowserLayout() {
           <p>{updateNotice.message}</p>
           <button type="button" className="browser-update-panel-action" onClick={updateNotice.update}>Update when safe</button>
         </div>}
-        <BrowserProfileNavigation hidden={tab !== 'sessions'} />
       </aside>
       <BrowserNavigationResizer navigation={navigation} />
       <main className="browser-main" ref={main} hidden={navigation.mobile && navigation.drawerOpen} inert={navigation.compact && !navigation.mobile && navigation.drawerOpen} tabIndex={-1} aria-label="Conversation and workspace">

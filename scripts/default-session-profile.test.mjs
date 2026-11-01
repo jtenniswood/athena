@@ -39,8 +39,8 @@ test('new sessions in All profiles capture the first enabled owner before activa
   ])
 })
 
-test('single-profile sessions and unavailable enabled profiles retain their existing owner', () => {
-  for (const options of [{ all: false }, { profiles: [] }, { hidden: ['default', 'research'] }]) {
+test('unavailable enabled profiles retain their existing owner', () => {
+  for (const options of [{ profiles: [] }, { hidden: ['default', 'research'] }]) {
     const { prepare, target, calls } = harness(options)
     assert.equal(target(), null)
     prepare()
@@ -66,4 +66,8 @@ test('All profiles follows rail order, skips hidden profiles and handles stale o
   ]) {
     assert.equal(harness(options).target()?.profile, expected)
   }
+})
+
+test('new chats use the first enabled profile even after a previously scoped chat', () => {
+  assert.equal(harness({ all: false }).target()?.profile, 'research')
 })

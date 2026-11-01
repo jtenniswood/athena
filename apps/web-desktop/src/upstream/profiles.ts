@@ -1,4 +1,5 @@
 import { useStore } from '@nanostores/react'
+import { restoreUnifiedSessionList } from './session-list'
 import { $activeGatewayProfile, $profileOrder, $profiles, $showAllProfiles, selectProfile, setProfileOrder, setShowAllProfiles, sortByProfileOrder } from '@/store/profile'
 import { $botMeta, $lastRoster } from '@/plugins/hermes-bots/data'
 import { botRosterMeta } from '@/plugins/hermes-bots/routing'
@@ -16,52 +17,18 @@ export function useBrowserActiveProfile(): string {
   return useStore($activeGatewayProfile)
 }
 
-/** Restore the tab's profile without changing its persisted all-profiles scope. */
+/** Restore chat ownership metadata while keeping the session list unified. */
 export function restoreBrowserProfile(): () => void {
-  let saved: string | null = null
+  restoreUnifiedSessionList()
+  window.__HERMES_WEB_ACTIVE_PROFILE__ = null
+  setShowAllProfiles(true)
   try {
-    saved = sessionStorage.getItem('hermes-web.browser.profile')
+    const saved = sessionStorage.getItem('hermes-web.browser.profile')
+    if (saved) $activeGatewayProfile.set(saved)
   } catch { /* Optional tab state. */ }
-  if (saved) {
-    window.__HERMES_WEB_ACTIVE_PROFILE__ = $showAllProfiles.get() ? null : saved
-    $activeGatewayProfile.set(saved)
-  } else {
-    window.__HERMES_WEB_ACTIVE_PROFILE__ = null
-    setShowAllProfiles(true)
-  }
-  const hiddenProfiles = readHiddenProfiles()
-  let stopSelectingDefault: (() => void) | undefined
-  const chooseVisibleDefault = (profiles: ReturnType<typeof $profiles.get>) => {
-    const defaultProfile = profiles.find(profile => profile.is_default)
-    if (!defaultProfile) return
-    if (!hiddenProfiles.includes(defaultProfile.name)) {
-      stopSelectingDefault?.()
-      return
-    }
-    if (!$showAllProfiles.get() && !hiddenProfiles.includes($activeGatewayProfile.get())) {
-      stopSelectingDefault?.()
-      return
-    }
-    const order = $profileOrder.get()
-    const ordered = sortByProfileOrder(
-      [...profiles],
-      !order.includes(defaultProfile.name) ? [defaultProfile.name, ...order] : order
-    )
-    const next = ordered.find(profile => !hiddenProfiles.includes(profile.name))
-    if (!next) return
-    window.__HERMES_WEB_ACTIVE_PROFILE__ = next.name
-    selectProfile(next.name)
-    stopSelectingDefault?.()
-  }
-  stopSelectingDefault = $profiles.listen(profiles => chooseVisibleDefault([...profiles]))
-  chooseVisibleDefault($profiles.get())
-  const stopSavingProfile = $activeGatewayProfile.subscribe(profile => {
+  return $activeGatewayProfile.subscribe(profile => {
     try { sessionStorage.setItem('hermes-web.browser.profile', profile) } catch { /* Optional tab state. */ }
   })
-  return () => {
-    stopSelectingDefault?.()
-    stopSavingProfile()
-  }
 }
 
 /** A read-only profile projection with commands delegated to upstream owners. */

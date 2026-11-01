@@ -1,11 +1,10 @@
-import { $activeGatewayProfile, $newChatRoute, $profileOrder, $profiles, $showAllProfiles, ensureGatewayAgent, pinNewChatProfile, sortByProfileOrder, type AgentProfileRoute } from '@/store/profile'
+import { $activeGatewayProfile, $newChatRoute, $profileOrder, $profiles, ensureGatewayAgent, pinNewChatProfile, sortByProfileOrder, type AgentProfileRoute } from '@/store/profile'
 import { WEB_CONNECTION_ID } from '../platform/connection'
 import { readHiddenProfiles } from '../experience/browser-preferences'
 import { reportActionFailure } from '../experience/action-errors'
 
-/** Generic creation in All profiles uses the first enabled profile in rail order. */
+/** Generic creation uses the first enabled profile in the saved profile order. */
 export function defaultNewSessionTarget(): { profile: string; route: AgentProfileRoute } | null {
-  if (!$showAllProfiles.get()) return null
   const profiles = $profiles.get()
   const order = $profileOrder.get()
   const defaultProfile = profiles.find(profile => profile.is_default)

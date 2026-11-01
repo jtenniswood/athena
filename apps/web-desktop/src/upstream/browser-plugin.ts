@@ -1107,6 +1107,26 @@ export function showHiddenBotsInBrowserRoster(source: string): string {
   const visibleRoster = showHiddenBots ? roster : roster.filter(bot => !isBotHidden(bot, allMeta))`)
 }
 
+export function useBrowserProfileSectionPictures(source: string, root: string): string {
+  const replacements: [string, string][] = [
+    ['if (nested || embedded || !group.connectionId) {', 'if (nested || embedded || !group.connectionId || window.__HERMES_WEB_BRIDGE__) {'],
+    ['  const label = aliases[group.id] || group.label', '  const browserProfile = useBrowserProfileSection(group.profile)\n  const label = aliases[group.id] || browserProfile?.label || group.label'],
+    [`              <ProfileGlyph
+                className="size-full"
+                color={group.color ?? null}
+                isDefault={group.profile === 'default'}
+                name={group.profile}
+              />`, '              browserProfile?.picture']
+  ]
+  let output = source.replace("import { ProfileGlyph } from '@/components/ui/profile-glyph'\n", '')
+  for (const [before, after] of replacements) {
+    if (output.split(before).length !== 2) throw new Error('Browser profile section picture boundary changed')
+    output = output.replace(before, after)
+  }
+  const owner = JSON.stringify(path.join(root, 'src/upstream/profile-section'))
+  return `import { useBrowserProfileSection } from ${owner}\n` + output
+}
+
 export function enableBrowserUngroupedSessions(source: string, surface: 'store' | 'menu' | 'sidebar'): string {
   const replacements: Record<typeof surface, [string, string][]> = {
     store: [
@@ -1377,6 +1397,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     trackBrowserSettingsSaves: source => trackBrowserSettingsSaves(source, root),
     useBrowserSettingsFrame: source => useBrowserSettingsFrame(source, root),
     useBrowserSearchLabel: source => useBrowserSearchLabel(source, root),
+    useBrowserProfileSectionPictures: source => useBrowserProfileSectionPictures(source, root),
     ungroupedStore: source => enableBrowserUngroupedSessions(source, 'store'),
     ungroupedMenu: source => enableBrowserUngroupedSessions(source, 'menu'),
     ungroupedSidebar: source => enableBrowserUngroupedSessions(source, 'sidebar')

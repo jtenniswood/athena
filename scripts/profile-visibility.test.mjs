@@ -74,6 +74,7 @@ function restoration({ saved = null, active = 'default', all = false, hidden = [
   const selections = []
   const window = {}
   const { restoreBrowserProfile } = load('upstream/profiles.ts', {
+    restoreUnifiedSessionList: () => {},
     $profiles: profiles, $activeGatewayProfile: current, $showAllProfiles: scope,
     $profileOrder: atom(order),
     readHiddenProfiles: () => hidden,
@@ -91,25 +92,14 @@ function restoration({ saved = null, active = 'default', all = false, hidden = [
   return { selections, publish, stop, current, scope, storage, window }
 }
 
-test('profile arrival restores the first visible profile when the default or saved profile is hidden', () => {
-  for (const options of [{}, { saved: 'default' }, { saved: 'writer', hidden: ['default', 'writer'] }]) {
-    const state = restoration(options)
-    state.publish()
-    assert.deepEqual(state.selections, ['research'])
-    assert.equal(state.scope.get(), false)
-    assert.equal(state.window.__HERMES_WEB_ACTIVE_PROFILE__, 'research')
-    assert.equal(state.storage.get('hermes-web.browser.profile'), 'research')
-    state.publish()
-    assert.equal(state.selections.length, 1)
-    state.stop()
-  }
-})
-
-test('restoration preserves a visible saved profile and tolerates all profiles being hidden', () => {
-  for (const options of [{ saved: 'writer' }, { hidden: ['default', 'writer', 'research'] }, { hidden: [] }]) {
+test('restoration keeps every profile visible while restoring saved chat ownership', () => {
+  for (const options of [{}, { saved: 'default' }, { saved: 'writer' }, { saved: 'writer', hidden: ['writer'] }]) {
     const state = restoration(options)
     state.publish()
     assert.deepEqual(state.selections, [])
+    assert.equal(state.scope.get(), true)
+    assert.equal(state.current.get(), options.saved ?? 'default')
+    assert.equal(state.window.__HERMES_WEB_ACTIVE_PROFILE__, null)
     state.stop()
   }
 })
