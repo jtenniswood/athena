@@ -51,10 +51,10 @@ test('container startup logs build and configuration after writing usable runtim
   const configured = logs.at(-1)
   assert.equal(configured.event, 'runtime_configured')
   assert.equal(configured.gateway, env.HERMES_GATEWAY_URL)
-  assert.equal(configured.authMode, 'oidc')
+  assert.equal(configured.authMode, undefined)
   assert.ok(!result.stdout.includes('private-plugin-name'))
   assert.ok(readFileSync(env.HERMES_NGINX_CONFIG, 'utf8').includes('proxy_pass https://gateway.example.test;'))
-  assert.ok(readFileSync(path.join(env.HERMES_STATIC_ROOT, 'runtime-config.js'), 'utf8').includes('"mode":"oidc"'))
+  assert.ok(!readFileSync(path.join(env.HERMES_STATIC_ROOT, 'runtime-config.js'), 'utf8').includes('"auth"'))
 })
 
 test('unavailable plugin directories and build identity warn without stopping startup', t => {

@@ -41,6 +41,42 @@ class NativeAppSettingsTest {
         controller.pause().stop().destroy()
     }
 
+    @Test fun testNotificationUsesTheNormalChannelAndKeepsSettingsOpen() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+        MainActivity::class.java.getDeclaredMethod("appSettings").apply { isAccessible = true }.invoke(activity)
+        val content = activity.findViewById<View>(android.R.id.content)
+        val action = content.findViewWithTag<View>(R.string.test_notification)
+        action.performClick()
+        val manager = activity.getSystemService(android.app.NotificationManager::class.java)
+        val notifications = org.robolectric.Shadows.shadowOf(manager)
+        val notification = notifications.getNotification("athena-test-notification", 0)
+        assertEquals("responses", notification.channelId)
+        assertEquals(activity.getString(R.string.test_notification_title), notification.extras.getString(android.app.Notification.EXTRA_TITLE))
+        assertEquals(activity.getString(R.string.test_notification_body), notification.extras.getString(android.app.Notification.EXTRA_TEXT))
+        action.performClick()
+        assertEquals(1, notifications.allNotifications.size)
+        assertNotNull(content.findViewWithTag<View>(R.string.app_settings))
+        controller.pause().stop().destroy()
+    }
+
+    @Test fun blockedTestNotificationOffersAndroidSettingsWithoutPostingAnAlert() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+        val manager = activity.getSystemService(android.app.NotificationManager::class.java)
+        org.robolectric.Shadows.shadowOf(manager).setNotificationsEnabled(false)
+        MainActivity::class.java.getDeclaredMethod("appSettings").apply { isAccessible = true }.invoke(activity)
+        activity.findViewById<View>(android.R.id.content).findViewWithTag<View>(R.string.test_notification).performClick()
+        assertTrue(org.robolectric.Shadows.shadowOf(manager).allNotifications.isEmpty())
+        val dialog = ShadowDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).performClick()
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+        val intent = org.robolectric.Shadows.shadowOf(activity).nextStartedActivity
+        assertEquals(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS, intent.action)
+        assertEquals(activity.packageName, intent.getStringExtra(android.provider.Settings.EXTRA_APP_PACKAGE))
+        controller.pause().stop().destroy()
+    }
+
     @Test fun themeRefreshRetainsTheDetailsBackStack() {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         val activity = controller.get()

@@ -5,6 +5,7 @@ import { Codicon } from '../upstream/browser-api'
 import { SettingsMenu } from './settings-menu'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { useCompactBrowser, useMobileBrowser } from './ui/use-compact-browser'
+import { useMobileChatHistory } from './mobile-chat-history'
 import { $conversationOpenRequest, $preserveNavigationRequest, preserveNavigationForNextSelection } from './conversation-navigation'
 import { clampNavigationWidth, DEFAULT_NAVIGATION_WIDTH, MAX_NAVIGATION_WIDTH, MIN_NAVIGATION_WIDTH, NAVIGATION_TAB_LABELS, NAVIGATION_TABS, readNavigationTab, readNavigationWidth, readVisibleNavigationTabs, type NavigationTab, writeBrowserPreference } from './browser-preferences'
 
@@ -87,8 +88,21 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
     document.addEventListener('keydown', keydown)
     return () => document.removeEventListener('keydown', keydown)
   }, [drawerOpen])
+  const backToHistory = useMobileChatHistory({
+    mobile, drawerOpen, covered: browserRouteCoversWorkspace(path),
+    showHistory: () => {
+      setVisibleTabs(current => current.includes('sessions') ? current : ['sessions', ...current])
+      setTab('sessions')
+      focusDrawerOnOpen.current = true
+      setDrawerOpen(true)
+    },
+    showConversation: () => {
+      setDrawerOpen(false)
+      requestAnimationFrame(() => main.current?.focus())
+    }
+  })
   return {
-    sections, drawer, compact, mobile, drawerOpen, collapsed, width, setWidth, tab, setTab, visibleTabs,
+    sections, drawer, compact, mobile, drawerOpen, collapsed, width, setWidth, tab, setTab, visibleTabs, backToHistory,
     open: compact ? drawerOpen : !collapsed,
     toggle: () => {
       if (compact) {

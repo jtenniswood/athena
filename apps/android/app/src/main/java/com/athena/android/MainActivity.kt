@@ -267,13 +267,13 @@ class MainActivity : AppCompatActivity() {
                 documentReady = false
                 navigationAction = null; navigationId = null
                 connection.loading()
-                renderConnection(connection.state)
+                if (AccessDetection.loginUrl(url, origin)) accessRequired()
+                else renderConnection(connection.state)
             }
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                if (request.isForMainFrame && request.url.scheme == "https" &&
-                    request.url.path?.startsWith("/cdn-cgi/access/") == true &&
-                    (ServerAddress.belongsTo(request.url.toString(), origin) || request.url.host?.endsWith(".cloudflareaccess.com") == true)) {
-                    startSignIn(true)
+                if (view !== web) return true
+                if (request.isForMainFrame && AccessDetection.loginUrl(request.url.toString(), origin)) {
+                    accessRequired()
                     return true
                 }
                 if (request.isForMainFrame && ServerAddress.belongsTo(request.url.toString(), origin) &&
@@ -286,10 +286,10 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-                if (view === web && request.isForMainFrame) errorScreen("Could not reach Athena. Check your connection and server address.")
+                if (view === web && request.isForMainFrame) errorScreen("Could not reach Athena. Check your connection and server address.", checkAccess = true)
             }
             override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
-                if (view === web && request.isForMainFrame) errorScreen("The server returned HTTP ${response.statusCode}. Try again or check your server address and configuration.")
+                if (view === web && request.isForMainFrame) errorScreen("The server returned HTTP ${response.statusCode}. Try again or check your server address and configuration.", checkAccess = response.statusCode in listOf(401, 403))
             }
             override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
                 if (view !== web) return true
@@ -354,14 +354,12 @@ class MainActivity : AppCompatActivity() {
                 if (current.stage in listOf(ConnectionCoordinator.Stage.ACCESS_SIGN_IN, ConnectionCoordinator.Stage.ATHENA_SIGN_IN)) {
                     authentication.cancel()
                     connection.recover("auth-cancelled", getString(R.string.sign_in_cancelled))
-                } else if (current.code?.startsWith("auth-") == true) authentication.retry(origin)
+                } else if (current.code == "auth-access-required") startSignIn(true)
+                else if (current.code?.startsWith("auth-") == true) authentication.retry(origin)
                 else reconnectAthena()
             }
         }
-        screen.findViewById<View>(R.id.server_settings).setOnClickListener {
-            prepareNavigation(allowUnloaded = true) { web?.destroy(); web = null; setup() }
-        }
-        screen.findViewById<View>(R.id.app_settings).setOnClickListener { appSettings() }
+        screen.findViewById<View>(R.id.review_settings).setOnClickListener { appSettings() }
     }
 
     private fun handleMessage(raw: String, reply: JavaScriptReplyProxy) {
@@ -384,7 +382,10 @@ class MainActivity : AppCompatActivity() {
                 webRevision = payload.optString("revision", "Unknown").take(80)
                 serverProtocol = payload.optString("serverProtocol", "Unknown").take(40)
                 if (payload.optBoolean("ready")) { documentReady = true; connection.ready() }
-                else connection.recover("web-startup", "Athena could not finish loading. Choose Try again or check App settings.")
+                else {
+                    connection.recover("web-startup", "Athena could not finish loading. Choose Try again or review settings.")
+                    detectAccess(connection.state)
+                }
                 respond(true)
             }
             "settingsFiles" -> {
@@ -485,6 +486,7 @@ class MainActivity : AppCompatActivity() {
         nativeSettings.show(::diagnostics, NativeAppSettings.Actions(
             updates = { appUpdates.settings() },
             connectionTesting = { showConnectionTests() },
+            testNotification = { testNotification() },
             notifications = { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) },
             changeServer = {
                 MaterialAlertDialogBuilder(this).setTitle("Change Athena server?")
@@ -500,6 +502,31 @@ class MainActivity : AppCompatActivity() {
                     .setNegativeButton(R.string.cancel, null).setPositiveButton(R.string.reload) { _, _ -> reconnectAthena() }.show()
             }
         ))
+    }
+
+    private fun testNotification() {
+        if (notifications.permission() == "default" && Build.VERSION.SDK_INT >= 33) {
+            if (permissionReply != null) return
+            permissionReply = { testNotification() }
+            prefs.edit().putBoolean("notificationAsked", true).apply()
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            return
+        }
+        if (notifications.permission() != "granted") {
+            MaterialAlertDialogBuilder(this).setTitle(R.string.test_notification)
+                .setMessage(R.string.test_notification_blocked)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.notifications) { _, _ ->
+                    startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+                }.show()
+            return
+        }
+        val sent = notifications.show(origin, JSONObject()
+            .put("title", getString(R.string.test_notification_title))
+            .put("body", getString(R.string.test_notification_body))
+            .put("tag", "athena-test-notification"))
+        Toast.makeText(this, if (sent) R.string.test_notification_sent else R.string.test_notification_failed, Toast.LENGTH_LONG).show()
+        nativeSettings.refreshNotifications()
     }
 
     private fun showConnectionTests() {
@@ -566,11 +593,29 @@ class MainActivity : AppCompatActivity() {
         }, 6000)
     }
 
-    private fun errorScreen(message: String) {
+    private fun accessRequired() {
+        connection.recover("auth-access-required", "Sign in through Cloudflare Access to reconnect to Athena.")
+    }
+
+    private fun detectAccess(failure: ConnectionCoordinator.State) {
+        if (connectionTest != null || origin.isEmpty()) return
+        val requestedOrigin = origin
+        val cookies = CookieManager.getInstance().getCookie(requestedOrigin)
+        Thread {
+            val required = try { AccessDetection.required(requestedOrigin, cookies) } catch (_: Exception) { false }
+            runOnUiThread {
+                // A late probe must never replace a retry, a new server or a successful connection.
+                if (required && !isFinishing && !isDestroyed && origin == requestedOrigin && connection.state === failure) accessRequired()
+            }
+        }.start()
+    }
+
+    private fun errorScreen(message: String, checkAccess: Boolean = false) {
         settingsPage.dismiss()
         actionMenus.dismiss()
         visibility.clear()
         connection.recover("web-unreachable", message)
+        if (checkAccess) detectAccess(connection.state)
         if (!documentReady) {
             web?.let { view ->
                 (view.parent as? android.view.ViewGroup)?.removeView(view)
@@ -610,18 +655,22 @@ class MainActivity : AppCompatActivity() {
         connectionScreen?.apply {
             visibility = if (ready) View.GONE else View.VISIBLE
             findViewById<View>(R.id.connection_progress).visibility = if (state.stage == ConnectionCoordinator.Stage.LOADING) View.VISIBLE else View.GONE
-            findViewById<View>(R.id.server_settings).visibility = if (recovery) View.VISIBLE else View.GONE
-            findViewById<View>(R.id.app_settings).visibility = if (recovery) View.VISIBLE else View.GONE
+            findViewById<View>(R.id.review_settings).visibility = if (recovery) View.VISIBLE else View.GONE
         }
         connectionStatus?.text = state.message
         connectionAction?.apply {
             visibility = if (signingIn || recovery) View.VISIBLE else View.GONE
-            setText(if (signingIn) R.string.cancel_sign_in else R.string.reconnect)
+            setText(when {
+                signingIn -> R.string.cancel_sign_in
+                state.code == "auth-access-required" -> R.string.browser_sign_in
+                else -> R.string.reconnect
+            })
         }
         if (state.stage == ConnectionCoordinator.Stage.LOADING) {
             container.postDelayed({
                 if (connection.state === state) {
-                    connection.recover("web-timeout", "Athena has not finished connecting. Try again or check your server settings.")
+                    connection.recover("web-timeout", "Athena has not finished connecting. Try again or review settings.")
+                    detectAccess(connection.state)
                 }
             }, 20000)
         }

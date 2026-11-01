@@ -83,13 +83,12 @@ class BrowserSignInTest {
     @Test fun cancellingTheBrowserPromptInvalidatesItsPendingVerifier() {
         val host = activity()
         var status = ""
-        val response = Response("""{"id":"pending","code":"ABC123","loginPath":"/login"}""")
+        val response = Response("""{"id":"pending","loginPath":"/login"}""")
         val signIn = BrowserSignIn(host, { code, _ -> status = code }, open = { response }) {}
         signIn.start(origin, "/login")
         until { ShadowDialog.getLatestDialog()?.isShowing == true }
         val dialog = ShadowDialog.getLatestDialog() as AlertDialog
         assertEquals(origin, dialog.findViewById<android.widget.TextView>(R.id.sign_in_server)!!.text.toString())
-        assertEquals("ABC123", dialog.findViewById<android.widget.TextView>(R.id.sign_in_code)!!.text.toString())
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
         shadowOf(Looper.getMainLooper()).idle()
         assertEquals("auth-cancelled", status)

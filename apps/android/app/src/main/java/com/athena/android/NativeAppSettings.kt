@@ -18,7 +18,7 @@ import com.google.android.material.button.MaterialButton
 
 /** Native presentation only: connection and navigation actions remain owned by the host. */
 class NativeAppSettings(private val activity: Activity) {
-    data class Actions(val notifications: () -> Unit, val changeServer: () -> Unit, val signIn: () -> Unit, val reload: () -> Unit, val updates: () -> Unit = {}, val connectionTesting: () -> Unit = {})
+    data class Actions(val notifications: () -> Unit, val changeServer: () -> Unit, val signIn: () -> Unit, val reload: () -> Unit, val updates: () -> Unit = {}, val connectionTesting: () -> Unit = {}, val testNotification: () -> Unit = {})
     private var host: FrameLayout? = null
     private var settingsPage: View? = null
     private var detailsPage: View? = null
@@ -129,6 +129,7 @@ class NativeAppSettings(private val activity: Activity) {
         }
         section(R.string.settings_section_app)
         row(R.string.notifications, if (NativeNotifications(activity).permission() == "granted") R.string.notifications_enabled else R.string.notifications_disabled, R.drawable.ic_notifications) { actions.notifications() }
+        row(R.string.test_notification, R.string.test_notification_description, R.drawable.ic_notifications, actions.testNotification)
         row(R.string.app_updates, R.string.app_updates_description, R.drawable.ic_refresh, actions.updates)
         section(R.string.settings_section_server)
         row(R.string.change_server, R.string.change_server_description, R.drawable.ic_server) { dismiss(); actions.changeServer() }

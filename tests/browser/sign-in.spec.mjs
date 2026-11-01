@@ -6,6 +6,7 @@ import { getBrowserTarget } from './test-target.mjs'
 const { image, url } = getBrowserTarget()
 test.skip(!image && !url && !process.env.CI, 'Set HERMES_TEST_IMAGE or HERMES_BROWSER_PREVIEW_URL')
 let gateway, container, origin
+test.use({ viewport: { width: 1440, height: 960 } })
 
 test.beforeAll(async () => {
   if (url) { origin = url; return }
@@ -22,7 +23,7 @@ test.afterAll(async () => {
   await gateway?.close()
 })
 
-const oidc = { name: 'self-hosted', display_name: 'Self-Hosted OIDC', supports_password: false }
+const externalProvider = { name: 'self-hosted', display_name: 'External provider', supports_password: false }
 const editor = page => page.locator('[contenteditable="true"]:visible').first()
 
 test('Android sign-in opens the native browser bridge and resumes the selected conversation', async ({ page, context }) => {
@@ -40,11 +41,11 @@ test('Android sign-in opens the native browser bridge and resumes the selected c
     }
   })
   await page.goto(`${origin}/#/preview-week`)
-  await page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC', exact: true }).click()
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect.poll(() => nativeRequests.some(request => request.method === 'openSignIn')).toBe(true)
   const request = nativeRequests.find(request => request.method === 'openSignIn')
-  expect(request.payload.path).toContain('/auth/login?')
-  expect(new URL(request.payload.path, origin).searchParams.get('provider')).toBe('self-hosted')
+  expect(request.payload.path).toContain('/login?')
+  expect(new URL(request.payload.path, origin).searchParams.has('provider')).toBe(false)
   expect(page.url()).toBe(`${origin}/#/preview-week`)
   expect(context.pages()).toHaveLength(1)
   // Model the native CookieManager finishing the one-time server exchange.
@@ -53,7 +54,7 @@ test('Android sign-in opens the native browser bridge and resumes the selected c
   expect(page.url()).toBe(`${origin}/#/preview-week`)
 })
 
-async function hermesAuth(context, { providers = [oidc], signedIn = false, authMode } = {}) {
+async function hermesAuth(context, { providers = [externalProvider], signedIn = false, authMode } = {}) {
   if (authMode) await context.route(/\/runtime-config\.js(?:\?.*)?$/, async route => {
     const response = await route.fetch()
     await route.fulfill({ response, body: `${await response.text()}\nwindow.__HERMES_RUNTIME_CONFIG__.auth = ${JSON.stringify({ mode: authMode })};` })
@@ -68,23 +69,15 @@ async function hermesAuth(context, { providers = [oidc], signedIn = false, authM
       .some(cookie => cookie.name === 'athena_test_session' && cookie.value === 'authenticated')
     return route.fulfill({ status: authenticated ? 200 : 401, json: authenticated ? { provider: 'self-hosted', user_id: 'test-user' } : { detail: 'sign_in_required' } })
   })
-  // Model Hermes -> external IDP -> Hermes callback. Only Hermes sets the session.
-  let returnTo = '/'
-  await context.route('**/auth/login?*', route => {
-    const request = new URL(route.request().url())
-    returnTo = request.searchParams.get('next') || '/'
-    // Fresh navigations let Playwright intercept each hop (it does not re-route
-    // requests following a mocked HTTP redirect to a different host).
-    return route.fulfill({ contentType: 'text/html', body: '<script>location.replace("https://identity.example.test/authorize")</script>' })
+  // Only the Hermes login page creates the authenticated session.
+  await context.route('**/login?*', route => {
+    const returnTo = new URL(route.request().url()).searchParams.get('next') || '/'
+    return route.fulfill({
+      contentType: 'text/html',
+      headers: { 'set-cookie': 'athena_test_session=authenticated; Path=/; HttpOnly; SameSite=Lax' },
+      body: `<script>location.replace(${JSON.stringify(returnTo)})</script>`
+    })
   })
-  await context.route('https://identity.example.test/authorize', route => route.fulfill({
-    contentType: 'text/html', body: `<script>location.replace(${JSON.stringify(`${origin}/auth/callback?code=synthetic&state=synthetic`)})</script>`
-  }))
-  await context.route('**/auth/callback?*', route => route.fulfill({
-    contentType: 'text/html',
-    headers: { 'set-cookie': 'athena_test_session=authenticated; Path=/; HttpOnly; SameSite=Lax' },
-    body: `<script>location.replace(${JSON.stringify(returnTo)})</script>`
-  }))
   await context.route('**/auth/logout', route => route.fulfill({
     // WebKit cannot fulfill mocked redirects; model the completed login response.
     status: context.browser().browserType().name() === 'webkit' ? 200 : 302,
@@ -113,19 +106,21 @@ for (const width of [390, 1440]) {
     await hermesAuth(context, { signedIn: true })
     await page.setViewportSize({ width, height: 960 })
     await page.goto(`${origin}/#/preview-week`)
+    if (width === 390) await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
     await expect(editor(page)).toBeVisible({ timeout: 30000 })
     await editor(page).fill('Keep this draft after signing out')
     const logout = page.waitForRequest(request => request.url().endsWith('/auth/logout'))
     await selectSignOut(page, width === 390)
     expect((await logout).method()).toBe('POST')
     await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Sign in' })).toBeEnabled()
     await expect(editor(page)).toHaveCount(0)
     await expect(page).toHaveURL(/#\/settings\?tab=gateway$/)
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes:composer-drafts:v3'))['preview-week'])).toBe('Keep this draft after signing out')
     await context.addCookies([{ name: 'athena_test_session', value: 'authenticated', url: origin, httpOnly: true }])
     await page.goto(`${origin}/#/preview-week`)
     await page.reload()
+    if (width === 390) await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
     await expect(editor(page)).toHaveText('Keep this draft after signing out', { timeout: 30000 })
   })
 }
@@ -135,7 +130,7 @@ test('settings sign-out clears imported session tokens', async ({ page, context 
   await page.goto(`${origin}/?token=synthetic-session-token#/preview-week`)
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
   await selectSignOut(page)
-  await expect(page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeEnabled()
   expect(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('hermes-web.connection.v2.')).map(key => JSON.parse(localStorage.getItem(key))).every(state => state.authMode === 'oauth' && state.token === ''))).toBe(true)
 })
 
@@ -191,23 +186,25 @@ test('sign-out leaves unsent attachments in chat without ending the session', as
   expect(logouts).toBe(0)
 })
 
-test('signed-out users see sign-in before any chat connection; provider labels are plain text', async ({ page, context }) => {
-  await hermesAuth(context, { providers: [{ ...oidc, display_name: '<img src=x onerror=alert(1)>' }] })
-  let sockets = 0
+test('signed-out users see standard sign-in without fetching provider metadata or connecting chat', async ({ page, context }) => {
+  await hermesAuth(context, { providers: [{ ...externalProvider, display_name: '<img src=x onerror=alert(1)>' }] })
+  let sockets = 0, providerRequests = 0
   page.on('websocket', () => sockets++)
+  page.on('request', request => { if (new URL(request.url()).pathname === '/api/auth/providers') providerRequests++ })
   await page.goto(origin)
   await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Sign in with <img src=x onerror=alert(1)>' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeEnabled()
   expect(await page.evaluate(() => Boolean(window.hermesDesktop))).toBe(false)
   expect(sockets).toBe(0)
+  expect(providerRequests).toBe(0)
   await expect(page.locator('.athena-sign-in button img')).toHaveCount(0)
 })
 
-test('OIDC popup success connects automatically and keeps the selected conversation', async ({ page, context }) => {
+test('Hermes popup success connects automatically and keeps the selected conversation', async ({ page, context }) => {
   await hermesAuth(context)
   await page.goto(`${origin}/#/preview-week`)
   const popupReady = page.waitForEvent('popup')
-  await page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' }).click()
+  await page.getByRole('button', { name: 'Sign in' }).click()
   const popup = await popupReady
   await expect.poll(() => popup.isClosed()).toBe(true)
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
@@ -230,10 +227,12 @@ for (const mode of ['mobile', 'installed PWA']) {
         if (!localStorage.getItem('hermes:composer-drafts:v3')) localStorage.setItem('hermes:composer-drafts:v3', JSON.stringify({ 'preview-week': 'Keep this unsent text' }))
       })
       await page.goto(`${origin}/?source=bookmark#/preview-week`)
-      await expect(page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' })).toBeEnabled()
+      await expect(page.getByRole('button', { name: 'Sign in' })).toBeEnabled()
       await page.screenshot({ path: testInfo.outputPath('sign-in-phone.png') })
       await expect(page.getByRole('button', { name: 'Continue in this window' })).toBeHidden()
-      await page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' }).click()
+      await page.getByRole('button', { name: 'Sign in' }).click()
+      await expect(page).toHaveURL(/#\/preview-week$/)
+      if (mode === 'mobile') await page.getByRole('dialog', { name: 'Navigation', exact: true }).getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
       await expect(editor(page)).toBeVisible({ timeout: 30000 })
       expect(new URL(page.url()).searchParams.get('source')).toBe('bookmark')
       await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-week')
@@ -274,7 +273,7 @@ test('a blocked popup offers same-window sign-in and then connects', async ({ pa
   await hermesAuth(context)
   await page.addInitScript(() => { window.open = () => null })
   await page.goto(origin)
-  await page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' }).click()
+  await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page.getByRole('status')).toContainText('window was blocked')
   await page.getByRole('button', { name: 'Continue in this window' }).click()
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
@@ -282,14 +281,14 @@ test('a blocked popup offers same-window sign-in and then connects', async ({ pa
 
 test('cancelled sign-in stays on the welcome screen without connecting chat', async ({ page, context }) => {
   await hermesAuth(context)
-  await context.route('**/auth/login?*', route => route.fulfill({ contentType: 'text/html', body: '<h1>Identity provider</h1>' }))
+  await context.route('**/login?*', route => route.fulfill({ contentType: 'text/html', body: '<h1>Identity provider</h1>' }))
   await page.goto(origin)
   const popupReady = page.waitForEvent('popup')
-  await page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' }).click()
+  await page.getByRole('button', { name: 'Sign in' }).click()
   const popup = await popupReady
   await popup.close()
   await expect(page.getByRole('status')).toContainText('Sign-in did not complete')
-  await expect(page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeEnabled()
   expect(await page.evaluate(() => Boolean(window.hermesDesktop))).toBe(false)
 })
 
@@ -299,10 +298,10 @@ test('an unavailable server offers retry without pretending the user is signed o
   await context.route('**/api/status', route => route.fulfill({ status: unavailable ? 503 : 200, json: { auth_required: true } }))
   await page.goto(origin)
   await expect(page.getByRole('status')).toContainText('Could not reach your Hermes server')
-  await expect(page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' })).toBeHidden()
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeHidden()
   unavailable = false
   await page.getByRole('button', { name: 'Retry connection' }).click()
-  await expect(page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeEnabled()
 })
 
 test('existing cookie sessions bypass sign-in', async ({ page, context }) => {
@@ -323,7 +322,7 @@ test('a proxy login page cannot be mistaken for a verified Hermes session', asyn
 test('sign-in completed in another tab connects when Athena regains focus', async ({ page, context }) => {
   await hermesAuth(context)
   await page.goto(origin)
-  await expect(page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeEnabled()
   await context.addCookies([{ name: 'athena_test_session', value: 'authenticated', url: origin, httpOnly: true }])
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
@@ -336,7 +335,7 @@ test('a pending focus session check keeps Sign in usable', async ({ page, contex
     window.matchMedia = query => query === '(display-mode: standalone)' ? { ...matchMedia(query), matches: true } : matchMedia(query)
   })
   await page.goto(`${origin}/#/preview-week`)
-  const signIn = page.getByRole('button', { name: 'Sign in with Self-Hosted OIDC' })
+  const signIn = page.getByRole('button', { name: 'Sign in' })
   await expect(signIn).toBeEnabled()
   let releaseProbe, observedProbe
   const held = new Promise(resolve => { releaseProbe = resolve })
@@ -350,7 +349,7 @@ test('a pending focus session check keeps Sign in usable', async ({ page, contex
     await page.evaluate(() => window.dispatchEvent(new Event('focus')))
     await requested
     await expect(signIn).toBeEnabled({ timeout: 1000 })
-    const loginRequested = page.waitForRequest(request => new URL(request.url()).pathname === '/auth/login')
+    const loginRequested = page.waitForRequest(request => new URL(request.url()).pathname === '/login')
     const clicking = signIn.click()
     await loginRequested
     releaseProbe()
@@ -383,7 +382,7 @@ test('queried password login bypasses an older installed app-shell worker', asyn
 })
 
 test('multiple providers use the Hermes provider chooser', async ({ page, context }) => {
-  await hermesAuth(context, { providers: [oidc, { name: 'basic', display_name: 'Password', supports_password: true }] })
+  await hermesAuth(context, { providers: [externalProvider, { name: 'basic', display_name: 'Password', supports_password: true }] })
   await context.route('**/login?*', route => route.fulfill({ contentType: 'text/html', body: '<h1>Choose your provider</h1>' }))
   await page.goto(origin)
   const popupReady = page.waitForEvent('popup')
@@ -401,63 +400,38 @@ test('session-token import retains the existing connection path', async ({ page,
   expect(await page.evaluate(async () => (await window.hermesDesktop.getConnectionConfig()).remoteAuthMode)).toBe('token')
 })
 
-test('Docker Hermes mode uses the Hermes login page even when OIDC is registered', async ({ page, context }) => {
-  await hermesAuth(context, { authMode: 'hermes' })
+test('retired OIDC configuration uses standard Hermes login without a provider override', async ({ page, context }) => {
+  await hermesAuth(context, { authMode: 'oidc' })
   await context.route('**/login?*', route => route.fulfill({ contentType: 'text/html', body: '<h1>Hermes account sign-in</h1>' }))
   await page.goto(`${origin}/#/preview-week`)
   const popupReady = page.waitForEvent('popup')
-  await page.getByRole('button', { name: 'Sign in with Hermes Agent', exact: true }).click()
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   const popup = await popupReady
   await expect(popup.getByRole('heading', { name: 'Hermes account sign-in' })).toBeVisible()
   expect(new URL(popup.url()).pathname).toBe('/login')
   expect(new URL(popup.url()).searchParams.get('next')).toBe('/#/preview-week')
+  expect(new URL(popup.url()).searchParams.has('provider')).toBe(false)
   await popup.close()
 })
 
-test('Docker OIDC mode selects the self-hosted provider from several providers', async ({ page, context }) => {
-  await hermesAuth(context, { authMode: 'oidc', providers: [{ name: 'basic', display_name: 'Password', supports_password: true }, oidc] })
-  let selectedProvider
-  await context.route('**/auth/login?*', async route => {
-    selectedProvider = new URL(route.request().url()).searchParams.get('provider')
-    await route.fallback()
-  })
+test('Gateway settings uses standard browser sign-in', async ({ page, context }) => {
+  await hermesAuth(context, { signedIn: true })
+  await context.route('**/login', route => route.fulfill({ contentType: 'text/html', body: '<h1>Hermes sign-in</h1>' }))
   await page.goto(`${origin}/#/preview-week`)
-  await page.getByRole('button', { name: 'Sign in with OIDC', exact: true }).click()
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
-  expect(selectedProvider).toBe('self-hosted')
-  await expect(page).toHaveURL(/#\/preview-week$/)
+  await context.clearCookies()
+  await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Settings', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Settings categories' }).getByRole('button', { name: 'Gateway', exact: true }).click()
+  const form = page.getByRole('region', { name: 'Gateway connection', exact: true })
+  await expect(form.getByLabel('Sign-in method')).toContainText('Browser sign-in')
+  const popupReady = page.waitForEvent('popup')
+  await form.getByRole('button', { name: 'Sign in', exact: true }).click()
+  const popup = await popupReady
+  await expect(popup.getByRole('heading', { name: 'Hermes sign-in', exact: true })).toBeVisible()
+  expect(new URL(popup.url()).searchParams.has('provider')).toBe(false)
+  await popup.close()
 })
-
-test('Docker OIDC mode reports an unavailable provider without choosing another login', async ({ page, context }) => {
-  await hermesAuth(context, { authMode: 'oidc', providers: [{ name: 'basic', display_name: 'Password', supports_password: true }] })
-  await page.goto(origin)
-  await expect(page.getByRole('status')).toContainText('Configure the self-hosted OIDC provider on your Hermes server')
-  await expect(page.getByRole('button', { name: 'Retry connection', exact: true })).toBeEnabled()
-  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeHidden()
-  expect(await page.evaluate(() => Boolean(window.hermesDesktop))).toBe(false)
-})
-
-for (const authMode of ['hermes', 'oidc']) {
-  test(`Gateway settings uses the Docker ${authMode} sign-in flow`, async ({ page, context }) => {
-    await hermesAuth(context, { authMode, signedIn: true })
-    await context.route('**/auth/login?*', route => route.fulfill({ contentType: 'text/html', body: '<h1>OIDC sign-in</h1>' }))
-    await context.route('**/login', route => route.fulfill({ contentType: 'text/html', body: '<h1>Hermes sign-in</h1>' }))
-    await page.goto(`${origin}/#/preview-week`)
-    await expect(editor(page)).toBeVisible({ timeout: 30000 })
-    await context.clearCookies()
-    await page.getByRole('button', { name: 'Open settings menu', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Settings', exact: true }).click()
-    await page.getByRole('button', { name: 'Server Connection', exact: true }).click()
-    const form = page.getByRole('region', { name: 'Gateway connection', exact: true })
-    await expect(form.getByLabel('Sign-in method')).toContainText(authMode === 'hermes' ? 'Hermes Agent sign-in' : 'OIDC sign-in')
-    const popupReady = page.waitForEvent('popup')
-    await form.getByRole('button', { name: 'Sign in', exact: true }).click()
-    const popup = await popupReady
-    await expect(popup.getByRole('heading', { name: authMode === 'hermes' ? 'Hermes sign-in' : 'OIDC sign-in', exact: true })).toBeVisible()
-    if (authMode === 'oidc') expect(new URL(popup.url()).searchParams.get('provider')).toBe('self-hosted')
-    await popup.close()
-  })
-}
 
 test('existing session keeps the startup loader while checking authentication', async ({ page, context }, testInfo) => {
   await hermesAuth(context, { signedIn: true })

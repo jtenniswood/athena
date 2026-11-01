@@ -64,7 +64,7 @@ class BridgeIntegrationTest {
                         <button id="settings">App settings</button>
                         <script type="module">
                           $adapter
-                          window.adapter = { androidAppSettingsMenu, androidOpenAppSettings, androidWebVisibility, androidOpenActionMenu, androidDismissActionMenu };
+                          window.adapter = { androidAppSettingsMenu, androidOpenAppSettings, androidWebVisibility };
                           window.productionHello = await androidHost();
                           const nativeReceiver = AthenaAndroid.onmessage;
                           window.result = null;
@@ -83,10 +83,13 @@ class BridgeIntegrationTest {
                 scenario.onActivity { assertEquals("https://athena.example/", web.url) }
                 assertEquals("1", evaluate(web, "window.productionHello.protocol"))
                 assertEquals("true", evaluate(web, "window.productionHello.capabilities.includes('action-menu')"))
-                evaluate(web, """window.menuResult = null; window.adapter.androidOpenActionMenu({
-                    id:'fixture-menu',title:'Chat actions',compact:true,x:20,y:20,viewportWidth:390,
-                    groups:[{items:[{id:'rename',label:'Rename'},{id:'delete',label:'Delete',disabled:true}]}]
-                }).then(value => window.menuResult = value)""")
+                // Older web clients can still use the legacy menu bridge directly.
+                evaluate(web, """window.result = null; AthenaAndroid.postMessage(JSON.stringify({
+                    id:'test',protocol:1,method:'actionMenu',payload:{
+                        id:'fixture-menu',title:'Chat actions',compact:true,x:20,y:20,viewportWidth:390,
+                        groups:[{items:[{id:'rename',label:'Rename'},{id:'delete',label:'Delete',disabled:true}]}]
+                    }
+                }))""")
                 val menuDelegate = MainActivity::class.java.getDeclaredField("actionMenus$" + "delegate").apply { isAccessible = true }
                 waitUntil {
                     var shown = false
@@ -110,8 +113,8 @@ class BridgeIntegrationTest {
                     assertFalse(root.findViewWithTag<View>("delete").isEnabled)
                     root.findViewWithTag<View>("rename").performClick()
                 }
-                waitUntil { evaluate(web, "window.menuResult?.id === 'rename'") == "true" }
-                assertEquals("\"selected\"", evaluate(web, "window.menuResult.status"))
+                waitUntil { evaluate(web, "window.result?.value?.id === 'rename'") == "true" }
+                assertEquals("\"selected\"", evaluate(web, "window.result.value.status"))
                 request(web, "webState", JSONObject().put("ready", true).put("revision", "fixture").put("serverProtocol", 1))
                 evaluate(web, "window.discovered = null; window.adapter.androidAppSettingsMenu(true).then(value => window.discovered = value)")
                 waitUntil { evaluate(web, "window.discovered === true") == "true" }

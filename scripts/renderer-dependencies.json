@@ -56,7 +56,7 @@
       "reason": "Update the shared UI with React 19.3 while retaining Motion 12 to satisfy its peer; verify browser settings, menus and dialog focus."
     },
     "@tanstack/react-virtual": {
-      "upstream": "3.14.6", "version": "3.14.23",
+      "upstream": "3.14.6", "version": "3.14.24",
       "reason": "Use the updated virtual list; verify conversation selection and sidebar rendering."
     },
     "react-arborist": {

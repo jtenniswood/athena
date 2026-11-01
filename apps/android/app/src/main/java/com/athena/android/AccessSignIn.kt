@@ -42,7 +42,7 @@ class AccessSignIn(private val activity: Activity, private val now: () -> Long =
         val state = encode(ByteArray(32).also { SecureRandom().nextBytes(it) })
         val url = Uri.parse("$origin/api/athena/android/auth/access").buildUpon()
             .appendQueryParameter("state", state).appendQueryParameter("key", encode(pair.public.encoded)).build()
-        confirmation = SignInConfirmation.builder(activity, origin, state.take(6))
+        confirmation = SignInConfirmation.builder(activity, origin)
             .setNegativeButton(R.string.cancel) { _, _ -> progress("auth-cancelled", "Access sign-in cancelled. Choose Try again when you’re ready.") }
             .setOnCancelListener { progress("auth-cancelled", "Access sign-in cancelled. Choose Try again when you’re ready.") }
             .setPositiveButton(R.string.open_browser) { _, _ ->

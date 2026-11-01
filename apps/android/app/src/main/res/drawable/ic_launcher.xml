@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/athena_launcher_background" />
+    <foreground>
+        <!-- Keep the loading-screen artwork inside the launcher mask's safe area. -->
+        <inset android:drawable="@drawable/athena_loading"
+            android:insetLeft="12dp" android:insetTop="12dp"
+            android:insetRight="12dp" android:insetBottom="12dp" />
+    </foreground>
+</adaptive-icon>

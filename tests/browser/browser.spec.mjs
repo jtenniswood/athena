@@ -1557,6 +1557,7 @@ touchTest('Cron jobs can be hidden before any jobs exist and restored later', as
 })
 
 touchTest('section menu includes collapsed session, messaging, and Cron sections', async ({ page }) => {
+  await page.route(/\/api\/messaging\/platforms(?:\?|$)/, route => route.fulfill({ json: { platforms: [{ id: 'discord', name: 'Discord', enabled: true, configured: true }] } }))
   await page.setViewportSize({ width: 390, height: 960 })
   await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => route.fulfill({ json: [{ id: 'preview-menu-job', name: 'Menu verification job', prompt: 'Check navigation', enabled: true }] }))
   await page.route(/\/api\/profiles\/sessions\/sidebar(?:\?|$)/, async route => {
@@ -3245,71 +3246,43 @@ for (const mode of ['android', 'older-android', 'browser', 'android-phone']) {
 }
 
 for (const nativeMenus of [true, false]) {
-  test.describe(`Android action menus (${nativeMenus ? 'native' : 'legacy fallback'})`, () => {
+  test.describe(`Android web menus (${nativeMenus ? 'native-capable' : 'legacy'} host)`, () => {
     test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
-    test('keeps command ownership and confirmation dialogs in the web app', async ({ page, context }) => {
+    test('uses web commands and confirmation dialogs without native menu requests', async ({ page, context }) => {
       await context.addInitScript(({ supported }) => {
         window.nativeMenuRequests = []
         window.AthenaAndroid = {
           onmessage: null,
           postMessage(raw) {
             const request = JSON.parse(raw)
-            if (request.method === 'actionMenu') { window.nativeMenuRequests.push(request); return }
-            const value = request.method === 'hello' ? { protocol: 1, capabilities: supported ? ['action-menu'] : [] }
+            if (['actionMenu', 'updateActionMenu', 'dismissActionMenu'].includes(request.method)) window.nativeMenuRequests.push(request)
+            const value = request.method === 'hello' ? { protocol: 1, capabilities: supported ? ['action-menu', 'action-menu-live', 'action-menu-search'] : [] }
               : request.method === 'permission' ? 'denied' : true
             queueMicrotask(() => this.onmessage?.({ data: JSON.stringify({ id: request.id, value }) }))
           }
-        }
-        window.chooseNativeAction = value => {
-          const request = window.nativeMenuRequests.at(-1)
-          window.AthenaAndroid.onmessage({ data: JSON.stringify({ id: request.id, value }) })
         }
       }, { supported: nativeMenus })
       await open(page)
       await editor(page).fill('Keep this draft')
       const trigger = page.getByRole('button', { name: 'Chat actions', exact: true })
       await trigger.click()
-      if (nativeMenus) {
-        await expect.poll(() => page.evaluate(() => window.nativeMenuRequests.length)).toBe(1)
-        await expect(page.locator('[data-browser-action-surface]')).toHaveCount(0)
-        const menu = await page.evaluate(() => window.nativeMenuRequests.at(-1).payload)
-        expect(menu.compact).toBe(true)
-        const rename = menu.groups.flatMap(group => group.items).find(item => item.id.endsWith('/rename'))
-        await page.evaluate(id => window.chooseNativeAction({ status: 'selected', id }), rename.id)
-      } else {
-        await expect(page.evaluate(() => window.nativeMenuRequests.length)).resolves.toBe(0)
-        await page.getByRole('dialog', { name: 'Chat actions', exact: true }).getByRole('button', { name: 'Rename', exact: true }).click()
-      }
+      await page.getByRole('dialog', { name: 'Chat actions', exact: true }).getByRole('button', { name: 'Rename', exact: true }).click()
       await expect(page.getByRole('dialog', { name: 'Rename session', exact: true })).toBeVisible()
       await page.getByRole('button', { name: 'Cancel', exact: true }).click()
       await expect(editor(page)).toHaveText('Keep this draft')
       await expect(trigger).toBeFocused()
-      if (nativeMenus) {
-        await trigger.click()
-        await expect.poll(() => page.evaluate(() => window.nativeMenuRequests.length)).toBe(2)
-        await page.evaluate(() => window.chooseNativeAction({ status: 'selected', id: 'unrecognized-action' }))
-        await expect(trigger).toHaveAttribute('aria-expanded', 'false')
-        await expect(page.getByRole('dialog')).toHaveCount(0)
-        await expect(editor(page)).toHaveText('Keep this draft')
-        await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
-        await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).toBeVisible()
-        await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
-        await expect.poll(() => page.evaluate(() => window.nativeMenuRequests.length)).toBe(3)
-        const botChoice = await page.evaluate(() => window.nativeMenuRequests.at(-1).payload.groups
-          .flatMap(group => group.items).find(item => item.id.endsWith('/bots')))
-        expect(botChoice.checked).toBe(true)
-        await page.evaluate(id => window.chooseNativeAction({ status: 'selected', id }), botChoice.id)
-        await expect.poll(() => page.evaluate(() => window.nativeMenuRequests.length)).toBe(4)
-        const toggled = await page.evaluate(() => window.nativeMenuRequests.at(-1).payload.groups.flatMap(group => group.items))
-        expect(toggled.find(item => item.id.endsWith('/bots')).checked).toBe(false)
-        expect(toggled.find(item => item.id.endsWith('/sessions')).disabled).toBe(true)
-        await page.evaluate(() => window.chooseNativeAction({ status: 'dismissed' }))
-        await page.locator('#browser-navigation').getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().click()
-        await trigger.click()
-        await expect.poll(() => page.evaluate(() => window.nativeMenuRequests.length)).toBe(5)
-        await page.evaluate(() => window.chooseNativeAction({ status: 'unavailable' }))
-        await expect(page.getByRole('dialog', { name: 'Chat actions', exact: true })).toBeVisible()
-      }
+
+      // The upstream renderer's searchable model menu also stays in the WebView.
+      const model = page.getByRole('button', { name: /^Model ·/ })
+      await model.click()
+      const modelMenu = page.locator('[data-slot="dropdown-menu-content"][data-state="open"]')
+      await expect(modelMenu).toBeVisible()
+      await expect(modelMenu.locator('input')).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(modelMenu).toHaveCount(0)
+      await expect(editor(page)).toHaveText('Keep this draft')
+      expect(await page.evaluate(() => window.nativeMenuRequests)).toEqual([])
+      await expect(page.locator('[data-native-menu]')).toHaveCount(0)
     })
   })
 }
@@ -3356,4 +3329,27 @@ test.describe('Bots touch refresh', () => {
     await page.locator('#browser-navigation').getByRole('button',{name:'Plan a calmer working week',exact:true}).click()
     await expect(editor(page)).toHaveText('Keep this draft while refreshing Bots')
   })
+})
+
+test('configured Telegram appears without chats and channel controls exclude unset platforms', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await page.route(/\/api\/messaging\/platforms(?:\?|$)/, route => route.fulfill({ json: { platforms: [
+    { id: 'telegram', name: 'Telegram', enabled: true, configured: true },
+    { id: 'discord', name: 'Discord', enabled: true, configured: false },
+    { id: 'slack', name: 'Slack', enabled: false, configured: true }
+  ] } }))
+  await open(page)
+  const telegram = page.locator('[data-browser-section-id="messaging:telegram"]')
+  await expect(telegram).toBeVisible()
+  await expect(telegram.locator('[data-browser-section-header]')).toContainText('Telegram')
+  await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+  const menu = page.getByRole('menu', { name: 'Settings and workspace', exact: true })
+  const toggle = menu.getByRole('menuitemcheckbox', { name: 'Telegram', exact: true })
+  await expect(toggle).toBeVisible()
+  for (const name of ['Discord', 'Slack', 'WhatsApp']) await expect(menu.getByRole('menuitemcheckbox', { name, exact: true })).toHaveCount(0)
+  await toggle.click()
+  await expect(telegram).toBeHidden()
+  await toggle.click()
+  await page.keyboard.press('Escape')
+  await expect(telegram).toBeVisible()
 })

@@ -207,8 +207,8 @@ function BrowserLayout() {
       <BrowserNavigationResizer navigation={navigation} />
       <main className="browser-main" ref={main} hidden={navigation.mobile && navigation.drawerOpen} inert={navigation.compact && !navigation.mobile && navigation.drawerOpen} tabIndex={-1} aria-label="Conversation and workspace">
         <div className="browser-chat-toolbar" aria-label="Chat toolbar">
-          <BrowserToolbarButton tooltip={navigation.mobile ? 'Open navigation' : navigation.open ? 'Hide sidebar' : 'Show sidebar'} className="browser-menu" ref={menu} aria-label={navigation.mobile ? 'Open navigation' : navigation.open ? 'Hide navigation' : 'Open navigation'} aria-expanded={navigation.open} aria-controls="browser-navigation" onClick={navigation.toggle}>
-            <Codicon name={navigation.mobile ? 'three-bars' : 'layout-sidebar-left'} />
+          <BrowserToolbarButton tooltip={navigation.mobile ? 'Back to chat history' : navigation.open ? 'Hide sidebar' : 'Show sidebar'} className="browser-menu" ref={menu} aria-label={navigation.mobile ? 'Back to chat history' : navigation.open ? 'Hide navigation' : 'Open navigation'} aria-expanded={navigation.mobile ? undefined : navigation.open} aria-controls="browser-navigation" onClick={navigation.mobile ? navigation.backToHistory : navigation.toggle}>
+            <Codicon name={navigation.mobile ? 'arrow-left' : 'layout-sidebar-left'} />
           </BrowserToolbarButton>
           <div className="browser-actions">
             <BrowserChatActionsMenu actions={sessionActions} title={chatTitle} panels={panels} main={main} />

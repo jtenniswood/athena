@@ -34,15 +34,10 @@ export function runtimeConfiguration(env = process.env) {
   if (!Number.isInteger(port) || port < 1 || port > 65535 || !/^(?:localhost|[0-9a-fA-F:.]+)$/.test(host)) throw new Error('Invalid hosting bind address or port')
   const listen = `${host.includes(':') ? '[' + host + ']' : host}:${port}`
   const target = url.origin
-  const authMode = env.HERMES_AUTH_MODE || 'auto'
-  if (!['auto', 'hermes', 'oidc'].includes(authMode)) {
-    throw new Error('HERMES_AUTH_MODE must be auto, hermes, or oidc')
-  }
   return {
     target, home, staticRoot, stateDir, preferencesDir, listen,
     publicConfig: {
       version: 1,
-      auth: { mode: authMode },
       gateway: {
         id: createHash('sha256').update(target).digest('hex'),
         name: env.HERMES_GATEWAY_NAME || 'Hermes',
@@ -103,8 +98,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       log('warn', 'build_info_unavailable', { code: error.code || 'INVALID_BUILD_INFO' })
     }
     log('info', 'runtime_configured', {
-      listen: configuration.listen, gateway: configuration.target,
-      authMode: configuration.publicConfig.auth.mode
+      listen: configuration.listen, gateway: configuration.target
     })
   } catch (error) {
     log('error', 'startup_failed', {

@@ -11,7 +11,6 @@ provides the browser interface; you need a separate, running Hermes Gateway.
 ## Configure and use Athena
 
 - [Configure the Hermes Gateway](Gateway-Configuration)
-- [Set up OIDC sign-in](Set-up-OIDC)
 - [Access Athena remotely](Remote-Access)
 - [Update Athena](Updating-Athena)
 - [Troubleshooting](Troubleshooting)

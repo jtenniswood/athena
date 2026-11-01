@@ -47,9 +47,17 @@ The skill requires `main` to match `origin/main` and refuses an existing
 version tag. Version-tag builds publish the image but do not request a production
 deployment.
 
-### Ad hoc development image
+### Automatic and ad hoc development images
 
-To build a test image without moving a release tag or deploying it, open
+Every push to `main` runs **Build development image** and publishes
+`ghcr.io/jtenniswood/athena:dev-latest` and `dev-sha-<revision>`. The same push
+also runs **Build latest Android APK**, producing the signed development APK
+`athena-android-latest.apk` in the `android-signed-apk` Actions artifact and an
+`android-main-<commit>` prerelease. See [Android APK releases](android/releases.md)
+for downloads and the opt-in latest-main update channel. Each commit has its own
+concurrency group so another push cannot replace its pending build.
+
+To build a test image manually without moving a release tag or deploying it, open
 **Actions → Build development image → Run workflow** and select the branch to
 build. The workflow publishes `ghcr.io/jtenniswood/athena:dev-latest` and the
 immutable `dev-sha-<revision>` tag. Each completed run updates `dev-latest`;

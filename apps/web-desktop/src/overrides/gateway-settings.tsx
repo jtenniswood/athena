@@ -14,7 +14,6 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean; subp
   const gateway = getActiveGateway()
   const status = useBrowserGatewayStatus()
   const navigate = useNavigate()
-  const authMode = runtimeConfig().auth?.mode || 'auto'
   const signInMethodId = useId()
   const [mode, setMode] = useState(gateway.authMode)
   const [token, setToken] = useState('')
@@ -42,7 +41,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean; subp
       <Select value={mode} disabled={busy} onValueChange={value => setMode(value as 'oauth' | 'token')}>
         <SelectTrigger id={signInMethodId}><SelectValue /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="oauth">{authMode === 'hermes' ? 'Hermes Agent sign-in' : authMode === 'oidc' ? 'OIDC sign-in' : 'Browser sign-in'}</SelectItem>
+          <SelectItem value="oauth">Browser sign-in</SelectItem>
           <SelectItem value="token">Session token</SelectItem>
         </SelectContent>
       </Select>
