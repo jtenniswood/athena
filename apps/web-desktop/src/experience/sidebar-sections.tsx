@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useId, useState, type ReactNode } from 'react'
 import { BrowserActionSurface, type BrowserActionAnchor, type BrowserAction } from './ui/action-surface'
 import { useMobileBrowser } from './ui/use-compact-browser'
-import { Codicon, MESSAGING_SESSION_SOURCE_IDS, sessionSourceLabel } from '../upstream/browser-api'
+import { Codicon } from '../upstream/browser-api'
+import { useBrowserSidebarChannels } from '../upstream/sidebar-channels'
 import { notifyConversationOpen } from './conversation-navigation'
 
 import { browserPreference, useBrowserPreference } from '../platform/preferences'
@@ -27,6 +28,7 @@ export function useBrowserSidebarSection(key: string, label: string) {
 }
 
 export function useBrowserSidebarSections() {
+  const channels = useBrowserSidebarChannels()
   const hiddenSections = useBrowserPreference('hiddenSections')
   useEffect(() => {
     try { migrateBrowserPreference(browserPreferences.hiddenSections, window.localStorage, saveSyncedPreference) }
@@ -43,12 +45,10 @@ export function useBrowserSidebarSections() {
   }, [])
   const availableSections = [...new Map([...registered.values()].map(section => [section.key, section])).values()]
   if (!availableSections.some(section => section.key === 'cron-jobs')) availableSections.push({ key: 'cron-jobs', label: 'Cron jobs' })
-  // Keep channel controls available before chats load and while their groups
-  // are absent (for example during search or when all chats are pinned).
-  for (const sourceId of MESSAGING_SESSION_SOURCE_IDS) {
-    const key = `messaging:${sourceId}`
-    if (!availableSections.some(section => section.key === key)) {
-      availableSections.push({ key, label: sessionSourceLabel(sourceId) ?? sourceId })
+  // Search and pinning can unmount a section without removing its conversations.
+  for (const channel of channels) {
+    if (!availableSections.some(section => section.key === channel.key)) {
+      availableSections.push(channel)
     }
   }
   const actions: BrowserAction[] = availableSections.filter(section => section.key !== 'sessions').map(section => ({

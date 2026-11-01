@@ -21,8 +21,13 @@
   z-index: 110;
   min-width: 13rem;
   max-width: var(--radix-dropdown-menu-content-available-width);
-  max-height: var(--radix-dropdown-menu-content-available-height);
+  /* Radix measures screen pixels; menu content uses Athena's UI zoom. */
+  max-height: min(
+    calc((100dvh - 16px) / var(--web-ui-scale, 1)),
+    calc(var(--radix-dropdown-menu-content-available-height, 100dvh) / var(--web-ui-scale, 1))
+  );
   overflow: auto;
+  overscroll-behavior: contain;
   padding: var(--web-space-1);
 }
 
