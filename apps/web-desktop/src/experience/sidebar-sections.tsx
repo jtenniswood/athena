@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useId, useState, type ReactNode } from 'react'
 import { BrowserActionSurface, type BrowserActionAnchor, type BrowserAction } from './ui/action-surface'
 import { useMobileBrowser } from './ui/use-compact-browser'
-import { Codicon, MESSAGING_SESSION_SOURCE_IDS, sessionSourceLabel } from '../upstream/browser-api'
+import { Codicon } from '../upstream/browser-api'
+import { useConfiguredSidebarChannels } from '../upstream/sidebar-channels'
 import { notifyConversationOpen } from './conversation-navigation'
 
 import { browserPreference, useBrowserPreference } from '../platform/preferences'
@@ -12,6 +13,17 @@ type SidebarSection = { key: string; label: string }
 
 type SectionRegistry = ReturnType<typeof useBrowserSidebarSections>
 const SidebarSectionsContext = createContext<SectionRegistry | null>(null)
+
+// Configuration owns channel availability even when search or pinning removes all rows.
+export function useBrowserSidebarChannels() {
+  const channels = useConfiguredSidebarChannels()
+  const setChannels = useContext(SidebarSectionsContext)?.setChannels
+  useEffect(() => {
+    setChannels?.(channels)
+    return () => setChannels?.([])
+  }, [channels, setChannels])
+  return channels
+}
 
 // Called by the checked renderer adapter. Identity comes from the section's
 // data model; translated labels are display-only and rows may be collapsed.
@@ -32,6 +44,7 @@ export function useBrowserSidebarSections() {
     try { migrateBrowserPreference(browserPreferences.hiddenSections, window.localStorage, saveSyncedPreference) }
     catch { /* Sidebar visibility remains available without storage. */ }
   }, [])
+  const [channels, setChannels] = useState<SidebarSection[]>([])
   const [registered, setRegistered] = useState<Map<string, SidebarSection>>(() => new Map())
   const register = useCallback((instance: string, section: SidebarSection) => {
     setRegistered(current => new Map(current).set(instance, section))
@@ -41,16 +54,9 @@ export function useBrowserSidebarSections() {
       return next
     })
   }, [])
-  const availableSections = [...new Map([...registered.values()].map(section => [section.key, section])).values()]
+  const renderedSections = [...registered.values()].filter(section => !section.key.startsWith('messaging:'))
+  const availableSections = [...new Map(renderedSections.map(section => [section.key, section])).values(), ...channels]
   if (!availableSections.some(section => section.key === 'cron-jobs')) availableSections.push({ key: 'cron-jobs', label: 'Cron jobs' })
-  // Keep channel controls available before chats load and while their groups
-  // are absent (for example during search or when all chats are pinned).
-  for (const sourceId of MESSAGING_SESSION_SOURCE_IDS) {
-    const key = `messaging:${sourceId}`
-    if (!availableSections.some(section => section.key === key)) {
-      availableSections.push({ key, label: sessionSourceLabel(sourceId) ?? sourceId })
-    }
-  }
   const actions: BrowserAction[] = availableSections.filter(section => section.key !== 'sessions').map(section => ({
     key: section.key,
     label: section.label,
@@ -59,7 +65,7 @@ export function useBrowserSidebarSections() {
     keepOpen: true,
     run: () => browserPreference('hiddenSections').write(hiddenSections.includes(section.key) ? hiddenSections.filter(key => key !== section.key) : [...hiddenSections, section.key])
   }))
-  return { hiddenSections, register, actions }
+  return { hiddenSections, register, setChannels, actions }
 }
 
 export function BrowserSessionsPane({ hidden, sections, children }: { hidden: boolean; sections: ReturnType<typeof useBrowserSidebarSections>; children: ReactNode }) {

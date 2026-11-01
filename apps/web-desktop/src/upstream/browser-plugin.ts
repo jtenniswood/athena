@@ -784,8 +784,15 @@ export function useBrowserSectionIdentity(source: string, root: string): string 
   return `import { useBrowserSidebarSection } from ${owner}\n` + replaceBrowserContract(source, changes)
 }
 
-export function useBrowserSectionIds(source: string): string {
-  return replaceBrowserContract(source, [
+export function useBrowserSectionIds(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-sections'))
+  return `import { useBrowserSidebarChannels } from ${owner}\n` + replaceBrowserContract(source, [
+    ['  const messagingProfile = sidebarProfileForScope(profileScope)', '  const messagingProfile = sidebarProfileForScope(profileScope)\n  const browserChannels = useBrowserSidebarChannels()'],
+    ['    if (!visibleMessagingSessions.length) {\n      return []\n    }\n\n    const bySource = new Map<string, SessionInfo[]>()', '    const bySource = new Map<string, SessionInfo[]>(browserChannels.map(channel => [channel.sourceId, []]))'],
+    ['      if (!sourceId) {', '      if (!sourceId || !bySource.has(sourceId)) {'],
+    ['sessionTime(b.sessions[0]) - sessionTime(a.sessions[0])', '(b.sessions[0] ? sessionTime(b.sessions[0]) : 0) - (a.sessions[0] ? sessionTime(a.sessions[0]) : 0)'],
+    ['  }, [visibleMessagingSessions, messagingPlatformTotals, messagingTruncated, isPinnedSession, messagingProfile])', '  }, [browserChannels, visibleMessagingSessions, messagingPlatformTotals, messagingTruncated, isPinnedSession, messagingProfile])'],
+    ['            {!trimmedQuery &&\n              !worktreeGroupingActive &&\n              messagingGroups.map', '            {!trimmedQuery &&\n              messagingGroups.map'],
     // Athena's explicit section preference owns Cron visibility in both modes.
     ['(showsAdvancedChrome && cronJobs.length > 0)', '(cronJobs.length > 0)'],
     ['!worktreeGroupingActive && showsAdvancedChrome && cronJobs.length > 0', '!worktreeGroupingActive && cronJobs.length > 0'],
@@ -1356,7 +1363,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserSectionIdentity: source => useBrowserSectionIdentity(source, root),
     useBrowserTouchHooks: source => useBrowserTouchHooks(source, root), useBrowserAcceptedSubmit: source => useBrowserAcceptedSubmit(source, root),
     useBrowserFollowupSubmit: source => useBrowserFollowupSubmit(source, root), useBrowserAlternateSubmit: source => useBrowserAlternateSubmit(source, root),
-    useBrowserCodingActionHooks, useBrowserSectionIds, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
+    useBrowserCodingActionHooks, useBrowserSectionIds: source => useBrowserSectionIds(source, root), omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     useBrowserProjectDisclosure,

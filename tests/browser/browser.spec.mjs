@@ -1557,6 +1557,7 @@ touchTest('Cron jobs can be hidden before any jobs exist and restored later', as
 })
 
 touchTest('section menu includes collapsed session, messaging, and Cron sections', async ({ page }) => {
+  await page.route(/\/api\/messaging\/platforms(?:\?|$)/, route => route.fulfill({ json: { platforms: [{ id: 'discord', name: 'Discord', enabled: true, configured: true }] } }))
   await page.setViewportSize({ width: 390, height: 960 })
   await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => route.fulfill({ json: [{ id: 'preview-menu-job', name: 'Menu verification job', prompt: 'Check navigation', enabled: true }] }))
   await page.route(/\/api\/profiles\/sessions\/sidebar(?:\?|$)/, async route => {
@@ -3328,4 +3329,27 @@ test.describe('Bots touch refresh', () => {
     await page.locator('#browser-navigation').getByRole('button',{name:'Plan a calmer working week',exact:true}).click()
     await expect(editor(page)).toHaveText('Keep this draft while refreshing Bots')
   })
+})
+
+test('configured Telegram appears without chats and channel controls exclude unset platforms', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await page.route(/\/api\/messaging\/platforms(?:\?|$)/, route => route.fulfill({ json: { platforms: [
+    { id: 'telegram', name: 'Telegram', enabled: true, configured: true },
+    { id: 'discord', name: 'Discord', enabled: true, configured: false },
+    { id: 'slack', name: 'Slack', enabled: false, configured: true }
+  ] } }))
+  await open(page)
+  const telegram = page.locator('[data-browser-section-id="messaging:telegram"]')
+  await expect(telegram).toBeVisible()
+  await expect(telegram.locator('[data-browser-section-header]')).toContainText('Telegram')
+  await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+  const menu = page.getByRole('menu', { name: 'Settings and workspace', exact: true })
+  const toggle = menu.getByRole('menuitemcheckbox', { name: 'Telegram', exact: true })
+  await expect(toggle).toBeVisible()
+  for (const name of ['Discord', 'Slack', 'WhatsApp']) await expect(menu.getByRole('menuitemcheckbox', { name, exact: true })).toHaveCount(0)
+  await toggle.click()
+  await expect(telegram).toBeHidden()
+  await toggle.click()
+  await page.keyboard.press('Escape')
+  await expect(telegram).toBeVisible()
 })
