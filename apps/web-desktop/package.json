@@ -70,7 +70,7 @@
     "emojibase-data": "18.0.0",
     "fflate": "0.8.3",
     "frimousse": "0.4.0",
-    "get-windows": "9.3.0",
+    "get-windows": "10.0.0",
     "hast-util-from-html-isomorphic": "2.0.0",
     "hast-util-to-text": "4.0.3",
     "ignore": "7.0.14",
