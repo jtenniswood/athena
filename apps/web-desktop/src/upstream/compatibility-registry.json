@@ -416,12 +416,16 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/index.tsx",
-    "reason": "Compose browser search, disclosures, pins, and None grouping without desktop shortcuts or the duplicate top Capabilities link.",
+    "reason": "Compose browser search, disclosures, pins, None grouping, and configured messaging sections without desktop shortcuts or the duplicate top Capabilities link.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "search and disclosure form one navigation list"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "configured Telegram appears without chats and channel controls exclude unset platforms"
       },
       {
         "file": "scripts/sidebar-contracts.test.mjs",
@@ -448,7 +452,7 @@
     "sourceHash": "194742afb6c422679a0ad0507e1f29e66c4188345e47f7ee47f79dfc8f1fe2e6",
     "sourceRoot": "renderer",
     "inputHash": "194742afb6c422679a0ad0507e1f29e66c4188345e47f7ee47f79dfc8f1fe2e6",
-    "outputHash": "0094f4e03d823893b8ffae536a0424a3e5a63a2ebdb8c63f43a68425e3deb456"
+    "outputHash": "656a31c54034a4a051382b50de1a274ea30d8cfecc2bf542f7e7d27cd79f3ac3"
   },
   {
     "name": "single-conversation-wiring",
