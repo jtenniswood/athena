@@ -115,65 +115,47 @@ test('the first enabled profile routes All profiles drafts without changing scop
     localStorage.setItem('hermes-web.default-profile-route.v1', JSON.stringify({ connectionId: 'web-single', profile: 'writer' }))
   })
   await open(page)
+  const all = page.getByRole('button', { name: 'All profiles', exact: true })
+  await all.click()
   await page.getByRole('button', { name: 'New session', exact: true }).first().click()
   await editor(page).fill('Create this session in research')
   await editor(page).press('Enter')
   await expect.poll(() => creates.length).toBe(1)
   expect(creates[0].profile).toBe('research')
-  await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
+  await expect(all).toHaveAttribute('aria-pressed', 'true')
 
+  const writer = page.locator('[data-profile-key="writer"]')
+  await writer.click()
+  await expect(writer).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'New session', exact: true }).first().click()
+  await editor(page).fill('Create this session in writer')
+  await editor(page).press('Enter')
+  await expect.poll(() => creates.length).toBe(2)
+  expect(creates[1].profile).toBe('writer')
+
+  await all.click()
   await page.keyboard.press('ControlOrMeta+n')
   await expect(page).toHaveURL(/#\/$/)
   await editor(page).fill('Create this keyboard session in research')
   await editor(page).press('Enter')
-  await expect.poll(() => creates.length).toBe(2)
-  expect(creates[1].profile).toBe('research')
-  await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
+  await expect.poll(() => creates.length).toBe(3)
+  expect(creates[2].profile).toBe('research')
+  await expect(all).toHaveAttribute('aria-pressed', 'true')
 })
 
-touchTest('the phone session list has no profile selector and preserves the draft', async ({ page }) => {
+touchTest('the phone profile actions only manage enabled profiles and preserve the draft', async ({ page }) => {
+  await page.route('**/api/athena/preferences', route => route.abort())
   await page.setViewportSize({ width: 390, height: 844 })
   await open(page)
-  await editor(page).fill('Keep the draft in the combined list')
-  await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
-  await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Profile actions', exact: true })).toHaveCount(0)
-  await expect(page.locator('[contenteditable="true"]').first()).toHaveText('Keep the draft in the combined list')
+  await editor(page).fill('Keep the draft while managing phone profiles')
+  await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
+  await page.getByRole('button', { name: 'Profile actions', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Default for new sessions', exact: true })).toHaveCount(0)
+  await page.getByRole('checkbox', { name: 'Research', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('[data-profile-key="research"]')).toHaveCount(0)
+  await expect(page.locator('[contenteditable="true"]').first()).toHaveText('Keep the draft while managing phone profiles')
 })
-
-for (const width of [1440, 390]) {
-  touchTest(`sessions from every profile share pictured sections at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 960 })
-    await page.route('**/api/athena/preferences', route => route.abort())
-    await page.addInitScript(() => {
-      sessionStorage.setItem('hermes-web.browser.profile', 'writer')
-      localStorage.setItem('hermes.desktop.showAllProfiles', 'false')
-      localStorage.setItem('hermes.desktop.sidebarGrouping.allProfiles', 'date')
-    })
-    await page.route('**/api/profiles/sessions/sidebar**', async route => {
-      const response = await route.fetch()
-      const body = await response.json()
-      const template = body.recents.sessions.find(session => session.id === 'preview-week')
-      body.recents.sessions.push(
-        { ...template, id: 'research-history', profile: 'research', title: 'Research session history' },
-        { ...template, id: 'writer-history', profile: 'writer', title: 'Writer session history' }
-      )
-      await route.fulfill({ response, json: body })
-    })
-    await open(page)
-    await editor(page).fill('Keep my draft across the combined history')
-    if (width === 390) await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
-    for (const [profile, title] of [['default', 'Plan a calmer working week'], ['research', 'Research session history'], ['writer', 'Writer session history']]) {
-      const group = page.locator('[data-gateway-group]').filter({ has: page.locator(`[data-browser-profile-picture="${profile}"]`) })
-      await expect(group).toBeVisible()
-      await expect(group.getByRole('button', { name: title, exact: true })).toBeVisible()
-    }
-    await expect(page.locator('[data-gateway-section]')).toHaveCount(0)
-    await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
-    if (width === 390) await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
-    await expect(editor(page)).toHaveText('Keep my draft across the combined history')
-  })
-}
 
 for (const preference of ['queue', 'steer']) {
   for (const method of ['Enter', 'Send']) {
@@ -1631,6 +1613,7 @@ test('None grouping shows all sessions without subheaders and survives reload', 
     await page.keyboard.press('Escape')
   }
   for (const allProfiles of [false, true]) {
+    if (allProfiles) await page.getByRole('button', { name: 'All profiles', exact: true }).click()
     await chooseGrouping('Updated')
     await expect(dividers.first()).toBeVisible()
     // None must reveal sessions from collapsed groups, not just hide their labels.
@@ -2380,6 +2363,283 @@ test('navigation resizing follows the pointer at UI scale and persists keyboard 
   await expect(resizer).toHaveAttribute('aria-valuenow', '240')
 })
 
+test('profile context menus stay beside their originating profile', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await open(page)
+  const profile = page.locator('.browser-profile-choice[draggable="true"]').first()
+  await expect(profile).toBeVisible()
+  const origin = await profile.boundingBox()
+  await profile.click({ button: 'right' })
+  const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
+  await expect(menu).toBeVisible()
+  const position = await menu.boundingBox()
+  expect(origin).not.toBeNull()
+  expect(position).not.toBeNull()
+  expect(Math.abs(position.x - origin.x)).toBeLessThan(120)
+  // Collision handling can place a taller menu above the bottom avatar rail.
+  expect(Math.min(Math.abs(position.y - origin.y), Math.abs(position.y + position.height - origin.y))).toBeLessThan(40)
+})
+
+test('Sessions avatar editing preserves the conversation and targets the clicked profile', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
+  const writes = []
+  page.on('websocket', socket => socket.on('framesent', ({ payload }) => {
+    try {
+      const frame = JSON.parse(String(payload))
+      if (frame.method === 'profiles.configure') writes.push(frame.params)
+    } catch { /* Ignore non-JSON transport frames. */ }
+  }))
+  await open(page)
+  await editor(page).fill('Keep this draft while editing another profile')
+  const originalUrl = page.url()
+  const allProfiles = page.getByRole('button', { name: 'All profiles', exact: true })
+  const originalScope = await allProfiles.getAttribute('aria-pressed')
+  // Edit from Sessions before ever opening the Bots tab.
+  const writer = page.locator('[data-profile-key="writer"]')
+  await writer.click({ button: 'right' })
+  const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
+  await menu.getByRole('menuitem', { name: 'Edit profile', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Edit profile', exact: true })
+  await expect(dialog).toContainText('(writer).')
+  await expect(menu).toBeHidden()
+  await expect.poll(() => dialog.evaluate(node => node.contains(document.activeElement))).toBe(true)
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(writer).toBeFocused()
+  await expect(editor(page)).toHaveText('Keep this draft while editing another profile')
+  expect(page.url()).toBe(originalUrl)
+  await expect(allProfiles).toHaveAttribute('aria-pressed', originalScope)
+  expect(writes).toEqual([])
+
+  await writer.click({ button: 'right' })
+  await menu.getByRole('menuitem', { name: 'Edit profile', exact: true }).click()
+  await expect(dialog).toContainText('(writer).')
+  const title = dialog.getByRole('textbox').first()
+  const originalTitle = await title.inputValue()
+  await title.fill('Writer from Sessions')
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  expect(writes.at(-1)?.name).toBe('writer')
+  expect(writes.at(-1)?.ui_meta?.['hermes-bots']?.title).toBe('Writer from Sessions')
+  await expect(editor(page)).toHaveText('Keep this draft while editing another profile')
+  expect(page.url()).toBe(originalUrl)
+  await expect(allProfiles).toHaveAttribute('aria-pressed', originalScope)
+
+  await writer.click({ button: 'right' })
+  await menu.getByRole('menuitem', { name: 'Edit profile', exact: true }).click()
+  await expect(title).toHaveValue('Writer from Sessions')
+  await title.fill(originalTitle)
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(dialog).toBeHidden()
+
+  await allProfiles.click({ button: 'right' })
+  await expect(menu.getByRole('menuitem', { name: 'Edit profile', exact: true })).toHaveCount(0)
+})
+
+test('profiles can reorder and hide the default Hermes profile', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await open(page)
+  const hermes = page.getByRole('button', { name: 'Hermes', exact: true })
+  const writer = page.getByRole('button', { name: 'Writer', exact: true })
+  await hermes.hover()
+  await expect(page.locator('[data-slot="tooltip-content"]', { hasText: 'Hermes' })).toBeVisible()
+  await expect(hermes).toHaveAttribute('draggable', 'true')
+  const writerSize = await writer.evaluate(el => ({ width: el.clientWidth, height: el.clientHeight }))
+  await hermes.dragTo(writer, { targetPosition: { x: writerSize.width * .8, y: writerSize.height / 2 } })
+  const profileOrder = await page.locator('.browser-profile-choice[draggable="true"]').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))
+  expect(profileOrder).toEqual(['Research', 'Writer', 'Hermes'])
+
+  await hermes.click({ button: 'right' })
+  const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
+  await expect(menu.getByRole('menuitem', { name: 'Hide profile', exact: true })).toBeVisible()
+  await menu.getByRole('menuitem', { name: 'Hide profile', exact: true }).click()
+  await expect(hermes).toHaveCount(0)
+
+  await page.locator('.browser-profile-rail').click({ button: 'right' })
+  await page.getByRole('menu', { name: 'Profile actions', exact: true }).getByRole('menuitem', { name: 'Show hidden', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Hermes', exact: true })).toBeVisible()
+})
+
+for (const width of [1440]) {
+  test(`profile gap drops stay stable and persist at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 960 })
+    await open(page)
+    if (width === 390) await openNavigation(page)
+    const profiles = page.locator('.browser-profile-choice[draggable="true"]')
+    const rail = page.locator('.browser-profile-rail')
+    const marker = rail.locator('.browser-profile-drop-indicator')
+    const names = () => profiles.evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label')))
+    const beginDrag = async (source, x, y) => {
+      const bounds = await source.boundingBox()
+      await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(x, y, { steps: 12 })
+      await page.mouse.move(x, y)
+    }
+    let expected
+    for (const scale of [100, 125, 150]) {
+      await page.evaluate(percent => window.hermesDesktop.zoom.setPercent(percent), scale)
+      const original = await names()
+      const first = await profiles.nth(0).boundingBox(), second = await profiles.nth(1).boundingBox()
+      const gapX = (first.x + first.width + second.x) / 2
+      const y = second.y + second.height / 2
+      await beginDrag(profiles.nth(2), second.x + second.width * .2, y)
+      await expect(marker).toBeVisible()
+      // A preview must not shift the avatar or change which side the pointer is on.
+      expect((await profiles.nth(1).boundingBox()).x).toBeCloseTo(second.x, 1)
+      await page.mouse.move(gapX, y)
+      await page.mouse.move(gapX, y)
+      await expect(marker).toBeVisible()
+      await page.mouse.up()
+      expected = [original[0], original[2], original[1]]
+      await expect.poll(names).toEqual(expected)
+      await expect(marker).toHaveCount(0)
+
+      // Reverse direction into the leading gap, then cancel a further drag.
+      const all = await page.getByRole('button', { name: 'All profiles', exact: true }).boundingBox()
+      const leading = await profiles.first().boundingBox()
+      await beginDrag(profiles.last(), (all.x + all.width + leading.x) / 2, y)
+      await expect(marker).toBeVisible()
+      await page.mouse.up()
+      expected = [original[1], original[0], original[2]]
+      await expect.poll(names).toEqual(expected)
+      const end = await page.locator('.browser-profile-drop-end').boundingBox()
+      // Aim inside the visible trailing space at every UI scale.
+      await beginDrag(profiles.first(), Math.min(end.x + end.width / 2, width - 2), y)
+      await expect(marker).toBeVisible()
+      await page.keyboard.press('Escape')
+      await page.mouse.up()
+      await expect(marker).toHaveCount(0)
+      expect(await names()).toEqual(expected)
+    }
+    await page.reload()
+    await expect(editor(page)).toBeVisible()
+    if (width === 390) await openNavigation(page)
+    await expect.poll(names).toEqual(expected)
+  })
+
+  test(`profile end drop shows an indicator and saves the order at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 960 })
+    await open(page)
+    if (width === 390) await openNavigation(page)
+    const source = page.getByRole('button', { name: 'Hermes', exact: true })
+    const writer = page.getByRole('button', { name: 'Writer', exact: true })
+    const end = page.locator('.browser-profile-drop-end')
+    const indicator = end.locator('.browser-profile-drop-indicator')
+    const from = await source.boundingBox(), last = await writer.boundingBox(), target = await end.boundingBox()
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+    await page.mouse.down()
+    // Both the trailing half of the last avatar and the empty space after it
+    // must preview the same insertion position.
+    await page.mouse.move(last.x + last.width * .8, last.y + last.height / 2, { steps: 10 })
+    await page.mouse.move(last.x + last.width * .8, last.y + last.height / 2)
+    await expect(indicator).toBeVisible()
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 5 })
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2)
+    await expect(indicator).toBeVisible()
+    const marker = await indicator.boundingBox()
+    expect(marker.x).toBeGreaterThanOrEqual(last.x + last.width)
+    await page.screenshot({ path: testInfo.outputPath('profile-end-indicator.png') })
+    await page.mouse.up()
+    await expect(indicator).toHaveCount(0)
+    const order = page.locator('.browser-profile-choice[draggable="true"]')
+    expect(await order.evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))).toEqual(['Research', 'Writer', 'Hermes'])
+    await page.reload()
+    await expect(editor(page)).toBeVisible()
+    if (width === 390) await openNavigation(page)
+    expect(await order.evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))).toEqual(['Research', 'Writer', 'Hermes'])
+  })
+}
+
+for (const width of [390, 1440]) {
+  for (const scale of [100, 150]) {
+    test.extend({ hasTouch: width === 390 })(`profile actions preserve drafts and focus at ${width}px and ${scale}%`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 960 })
+      await open(page)
+      await page.evaluate(percent => window.hermesDesktop.zoom.setPercent(percent), scale)
+      await editor(page).fill('Keep this profile actions draft')
+      if (width === 390) await openNavigation(page)
+      const trigger = page.getByRole('button', { name: 'Profile actions', exact: true })
+      const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Profile actions', exact: true })
+      const actionRole = width === 390 ? 'button' : 'menuitem'
+      await trigger.click()
+      await expect(surface.getByRole(actionRole, { name: 'Show hidden', exact: true })).toBeDisabled()
+      await page.screenshot({ path: testInfo.outputPath('profile-actions.png') })
+      const bounds = await surface.boundingBox()
+      expect(bounds.x).toBeGreaterThanOrEqual(-1)
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width + 1)
+      expect(bounds.y).toBeGreaterThanOrEqual(0)
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual(961)
+      if (width === 390) {
+        expect(bounds.y + bounds.height).toBeGreaterThan(950)
+        // The sheet traps Tab; its Escape must leave navigation open.
+        await surface.getByRole('button', { name: 'Cancel', exact: true }).focus()
+        await page.keyboard.press('Tab')
+        await expect(surface.getByRole('button', { name: 'Hide Hermes', exact: true })).toBeFocused()
+      }
+      await page.keyboard.press('Escape')
+      await expect(surface).toHaveCount(0)
+      await expect(trigger).toBeFocused()
+      await trigger.click()
+      await surface.getByRole(actionRole, { name: 'Hide Writer', exact: true }).click()
+      await expect(page.locator('[data-profile-key="writer"]')).toHaveCount(0)
+      await expect(trigger).toBeFocused()
+      await trigger.click()
+      await surface.getByRole(actionRole, { name: 'Show hidden', exact: true }).click()
+      await expect(page.locator('[data-profile-key="writer"]')).toBeVisible()
+      await expect(trigger).toBeFocused()
+      if (width === 390) await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
+      else {
+        await trigger.click()
+        await editor(page).click()
+        await expect(editor(page)).toBeFocused()
+      }
+      await expect(editor(page)).toHaveText('Keep this profile actions draft')
+    })
+  }
+}
+
+test.describe('touch profile controls', () => {
+  test.use({ hasTouch: true })
+  test('profile actions work with taps without changing the conversation', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await open(page)
+    await editor(page).fill('Keep the touch draft')
+    await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).tap()
+    const trigger = page.getByRole('button', { name: 'Profile actions', exact: true })
+    const sheet = page.getByRole('dialog', { name: 'Profile actions', exact: true })
+    await trigger.tap()
+    await sheet.getByRole('button', { name: 'Hide Research', exact: true }).tap()
+    await expect(page.locator('[data-profile-key="research"]')).toHaveCount(0)
+    await trigger.tap()
+    await sheet.getByRole('button', { name: 'Show hidden', exact: true }).tap()
+    await expect(page.locator('[data-profile-key="research"]')).toBeVisible()
+    await page.getByRole('button', { name: 'Back to chat', exact: true }).tap()
+    await expect(page).toHaveURL(/#\/preview-week$/)
+    await expect(editor(page)).toHaveText('Keep the touch draft')
+  })
+})
+
+test('phone profiles retain saved desktop order and reject drag operations', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('hermes.desktop.profileOrder', JSON.stringify(['writer', 'default', 'research'])))
+  await page.setViewportSize({ width: 390, height: 844 })
+  await open(page)
+  await openNavigation(page)
+  const profiles = page.locator('[data-profile-key]')
+  const names = () => profiles.evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label')))
+  await expect.poll(names).toEqual(['Writer', 'Hermes', 'Research'])
+  for (const profile of await profiles.all()) await expect(profile).toHaveAttribute('draggable', 'false')
+  // Even a synthetic drag cannot call the reorder command on a phone.
+  const dataTransfer = await page.evaluateHandle(() => new DataTransfer())
+  await profiles.first().dispatchEvent('dragstart', { dataTransfer })
+  await page.locator('.browser-profile-rail').dispatchEvent('drop', { dataTransfer, clientX: 350 })
+  expect(await names()).toEqual(['Writer', 'Hermes', 'Research'])
+  await expect(page.locator('.browser-profile-drop-indicator')).toHaveCount(0)
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes.desktop.profileOrder')))).toEqual(['writer', 'default', 'research'])
+  await page.setViewportSize({ width: 1440, height: 960 })
+  for (const profile of await profiles.all()) await expect(profile).toHaveAttribute('draggable', 'true')
+  expect(await names()).toEqual(['Writer', 'Hermes', 'Research'])
+})
+
 test('full-page browser routes open as modals and return to the chat', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await open(page)
@@ -3068,4 +3328,70 @@ test.describe('Bots touch refresh', () => {
     await page.locator('#browser-navigation').getByRole('button',{name:'Plan a calmer working week',exact:true}).click()
     await expect(editor(page)).toHaveText('Keep this draft while refreshing Bots')
   })
+})
+
+for (const width of [1440, 390]) {
+  touchTest(`sessions from every profile share pictured sections at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 960 })
+    await page.route('**/api/athena/preferences', route => route.abort())
+    await page.addInitScript(() => {
+      localStorage.setItem('hermes-web.browser.presentation-mode', 'true')
+      sessionStorage.setItem('hermes-web.browser.profile', 'writer')
+      localStorage.setItem('hermes.desktop.showAllProfiles', 'false')
+      localStorage.setItem('hermes.desktop.sidebarGrouping.allProfiles', 'date')
+    })
+    await page.route('**/api/profiles/sessions/sidebar**', async route => {
+      const response = await route.fetch()
+      const body = await response.json()
+      const template = body.recents.sessions.find(session => session.id === 'preview-week')
+      body.recents.sessions.push(
+        { ...template, id: 'research-history', profile: 'research', title: 'Research session history' },
+        { ...template, id: 'writer-history', profile: 'writer', title: 'Writer session history' }
+      )
+      await route.fulfill({ response, json: body })
+    })
+    await open(page)
+    await editor(page).fill('Keep my draft across the combined history')
+    if (width === 390) await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+    for (const [profile, title] of [['default', 'Plan a calmer working week'], ['research', 'Research session history'], ['writer', 'Writer session history']]) {
+      const group = page.locator('[data-gateway-group]').filter({ has: page.locator(`[data-browser-profile-picture="${profile}"]`) })
+      await expect(group).toBeVisible()
+      await expect(group.getByRole('button', { name: title, exact: true })).toBeVisible()
+    }
+    await expect(page.locator('[data-gateway-section]')).toHaveCount(0)
+    await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
+    if (width === 390) await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
+    await expect(editor(page)).toHaveText('Keep my draft across the combined history')
+  })
+}
+
+
+test('settings switch presentation mode live and restore the standard session list', async ({ page }) => {
+  await page.route('**/api/athena/preferences', route => route.abort())
+  await page.addInitScript(() => {
+    sessionStorage.setItem('hermes-web.browser.profile', 'writer')
+    localStorage.setItem('hermes.desktop.showAllProfiles', 'false')
+    localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarGrouping', 'date')
+  })
+  await open(page)
+  await editor(page).fill('Keep the draft while changing presentation')
+  await expect(page.locator('.browser-profile-footer')).toBeVisible()
+  await page.goto(`${origin}/#/settings?tab=config:browser-configuration`)
+  const presentation = page.getByRole('group', { name: 'Session list presentation', exact: true })
+  await expect(presentation.getByRole('button', { name: 'Standard', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await presentation.getByRole('button', { name: 'Presentation', exact: true }).click()
+  await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+  await expect(editor(page)).toHaveText('Keep the draft while changing presentation')
+  await expect(page.locator('[data-browser-profile-picture="default"]')).toBeVisible()
+  await page.reload()
+  await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
+  await expect(editor(page)).toHaveText('Keep the draft while changing presentation')
+  await page.goto(`${origin}/#/settings?tab=config:browser-configuration`)
+  await presentation.getByRole('button', { name: 'Standard', exact: true }).click()
+  await expect(page.locator('.browser-profile-footer')).toBeVisible()
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+  await expect(editor(page)).toHaveText('Keep the draft while changing presentation')
+  expect(await page.evaluate(() => localStorage.getItem('hermes-web.browser.hermes.desktop.sidebarGrouping'))).toBe('date')
+  await expect(page.locator('[data-browser-profile-picture]')).toHaveCount(0)
 })

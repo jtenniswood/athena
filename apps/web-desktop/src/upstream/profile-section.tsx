@@ -1,10 +1,12 @@
+import { useBrowserPreference } from '../platform/preferences'
 import { useBrowserProfiles } from './profiles'
 import { avatarColor, BotFace } from './browser-api'
 
 /** Reuse the profile's configured picture and display name in session headers. */
 export function useBrowserProfileSection(profile: string | undefined) {
   const model = useBrowserProfiles()
-  if (!profile) return null
+  const enabled = useBrowserPreference('presentationMode')
+  if (!enabled || !profile) return null
   const item = model.items.find(item => item.key === profile) ?? (model.fallback?.key === profile ? model.fallback : null)
   const name = item?.botName ?? profile
   return {

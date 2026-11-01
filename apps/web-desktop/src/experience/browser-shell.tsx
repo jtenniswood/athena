@@ -1,3 +1,5 @@
+import { BrowserProfileNavigation } from './profile-navigation'
+import { useBrowserPreference } from '../platform/preferences'
 import { useAndroidVisibleConversation } from '../upstream/android-host'
 import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
@@ -46,6 +48,7 @@ export function BrowserShell() {
   </SidebarProvider>
 }
 function BrowserLayout() {
+  const presentationMode = useBrowserPreference('presentationMode')
   useRendererMenuCompatibility()
   useEffect(() => installConversationSubmitScroll(), [])
   useEffect(() => installTranscriptPreferences(), [])
@@ -201,6 +204,7 @@ function BrowserLayout() {
           <p>{updateNotice.message}</p>
           <button type="button" className="browser-update-panel-action" onClick={updateNotice.update}>Update when safe</button>
         </div>}
+        {!presentationMode && <BrowserProfileNavigation hidden={tab !== 'sessions'} />}
       </aside>
       <BrowserNavigationResizer navigation={navigation} />
       <main className="browser-main" ref={main} hidden={navigation.mobile && navigation.drawerOpen} inert={navigation.compact && !navigation.mobile && navigation.drawerOpen} tabIndex={-1} aria-label="Conversation and workspace">

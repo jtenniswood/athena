@@ -42,6 +42,9 @@
       ],
       "hermes:web-assistant-ui-runtime": [
         "./src/upstream/assistant-ui-runtime.ts"
+      ],
+      "hermes:web-session-presentation": [
+        "./src/platform/session-presentation.ts"
       ]
     }
   }

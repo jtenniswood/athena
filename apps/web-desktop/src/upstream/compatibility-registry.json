@@ -13,7 +13,7 @@
       },
       {
         "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "the combined list survives delayed Bot activation and reload"
+        "scenario": "an explicit profile choice survives delayed Bot activation"
       },
       {
         "file": "tests/browser/interruptions.spec.mjs",
@@ -58,16 +58,16 @@
     "kind": "renderer-transform",
     "order": 30,
     "module": "store/profile.ts",
-    "reason": "Keep the session list scoped to all profiles while selecting new-chat owners without starting a desktop backend.",
+    "reason": "Keep standard profile selection and support a reactive all-profile scope in optional presentation mode.",
     "owner": "apps/web-desktop/src/upstream/transforms.ts",
     "tests": [
       {
         "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "the combined list survives delayed Bot activation and reload"
+        "scenario": "an explicit profile choice survives delayed Bot activation"
       },
       {
         "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "the combined list preserves the conversation draft across navigation and reload"
+        "scenario": "profile commands preserve the conversation draft across scope changes and reload"
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
@@ -76,7 +76,7 @@
     ],
     "removal": "Remove when upstream profile selection supports a browser-owned scope without starting desktop backends.",
     "sourceHash": "55d064cdff86ca18dab3dae7d26da01d54ecfa33ad5ca99fb233fa2f60fa897d",
-    "outputHash": "956a6b5ee835cad2e25746a8afc785301ecf1075349e6341376051a1d03848c1",
+    "outputHash": "1267747233333cb4089810a5fc72d353cf543eda7be60cc43174e3fd9863ad11",
     "handler": "browser-profile-selection",
     "sourceRoot": "renderer"
   },
@@ -104,12 +104,12 @@
     "kind": "renderer-transform",
     "order": 30,
     "module": "app/session/hooks/use-session-list-actions.ts",
-    "reason": "Refresh and paginate sessions using the unified list scope, independently of the active chat profile.",
+    "reason": "Refresh and paginate the standard or presentation session scope independently of background gateway activation.",
     "owner": "apps/web-desktop/src/upstream/transforms.ts",
     "tests": [
       {
         "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "the combined list survives delayed Bot activation and reload"
+        "scenario": "an explicit profile choice survives delayed Bot activation"
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
@@ -118,7 +118,7 @@
     ],
     "removal": "Remove when shared-gateway sidebar refresh accepts the browser profile scope as a public input.",
     "sourceHash": "4f3fa082a0a0125d4955faf243bc7606781ae0031053ce7810eeeda337dd0fdb",
-    "outputHash": "830bc57299e690502fe8df7894f9a6e1110f85e0a1971176205ba13db62ae098",
+    "outputHash": "576179396609a51b5302ad9446d56c124c82b6154ad4187b8957b18bdbf1d94a",
     "handler": "profile-session-refresh",
     "sourceRoot": "renderer"
   },
@@ -244,7 +244,7 @@
     "tests": [
       {
         "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "the combined list survives delayed Bot activation and reload"
+        "scenario": "an explicit profile choice survives delayed Bot activation"
       }
     ],
     "removal": "Remove when public profile activation contracts prevent background readiness overwriting browser selection.",
@@ -302,16 +302,21 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "None grouping shows all sessions without subheaders and survives reload"
+      },
+      {
+        "file": "scripts/unified-session-list.test.mjs",
+        "scenario": "presentation mode switches scope and grouping without changing standard preferences"
       }
     ],
     "removal": "Upstream supports None grouping as a persisted option.",
     "handlers": [
-      "ungroupedStore"
+      "ungroupedStore",
+      "sessionPresentationStore"
     ],
     "sourceHash": "4ae5310b2f1c0f145baa680483e82698810dbf98d0f6c870f09d33d22b2a3e91",
     "sourceRoot": "renderer",
     "inputHash": "4ae5310b2f1c0f145baa680483e82698810dbf98d0f6c870f09d33d22b2a3e91",
-    "outputHash": "e6c84fd560b3597c0cf4ff58fa719d22df08bad504afc505267f10f75942d509"
+    "outputHash": "3edada2a489f21494473233c64a61d85143775743cfafac64b8d0e955816de66"
   },
   {
     "name": "browser-session-filters",
@@ -425,6 +430,10 @@
       {
         "file": "scripts/browser.test.mjs",
         "scenario": "browser sidebar keeps Capabilities only in More controls"
+      },
+      {
+        "file": "scripts/unified-session-list.test.mjs",
+        "scenario": "presentation mode switches scope and grouping without changing standard preferences"
       }
     ],
     "removal": "A browser-owned navigation surface consumes public session models and actions.",
@@ -433,12 +442,13 @@
       "ungroupedSidebar",
       "removeBrowserNewSessionShortcut",
       "removeBrowserTopCapabilitiesLink",
-      "useBrowserSectionIds"
+      "useBrowserSectionIds",
+      "sessionPresentationSidebar"
     ],
     "sourceHash": "194742afb6c422679a0ad0507e1f29e66c4188345e47f7ee47f79dfc8f1fe2e6",
     "sourceRoot": "renderer",
     "inputHash": "194742afb6c422679a0ad0507e1f29e66c4188345e47f7ee47f79dfc8f1fe2e6",
-    "outputHash": "41e76b258bc8003965cbda786999b3e8052dbffc8ef63c2591b5a043c1d504b3"
+    "outputHash": "0094f4e03d823893b8ffae536a0424a3e5a63a2ebdb8c63f43a68425e3deb456"
   },
   {
     "name": "single-conversation-wiring",
@@ -3020,7 +3030,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/gateway-groups.tsx",
-    "reason": "Show all profile sections together with their configured pictures and display names, without a separate gateway heading.",
+    "reason": "In presentation mode, show configured pictures and display names in a single list of profile sections; retain standard headers otherwise.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -3035,6 +3045,24 @@
     "sourceHash": "6a6e88e4b8483bf0ff54a17142c9b006097e8addacd6e659b3dcdf278739cd9e",
     "sourceRoot": "renderer",
     "inputHash": "6a6e88e4b8483bf0ff54a17142c9b006097e8addacd6e659b3dcdf278739cd9e",
-    "outputHash": "548b3ab9f68d07ff322d5a26a6d8daad2e264811c94165452e0713ae7e16aaa4"
+    "outputHash": "d90433394a38347cc7d0b6bca7aa7698cf2fcb2553b0ba6a69616bb6345ca962"
+  },
+  {
+    "name": "browser-session-presentation-alias",
+    "kind": "alias",
+    "order": 0,
+    "reason": "Share the browser presentation preference with renderer selectors.",
+    "owner": "apps/web-desktop/src/platform/session-presentation.ts",
+    "tests": [
+      {
+        "file": "scripts/unified-session-list.test.mjs",
+        "scenario": "presentation mode switches scope and grouping without changing standard preferences"
+      }
+    ],
+    "removal": "Remove when upstream accepts the browser presentation preference as a public input.",
+    "fingerprintPolicy": "Browser-owned module with no upstream source.",
+    "specifier": "hermes:web-session-presentation",
+    "replacement": "./src/platform/session-presentation.ts",
+    "aliasGroup": "renderer"
   }
 ]

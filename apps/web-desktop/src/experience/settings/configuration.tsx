@@ -1,3 +1,4 @@
+import { browserPreference, useBrowserPreference } from '../../platform/preferences'
 import { settingsPageLabel } from './policy'
 import { useId } from 'react'
 import { BrowserPreferenceSync } from './preference-sync'
@@ -40,11 +41,25 @@ export function BrowserConfigurationAction({ command, destructive = false }: { c
 }
 
 export function BrowserConfigurationPage({ commands }: { commands: BrowserConfigurationCommands; scopeProfile?: string }) {
+  const presentationMode = useBrowserPreference('presentationMode')
   const followupBehavior = useFollowupBehavior()
   const showAuxiliaryTranscriptContent = useShowAuxiliaryTranscriptContent()
   return <section className="browser-settings-page browser-configuration-page" aria-label="Configuration management">
     <h2 className="browser-settings-page-title">{settingsPageLabel('config:browser-configuration', 'Configuration')}</h2>
     <BrowserPreferenceSync />
+    <section className="browser-followup-setting" aria-labelledby="browser-presentation-title">
+      <h3 id="browser-presentation-title">Session list presentation</h3>
+      <p>Presentation mode combines all profiles into sections with profile pictures and hides the bottom profile selector.</p>
+      <div className="browser-followup-options" role="group" aria-label="Session list presentation">
+        {([false, true] as const).map(enabled => <button
+          key={String(enabled)}
+          type="button"
+          aria-pressed={presentationMode === enabled}
+          className={presentationMode === enabled ? 'is-selected' : ''}
+          onClick={() => browserPreference('presentationMode').write(enabled)}
+        >{enabled ? 'Presentation' : 'Standard'}</button>)}
+      </div>
+    </section>
     <section className="browser-followup-setting" aria-labelledby="browser-followup-setting-title">
       <h3 id="browser-followup-setting-title">Follow-up behavior</h3>
       <p>Queue or steer messages sent during a reply. Cmd/Ctrl+Enter uses the other action once.</p>

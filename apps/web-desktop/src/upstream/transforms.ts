@@ -205,10 +205,12 @@ ${code.slice(scopeMarkerStart + scopeMarker.length)}`
       normalizedId.endsWith('/apps/desktop/src/store/profile.ts') ||
       normalizedId.endsWith('/desktop/src/store/profile.ts')
     ) {
-      // List scope stays unified even while a chat or new-chat owner changes.
+      code = "import { $browserPresentationMode } from 'hermes:web-session-presentation'\n" + code
+      // Presentation scope is independent of the selected chat's owner.
       const scope = '  showAll ? ALL_PROFILES : normalizeProfileKey(gateway)'
       if (code.split(scope).length !== 2) throw new Error('Browser unified profile scope changed')
-      code = code.replace(scope, '  window.__HERMES_WEB_BRIDGE__ ? ALL_PROFILES : showAll ? ALL_PROFILES : normalizeProfileKey(gateway)')
+      code = code.replace(scope, '  presentation ? ALL_PROFILES : showAll ? ALL_PROFILES : normalizeProfileKey(gateway)')
+        .replace('[$showAllProfiles, $activeGatewayProfile], (showAll, gateway)', '[$showAllProfiles, $activeGatewayProfile, $browserPresentationMode], (showAll, gateway, presentation)')
       const selectStart = code.indexOf('function selectProfile')
       const targetMarker = 'const target = normalizeProfileKey(name)'
       const targetStart = selectStart < 0 ? -1 : code.indexOf(targetMarker, selectStart)
@@ -266,7 +268,10 @@ ${withoutStaleFront.slice(lineStart)}`
       normalizedId.endsWith('/apps/desktop/src/app/session/hooks/use-session-list-actions.ts') ||
       normalizedId.endsWith('/desktop/src/app/session/hooks/use-session-list-actions.ts')
     ) {
+      code = "import { $browserPresentationMode } from 'hermes:web-session-presentation'\n" + code
       const patched = code
+        .replaceAll('sidebarProfileForScope(profileScopeRef.current)', 'sidebarProfileForScope(window.__HERMES_WEB_BRIDGE__ && !$browserPresentationMode.get() ? (window.__HERMES_WEB_ACTIVE_PROFILE__ ?? profileScopeRef.current) : profileScopeRef.current)')
+        .replaceAll('sidebarProfileForScope(profileScope)', 'sidebarProfileForScope(window.__HERMES_WEB_BRIDGE__ && !$browserPresentationMode.get() ? (window.__HERMES_WEB_ACTIVE_PROFILE__ ?? profileScope) : profileScope)')
         .replaceAll(
           'gatewayActivationEpoch() !== activationEpoch',
           '!window.__HERMES_WEB_BRIDGE__ && gatewayActivationEpoch() !== activationEpoch'

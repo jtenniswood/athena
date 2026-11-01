@@ -21,6 +21,7 @@ test('phone navigation closes for actual session and Bot changes while preservin
   await expect(page.getByRole('button', { name: 'Open navigation', exact: true })).toHaveAttribute('aria-expanded', 'false')
   await openNavigation()
   await page.getByRole('tab', { name: 'Sessions', exact: true }).click()
+  await page.getByRole('button', { name: 'All profiles', exact: true }).click()
   await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
   await expect(editor(page)).toHaveText('Keep the first phone conversation draft')
   await openNavigation()
@@ -49,20 +50,22 @@ test('a late Bot A response cannot replace Bot B or cross their drafts', async (
   await expect(editor(page)).toHaveText('Ordinary session draft')
 })
 
-test('the combined list survives delayed Bot activation and reload', async ({ page, gatewayApp }) => {
+test('an explicit profile choice survives delayed Bot activation', async ({ page, gatewayApp }, testInfo) => {
   const finishHeldResponse = observeResponses(page)
   await openConversation(page, gatewayApp.origin)
   await page.getByRole('tab', { name: 'Bots', exact: true }).click()
   const opening = gatewayApp.controls.hold(call => call.transport === 'rpc' && call.method === 'session.resume' && call.params.session_id === 'preview-research')
   await page.getByRole('button', { name: /Research · @/ }).click()
-  await opening.entered
+  await expect.poll(() => gatewayApp.controls.calls.some(call => call.method === 'session.resume' && call.params.session_id === 'preview-research')).toBe(true)
   await page.getByRole('tab', { name: 'Sessions', exact: true }).click()
+  const choice = page.locator('[data-profile-key="writer"]')
+  await choice.click()
   await finishHeldResponse(opening)
-  await expect(page.getByRole('button', { name: 'Plan a calmer working week', exact: true })).toBeVisible()
-  await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
+  await testInfo.attach('profile-after-response', { body: JSON.stringify(await page.evaluate(() => ({ saved: sessionStorage.getItem('hermes-web.browser.profile'), requested: window.__HERMES_WEB_ACTIVE_PROFILE__, pressed: [...document.querySelectorAll('[aria-pressed="true"]')].map(el => el.getAttribute('aria-label')) }))), contentType: 'application/json' })
+  await expect(choice).toHaveAttribute('aria-pressed', 'true')
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('hermes-web.browser.profile'))).toBe('writer')
   await page.reload()
-  await expect(page.getByRole('button', { name: 'Plan a calmer working week', exact: true })).toBeVisible({ timeout: 30000 })
-  await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
+  await expect(choice).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('a session selection supersedes delayed Bot activation without losing its draft', async ({ page, gatewayApp }) => {
@@ -74,6 +77,7 @@ test('a session selection supersedes delayed Bot activation without losing its d
   await page.getByRole('button', { name: /Research · @/ }).click()
   await opening.entered
   await page.getByRole('tab', { name: 'Sessions', exact: true }).click()
+  await page.getByRole('button', { name: 'All profiles', exact: true }).click()
   await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
   await expect(page).toHaveURL(/#\/preview-week$/)
   await finishHeldResponse(opening)
@@ -127,6 +131,7 @@ test('group selection survives delayed Bot activation and preserves both compose
   await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'Planning team')
   await expect(groupComposer).toHaveValue('Keep this group draft')
   await page.getByRole('tab', { name: 'Sessions', exact: true }).click()
+  await page.getByRole('button', { name: 'All profiles', exact: true }).click()
   await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
   await expect(editor(page)).toHaveText('Keep the ordinary session draft beside the group')
   await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-week')
@@ -164,6 +169,7 @@ test('creating a group selects the new room through the browser command', async 
   await expect(page.getByPlaceholder('New thread in New planning team… (@name to direct, @everyone for all)')).toBeVisible()
   await expect.poll(() => gatewayApp.profiles.find(profile => profile.name === 'research').ui_meta?.['hermes-bots']?.groups).toContain('New planning team')
   await page.getByRole('tab', { name: 'Sessions', exact: true }).click()
+  await page.getByRole('button', { name: 'All profiles', exact: true }).click()
   await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
   await expect(editor(page)).toHaveText('Keep the draft while creating a group')
   await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-week')
@@ -379,20 +385,46 @@ test('approval initialization waits for the gateway without a false action error
 })
 
 
-test('the combined list preserves the conversation draft across navigation and reload', async ({ page, gatewayApp }) => {
+test('profile commands preserve the conversation draft across scope changes and reload', async ({ page, gatewayApp }) => {
+  await openConversation(page, gatewayApp.origin)
+  await editor(page).fill('Keep the draft while browsing other profiles')
+  const writer = page.locator('[data-profile-key="writer"]')
+  await writer.click()
+  await expect(writer).toHaveAttribute('aria-pressed', 'true')
+  await expect(editor(page)).toHaveText('Keep the draft while browsing other profiles')
+  await page.reload()
+  await expect(writer).toHaveAttribute('aria-pressed', 'true', { timeout: 30000 })
+  await expect(editor(page)).toHaveText('Keep the draft while browsing other profiles', { timeout: 30000 })
+  const all = page.getByRole('button', { name: 'All profiles', exact: true })
+  await all.click()
+  await expect(all).toHaveAttribute('aria-pressed', 'true')
+  await expect.poll(() => page.evaluate(() => window.__HERMES_WEB_ACTIVE_PROFILE__)).toBe(null)
+  await expect(editor(page)).toHaveText('Keep the draft while browsing other profiles')
+  await page.reload()
+  await expect(all).toHaveAttribute('aria-pressed', 'true', { timeout: 30000 })
+  await expect(editor(page)).toHaveText('Keep the draft while browsing other profiles', { timeout: 30000 })
+})
+
+test('profile visibility survives navigation when preference storage is unavailable', async ({ page, gatewayApp }) => {
   await page.addInitScript(() => {
-    sessionStorage.setItem('hermes-web.browser.profile', 'writer')
-    localStorage.setItem('hermes.desktop.showAllProfiles', 'false')
+    const original = Storage.prototype.setItem
+    Storage.prototype.setItem = function (key, value) {
+      if (key === 'hermes-web.browser.hidden-profiles') throw new Error('Preference storage unavailable')
+      return original.call(this, key, value)
+    }
   })
   await openConversation(page, gatewayApp.origin)
-  await editor(page).fill('Keep the draft while browsing all profiles')
+  await editor(page).fill('Keep the draft across profile navigation')
+  const writer = page.locator('[data-profile-key="writer"]')
+  await writer.click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Hide profile', exact: true }).click()
+  await expect(writer).toHaveCount(0)
   await page.getByRole('tab', { name: 'Bots', exact: true }).click()
+  await expect(page.locator('.browser-profile-footer')).toBeHidden()
   await page.getByRole('tab', { name: 'Sessions', exact: true }).click()
-  await expect(editor(page)).toHaveText('Keep the draft while browsing all profiles')
-  await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
-  await page.reload()
-  await expect(editor(page)).toHaveText('Keep the draft while browsing all profiles', { timeout: 30000 })
-  await expect(page.getByRole('button', { name: 'Plan a calmer working week', exact: true })).toBeVisible()
+  await expect(page.locator('.browser-profile-footer')).toBeVisible()
+  await expect(writer).toHaveCount(0)
+  await expect(editor(page)).toHaveText('Keep the draft across profile navigation')
 })
 
 test('a rejected pin restores confirmed state and preserves the draft', async ({ page, gatewayApp }) => {
@@ -596,6 +628,7 @@ test.describe('touch roster rows', () => {
     await groupComposer.fill('Retain the touch group draft')
     await page.getByRole('button', { name: 'Open navigation', exact: true }).tap()
     await page.getByRole('tab', { name: 'Sessions', exact: true }).tap()
+    await page.getByRole('button', { name: 'All profiles', exact: true }).tap()
     await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).tap()
     await expect(editor(page)).toHaveText('Retain my draft during touch row actions')
   })
