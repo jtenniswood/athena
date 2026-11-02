@@ -1,8 +1,11 @@
 /* CSS zoom scales viewport units as well as the UI. Compensate the root
-   height and let the shell inherit its available width/height instead of
+   width/height and let the shell inherit its available size instead of
    the desktop renderer's 100vw/100vh, which leave gaps below 100% scale and
    clip content above it. Dynamic height also follows mobile browser chrome. */
 html {
+  /* Bound the layout explicitly so UI scaling cannot push the chat and its
+     controls beyond the Android WebView's available width. */
+  width: calc(100vw / var(--web-ui-scale, 1)) !important;
   height: calc(100dvh / var(--web-ui-scale, 1)) !important;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
