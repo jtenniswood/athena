@@ -304,7 +304,7 @@ test('browser sidebar keeps Capabilities only in More controls', () => {
   const output = removeBrowserTopCapabilitiesLink(source)
   assert.doesNotMatch(output, /id: 'capabilities'/)
   assert.doesNotMatch(output, /CAPABILITIES_ROUTE/)
-  assert.match(readFileSync(path.join(root, 'src/experience/tool-routes.ts'), 'utf8'), /path: '\/skills', label: 'Capabilities'/)
+  assert.match(readFileSync(path.join(root, 'src/experience/tool-routes.ts'), 'utf8'), /path: '\/capabilities', label: 'Capabilities'/)
   assert.throws(() => removeBrowserTopCapabilitiesLink(source.replace("id: 'capabilities'", "id: 'skills'")), /target changed/)
 })
 
