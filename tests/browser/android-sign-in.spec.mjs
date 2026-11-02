@@ -54,18 +54,25 @@ test.afterAll(async () => {
 
 const root = '/api/athena/android/auth/'
 
-test('Access approval form preserves the browser Origin and reaches the encrypted app return link', async ({ page, context }) => {
+test('Access sign-in automatically opens the encrypted app callback with a manual fallback', async ({ page, context, browserName }) => {
   const { publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 })
   const params = new URLSearchParams({ state: 'x'.repeat(43), key: publicKey.export({ type: 'spki', format: 'der' }).toString('base64url') })
   await context.addCookies([{ name: 'CF_Authorization', value: 'e30.eyJleHAiOjQwMDAwMDAwMDB9.signature', url: origin, secure: true, httpOnly: true }])
-  await page.goto(origin + root + 'access?' + params)
-  const [response] = await Promise.all([
-    page.waitForResponse(response => response.request().method() === 'POST'),
-    page.getByRole('button', { name: 'Approve Android connection' }).click()
-  ])
-  expect(response.request().headers().origin).toBe(origin)
-  expect(response.status()).toBe(200)
-  await expect(page.getByRole('link', { name: 'Return to Athena Android' })).toHaveAttribute('href', /^athena-android:\/\/access#[A-Za-z0-9_-]+$/)
+  const navigations = []
+  if (browserName === 'chromium') {
+    const session = await context.newCDPSession(page)
+    await session.send('Page.enable')
+    session.on('Page.frameRequestedNavigation', event => navigations.push(event.url))
+  }
+  // The app-scheme navigation can keep the document's load event pending on desktop browsers.
+  await page.goto(origin + root + 'access?' + params, { waitUntil: 'commit' })
+  const fallback = page.getByRole('link', { name: 'Return to Athena Android' })
+  await expect(fallback).toHaveAttribute('href', /^athena-android:\/\/access#[A-Za-z0-9_-]+$/)
+  await expect(page.getByRole('button', { name: 'Approve Android connection' })).toHaveCount(0)
+  if (browserName === 'chromium') {
+    const callback = await fallback.getAttribute('href')
+    await expect.poll(() => navigations.includes(callback)).toBe(true)
+  }
 })
 
 test('Hermes browser session approval also preserves Origin and can be exchanged once', async ({ page, context }) => {
