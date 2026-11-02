@@ -1114,6 +1114,48 @@ export function showHiddenBotsInBrowserRoster(source: string): string {
   const visibleRoster = showHiddenBots ? roster : roster.filter(bot => !isBotHidden(bot, allMeta))`)
 }
 
+export function useBrowserProfileSectionPictures(source: string, root: string): string {
+  const replacements: [string, string][] = [
+    ['  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA)', "  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA).filter(item => item.id !== 'hermes-bots:screen-portal')"],
+    ['  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()', '  const presentationMode = useStore($browserPresentationMode)\n  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()'],
+    ['if (nested || embedded || !group.connectionId) {', 'if (nested || embedded || !group.connectionId || presentationMode) {'],
+    ['  const label = aliases[group.id] || group.label', '  const browserProfile = useBrowserProfileSection(group.profile)\n  const label = aliases[group.id] || browserProfile?.label || group.label'],
+    [`              <ProfileGlyph
+                className="size-full"
+                color={group.color ?? null}
+                isDefault={group.profile === 'default'}
+                name={group.profile}
+              />`, `              browserProfile?.picture ?? <ProfileGlyph
+                className="size-full"
+                color={group.color ?? null}
+                isDefault={group.profile === 'default'}
+                name={group.profile}
+              />`]
+  ]
+  let output = source
+  for (const [before, after] of replacements) {
+    if (output.split(before).length !== 2) throw new Error('Browser profile section picture boundary changed')
+    output = output.replace(before, after)
+  }
+  const owner = JSON.stringify(path.join(root, 'src/upstream/profile-section'))
+  return `import { $browserPresentationMode } from 'hermes:web-session-presentation'\nimport { useBrowserProfileSection } from ${owner}\n` + output
+}
+
+export function useBrowserSessionPresentation(source: string, surface: 'store' | 'sidebar'): string {
+  const replacements: [string, string][] = surface === 'store' ? [
+    ['[$sidebarAgentsGrouped, $sidebarFlatGrouping, $sidebarAllProfilesGrouping, $showAllProfiles],', '[$sidebarAgentsGrouped, $sidebarFlatGrouping, $sidebarAllProfilesGrouping, $showAllProfiles, $browserPresentationMode],'],
+    ["(grouped, flat, allProfiles, showAll) => (grouped ? 'project' : showAll ? allProfiles : flat)", "(grouped, flat, allProfiles, showAll, presentation) => (presentation ? 'profile' : grouped ? 'project' : showAll ? allProfiles : flat)"]
+  ] : [
+    ['  const profileFilter = useStore($sidebarProfileFilter)', "  const savedProfileFilter = useStore($sidebarProfileFilter)\n  const presentationMode = useStore($browserPresentationMode)\n  const profileFilter = presentationMode ? [] : savedProfileFilter"]
+  ]
+  let output = source
+  for (const [before, after] of replacements) {
+    if (output.split(before).length !== 2) throw new Error(`Browser session presentation ${surface} boundary changed`)
+    output = output.replace(before, after)
+  }
+  return "import { $browserPresentationMode } from 'hermes:web-session-presentation'\n" + output
+}
+
 export function enableBrowserUngroupedSessions(source: string, surface: 'store' | 'menu' | 'sidebar'): string {
   const replacements: Record<typeof surface, [string, string][]> = {
     store: [
@@ -1384,6 +1426,9 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     trackBrowserSettingsSaves: source => trackBrowserSettingsSaves(source, root),
     useBrowserSettingsFrame: source => useBrowserSettingsFrame(source, root),
     useBrowserSearchLabel: source => useBrowserSearchLabel(source, root),
+    useBrowserProfileSectionPictures: source => useBrowserProfileSectionPictures(source, root),
+    sessionPresentationStore: source => useBrowserSessionPresentation(source, 'store'),
+    sessionPresentationSidebar: source => useBrowserSessionPresentation(source, 'sidebar'),
     ungroupedStore: source => enableBrowserUngroupedSessions(source, 'store'),
     ungroupedMenu: source => enableBrowserUngroupedSessions(source, 'menu'),
     ungroupedSidebar: source => enableBrowserUngroupedSessions(source, 'sidebar')
