@@ -16,27 +16,25 @@ async function fixture(t) {
   t.after(() => new Promise(resolve => server.close(resolve)))
   const url = `http://127.0.0.1:${server.address().port}${route}`
   const headers = { 'x-forwarded-proto': 'https', 'x-forwarded-host': 'athena.example.com' }
-  return { get: params => fetch(url + '?' + new URLSearchParams(params), { headers }),
+  return { get: (params, extra = {}) => fetch(url + '?' + new URLSearchParams(params), { headers: { ...headers, ...extra } }),
     post: (params, extra = {}) => fetch(url, { method: 'POST', headers: { ...headers, origin, 'content-type': 'application/x-www-form-urlencoded', ...extra }, body: new URLSearchParams(params) }) }
 }
 
-test('Access bootstrap requires explicit approval and encrypts only the Access cookie for the requesting app', async t => {
-  const { get, post } = await fixture(t)
-  const preview = await get({ key, state })
-  const html = await preview.text()
-  assert.equal(preview.status, 200)
-  assert.match(html, /Approve Android connection/)
-  assert.doesNotMatch(html, /shows code|matching code|pairing/i)
-  assert.match(html, /xxxxxx/)
-  assert.ok(!html.includes('athena-android://'), 'opening the page does not release a session')
-  assert.equal(preview.headers.get('referrer-policy'), 'same-origin')
-  assert.equal(preview.headers.get('cache-control'), 'no-store')
+test('Access bootstrap automatically returns an encrypted Access cookie to the requesting app', async t => {
+  const { get } = await fixture(t)
   const token = 'eyJhbGciOiJSUzI1NiJ9.eyJleHAiOjQwMDAwMDAwMDB9.signature'
-  const approved = await post({ key, state }, { cookie: `CF_Authorization=${token}; pocket_id_session=private; hermes_session_at=private` })
+  const approved = await get({ key, state }, { cookie: `CF_Authorization=${token}; pocket_id_session=private; hermes_session_at=private` })
   const result = await approved.text()
   assert.equal(approved.status, 200)
+  assert.doesNotMatch(result, /Approve Android connection|<form/)
+  assert.equal(approved.headers.get('referrer-policy'), 'same-origin')
+  assert.equal(approved.headers.get('cache-control'), 'no-store')
+  const nonce = result.match(/<script nonce="([A-Za-z0-9_-]+)">/)[1]
+  assert.ok(approved.headers.get('content-security-policy').includes(`script-src 'nonce-${nonce}'`))
   assert.ok(!result.includes(token) && !result.includes('private'))
   const callback = result.match(/athena-android:\/\/access#([A-Za-z0-9_-]+)/)[1]
+  assert.ok(result.includes(`window.location.replace("athena-android://access#${callback}")`))
+  assert.ok(result.includes(`href="athena-android://access#${callback}"`), 'manual return remains available')
   const envelope = Buffer.from(callback, 'base64url')
   const aesKey = privateDecrypt({ key: pair.privateKey, padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: 'sha256' }, envelope.subarray(0, 256))
   const aes = createDecipheriv('aes-256-gcm', aesKey, envelope.subarray(256, 268))
@@ -49,10 +47,20 @@ test('Access bootstrap requires explicit approval and encrypts only the Access c
 
 test('Access bootstrap rejects missing cookies, unsafe input and cross-origin approvals', async t => {
   const { get, post } = await fixture(t)
+  const missing = await get({ key, state })
+  assert.equal(missing.status, 409)
+  assert.doesNotMatch(await missing.text(), /athena-android:\/\/|window.location.replace/)
   assert.equal((await post({ key, state })).status, 409)
   assert.equal((await post({ key, state }, { origin: 'null' })).status, 403)
   assert.equal((await post({ key, state }, { origin: 'https://attacker.test', cookie: 'CF_Authorization=valid' })).status, 403)
   assert.equal((await get({ key, state: '<script>' })).status, 400)
   assert.equal((await get({ key: 'a'.repeat(400), state })).status, 400)
   assert.equal((await post({ key, state }, { 'x-forwarded-proto': 'http', origin: 'http://athena.example.com' })).status, 400)
+})
+
+test('Access bootstrap still accepts same-origin POSTs from an already-open approval page', async t => {
+  const { post } = await fixture(t)
+  const response = await post({ key, state }, { cookie: 'CF_Authorization=e30.eyJleHAiOjQwMDAwMDAwMDB9.signature' })
+  assert.equal(response.status, 200)
+  assert.match(await response.text(), /window.location.replace\("athena-android:\/\/access#/)
 })
