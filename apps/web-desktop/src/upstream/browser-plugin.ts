@@ -1051,6 +1051,9 @@ export function filterBrowserSessionMenu(source: string, root: string): string {
   const target = 'function OptionCheckbox({ checked, onCheck, option }: { checked: boolean; onCheck: () => void; option: Option }) {'
   if (source.split(target).length !== 2) throw new Error('Browser session filter menu target changed')
   const replacements: [string, string][] = [
+    ['  const grouping = useStore($sidebarGrouping)', '  const grouping = useStore($sidebarGrouping)\n  const presentationMode = useStore($browserPresentationMode)'],
+    ['        <DropdownMenuGroup>\n          <DropdownMenuSub>', '        <DropdownMenuGroup>\n          {!presentationMode && <DropdownMenuSub>'],
+    ['          </DropdownMenuSub>\n\n          <DropdownMenuSub>', '          </DropdownMenuSub>}\n\n          <DropdownMenuSub>'],
     ['  const groupingLabel = groupings.find(option => option.id === grouping)?.label\n', ''],
     [
       "      {option.label}\n    </DropdownMenuCheckboxItem>",
@@ -1106,7 +1109,7 @@ function OptionGlyph({ option }: { option: Option }) {`
   if (output.split(manualOrdering).length !== 2) throw new Error('Browser manual ordering option contract changed')
   output = output.replace(manualOrdering, '      return true')
   const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-shortcuts'))
-  return `import { browserSidebarActionLabel, useBrowserSidebarShortcuts } from ${owner}\n` + output.replace(target, target + hideDesktopOnlyRows)
+  return `import { $browserPresentationMode } from 'hermes:web-session-presentation'\nimport { browserSidebarActionLabel, useBrowserSidebarShortcuts } from ${owner}\n` + output.replace(target, target + hideDesktopOnlyRows)
 }
 
 export function showHiddenBotsInBrowserRoster(source: string): string {
