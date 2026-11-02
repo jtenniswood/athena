@@ -1052,6 +1052,7 @@ export function filterBrowserSessionMenu(source: string, root: string): string {
   if (source.split(target).length !== 2) throw new Error('Browser session filter menu target changed')
   const replacements: [string, string][] = [
     ['  const grouping = useStore($sidebarGrouping)', '  const grouping = useStore($sidebarGrouping)\n  const presentationMode = useStore($browserPresentationMode)'],
+    ['  const ordering = useStore($sidebarOrdering)', "  const presentationGrouping = useBrowserPreference('presentationGrouping')\n  const ordering = useStore($sidebarOrdering)"],
     ['        <DropdownMenuGroup>\n          <DropdownMenuSub>', `        <DropdownMenuGroup>
           <DropdownMenuCheckboxItem
             checked={presentationMode}
@@ -1061,6 +1062,15 @@ export function filterBrowserSessionMenu(source: string, root: string): string {
             <Codicon name="preview" size="0.8125rem" />
             Presentation mode
           </DropdownMenuCheckboxItem>
+          {presentationMode && <DropdownMenuSub>
+            <DropdownMenuSubTrigger><Codicon name="list-tree" size="0.8125rem" />Grouping</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup value={presentationGrouping} onValueChange={value => browserPreference('presentationGrouping').write(value === 'project' ? 'project' : 'none')}>
+                <DropdownMenuRadioItem value="none" onSelect={keepOpen}><Codicon name="list-unordered" size="0.8125rem" />Chats</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="project" onSelect={keepOpen}><Codicon name="root-folder" size="0.8125rem" />Projects</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>}
           {!presentationMode && <DropdownMenuSub>`],
     ['          </DropdownMenuSub>\n\n          <DropdownMenuSub>', '          </DropdownMenuSub>}\n\n          <DropdownMenuSub>'],
     ['  const groupingLabel = groupings.find(option => option.id === grouping)?.label\n', ''],
@@ -1118,7 +1128,7 @@ function OptionGlyph({ option }: { option: Option }) {`
   if (output.split(manualOrdering).length !== 2) throw new Error('Browser manual ordering option contract changed')
   output = output.replace(manualOrdering, '      return true')
   const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-shortcuts'))
-  return `import { browserPreference } from ${JSON.stringify(path.join(root, 'src/platform/preferences'))}\nimport { $browserPresentationMode } from 'hermes:web-session-presentation'\nimport { browserSidebarActionLabel, useBrowserSidebarShortcuts } from ${owner}\n` + output.replace(target, target + hideDesktopOnlyRows)
+  return `import { browserPreference, useBrowserPreference } from ${JSON.stringify(path.join(root, 'src/platform/preferences'))}\nimport { $browserPresentationMode } from 'hermes:web-session-presentation'\nimport { browserSidebarActionLabel, useBrowserSidebarShortcuts } from ${owner}\n` + output.replace(target, target + hideDesktopOnlyRows)
 }
 
 export function showHiddenBotsInBrowserRoster(source: string): string {
@@ -1139,6 +1149,8 @@ export function showHiddenBotsInBrowserRoster(source: string): string {
 
 export function useBrowserProfileSectionPictures(source: string, root: string): string {
   const replacements: [string, string][] = [
+    ['  const hiddenCount = embedded ? 0 : Math.max(0, sessions.length - visibleCount)', "  const presentationEnabled = useBrowserPreference('presentationMode')\n  const projectGrouping = useBrowserPreference('presentationGrouping') === 'project' && presentationEnabled\n  const hiddenCount = embedded || projectGrouping ? 0 : Math.max(0, sessions.length - visibleCount)"],
+    ['{renderRows(embedded ? sessions : sessions.slice(0, visibleCount))}', '{embedded ? renderRows(sessions) : <BrowserProfileProjectRows sessions={projectGrouping ? sessions : sessions.slice(0, visibleCount)} renderRows={renderRows} />}'],
     ['  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA)', "  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA).filter(item => item.id !== 'hermes-bots:screen-portal')"],
     ['  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()', '  const presentationMode = useStore($browserPresentationMode)\n  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()'],
     ['if (nested || embedded || !group.connectionId) {', 'if (nested || embedded || !group.connectionId || presentationMode) {'],
@@ -1161,7 +1173,7 @@ export function useBrowserProfileSectionPictures(source: string, root: string): 
     output = output.replace(before, after)
   }
   const owner = JSON.stringify(path.join(root, 'src/upstream/profile-section'))
-  return `import { $browserPresentationMode } from 'hermes:web-session-presentation'\nimport { useBrowserProfileSection } from ${owner}\n` + output
+  return `import { useBrowserPreference } from ${JSON.stringify(path.join(root, 'src/platform/preferences'))}\nimport { BrowserProfileProjectRows } from ${JSON.stringify(path.join(root, 'src/upstream/profile-projects'))}\nimport { $browserPresentationMode } from 'hermes:web-session-presentation'\nimport { useBrowserProfileSection } from ${owner}\n` + output
 }
 
 export function useBrowserSessionPresentation(source: string, surface: 'store' | 'sidebar'): string {

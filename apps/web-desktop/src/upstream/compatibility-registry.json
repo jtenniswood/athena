@@ -323,7 +323,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
-    "reason": "Hide desktop profile/card controls and the grouping summary, add a presentation mode toggle and hide grouping controls while enabled, expose None grouping, and add leading icons and sidebar action shortcuts.",
+    "reason": "Add presentation mode and its Chats/Projects grouping choice, preserve standard grouping controls, hide desktop profile/card controls and the grouping summary, expose None grouping, and add sidebar action shortcuts.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -337,6 +337,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "settings switch presentation mode live and restore the standard session list"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "presentation mode groups projects within each profile and remembers the choice"
       }
     ],
     "removal": "The browser owns the filter menu or upstream offers composition flags.",
@@ -347,7 +351,7 @@
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
     "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
-    "outputHash": "a124bdd36a322813a30f629e7d28e2e8f675d715d1295413c61a00fb3208a6e7"
+    "outputHash": "65fac0413e54bbe57e5bd30c86edf035f65d490227f69a79d15ef1067d0d527e"
   },
   {
     "name": "hidden-bot-roster",
@@ -3042,12 +3046,16 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/gateway-groups.tsx",
-    "reason": "In presentation mode, show configured pictures and display names in a single list of profile sections; retain standard headers otherwise. Omit the desktop Screen portal from browser session headers.",
+    "reason": "In presentation mode, show configured pictures and display names in profile sections with optional nested project groups; retain standard headers otherwise. Omit the desktop Screen portal from browser session headers.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "scripts/unified-session-list.test.mjs",
         "scenario": "profile sections reuse configured pictures and keep exact owner routes"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "presentation mode groups projects within each profile and remembers the choice"
       }
     ],
     "removal": "Remove when upstream profile headers use the configured profile picture and support a single shared-gateway list.",
@@ -3057,7 +3065,7 @@
     "sourceHash": "6a6e88e4b8483bf0ff54a17142c9b006097e8addacd6e659b3dcdf278739cd9e",
     "sourceRoot": "renderer",
     "inputHash": "6a6e88e4b8483bf0ff54a17142c9b006097e8addacd6e659b3dcdf278739cd9e",
-    "outputHash": "d73e27fda193005013b2c1faa5b08bdf4a856d8139bd5a49c950db8ba2cf9236"
+    "outputHash": "10b245690a56421fbb15143917525f6c88f47ad09f7069023d5e36a3628df06d"
   },
   {
     "name": "browser-session-presentation-alias",

@@ -11,6 +11,9 @@ function harness(definition, initial = {}) {
 }
 test('existing preference formats retain defaults and conservative malformed-value behavior', () => {
   const parse = (id, raw) => parseBrowserPreference(definitions[id], raw)
+  assert.equal(parse('presentationGrouping', null), 'none')
+  assert.equal(parse('presentationGrouping', 'project'), 'project')
+  assert.equal(parse('presentationGrouping', 'invalid'), 'none')
   assert.equal(parse('presentationMode', null), false)
   assert.equal(parse('presentationMode', 'true'), true)
   assert.equal(parse('presentationMode', 'invalid'), false)
