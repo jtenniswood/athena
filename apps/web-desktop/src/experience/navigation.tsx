@@ -73,7 +73,9 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
     if (!drawerOpen) { focusDrawerOnOpen.current = false; return }
     if (focusDrawerOnOpen.current) {
       focusDrawerOnOpen.current = false
-      drawer.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus()
+      const target = drawer.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+        ?? drawer.current?.querySelector<HTMLElement>('.browser-navigation-actions-trigger')
+      target?.focus()
     }
     const keydown = (event: KeyboardEvent) => {
       // Portaled controls own focus and Escape until they are dismissed.
@@ -144,7 +146,7 @@ export function BrowserNavigationTabs({ navigation, settingsMenu }: { navigation
   }
   return <>
     <div className="browser-navigation-heading">
-      <div className="browser-navigation-tabs" role="tablist" aria-label="Navigation" onContextMenu={showActions}>
+      {visibleTabs.length === 1 ? <div className="browser-navigation-brand" onContextMenu={showActions}>Athena</div> : <div className="browser-navigation-tabs" role="tablist" aria-label="Navigation" onContextMenu={showActions}>
         {visibleTabs.map((value, index) => <button key={value} type="button" role="tab" tabIndex={tab === value ? 0 : -1} aria-selected={tab === value} draggable={visibleTabs.length > 1} data-dragging={draggedTab === value || undefined} onDragStart={event => {
           setDraggedTab(value)
           event.dataTransfer.effectAllowed = 'move'
@@ -169,7 +171,7 @@ export function BrowserNavigationTabs({ navigation, settingsMenu }: { navigation
             ;(event.currentTarget.parentElement?.children[visibleTabs.indexOf(next)] as HTMLElement)?.focus()
           }
         }} onClick={() => setTab(value)}>{NAVIGATION_TAB_LABELS[value]}</button>)}
-      </div>
+      </div>}
       {navigation.compact && !navigation.mobile && <BrowserToolbarButton tooltip="Close navigation" aria-label="Close navigation" onClick={navigation.dismissDrawer}><Codicon name="close" /></BrowserToolbarButton>}
       <SettingsMenu {...settingsMenu} triggerRef={actionsTrigger} triggerTooltip="Navigation tabs" triggerClassName="browser-navigation-actions-trigger" navigationOpen={navigation.open} additionalGroups={[{ key: 'tabs', label: 'Tabs', actions: NAVIGATION_TABS.map(value => ({
         key: value, label: NAVIGATION_TAB_LABELS[value], icon: <Codicon name={value === 'sessions' ? 'history' : 'hubot'} size="1rem" />, checked: visibleTabs.includes(value), disabled: visibleTabs.includes(value) && visibleTabs.length === 1, keepOpen: true, run: () => navigation.toggleTab(value)

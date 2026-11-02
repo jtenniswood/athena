@@ -2274,10 +2274,19 @@ for (const width of [390, 1440]) {
   for (const scale of [100, 150]) {
     test.extend({ hasTouch: width === 390 })(`navigation tab actions preserve selection and drafts at ${width}px and ${scale}%`, async ({ page }) => {
       await page.setViewportSize({ width, height: 960 })
+      const saved = await (await page.request.get(`${origin}/api/athena/preferences`)).json()
+      const reset = await page.request.patch(`${origin}/api/athena/preferences`, {
+        headers: { Origin: origin },
+        data: { version: 1, accountId: saved.accountId, seed: false, changes: { 'hermes-web.browser.navigation-tabs': '["sessions","bots"]', 'hermes-web.browser.navigation': 'sessions' } }
+      })
+      expect(reset.ok()).toBe(true)
       await open(page)
       await page.evaluate(value => window.hermesDesktop.zoom.setPercent(value), scale)
       await editor(page).fill('Keep this draft while arranging navigation')
-      if (width === 390) await openNavigation(page)
+      if (width === 390) {
+        await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+        await expect(page.locator('.browser-navigation.is-open')).toBeVisible()
+      }
       const trigger = page.getByRole('button', { name: 'Navigation tabs', exact: true })
       if (width === 390) {
         const navigationBox = await page.locator('.browser-navigation').boundingBox()
@@ -2286,7 +2295,7 @@ for (const width of [390, 1440]) {
         const triggerBox = await trigger.boundingBox()
         expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(width)
       }
-      const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Navigation tabs', exact: true })
+      const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
       const check = name => surface.getByRole(width === 390 ? 'checkbox' : 'menuitemcheckbox', { name, exact: true })
       if (width === 1440) await page.getByRole('tablist', { name: 'Navigation', exact: true }).click({ button: 'right' })
       else await trigger.click()
@@ -2295,12 +2304,15 @@ for (const width of [390, 1440]) {
       await expect(surface).toBeVisible()
       await expect(check('Sessions')).not.toBeChecked()
       await expect(check('Bots')).toBeDisabled()
-      await expect(page.getByRole('tab', { name: 'Bots', exact: true, includeHidden: true })).toHaveAttribute('aria-selected', 'true')
+      await expect(page.locator('.browser-navigation-brand')).toHaveText('Athena')
+      await expect(page.locator('.browser-navigation-tabs')).toHaveCount(0)
+      await expect(page.locator('.browser-sessions-pane')).toHaveJSProperty('hidden', true)
       await expect(page.getByRole('tab', { name: 'Sessions', exact: true, includeHidden: true })).toHaveCount(0)
       await check('Sessions').click()
       await check('Bots').click()
       await expect(check('Sessions')).toBeDisabled()
-      await expect(page.getByRole('tab', { name: 'Sessions', exact: true, includeHidden: true })).toHaveAttribute('aria-selected', 'true')
+      await expect(page.locator('.browser-navigation-brand')).toHaveText('Athena')
+      await expect(page.locator('.browser-sessions-pane')).toHaveJSProperty('hidden', false)
       const bounds = await surface.boundingBox()
       expect(bounds.x).toBeGreaterThanOrEqual(-1)
       expect(bounds.x + bounds.width).toBeLessThanOrEqual(width + 1)
@@ -2309,21 +2321,23 @@ for (const width of [390, 1440]) {
       await page.keyboard.press('Escape')
       await expect(surface).toHaveCount(0)
       await expect(trigger).toBeFocused()
+      await expect(page.locator('.browser-navigation-brand')).toHaveCSS('font-family', /^Collapse,/)
       if (width === 390) {
         await expect(page.locator('.browser-navigation.is-open')).toBeVisible()
-        await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
+        await page.locator('#browser-navigation').getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().click()
       }
       await expect(page).toHaveURL(/#\/preview-week$/)
       await expect(editor(page)).toHaveText('Keep this draft while arranging navigation')
       await page.reload()
-      await expect(editor(page)).toBeVisible()
-      if (width === 390) await openNavigation(page)
-      await expect(page.getByRole('tab', { name: 'Sessions', exact: true, includeHidden: true })).toHaveAttribute('aria-selected', 'true')
+      if (width === 390) await expect(page.locator('.browser-navigation.is-open')).toBeVisible()
+      else await expect(editor(page)).toBeVisible()
+      await expect(page.locator('.browser-navigation-brand')).toHaveText('Athena')
+      await expect(page.locator('.browser-navigation-tabs')).toHaveCount(0)
       await expect(page.getByRole('tab', { name: 'Bots', exact: true, includeHidden: true })).toHaveCount(0)
       await trigger.click()
       await check('Bots').click()
-      if (width === 390) await surface.getByRole('button', { name: 'Done', exact: true }).click()
-      else await page.keyboard.press('Escape')
+      await expect(page.locator('.browser-navigation-brand')).toHaveCount(0)
+      await page.keyboard.press('Escape')
       await expect(surface).toHaveCount(0)
       await expect(trigger).toBeFocused()
       await page.getByRole('tab', { name: 'Sessions', exact: true, includeHidden: true }).focus()
@@ -2331,7 +2345,7 @@ for (const width of [390, 1440]) {
       await expect(page.getByRole('tab', { name: 'Bots', exact: true, includeHidden: true })).toBeFocused()
       await page.keyboard.press('ArrowLeft')
       await expect(page.getByRole('tab', { name: 'Sessions', exact: true, includeHidden: true })).toBeFocused()
-      if (width === 390) await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
+      if (width === 390) await page.locator('#browser-navigation').getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().click()
       await expect(editor(page)).toHaveText('Keep this draft while arranging navigation')
     })
   }
