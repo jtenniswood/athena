@@ -60,7 +60,7 @@ const openNavigation = async page => {
 }
 const settingsTrigger = async page => {
   for (const dismiss of await page.getByRole('button', { name: 'Dismiss notification', exact: true }).all()) await dismiss.click()
-  const trigger = page.getByRole('button', { name: 'Navigation tabs', exact: true })
+  const trigger = page.getByRole('button', { name: 'Settings', exact: true })
   if (!await trigger.isVisible()) await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
   return trigger
 }
@@ -1000,7 +1000,7 @@ for (const width of [390, 1440]) {
     const section = page.locator('.browser-pinned-section')
     const heading = section.getByRole('button', { name: /Pinned/ }).first()
     await expect(section).toBeVisible()
-    const trigger = page.getByRole('button', { name: 'Navigation tabs', exact: true })
+    const trigger = page.getByRole('button', { name: 'Settings', exact: true })
     const sectionAction = name => page.getByRole(width === 390 ? 'button' : 'menuitem', { name, exact: true })
     // Touch users reach the same command through an explicit toolbar control.
     if (width === 390) await trigger.click()
@@ -1536,7 +1536,7 @@ touchTest('Cron jobs can be hidden before any jobs exist and restored later', as
   await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => route.fulfill({ json: jobs }))
   await open(page)
   await openSectionNavigation(page)
-  await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
   const sheet = page.getByRole('dialog', { name: 'Navigation tabs' })
   const cron = sheet.getByRole('checkbox', { name: 'Cron jobs' })
   await expect(cron).toBeVisible()
@@ -1550,7 +1550,7 @@ touchTest('Cron jobs can be hidden before any jobs exist and restored later', as
   await openSectionNavigation(page)
   const cronSection = page.locator('.browser-sessions-pane [data-browser-section-label]').filter({ hasText: /^Cron jobs$/ }).locator('xpath=ancestor::*[@data-sidebar="group"][1]')
   await expect(cronSection).toHaveAttribute('data-browser-section-hidden', '')
-  await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
   const restored = page.getByRole('dialog', { name: 'Navigation tabs' }).getByRole('checkbox', { name: 'Cron jobs' })
   await restored.click()
   await expect(cronSection).toBeVisible()
@@ -1580,7 +1580,7 @@ touchTest('section menu includes collapsed session, messaging, and Cron sections
     if (await content.count()) await label.click()
     await expect(content).toHaveCount(0)
   }
-  await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
   const sheet = page.getByRole('dialog', { name: 'Navigation tabs' })
   const sections = sheet.getByRole('group', { name: 'Sections' })
   await expect(sections.getByRole('checkbox', { name: 'Sessions', exact: true })).toHaveCount(0)
@@ -2287,7 +2287,7 @@ for (const width of [390, 1440]) {
         await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
         await expect(page.locator('.browser-navigation.is-open')).toBeVisible()
       }
-      const trigger = page.getByRole('button', { name: 'Navigation tabs', exact: true })
+      const trigger = page.getByRole('button', { name: 'Settings', exact: true })
       if (width === 390) {
         const navigationBox = await page.locator('.browser-navigation').boundingBox()
         expect(navigationBox.x).toBe(0)
@@ -3174,7 +3174,7 @@ for (const width of [390, 1440]) {
       // A presentation-only change must not create another persisted identity or
       // remove a collapsed section from the available actions.
       await header.evaluate(node => { node.textContent = 'Renamed schedule' })
-      await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+      await page.getByRole('button', { name: 'Settings', exact: true }).click()
       const action = page.getByRole(width === 390 ? 'checkbox' : 'menuitemcheckbox', { name: 'Cron jobs', exact: true })
       await expect(action).toBeChecked()
       await action.click()
@@ -3188,7 +3188,7 @@ for (const width of [390, 1440]) {
         await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
       }
       await expect(section).toBeHidden()
-      await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+      await page.getByRole('button', { name: 'Settings', exact: true }).click()
       await expect(action).not.toBeChecked()
       await action.click()
       await expect(section).toBeVisible()
@@ -3245,7 +3245,7 @@ for (const mode of ['android', 'older-android', 'browser', 'android-phone']) {
       if (mode !== 'browser') await expect.poll(() => calls.some(call => call.method === 'appSettingsMenu' && call.payload.mounted)).toBe(true)
       const navigation = page.getByRole('button', { name: /^(Open navigation|Back to home)$/ })
       if (await navigation.isVisible()) await navigation.click()
-      await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+      await page.getByRole('button', { name: 'Settings', exact: true }).click()
       const surface = page.getByRole(mode === 'android-phone' ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
       const settings = surface.getByRole(mode === 'android-phone' ? 'button' : 'menuitem', { name: 'App settings', exact: true })
       if (mode === 'browser' || mode === 'older-android') await expect(settings).toHaveCount(0)
@@ -3364,7 +3364,7 @@ test('saved Telegram conversations remain visible without detected configuration
   await expect(telegram).toBeVisible()
   await telegram.getByRole('button', { name: 'Telegram', exact: true }).click()
   await expect(telegram).toContainText('Saved Telegram conversation')
-  await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
   const menu = page.getByRole('menu', { name: 'Settings and workspace', exact: true })
   const toggle = menu.getByRole('menuitemcheckbox', { name: 'Telegram', exact: true })
   await expect(toggle).toHaveCount(1)
@@ -3458,7 +3458,7 @@ test('configured Telegram appears without chats and channel controls exclude uns
   const telegram = page.locator('[data-browser-section-id="messaging:telegram"]')
   await expect(telegram).toBeVisible()
   await expect(telegram.locator('[data-browser-section-header]')).toContainText('Telegram')
-  await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
   const menu = page.getByRole('menu', { name: 'Settings and workspace', exact: true })
   const toggle = menu.getByRole('menuitemcheckbox', { name: 'Telegram', exact: true })
   await expect(toggle).toBeVisible()
