@@ -693,15 +693,26 @@ export function removeBrowserGatewayGroupsRefresh(source: string, root: string):
   const changes: [string, string][] = [
     ["import { useCanonicalGroupLabels } from './canonical-group-labels'\n", ''],
     ['  const labels = useCanonicalGroupLabels()\n', ''],
+    ['  const profile = useValue(host.state.profile)\n', `  const profile = useValue(host.state.profile)
+  const gatewayState = useValue(host.state.gateway)
+  const gateway = useValue($gateway)
+`],
     ['  const [refresh, setRefresh] = useState(0)\n', '  const [refresh, finishRefresh] = useBotsRefreshSignal()\n'],
-    ['[connectionId, profile, refresh]', '[connectionId, profile, refresh, finishRefresh]'],
+    ["    setError('')\n", `    setError('')
+    // The open state may publish before the socket. Retry when both are ready.
+    if (gatewayState !== 'open' || !gateway) {
+      finishRefresh()
+      return
+    }
+`],
+    ['[connectionId, profile, refresh]', '[connectionId, profile, gatewayState, gateway, refresh, finishRefresh]'],
     ["})().catch(e => { if (!cancelled) {setError(e instanceof Error ? e.message : String(e))} })", "})().catch(e => { if (!cancelled) {setError(e instanceof Error ? e.message : String(e))} }).finally(finishRefresh)"],
     ['    <Button onClick={() => setRefresh(value => value + 1)} variant="ghost">{labels.refreshGroups}</Button>\n', '']
   ]
   for (const [before] of changes) {
     if (source.split(before).length !== 2) throw new Error('Browser gateway groups refresh target changed')
   }
-  return `import { useBotsRefreshSignal } from ${JSON.stringify(path.join(root, 'src/experience/browser-bots-refresh'))}\n` +
+  return `import { $gateway } from '@/store/gateway'\nimport { useBotsRefreshSignal } from ${JSON.stringify(path.join(root, 'src/experience/browser-bots-refresh'))}\n` +
     changes.reduce((output, [before, after]) => output.replace(before, after), source)
 }
 

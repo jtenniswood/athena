@@ -2986,7 +2986,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "plugins/hermes-bots/canonical-group-registry.tsx",
-    "reason": "Replace manual gateway groups refresh with a scoped Bots pull-to-refresh signal while retaining the existing loader.",
+    "reason": "Keep gateway groups loading and reconnect retries behind socket readiness while supporting Bots pull-to-refresh.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -3000,6 +3000,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "pulling Bots refreshes roster and groups while preserving the chat draft"
+      },
+      {
+        "file": "scripts/bots-gateway-readiness.test.mjs",
+        "scenario": "groups wait for a live socket and recover after reconnect without stale errors or replies"
       }
     ],
     "removal": "Remove when upstream exposes a presentation option for the gateway groups refresh control.",
@@ -3009,6 +3013,6 @@
     "sourceHash": "98e82fe10e1ef518bfbd4275b3febddb76f0f5bbbfc1fab7df9dd632d64e0429",
     "sourceRoot": "renderer",
     "inputHash": "98e82fe10e1ef518bfbd4275b3febddb76f0f5bbbfc1fab7df9dd632d64e0429",
-    "outputHash": "30868165dcb6d2ff561a31d1fc8cf7f29d4138035c783dd659573b83ea28e335"
+    "outputHash": "4efe11991c85029f55ffd72bc204893fa0c9f35f6c374c967f25e4846361713e"
   }
 ]
