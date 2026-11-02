@@ -3,11 +3,15 @@ import { createContext, useContext, type ReactNode } from 'react'
 import { BrowserNavigationSection } from './ui/navigation-section'
 import { Codicon } from '../upstream/browser-api'
 
+const SettingsContext = createContext<ReactNode>(null)
+
+export function BrowserSidebarSettings() { return useContext(SettingsContext) }
+
 const NavigateContext = createContext<(path: string) => void>(() => {})
 
 
-export function BrowserSidebarNavigation({ onNavigate, children }: { onNavigate: (path: string) => void; children: ReactNode }) {
-  return <NavigateContext.Provider value={onNavigate}>{children}</NavigateContext.Provider>
+export function BrowserSidebarNavigation({ onNavigate, settings, children }: { onNavigate: (path: string) => void; settings: ReactNode; children: ReactNode }) {
+  return <NavigateContext.Provider value={onNavigate}><SettingsContext.Provider value={settings}>{children}</SettingsContext.Provider></NavigateContext.Provider>
 }
 
 export function BrowserSidebarExtras() {

@@ -10,11 +10,12 @@ type SettingsMenuProps = {
   onOpenRoute: (path: string) => void
   additionalGroups?: BrowserActionGroup[]
   triggerClassName?: string
+  triggerLabel?: string
   triggerTooltip?: string
   navigationOpen?: boolean
 }
 
-export function SettingsMenu({ triggerRef, onOpenRoute, additionalGroups = [], triggerClassName, triggerTooltip = 'Settings', navigationOpen }: SettingsMenuProps) {
+export function SettingsMenu({ triggerRef, onOpenRoute, additionalGroups = [], triggerClassName, triggerLabel, triggerTooltip = 'Settings', navigationOpen }: SettingsMenuProps) {
   const compact = useMobileBrowser()
   const [appSettingsAvailable, setAppSettingsAvailable] = useState(false)
   useEffect(() => {
@@ -41,10 +42,10 @@ export function SettingsMenu({ triggerRef, onOpenRoute, additionalGroups = [], t
     ] }
   ]
   return <>
-    <BrowserToolbarButton ref={triggerRef} tooltip={triggerTooltip} className={triggerClassName} aria-label="Navigation tabs" aria-haspopup={compact ? 'dialog' : 'menu'} aria-expanded={Boolean(anchor)} onClick={event => {
+    <BrowserToolbarButton ref={triggerRef} tooltip={triggerTooltip} className={triggerClassName} aria-label="Settings" aria-haspopup={compact ? 'dialog' : 'menu'} aria-expanded={Boolean(anchor)} onClick={event => {
       const bounds = event.currentTarget.getBoundingClientRect()
       setAnchor({ x: bounds.right, y: bounds.bottom, returnFocus: event.currentTarget })
-    }}><Codicon name="settings-gear" /></BrowserToolbarButton>
+    }}><Codicon name="settings-gear" />{triggerLabel && <span>{triggerLabel}</span>}</BrowserToolbarButton>
     <BrowserActionSurface title="Settings and workspace" className="browser-settings-menu" groups={groups} anchor={anchor} compact={compact} onClose={() => setAnchor(null)} fallbackFocus={triggerRef} />
   </>
 }

@@ -87,7 +87,7 @@ async function hermesAuth(context, { providers = [externalProvider], signedIn = 
 }
 
 async function selectSignOut(page, compact = false) {
-  const trigger = page.getByRole('button', { name: 'Navigation tabs', exact: true })
+  const trigger = page.getByRole('button', { name: 'Settings', exact: true })
   if (!await trigger.isVisible()) await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
   await trigger.click()
   const menu = page.getByRole(compact ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
@@ -420,7 +420,7 @@ test('Gateway settings uses standard browser sign-in', async ({ page, context })
   await page.goto(`${origin}/#/preview-week`)
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
   await context.clearCookies()
-  await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await page.getByRole('menuitem', { name: 'Settings', exact: true }).click()
   await page.getByRole('navigation', { name: 'Settings categories' }).getByRole('button', { name: 'Gateway', exact: true }).click()
   const form = page.getByRole('region', { name: 'Gateway connection', exact: true })

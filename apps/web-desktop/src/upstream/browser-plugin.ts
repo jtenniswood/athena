@@ -1016,6 +1016,8 @@ export function useBrowserSearchLabel(source: string, root: string): string {
   }
   const slotTarget = '              value={searchQuery}\n            />'
   if (source.split(slotTarget).length !== 2) throw new Error('Browser sidebar disclosure target changed')
+  const settingsSlot = '                  </SidebarMenuItem>\n                )\n              })}'
+  if (source.split(settingsSlot).length !== 2) throw new Error('Browser sidebar settings slot changed')
   const extras = JSON.stringify(path.join(root, 'src/experience/sidebar-extras.tsx'))
   // Give the browser visibility preference a stable, label-independent target.
   const pinnedTarget = 'rootClassName="shrink-0 p-0 pb-1"'
@@ -1039,9 +1041,10 @@ export function useBrowserSearchLabel(source: string, root: string): string {
   const currentPinnedStart = source.lastIndexOf(pinnedSection, currentPinnedTarget)
   if (currentPinnedStart < 0) throw new Error('Browser pinned section visibility target changed')
   source = source.slice(0, currentPinnedStart) + source.slice(currentPinnedStart).replace(pinnedSection, '{!trimmedQuery && pinnedSessions.length > 0 && (')
-  return (`import { BrowserSidebarExtras } from ${extras}\n` + source)
+  return (`import { BrowserSidebarExtras, BrowserSidebarSettings } from ${extras}\n` + source)
     .replace(pinnedTarget, 'rootClassName="browser-pinned-section shrink-0 p-0 pb-1"')
     .replace(slotTarget, slotTarget + '\n            <BrowserSidebarExtras />')
+    .replace(settingsSlot, '                    {isNewSession && <BrowserSidebarSettings />}\n' + settingsSlot)
     .replace(ariaTarget, "aria-label={'Search'}")
     .replace(placeholderTarget, "placeholder={'Search'}")
 }

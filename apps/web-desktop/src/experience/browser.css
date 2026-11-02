@@ -302,3 +302,7 @@ html[data-experience="browser"] span:has(> img[src*="nous-girl.jpg"]) { display:
 
 .browser-chat-toolbar [data-browser-toolbar-button], .browser-chat-toolbar .browser-approval-control > button { position:relative; }
 .browser-navigation-actions-trigger { margin-inline-end:var(--web-space-1); }
+
+.browser-navigation .browser-navigation-settings-link { width:100%; height:var(--browser-session-control-height); min-height:var(--browser-session-control-height); display:flex; justify-content:flex-start; gap:var(--web-space-2); margin:0; padding:0 var(--web-space-2); border:1px solid transparent; border-radius:var(--web-radius-control); color:var(--web-text-muted); background:transparent; font:inherit; font-size:var(--web-text-body); font-weight:500; text-align:left; }
+.browser-navigation-settings-link > .codicon { width:1rem; flex:0 0 1rem; font-size:1rem; color:color-mix(in srgb,currentColor 72%,transparent); }
+@media (pointer:coarse) { .browser-navigation .browser-navigation-settings-link { min-height:var(--web-touch-min); height:auto; } }

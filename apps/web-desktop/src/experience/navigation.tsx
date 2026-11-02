@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentProps, type PointerEvent, type RefObject, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type ComponentProps, type ReactNode, type PointerEvent, type RefObject, type MouseEvent } from 'react'
 import { useBrowserSidebarSections } from './sidebar-sections'
 import { browserRouteCoversWorkspace } from '../upstream/browser-routes'
 import { Codicon } from '../upstream/browser-api'
@@ -17,6 +17,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
   trigger: RefObject<HTMLButtonElement | null>
 }) {
   const sections = useBrowserSidebarSections()
+  const actionsTrigger = useRef<HTMLButtonElement>(null)
   const drawer = useRef<HTMLElement>(null)
   const compact = useCompactBrowser()
   const mobile = useMobileBrowser()
@@ -104,7 +105,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
     }
   })
   return {
-    sections, drawer, compact, mobile, drawerOpen, collapsed, width, setWidth, tab, setTab, visibleTabs, backToHistory,
+    sections, actionsTrigger, drawer, compact, mobile, drawerOpen, collapsed, width, setWidth, tab, setTab, visibleTabs, backToHistory,
     open: compact ? drawerOpen : !collapsed,
     toggle: () => {
       if (compact) {
@@ -135,10 +136,9 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
 
 type Navigation = ReturnType<typeof useBrowserNavigation>
 
-export function BrowserNavigationTabs({ navigation, settingsMenu }: { navigation: Navigation; settingsMenu: Omit<ComponentProps<typeof SettingsMenu>, 'triggerRef' | 'additionalGroups' | 'triggerClassName' | 'triggerTooltip'> }) {
+export function BrowserNavigationTabs({ navigation, actions }: { navigation: Navigation; actions?: ReactNode }) {
   const [draggedTab, setDraggedTab] = useState<NavigationTab | null>(null)
-  const actionsTrigger = useRef<HTMLButtonElement>(null)
-  const { tab, setTab, visibleTabs } = navigation
+  const { actionsTrigger, tab, setTab, visibleTabs } = navigation
   const showActions = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault()
     event.stopPropagation()
@@ -172,10 +172,8 @@ export function BrowserNavigationTabs({ navigation, settingsMenu }: { navigation
           }
         }} onClick={() => setTab(value)}>{NAVIGATION_TAB_LABELS[value]}</button>)}
       </div>}
+      {actions}
       {navigation.compact && !navigation.mobile && <BrowserToolbarButton tooltip="Close navigation" aria-label="Close navigation" onClick={navigation.dismissDrawer}><Codicon name="close" /></BrowserToolbarButton>}
-      <SettingsMenu {...settingsMenu} triggerRef={actionsTrigger} triggerTooltip="Navigation tabs" triggerClassName="browser-navigation-actions-trigger" navigationOpen={navigation.open} additionalGroups={[{ key: 'tabs', label: 'Tabs', actions: NAVIGATION_TABS.map(value => ({
-        key: value, label: NAVIGATION_TAB_LABELS[value], icon: <Codicon name={value === 'sessions' ? 'history' : 'hubot'} size="1rem" />, checked: visibleTabs.includes(value), disabled: visibleTabs.includes(value) && visibleTabs.length === 1, keepOpen: true, run: () => navigation.toggleTab(value)
-      })) }, { key: 'sections', label: 'Sections', actions: navigation.sections.actions }]} />
     </div>
   </>
 }
@@ -202,4 +200,11 @@ export function BrowserNavigationResizer({ navigation }: { navigation: Navigatio
     if (event.key === 'Home') { event.preventDefault(); setWidth(MIN_NAVIGATION_WIDTH) }
     if (event.key === 'End') { event.preventDefault(); setWidth(MAX_NAVIGATION_WIDTH) }
   }} />
+}
+
+export function BrowserNavigationSettings({ navigation, onOpenRoute, row = false }: { navigation: Navigation; onOpenRoute: ComponentProps<typeof SettingsMenu>['onOpenRoute']; row?: boolean }) {
+  const { actionsTrigger, visibleTabs } = navigation
+  return <SettingsMenu onOpenRoute={onOpenRoute} triggerRef={actionsTrigger} triggerTooltip="Settings" triggerClassName={row ? "browser-navigation-settings-link browser-navigation-actions-trigger" : "browser-navigation-actions-trigger"} triggerLabel={row ? "Settings" : undefined} navigationOpen={navigation.open} additionalGroups={[{ key: 'tabs', label: 'Tabs', actions: NAVIGATION_TABS.map(value => ({
+        key: value, label: NAVIGATION_TAB_LABELS[value], icon: <Codicon name={value === 'sessions' ? 'history' : 'hubot'} size="1rem" />, checked: visibleTabs.includes(value), disabled: visibleTabs.includes(value) && visibleTabs.length === 1, keepOpen: true, run: () => navigation.toggleTab(value)
+      })) }, { key: 'sections', label: 'Sections', actions: navigation.sections.actions }]} />
 }
