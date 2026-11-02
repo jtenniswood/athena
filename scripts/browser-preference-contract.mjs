@@ -23,6 +23,7 @@ function definition(key, owner, defaultValue, parse, serialize = String, extra =
 const list = raw => { const value = json(raw); return Array.isArray(value) ? strings(value) : [] }
 const scale = raw => { const value = Number(raw); return Number.isFinite(value) && value > 0 ? value : 125 }
 export const browserPreferences = Object.freeze({
+  presentationMode: definition('hermes-web.browser.presentation-mode', 'platform/session-presentation', false, raw => raw === 'true', String, { memoryOnFailure: true }),
   activeTab: definition('hermes-web.browser.navigation', 'experience/browser-preferences', 'sessions', raw => raw === 'bots' ? 'bots' : 'sessions'),
   hiddenProfiles: definition('hermes-web.browser.hidden-profiles', 'experience/browser-preferences', empty, list, JSON.stringify),
   hideAllProfilesButton: definition('hermes-web.browser.hide-all-profiles-button', 'experience/browser-preferences', false, raw => raw === 'true'),

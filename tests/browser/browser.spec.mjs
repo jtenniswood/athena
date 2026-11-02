@@ -3331,6 +3331,74 @@ test.describe('Bots touch refresh', () => {
   })
 })
 
+for (const width of [1440, 390]) {
+  touchTest(`sessions from every profile share pictured sections at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 960 })
+    await page.route('**/api/athena/preferences', route => route.abort())
+    await page.addInitScript(() => {
+      localStorage.setItem('hermes-web.browser.presentation-mode', 'true')
+      sessionStorage.setItem('hermes-web.browser.profile', 'writer')
+      localStorage.setItem('hermes.desktop.showAllProfiles', 'false')
+      localStorage.setItem('hermes.desktop.sidebarGrouping.allProfiles', 'date')
+    })
+    await page.route('**/api/profiles/sessions/sidebar**', async route => {
+      const response = await route.fetch()
+      const body = await response.json()
+      const template = body.recents.sessions.find(session => session.id === 'preview-week')
+      body.recents.sessions.push(
+        { ...template, id: 'research-history', profile: 'research', title: 'Research session history' },
+        { ...template, id: 'writer-history', profile: 'writer', title: 'Writer session history' }
+      )
+      await route.fulfill({ response, json: body })
+    })
+    await open(page)
+    await editor(page).fill('Keep my draft across the combined history')
+    if (width === 390) await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+    for (const [profile, title] of [['default', 'Plan a calmer working week'], ['research', 'Research session history'], ['writer', 'Writer session history']]) {
+      const group = page.locator('[data-gateway-group]').filter({ has: page.locator(`[data-browser-profile-picture="${profile}"]`) })
+      await expect(group).toBeVisible()
+      await expect(group.getByRole('button', { name: title, exact: true })).toBeVisible()
+    }
+    await expect(page.locator('#browser-navigation').getByText('Screen', { exact: true })).toHaveCount(0)
+    await expect(page.locator('#browser-navigation').getByText('Not installed on host', { exact: true })).toHaveCount(0)
+    await expect(page.locator('[data-gateway-section]')).toHaveCount(0)
+    await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
+    if (width === 390) await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
+    await expect(editor(page)).toHaveText('Keep my draft across the combined history')
+  })
+}
+
+
+test('settings switch presentation mode live and restore the standard session list', async ({ page }) => {
+  await page.route('**/api/athena/preferences', route => route.abort())
+  await page.addInitScript(() => {
+    sessionStorage.setItem('hermes-web.browser.profile', 'writer')
+    localStorage.setItem('hermes.desktop.showAllProfiles', 'false')
+    localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarGrouping', 'date')
+  })
+  await open(page)
+  await editor(page).fill('Keep the draft while changing presentation')
+  await expect(page.locator('.browser-profile-footer')).toBeVisible()
+  await page.goto(`${origin}/#/settings?tab=config:browser-configuration`)
+  const presentation = page.getByRole('group', { name: 'Session list presentation', exact: true })
+  await expect(presentation.getByRole('button', { name: 'Standard', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await presentation.getByRole('button', { name: 'Presentation', exact: true }).click()
+  await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+  await expect(editor(page)).toHaveText('Keep the draft while changing presentation')
+  await expect(page.locator('[data-browser-profile-picture="default"]')).toBeVisible()
+  await page.reload()
+  await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
+  await expect(editor(page)).toHaveText('Keep the draft while changing presentation')
+  await page.goto(`${origin}/#/settings?tab=config:browser-configuration`)
+  await presentation.getByRole('button', { name: 'Standard', exact: true }).click()
+  await expect(page.locator('.browser-profile-footer')).toBeVisible()
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+  await expect(editor(page)).toHaveText('Keep the draft while changing presentation')
+  expect(await page.evaluate(() => localStorage.getItem('hermes-web.browser.hermes.desktop.sidebarGrouping'))).toBe('date')
+  await expect(page.locator('[data-browser-profile-picture]')).toHaveCount(0)
+})
+
 test('configured Telegram appears without chats and channel controls exclude unset platforms', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
   await page.route(/\/api\/messaging\/platforms(?:\?|$)/, route => route.fulfill({ json: { platforms: [
