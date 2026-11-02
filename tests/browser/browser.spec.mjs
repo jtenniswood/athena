@@ -2641,17 +2641,19 @@ test('phone profiles retain saved desktop order and reject drag operations', asy
   expect(await names()).toEqual(['Writer', 'Hermes', 'Research'])
 })
 
-test('full-page browser routes open as modals and return to the chat', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
+test('Capabilities opens its page and returns to the same chat draft', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
   await open(page)
-  await openNavigation(page)
+  await editor(page).fill('Keep this capabilities draft')
+  await editor(page).evaluate(node => { window.capabilitiesComposer = node })
   await page.getByRole('button', { name: 'More', exact: true }).click()
   await page.getByRole('group', { name: 'More controls', exact: true }).getByRole('button', { name: 'Capabilities', exact: true }).click()
-  await expect(page).toHaveURL(/#\/skills$/)
+  await expect(page).toHaveURL(/#\/capabilities$/)
   await expect(page.locator('[data-overlay-surface]:visible').filter({ hasText: 'Skills' })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page).toHaveURL(/#\/preview-week$/)
-  await expect(editor(page)).toBeVisible()
+  await expect(editor(page)).toHaveText('Keep this capabilities draft')
+  expect(await editor(page).evaluate(node => node === window.capabilitiesComposer)).toBe(true)
 })
 
 touchTest('phone tool surfaces fit a short 320px viewport and close back to chat', async ({ page }) => {
@@ -2685,7 +2687,7 @@ for (const [width, scale] of [[390, 100], [390, 150], [1440, 100], [1440, 150]])
     await (await picker).setFiles({ name: 'modal-draft.txt', mimeType: 'text/plain', buffer: Buffer.from('Keep this unsent file through tool navigation.') })
     const attachment = page.getByRole('button', { name: 'Remove modal-draft.txt', exact: true })
     await expect(attachment).toBeVisible()
-    for (const [label, path] of [['Capabilities', 'skills'], ['Messaging', 'messaging'], ['Artifacts', 'artifacts']]) {
+    for (const [label, path] of [['Capabilities', 'capabilities'], ['Messaging', 'messaging'], ['Artifacts', 'artifacts']]) {
       if (width === 390) await openNavigation(page)
       const extras = page.getByRole('group', { name: 'More controls', exact: true })
       if (!await extras.isVisible()) await page.getByRole('button', { name: 'More', exact: true }).click()
@@ -2764,7 +2766,7 @@ test('tool modal history preserves query state and cold entry closes to a usable
   await editor(page).evaluate(node => { window.modalComposer = node })
   await page.getByRole('button', { name: 'More', exact: true }).click()
   await page.getByRole('group', { name: 'More controls', exact: true }).getByRole('button', { name: 'Capabilities', exact: true }).click()
-  await expect(page).toHaveURL(/#\/skills$/)
+  await expect(page).toHaveURL(/#\/capabilities$/)
   await page.goBack()
   await expect(page).toHaveURL(/#\/preview-week\?keep=query#anchor$/)
   expect(await editor(page).evaluate(node => node === window.modalComposer)).toBe(true)
@@ -2774,7 +2776,7 @@ test('tool modal history preserves query state and cold entry closes to a usable
   await expect(page).toHaveURL(/#\/preview-week\?keep=query#anchor$/)
   await expect(editor(page)).toHaveText('Keep this history draft')
   expect(await editor(page).evaluate(node => node === window.modalComposer)).toBe(true)
-  await page.goto(`${origin}/#/skills`)
+  await page.goto(`${origin}/#/capabilities`)
   // Hash navigation keeps the document alive; reload proves cold route entry.
   await page.reload()
   await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)
