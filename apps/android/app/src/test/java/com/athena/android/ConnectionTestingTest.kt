@@ -55,7 +55,12 @@ class ConnectionTestingTest {
             action.performClick()
             assertEquals(ConnectionCoordinator.Stage.ACCESS_SIGN_IN, connection.state.stage)
             assertEquals(activity.getString(R.string.cancel_sign_in), action.text.toString())
-            assertNotNull(org.robolectric.shadows.ShadowDialog.getLatestDialog())
+            val browser = org.robolectric.Shadows.shadowOf(activity).nextStartedActivity
+            assertNotNull(browser)
+            assertEquals(android.content.Intent.ACTION_VIEW, browser.action)
+            assertEquals("https://saved.example/api/athena/android/auth/access",
+                browser.data!!.buildUpon().clearQuery().build().toString())
+            assertNull(org.robolectric.shadows.ShadowDialog.getLatestDialog())
         } finally { controller.pause().stop().destroy() }
     }
 
