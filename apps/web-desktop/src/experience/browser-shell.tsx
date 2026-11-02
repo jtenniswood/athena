@@ -1,5 +1,7 @@
 import { BrowserProfileNavigation } from './profile-navigation'
-import { useBrowserPreference } from '../platform/preferences'
+import { browserPreference } from '../platform/preferences'
+import { useStore } from '@nanostores/react'
+import { $sidebarGrouping, setSidebarGrouping } from '@/store/layout'
 import { useAndroidVisibleConversation } from '../upstream/android-host'
 import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
@@ -48,7 +50,14 @@ export function BrowserShell() {
   </SidebarProvider>
 }
 function BrowserLayout() {
-  const presentationMode = useBrowserPreference('presentationMode')
+  const presentationMode = useStore($sidebarGrouping) === 'profile'
+  useEffect(() => {
+    const legacy = browserPreference('presentationMode')
+    if (legacy.read()) {
+      setSidebarGrouping('profile')
+      legacy.write(false)
+    }
+  }, [])
   useRendererMenuCompatibility()
   useEffect(() => installConversationSubmitScroll(), [])
   useEffect(() => installTranscriptPreferences(), [])

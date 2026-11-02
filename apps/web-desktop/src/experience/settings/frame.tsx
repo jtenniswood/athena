@@ -5,7 +5,6 @@ import { groupSettingsSections, isSettingsSectionVisible, orderSettingsSections,
 import { BrowserToolbarButton } from '../ui/toolbar-button'
 import { BrowserColorThemesPage } from './themes-page'
 import { BrowserNotificationPermissionSetting } from './notification-permission'
-import { BrowserSessionPresentationSetting } from './session-presentation'
 import { SettingsFrameSurface, useSettingsFrame } from './frame-behavior'
 import './settings.css'
 
@@ -132,7 +131,6 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
               : pageVisible && activeView === 'notifications'
                 ? <div className="browser-notification-settings"><BrowserNotificationPermissionSetting />{children}</div>
                 : children}
-            {pageVisible && activeView === 'config:appearance' && <div className="browser-settings-page"><BrowserSessionPresentationSetting /></div>}
           </div>
         </main>
       </div>

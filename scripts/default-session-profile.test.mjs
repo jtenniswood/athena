@@ -4,10 +4,9 @@ import vm from 'node:vm'
 import { test } from 'node:test'
 import ts from 'typescript'
 
-function harness({ all = true, presentation = false, profiles = ['default', 'research'], order = ['research', 'default'], hidden = [], fail = false } = {}) {
+function harness({ all = true, profiles = ['default', 'research'], order = ['research', 'default'], hidden = [], fail = false } = {}) {
   const calls = []
   const dependencies = {
-    $browserPresentationMode: { get: () => presentation },
     $activeGatewayProfile: { get: () => 'writer' },
     $showAllProfiles: { get: () => all },
     $profiles: { get: () => profiles.map(name => ({ name, is_default: name === 'default' })) },
@@ -67,8 +66,4 @@ test('All profiles follows rail order, skips hidden profiles and handles stale o
   ]) {
     assert.equal(harness(options).target()?.profile, expected)
   }
-})
-
-test('presentation mode uses the first enabled profile without changing standard scope', () => {
-  assert.equal(harness({ all: false, presentation: true }).target()?.profile, 'research')
 })

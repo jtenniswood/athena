@@ -58,7 +58,7 @@
     "kind": "renderer-transform",
     "order": 30,
     "module": "store/profile.ts",
-    "reason": "Keep standard profile selection and support a reactive all-profile scope in optional presentation mode.",
+    "reason": "Keep browser profile selection and the native all-profile grouping scope independent of background gateway activation.",
     "owner": "apps/web-desktop/src/upstream/transforms.ts",
     "tests": [
       {
@@ -71,12 +71,12 @@
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
-        "scenario": "the combined session scope survives saved profile choices and opening another profile"
+        "scenario": "profile grouping uses the native all-profile scope"
       }
     ],
     "removal": "Remove when upstream profile selection supports a browser-owned scope without starting desktop backends.",
     "sourceHash": "55d064cdff86ca18dab3dae7d26da01d54ecfa33ad5ca99fb233fa2f60fa897d",
-    "outputHash": "1267747233333cb4089810a5fc72d353cf543eda7be60cc43174e3fd9863ad11",
+    "outputHash": "cc28256b5329dc8af0a167979e25d95214dc7b33ddd5e7861a242ce29a5b386f",
     "handler": "browser-profile-selection",
     "sourceRoot": "renderer"
   },
@@ -104,7 +104,7 @@
     "kind": "renderer-transform",
     "order": 30,
     "module": "app/session/hooks/use-session-list-actions.ts",
-    "reason": "Refresh and paginate the standard or presentation session scope independently of background gateway activation.",
+    "reason": "Refresh and paginate the selected native session scope independently of background gateway activation.",
     "owner": "apps/web-desktop/src/upstream/transforms.ts",
     "tests": [
       {
@@ -113,12 +113,12 @@
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
-        "scenario": "the combined session scope survives saved profile choices and opening another profile"
+        "scenario": "profile grouping uses the native all-profile scope"
       }
     ],
     "removal": "Remove when shared-gateway sidebar refresh accepts the browser profile scope as a public input.",
     "sourceHash": "4f3fa082a0a0125d4955faf243bc7606781ae0031053ce7810eeeda337dd0fdb",
-    "outputHash": "576179396609a51b5302ad9446d56c124c82b6154ad4187b8957b18bdbf1d94a",
+    "outputHash": "bd1d5c202cbfcdd34658af409a20131180b121a086fc16a2192634dafe21bd47",
     "handler": "profile-session-refresh",
     "sourceRoot": "renderer"
   },
@@ -305,25 +305,24 @@
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
-        "scenario": "presentation mode switches scope and grouping without changing standard preferences"
+        "scenario": "profile grouping uses the native all-profile scope"
       }
     ],
     "removal": "Upstream supports None grouping as a persisted option.",
     "handlers": [
-      "ungroupedStore",
-      "sessionPresentationStore"
+      "ungroupedStore"
     ],
     "sourceHash": "4ae5310b2f1c0f145baa680483e82698810dbf98d0f6c870f09d33d22b2a3e91",
     "sourceRoot": "renderer",
     "inputHash": "4ae5310b2f1c0f145baa680483e82698810dbf98d0f6c870f09d33d22b2a3e91",
-    "outputHash": "3edada2a489f21494473233c64a61d85143775743cfafac64b8d0e955816de66"
+    "outputHash": "e6c84fd560b3597c0cf4ff58fa719d22df08bad504afc505267f10f75942d509"
   },
   {
     "name": "browser-session-filters",
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
-    "reason": "Add presentation mode and its Chats/Projects grouping choice, preserve standard grouping controls, hide desktop profile/card controls and the grouping summary, expose None grouping, and add sidebar action shortcuts.",
+    "reason": "Adapt Gateway & profile grouping to Profile, hide desktop profile/card controls and the grouping summary, expose None grouping, and add sidebar action shortcuts.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -336,11 +335,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "settings switch presentation mode live and restore the standard session list"
-      },
-      {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "presentation mode groups projects within each profile and remembers the choice"
+        "scenario": "Profile grouping replaces presentation controls and switches live without gateway nesting"
       }
     ],
     "removal": "The browser owns the filter menu or upstream offers composition flags.",
@@ -351,7 +346,7 @@
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
     "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
-    "outputHash": "65fac0413e54bbe57e5bd30c86edf035f65d490227f69a79d15ef1067d0d527e"
+    "outputHash": "e0640af842abbed9d9aa057815a83a8396e50821af630512aa6323a62a5ef0d1"
   },
   {
     "name": "hidden-bot-roster",
@@ -445,7 +440,7 @@
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
-        "scenario": "presentation mode switches scope and grouping without changing standard preferences"
+        "scenario": "profile grouping uses the native all-profile scope"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -465,7 +460,7 @@
     "sourceHash": "194742afb6c422679a0ad0507e1f29e66c4188345e47f7ee47f79dfc8f1fe2e6",
     "sourceRoot": "renderer",
     "inputHash": "194742afb6c422679a0ad0507e1f29e66c4188345e47f7ee47f79dfc8f1fe2e6",
-    "outputHash": "63ae56b4787a81871fc1972389a0af18528834f9288a59fd97487aaee2c35035"
+    "outputHash": "a3652e641ba52f2493ac145c426e440af76f1ca6b4ddecf8a3c89c9f6d1ffed2"
   },
   {
     "name": "single-conversation-wiring",
@@ -3061,7 +3056,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/gateway-groups.tsx",
-    "reason": "In presentation mode, show configured pictures and display names in profile sections with optional nested project groups; retain standard headers otherwise. Omit the desktop Screen portal from browser session headers. Rank profile previews by the saved manual order when active.",
+    "reason": "In Profile grouping, show configured profile avatars and display names with chats directly beneath each profile, omitting the gateway nesting and desktop Screen portal. Rank profile previews by the saved manual order when active.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -3070,7 +3065,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "presentation mode groups projects within each profile and remembers the choice"
+        "scenario": "Profile grouping replaces presentation controls and switches live without gateway nesting"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -3085,24 +3080,6 @@
     "sourceHash": "6a6e88e4b8483bf0ff54a17142c9b006097e8addacd6e659b3dcdf278739cd9e",
     "sourceRoot": "renderer",
     "inputHash": "6a6e88e4b8483bf0ff54a17142c9b006097e8addacd6e659b3dcdf278739cd9e",
-    "outputHash": "ca9b061235c50a14416e609ab3049514885a0a3aaafe4d7d301a8647cf59e80c"
-  },
-  {
-    "name": "browser-session-presentation-alias",
-    "kind": "alias",
-    "order": 0,
-    "reason": "Share the browser presentation preference with renderer selectors.",
-    "owner": "apps/web-desktop/src/platform/session-presentation.ts",
-    "tests": [
-      {
-        "file": "scripts/unified-session-list.test.mjs",
-        "scenario": "presentation mode switches scope and grouping without changing standard preferences"
-      }
-    ],
-    "removal": "Remove when upstream accepts the browser presentation preference as a public input.",
-    "fingerprintPolicy": "Browser-owned module with no upstream source.",
-    "specifier": "hermes:web-session-presentation",
-    "replacement": "./src/platform/session-presentation.ts",
-    "aliasGroup": "renderer"
+    "outputHash": "27f3fedfddca3b0e5152aba3c892e7427ec7766bec4d8da3c530fe5437d82cb1"
   }
 ]

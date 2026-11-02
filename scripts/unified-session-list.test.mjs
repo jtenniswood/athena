@@ -15,49 +15,12 @@ function load(file, mocks, globals = {}) {
   }).outputText, context)
   return context.exports
 }
-function initializer(source, name) {
-  const parsed = ts.createSourceFile('selector.ts', source, ts.ScriptTarget.Latest, true)
-  return parsed.statements.flatMap(node => ts.isVariableStatement(node) ? Array.from(node.declarationList.declarations) : [])
-    .find(node => node.name.getText(parsed) === name).initializer.getText(parsed)
-}
-
-test('the combined session scope survives saved profile choices and opening another profile', () => {
-  const { transformRenderer } = load('src/upstream/transforms.ts')
-  const module = 'store/profile.ts'
-  const output = transformRenderer(readFileSync(path.join(root, '../desktop/src', module), 'utf8'), `/desktop/src/${module}`).code
-  const selector = initializer(output, '$profileScope')
-  for (const presentation of [false, true]) for (const all of [false, true]) for (const active of ['default', 'writer', 'research']) {
-    const scope = vm.runInNewContext(selector, {
-      ALL_PROFILES: '__all__', $browserPresentationMode: presentation,
-      $showAllProfiles: all, $activeGatewayProfile: active,
-      normalizeProfileKey: value => value || 'default', computed: (values, project) => project(...values)
-    })
-    assert.equal(scope, presentation || all ? '__all__' : active)
-  }
-})
-
-test('presentation mode switches scope and grouping without changing standard preferences', () => {
+test('profile grouping uses the native all-profile scope', () => {
   const { useBrowserSessionPresentation } = load('src/upstream/browser-plugin.ts')
-  const source = readFileSync(path.join(root, '../desktop/src/store/layout.ts'), 'utf8')
-  const selector = initializer(useBrowserSessionPresentation(source, 'store'), '$sidebarGrouping')
-  for (const presentation of [false, true]) for (const all of [false, true]) for (const grouped of [false, true]) {
-    assert.equal(vm.runInNewContext(selector, {
-      $browserPresentationMode: presentation, $sidebarAgentsGrouped: grouped, $showAllProfiles: all,
-      $sidebarFlatGrouping: 'date', $sidebarAllProfilesGrouping: 'status', computed: (values, project) => project(...values)
-    }), presentation ? 'profile' : grouped ? 'project' : all ? 'status' : 'date')
-  }
-  let enabled = false, notify
-  const { $browserPresentationMode } = load('src/platform/session-presentation.ts', () => ({
-    atom: initial => ({ value: initial, set(value) { this.value = value } }),
-    browserPreference: () => ({ read: () => enabled, subscribe: callback => { notify = callback } })
-  }))
-  assert.equal($browserPresentationMode.value, false)
-  enabled = true
-  notify()
-  assert.equal($browserPresentationMode.value, true)
-  enabled = false
-  notify()
-  assert.equal($browserPresentationMode.value, false)
+  const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/index.tsx'), 'utf8')
+  const output = useBrowserSessionPresentation(source)
+  assert.match(output, /label=\{grouping === 'profile' \? 'Profiles' : sessionsLabel\}/)
+  assert.doesNotMatch(output, /browserPresentationMode/)
 })
 
 test('profile sections reuse configured pictures and keep exact owner routes', () => {
@@ -80,7 +43,7 @@ test('profile sections reuse configured pictures and keep exact owner routes', (
   const element = (type, props) => ({ type, props })
   let enabled = true
   const { useBrowserProfileSection } = load('src/upstream/profile-section.tsx', () => ({
-    useBrowserPreference: () => enabled,
+    useStore: () => enabled ? 'profile' : 'none',
     useBrowserProfiles: () => ({ items: [{ key: 'research', label: 'Researcher', botName: 'Research', appearance: { color: 'blue', image: 'https://example.invalid/profile.png', shape: 'circle' } }] }),
     jsx: element, jsxs: element, avatarColor: color => color, BotFace: 'face'
   }))
