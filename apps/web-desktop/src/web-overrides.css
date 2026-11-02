@@ -263,6 +263,12 @@ body > [data-slot='fan-menu'] {
   row-gap: var(--composer-row-gap) !important;
 }
 
+/* The controls already have their own row, so upstream's multiline inset
+   must not shift the draft when it switches to the stacked layout. */
+[data-slot='composer-root']:not([data-popped-out]) [data-slot='composer-rich-input'] {
+  padding-left: 0;
+}
+
 [data-slot='composer-root']:not([data-popped-out]) [data-slot='composer-fade'] > div.grid.w-full:has([data-slot='composer-rich-input']) > [style*='grid-area: menu'],
 [data-slot='composer-root']:not([data-popped-out]) [data-slot='composer-fade'] > div.grid.w-full:has([data-slot='composer-rich-input']) > [class*='grid-area:menu'] {
   align-self: center;
