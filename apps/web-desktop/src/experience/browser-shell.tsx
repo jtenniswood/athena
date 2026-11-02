@@ -1,5 +1,7 @@
 import { BrowserProfileNavigation } from './profile-navigation'
-import { useBrowserPreference } from '../platform/preferences'
+import { browserPreference } from '../platform/preferences'
+import { useStore } from '@nanostores/react'
+import { $sidebarGrouping, setSidebarGrouping } from '@/store/layout'
 import { useAndroidVisibleConversation } from '../upstream/android-host'
 import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
@@ -48,7 +50,14 @@ export function BrowserShell() {
   </SidebarProvider>
 }
 function BrowserLayout() {
-  const presentationMode = useBrowserPreference('presentationMode')
+  const presentationMode = useStore($sidebarGrouping) === 'profile'
+  useEffect(() => {
+    const legacy = browserPreference('presentationMode')
+    if (legacy.read()) {
+      setSidebarGrouping('profile')
+      legacy.write(false)
+    }
+  }, [])
   useRendererMenuCompatibility()
   useEffect(() => installConversationSubmitScroll(), [])
   useEffect(() => installTranscriptPreferences(), [])
@@ -155,8 +164,8 @@ function BrowserLayout() {
     if (!row || target.closest('[data-reorder-handle], [data-row-actions]')) return
 
     // Sidebar session drags can reorder sessions or move them into a project.
-    // Stop the desktop pane-drop gesture, which is unsupported in this shell.
-    event.stopPropagation()
+    // Let sortable rows receive the press; their adapter suppresses desktop pane dragging.
+    if (!row.querySelector('[data-reorder-handle]')) event.stopPropagation()
     if (event.button !== 0) return
     sessionProjectDrag.current = {
       pointerId: event.pointerId,

@@ -1050,6 +1050,7 @@ export function filterBrowserSessionMenu(source: string, root: string): string {
   const target = 'function OptionCheckbox({ checked, onCheck, option }: { checked: boolean; onCheck: () => void; option: Option }) {'
   if (source.split(target).length !== 2) throw new Error('Browser session filter menu target changed')
   const replacements: [string, string][] = [
+    ["option.id === 'profile' ? { ...option, label: t.sidebar.gatewayGroups.grouping } : option", "option.id === 'profile' ? { ...option, label: 'Profile' } : option"],
     ['  const groupingLabel = groupings.find(option => option.id === grouping)?.label\n', ''],
     [
       "      {option.label}\n    </DropdownMenuCheckboxItem>",
@@ -1127,7 +1128,7 @@ export function showHiddenBotsInBrowserRoster(source: string): string {
 export function useBrowserProfileSectionPictures(source: string, root: string): string {
   const replacements: [string, string][] = [
     ['  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA)', "  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA).filter(item => item.id !== 'hermes-bots:screen-portal')"],
-    ['  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()', '  const presentationMode = useStore($browserPresentationMode)\n  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()'],
+    ['  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()', "  const presentationMode = useStore($sidebarGrouping) === 'profile'\n  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()"],
     ['if (nested || embedded || !group.connectionId) {', 'if (nested || embedded || !group.connectionId || presentationMode) {'],
     ['  const label = aliases[group.id] || group.label', '  const browserProfile = useBrowserProfileSection(group.profile)\n  const label = aliases[group.id] || browserProfile?.label || group.label'],
     [`              <ProfileGlyph
@@ -1148,22 +1149,46 @@ export function useBrowserProfileSectionPictures(source: string, root: string): 
     output = output.replace(before, after)
   }
   const owner = JSON.stringify(path.join(root, 'src/upstream/profile-section'))
-  return `import { $browserPresentationMode } from 'hermes:web-session-presentation'\nimport { useBrowserProfileSection } from ${owner}\n` + output
+  return `import { $sidebarGrouping } from '@/store/layout'\nimport { useBrowserProfileSection } from ${owner}\n` + output
 }
 
-export function useBrowserSessionPresentation(source: string, surface: 'store' | 'sidebar'): string {
-  const replacements: [string, string][] = surface === 'store' ? [
-    ['[$sidebarAgentsGrouped, $sidebarFlatGrouping, $sidebarAllProfilesGrouping, $showAllProfiles],', '[$sidebarAgentsGrouped, $sidebarFlatGrouping, $sidebarAllProfilesGrouping, $showAllProfiles, $browserPresentationMode],'],
-    ["(grouped, flat, allProfiles, showAll) => (grouped ? 'project' : showAll ? allProfiles : flat)", "(grouped, flat, allProfiles, showAll, presentation) => (presentation ? 'profile' : grouped ? 'project' : showAll ? allProfiles : flat)"]
+export function useBrowserSessionReordering(source: string, surface: 'sidebar' | 'section' | 'groups' | 'row'): string {
+  const replacements: [string, string][] = surface === 'sidebar' ? [
+    ['  useEffect(() => {\n    const next = resolveManualSessionOrderIds(', '  useEffect(() => {\n    if (sessionsLoading) return\n    const next = resolveManualSessionOrderIds('],
+    ['[agentOrderIds, agentOrderManual, unpinnedAgentSessions]', '[agentOrderIds, agentOrderManual, unpinnedAgentSessions, sessionsLoading]'],
+    ['onReorderSessions={showAllProfiles ? undefined : reorderSessions}', 'onReorderSessions={reorderSessions}'],
+    ['sortable={!showAllProfiles && agentSessions.length > 1}', 'sortable={agentSessions.length > 1}']
+  ] : surface === 'section' ? [
+    [`    (items: SessionInfo[]) =>
+      flattenSessionsWithBranches(items).map(({ branchStem, session }) => renderRow(session, false, branchStem)),
+    [renderRow]`, `    (items: SessionInfo[]) => {
+      const rows = orderRowsWithinGroups(toSessionRows(flattenSessionsWithBranches(items)), manualOrderIds ?? [])
+      const content = rows.map(row => renderListRow(row, sessionsDraggable))
+      if (!sessionsDraggable) return content
+      const allIds = reorderableRowIds(orderRowsWithinGroups(toSessionRows(flattenSessionsWithBranches(sessions)), manualOrderIds ?? []))
+      return <ReorderableList ids={reorderableRowIds(rows)} sensors={dndSensors}
+        onReorder={ids => onReorderSessions?.(mergeVisibleReorder(allIds, ids))}>
+        {content}
+      </ReorderableList>
+    },
+    [renderListRow, sessionsDraggable, manualOrderIds, sessions, dndSensors, onReorderSessions]`]
+  ] : surface === 'row' ? [
+    ["          startSessionDrag({ id: session.id, profile: session.profile || 'default', title }, event)", "          if (!reorderable) startSessionDrag({ id: session.id, profile: session.profile || 'default', title }, event)"]
   ] : [
-    ['  const profileFilter = useStore($sidebarProfileFilter)', "  const savedProfileFilter = useStore($sidebarProfileFilter)\n  const presentationMode = useStore($browserPresentationMode)\n  const profileFilter = presentationMode ? [] : savedProfileFilter"]
+    ['  const rankIds = useStore($sidebarSessionRankIds)', `  const rankedIds = useStore($sidebarSessionRankIds)
+  const manualIds = useStore($sidebarSessionOrderIds)
+  const manual = useStore($sidebarSessionOrderManual)
+  const rankIds = manual ? manualIds : rankedIds`]
   ]
-  let output = source
-  for (const [before, after] of replacements) {
-    if (output.split(before).length !== 2) throw new Error(`Browser session presentation ${surface} boundary changed`)
-    output = output.replace(before, after)
-  }
-  return "import { $browserPresentationMode } from 'hermes:web-session-presentation'\n" + output
+  let output = replaceBrowserContract(source, replacements)
+  if (surface === 'groups') output = "import { $sidebarSessionOrderIds, $sidebarSessionOrderManual } from '@/store/layout'\n" + output
+  return output
+}
+
+export function useBrowserSessionPresentation(source: string): string {
+  return replaceBrowserContract(source, [
+    ['label={sessionsLabel}', "label={grouping === 'profile' ? 'Profiles' : sessionsLabel}"]
+  ])
 }
 
 export function enableBrowserUngroupedSessions(source: string, surface: 'store' | 'menu' | 'sidebar'): string {
@@ -1437,8 +1462,11 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserSettingsFrame: source => useBrowserSettingsFrame(source, root),
     useBrowserSearchLabel: source => useBrowserSearchLabel(source, root),
     useBrowserProfileSectionPictures: source => useBrowserProfileSectionPictures(source, root),
-    sessionPresentationStore: source => useBrowserSessionPresentation(source, 'store'),
-    sessionPresentationSidebar: source => useBrowserSessionPresentation(source, 'sidebar'),
+    sessionReorderingRow: source => useBrowserSessionReordering(source, 'row'),
+    sessionReorderingSidebar: source => useBrowserSessionReordering(source, 'sidebar'),
+    sessionReorderingSection: source => useBrowserSessionReordering(source, 'section'),
+    sessionReorderingGroups: source => useBrowserSessionReordering(source, 'groups'),
+    sessionPresentationSidebar: source => useBrowserSessionPresentation(source),
     ungroupedStore: source => enableBrowserUngroupedSessions(source, 'store'),
     ungroupedMenu: source => enableBrowserUngroupedSessions(source, 'menu'),
     ungroupedSidebar: source => enableBrowserUngroupedSessions(source, 'sidebar')

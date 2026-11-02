@@ -58,7 +58,7 @@
     "kind": "renderer-transform",
     "order": 30,
     "module": "store/profile.ts",
-    "reason": "Keep standard profile selection and support a reactive all-profile scope in optional presentation mode.",
+    "reason": "Keep browser profile selection and the native all-profile grouping scope independent of background gateway activation.",
     "owner": "apps/web-desktop/src/upstream/transforms.ts",
     "tests": [
       {
@@ -71,12 +71,12 @@
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
-        "scenario": "the combined session scope survives saved profile choices and opening another profile"
+        "scenario": "profile grouping uses the native all-profile scope"
       }
     ],
     "removal": "Remove when upstream profile selection supports a browser-owned scope without starting desktop backends.",
     "sourceHash": "55d064cdff86ca18dab3dae7d26da01d54ecfa33ad5ca99fb233fa2f60fa897d",
-    "outputHash": "1267747233333cb4089810a5fc72d353cf543eda7be60cc43174e3fd9863ad11",
+    "outputHash": "cc28256b5329dc8af0a167979e25d95214dc7b33ddd5e7861a242ce29a5b386f",
     "handler": "browser-profile-selection",
     "sourceRoot": "renderer"
   },
@@ -104,7 +104,7 @@
     "kind": "renderer-transform",
     "order": 30,
     "module": "app/session/hooks/use-session-list-actions.ts",
-    "reason": "Refresh and paginate the standard or presentation session scope independently of background gateway activation.",
+    "reason": "Refresh and paginate the selected native session scope independently of background gateway activation.",
     "owner": "apps/web-desktop/src/upstream/transforms.ts",
     "tests": [
       {
@@ -113,12 +113,12 @@
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
-        "scenario": "the combined session scope survives saved profile choices and opening another profile"
+        "scenario": "profile grouping uses the native all-profile scope"
       }
     ],
     "removal": "Remove when shared-gateway sidebar refresh accepts the browser profile scope as a public input.",
     "sourceHash": "4f3fa082a0a0125d4955faf243bc7606781ae0031053ce7810eeeda337dd0fdb",
-    "outputHash": "576179396609a51b5302ad9446d56c124c82b6154ad4187b8957b18bdbf1d94a",
+    "outputHash": "bd1d5c202cbfcdd34658af409a20131180b121a086fc16a2192634dafe21bd47",
     "handler": "profile-session-refresh",
     "sourceRoot": "renderer"
   },
@@ -305,25 +305,24 @@
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
-        "scenario": "presentation mode switches scope and grouping without changing standard preferences"
+        "scenario": "profile grouping uses the native all-profile scope"
       }
     ],
     "removal": "Upstream supports None grouping as a persisted option.",
     "handlers": [
-      "ungroupedStore",
-      "sessionPresentationStore"
+      "ungroupedStore"
     ],
     "sourceHash": "4ae5310b2f1c0f145baa680483e82698810dbf98d0f6c870f09d33d22b2a3e91",
     "sourceRoot": "renderer",
     "inputHash": "4ae5310b2f1c0f145baa680483e82698810dbf98d0f6c870f09d33d22b2a3e91",
-    "outputHash": "3edada2a489f21494473233c64a61d85143775743cfafac64b8d0e955816de66"
+    "outputHash": "e6c84fd560b3597c0cf4ff58fa719d22df08bad504afc505267f10f75942d509"
   },
   {
     "name": "browser-session-filters",
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
-    "reason": "Hide desktop profile/card controls and the grouping summary, expose None grouping, and add leading icons and sidebar action shortcuts.",
+    "reason": "Adapt Gateway & profile grouping to Profile, hide desktop profile/card controls and the grouping summary, expose None grouping, and add sidebar action shortcuts.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -333,6 +332,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "sidebar action shortcuts preserve the selected chat and draft on"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Profile grouping replaces presentation controls and switches live without gateway nesting"
       }
     ],
     "removal": "The browser owns the filter menu or upstream offers composition flags.",
@@ -343,7 +346,7 @@
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
     "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
-    "outputHash": "f8a048c5cbbbc394770968f79ad6515968467c2b9a55d4bb207e7952ac3205bd"
+    "outputHash": "e0640af842abbed9d9aa057815a83a8396e50821af630512aa6323a62a5ef0d1"
   },
   {
     "name": "hidden-bot-roster",
@@ -416,7 +419,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/index.tsx",
-    "reason": "Compose browser search, disclosures, pins, None grouping, and messaging sections from configuration or saved conversations without desktop shortcuts or the duplicate top Capabilities link.",
+    "reason": "Compose browser search, disclosures, pins, None grouping, and messaging sections from configuration or saved conversations without desktop shortcuts or the duplicate top Capabilities link. Enable drag ordering in all-profile lists and preserve saved orders while sessions load.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -441,7 +444,11 @@
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
-        "scenario": "presentation mode switches scope and grouping without changing standard preferences"
+        "scenario": "profile grouping uses the native all-profile scope"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "dragging chats selects manual ordering and preserves the draft"
       }
     ],
     "removal": "A browser-owned navigation surface consumes public session models and actions.",
@@ -451,12 +458,13 @@
       "removeBrowserNewSessionShortcut",
       "removeBrowserTopCapabilitiesLink",
       "useBrowserSectionIds",
-      "sessionPresentationSidebar"
+      "sessionPresentationSidebar",
+      "sessionReorderingSidebar"
     ],
     "sourceHash": "194742afb6c422679a0ad0507e1f29e66c4188345e47f7ee47f79dfc8f1fe2e6",
     "sourceRoot": "renderer",
     "inputHash": "194742afb6c422679a0ad0507e1f29e66c4188345e47f7ee47f79dfc8f1fe2e6",
-    "outputHash": "6a6aef64d56888fac2524d3319415faefecee7ea07017249858905152f11196a"
+    "outputHash": "d1948364802ea198c6d62af4489a807ed5e8242b7da8b0515f14f3796cf0e7cb"
   },
   {
     "name": "single-conversation-wiring",
@@ -540,22 +548,27 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/session-row.tsx",
-    "reason": "Open session rows in place instead of desktop tabs/windows.",
+    "reason": "Open session rows in place instead of desktop tabs/windows. Route sortable row gestures to chat reordering instead of desktop pane dragging.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/interruptions.spec.mjs",
         "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "dragging chats selects manual ordering and preserves the draft"
       }
     ],
     "removal": "Browser navigation rows use public selection commands.",
     "handlers": [
-      "disableBrowserSessionRowTabs"
+      "disableBrowserSessionRowTabs",
+      "sessionReorderingRow"
     ],
     "sourceHash": "54c81e04b31efcea908cf42c53b20956531ed3655a4b290a657dde7776ecf80f",
     "sourceRoot": "renderer",
     "inputHash": "54c81e04b31efcea908cf42c53b20956531ed3655a4b290a657dde7776ecf80f",
-    "outputHash": "f7d5bb66dd6956979eab1c09f9dba5728cb9f643eaf3b237b841fb37be669c89"
+    "outputHash": "8c6fb304f8aafa01245b7ace3bb10a383133b8db61dce5c5ca4506c14929a7cc"
   },
   {
     "name": "single-conversation-menus",
@@ -1902,7 +1915,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/sessions-section.tsx",
-    "reason": "Register sidebar sections through React with model-owned identities and explicit styling hooks, preserving visibility when labels or disclosure state change.",
+    "reason": "Register sidebar sections through React with model-owned identities and explicit styling hooks, preserving visibility when labels or disclosure state change. Enable drag ordering within profile and project chat lists while merging untouched rows into the saved order.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -1916,17 +1929,22 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "sidebar visibility uses stable identity through markup changes and reload"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "dragging chats selects manual ordering and preserves the draft"
       }
     ],
     "removal": "Remove when a public upstream section API provides stable browser styling hooks or browser components own these headings.",
     "handlers": [
       "useBrowserSectionStyleHooks",
-      "useBrowserSectionIdentity"
+      "useBrowserSectionIdentity",
+      "sessionReorderingSection"
     ],
     "sourceRoot": "renderer",
     "sourceHash": "4309fe015a42cddfcbcd39fc5fedd298b3296925469739183eda6402833224f8",
     "inputHash": "4309fe015a42cddfcbcd39fc5fedd298b3296925469739183eda6402833224f8",
-    "outputHash": "8762f3d12e18b209b49768b411a08f52a1f8afa16054c740b8f2190ffacc1c54"
+    "outputHash": "a0b1126b63651e38d3c2910c059a94a8042f24302635ea3b80e4bc53d2b339dd"
   },
   {
     "name": "browser-cron-jobs-section-styling",
@@ -3042,39 +3060,30 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/gateway-groups.tsx",
-    "reason": "In presentation mode, show configured pictures and display names in a single list of profile sections; retain standard headers otherwise. Omit the desktop Screen portal from browser session headers.",
+    "reason": "In Profile grouping, show configured profile avatars and display names with chats directly beneath each profile, omitting the gateway nesting and desktop Screen portal. Rank profile previews by the saved manual order when active.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "scripts/unified-session-list.test.mjs",
         "scenario": "profile sections reuse configured pictures and keep exact owner routes"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Profile grouping replaces presentation controls and switches live without gateway nesting"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "dragging chats selects manual ordering and preserves the draft"
       }
     ],
     "removal": "Remove when upstream profile headers use the configured profile picture and support a single shared-gateway list.",
     "handlers": [
-      "useBrowserProfileSectionPictures"
+      "useBrowserProfileSectionPictures",
+      "sessionReorderingGroups"
     ],
     "sourceHash": "6a6e88e4b8483bf0ff54a17142c9b006097e8addacd6e659b3dcdf278739cd9e",
     "sourceRoot": "renderer",
     "inputHash": "6a6e88e4b8483bf0ff54a17142c9b006097e8addacd6e659b3dcdf278739cd9e",
-    "outputHash": "d73e27fda193005013b2c1faa5b08bdf4a856d8139bd5a49c950db8ba2cf9236"
-  },
-  {
-    "name": "browser-session-presentation-alias",
-    "kind": "alias",
-    "order": 0,
-    "reason": "Share the browser presentation preference with renderer selectors.",
-    "owner": "apps/web-desktop/src/platform/session-presentation.ts",
-    "tests": [
-      {
-        "file": "scripts/unified-session-list.test.mjs",
-        "scenario": "presentation mode switches scope and grouping without changing standard preferences"
-      }
-    ],
-    "removal": "Remove when upstream accepts the browser presentation preference as a public input.",
-    "fingerprintPolicy": "Browser-owned module with no upstream source.",
-    "specifier": "hermes:web-session-presentation",
-    "replacement": "./src/platform/session-presentation.ts",
-    "aliasGroup": "renderer"
+    "outputHash": "27f3fedfddca3b0e5152aba3c892e7427ec7766bec4d8da3c530fe5437d82cb1"
   }
 ]
