@@ -3034,7 +3034,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/gateway-groups.tsx",
-    "reason": "In presentation mode, show configured pictures and display names in a single list of profile sections; retain standard headers otherwise.",
+    "reason": "In presentation mode, show configured pictures and display names in a single list of profile sections; retain standard headers otherwise. Omit the desktop Screen portal from browser session headers.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -3049,7 +3049,7 @@
     "sourceHash": "6a6e88e4b8483bf0ff54a17142c9b006097e8addacd6e659b3dcdf278739cd9e",
     "sourceRoot": "renderer",
     "inputHash": "6a6e88e4b8483bf0ff54a17142c9b006097e8addacd6e659b3dcdf278739cd9e",
-    "outputHash": "d90433394a38347cc7d0b6bca7aa7698cf2fcb2553b0ba6a69616bb6345ca962"
+    "outputHash": "d73e27fda193005013b2c1faa5b08bdf4a856d8139bd5a49c950db8ba2cf9236"
   },
   {
     "name": "browser-session-presentation-alias",

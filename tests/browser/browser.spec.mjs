@@ -3359,6 +3359,8 @@ for (const width of [1440, 390]) {
       await expect(group).toBeVisible()
       await expect(group.getByRole('button', { name: title, exact: true })).toBeVisible()
     }
+    await expect(page.locator('#browser-navigation').getByText('Screen', { exact: true })).toHaveCount(0)
+    await expect(page.locator('#browser-navigation').getByText('Not installed on host', { exact: true })).toHaveCount(0)
     await expect(page.locator('[data-gateway-section]')).toHaveCount(0)
     await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
     if (width === 390) await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()

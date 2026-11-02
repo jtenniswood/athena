@@ -1116,6 +1116,7 @@ export function showHiddenBotsInBrowserRoster(source: string): string {
 
 export function useBrowserProfileSectionPictures(source: string, root: string): string {
   const replacements: [string, string][] = [
+    ['  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA)', "  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA).filter(item => item.id !== 'hermes-bots:screen-portal')"],
     ['  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()', '  const presentationMode = useStore($browserPresentationMode)\n  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()'],
     ['if (nested || embedded || !group.connectionId) {', 'if (nested || embedded || !group.connectionId || presentationMode) {'],
     ['  const label = aliases[group.id] || group.label', '  const browserProfile = useBrowserProfileSection(group.profile)\n  const label = aliases[group.id] || browserProfile?.label || group.label'],
