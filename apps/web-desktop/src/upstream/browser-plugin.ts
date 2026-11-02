@@ -1169,6 +1169,7 @@ export function useBrowserSessionPresentation(source: string, surface: 'store' |
     ['[$sidebarAgentsGrouped, $sidebarFlatGrouping, $sidebarAllProfilesGrouping, $showAllProfiles],', '[$sidebarAgentsGrouped, $sidebarFlatGrouping, $sidebarAllProfilesGrouping, $showAllProfiles, $browserPresentationMode],'],
     ["(grouped, flat, allProfiles, showAll) => (grouped ? 'project' : showAll ? allProfiles : flat)", "(grouped, flat, allProfiles, showAll, presentation) => (presentation ? 'profile' : grouped ? 'project' : showAll ? allProfiles : flat)"]
   ] : [
+    ['label={sessionsLabel}', "label={presentationMode ? 'Profiles' : sessionsLabel}"],
     ['  const profileFilter = useStore($sidebarProfileFilter)', "  const savedProfileFilter = useStore($sidebarProfileFilter)\n  const presentationMode = useStore($browserPresentationMode)\n  const profileFilter = presentationMode ? [] : savedProfileFilter"]
   ]
   let output = source
