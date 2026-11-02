@@ -296,7 +296,8 @@ connections for an Access login redirect or page and offers **Sign in through
 Cloudflare Access** when detected. Generic network errors keep **Try again**.
 Athena also offers this flow when it detects
 an Access login redirect. The app opens your browser, where Pocket ID can use its
-normal passkey prompt. Approve the connection, then tap **Return to Athena
+normal passkey prompt. After sign-in, the browser automatically returns to Athena
+Android. If your browser blocks the automatic return, tap **Return to Athena
 Android**. Athena imports the Access application cookie into its WebView and reloads after checking draft safety.
 
 Keep `/api/athena/android/auth/access` behind the same Cloudflare Access policy
