@@ -144,9 +144,10 @@ export function BrowserNavigationTabs({ navigation, actions }: { navigation: Nav
     event.stopPropagation()
     actionsTrigger.current?.click()
   }
+  if (visibleTabs.length === 1 && !actions && !(navigation.compact && !navigation.mobile)) return null
   return <>
     <div className="browser-navigation-heading">
-      {visibleTabs.length === 1 ? <div className="browser-navigation-brand" onContextMenu={showActions}>Athena</div> : <div className="browser-navigation-tabs" role="tablist" aria-label="Navigation" onContextMenu={showActions}>
+      {visibleTabs.length > 1 && <div className="browser-navigation-tabs" role="tablist" aria-label="Navigation" onContextMenu={showActions}>
         {visibleTabs.map((value, index) => <button key={value} type="button" role="tab" tabIndex={tab === value ? 0 : -1} aria-selected={tab === value} draggable={visibleTabs.length > 1} data-dragging={draggedTab === value || undefined} onDragStart={event => {
           setDraggedTab(value)
           event.dataTransfer.effectAllowed = 'move'
