@@ -323,7 +323,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
-    "reason": "Hide desktop profile/card controls and the grouping summary, hide grouping controls in presentation mode, expose None grouping, and add leading icons and sidebar action shortcuts.",
+    "reason": "Hide desktop profile/card controls and the grouping summary, add a presentation mode toggle and hide grouping controls while enabled, expose None grouping, and add leading icons and sidebar action shortcuts.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -347,7 +347,7 @@
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
     "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
-    "outputHash": "eb2b38909d3e3ee274882857f4ad718329b0033840a02c563dc8a943be197e22"
+    "outputHash": "a124bdd36a322813a30f629e7d28e2e8f675d715d1295413c61a00fb3208a6e7"
   },
   {
     "name": "hidden-bot-roster",

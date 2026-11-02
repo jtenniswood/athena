@@ -1052,7 +1052,16 @@ export function filterBrowserSessionMenu(source: string, root: string): string {
   if (source.split(target).length !== 2) throw new Error('Browser session filter menu target changed')
   const replacements: [string, string][] = [
     ['  const grouping = useStore($sidebarGrouping)', '  const grouping = useStore($sidebarGrouping)\n  const presentationMode = useStore($browserPresentationMode)'],
-    ['        <DropdownMenuGroup>\n          <DropdownMenuSub>', '        <DropdownMenuGroup>\n          {!presentationMode && <DropdownMenuSub>'],
+    ['        <DropdownMenuGroup>\n          <DropdownMenuSub>', `        <DropdownMenuGroup>
+          <DropdownMenuCheckboxItem
+            checked={presentationMode}
+            onCheckedChange={enabled => browserPreference('presentationMode').write(enabled)}
+            onSelect={keepOpen}
+          >
+            <Codicon name="preview" size="0.8125rem" />
+            Presentation mode
+          </DropdownMenuCheckboxItem>
+          {!presentationMode && <DropdownMenuSub>`],
     ['          </DropdownMenuSub>\n\n          <DropdownMenuSub>', '          </DropdownMenuSub>}\n\n          <DropdownMenuSub>'],
     ['  const groupingLabel = groupings.find(option => option.id === grouping)?.label\n', ''],
     [
@@ -1109,7 +1118,7 @@ function OptionGlyph({ option }: { option: Option }) {`
   if (output.split(manualOrdering).length !== 2) throw new Error('Browser manual ordering option contract changed')
   output = output.replace(manualOrdering, '      return true')
   const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-shortcuts'))
-  return `import { $browserPresentationMode } from 'hermes:web-session-presentation'\nimport { browserSidebarActionLabel, useBrowserSidebarShortcuts } from ${owner}\n` + output.replace(target, target + hideDesktopOnlyRows)
+  return `import { browserPreference } from ${JSON.stringify(path.join(root, 'src/platform/preferences'))}\nimport { $browserPresentationMode } from 'hermes:web-session-presentation'\nimport { browserSidebarActionLabel, useBrowserSidebarShortcuts } from ${owner}\n` + output.replace(target, target + hideDesktopOnlyRows)
 }
 
 export function showHiddenBotsInBrowserRoster(source: string): string {
