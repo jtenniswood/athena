@@ -17,7 +17,7 @@ export function useBrowserProfileSection(profile: string | undefined) {
       image={item?.appearance.image}
       name={name}
       shape={item?.appearance.shape ?? 'squircle'}
-      size={24}
+      size={20}
     /></span>
   }
 }
