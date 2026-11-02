@@ -2,6 +2,9 @@ package com.athena.android
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.content.ActivityNotFoundException
+import android.os.Bundle
 import android.net.Uri
 import android.util.Base64
 import android.webkit.CookieManager
@@ -11,6 +14,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadows.ShadowDialog
 import org.robolectric.annotation.Config
 import java.security.KeyPairGenerator
 import java.security.spec.MGF1ParameterSpec
@@ -44,6 +49,45 @@ class AccessSignInTest {
         val aes = Cipher.getInstance("AES/GCM/NoPadding")
         aes.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, iv))
         return Uri.parse("athena-android://access#" + encode(rsa.doFinal(key) + iv + aes.doFinal(body.toString().toByteArray())))
+    }
+
+    @Test fun startsBrowserImmediatelyWithStoredCallbackCredentials() {
+        var status = ""
+        val signIn = AccessSignIn(activity, { time }, { code, _ -> status = code }) {}
+        signIn.start(origin)
+
+        val intent = shadowOf(activity).nextStartedActivity
+        assertNotNull(intent)
+        assertEquals(Intent.ACTION_VIEW, intent.action)
+        val uri = intent.data!!
+        assertEquals("$origin/api/athena/android/auth/access", uri.buildUpon().clearQuery().build().toString())
+        assertEquals(origin, prefs.getString("origin", null))
+        assertEquals(prefs.getString("state", null), uri.getQueryParameter("state"))
+        assertEquals(43, uri.getQueryParameter("state")!!.length)
+        assertFalse(uri.getQueryParameter("key").isNullOrEmpty())
+        assertTrue(prefs.contains("private"))
+        assertEquals(time, prefs.getLong("started", 0))
+        assertEquals("waiting", status)
+        assertNull(ShadowDialog.getLatestDialog())
+
+        signIn.close()
+        assertTrue(prefs.contains("private"))
+        signIn.cancel()
+        assertTrue(prefs.all.isEmpty())
+    }
+
+    class NoBrowserActivity : Activity() {
+        override fun startActivity(intent: Intent, options: Bundle?) {
+            throw ActivityNotFoundException("No browser")
+        }
+    }
+
+    @Test fun failedBrowserLaunchClearsCredentialsAndReportsRecovery() {
+        val host = Robolectric.buildActivity(NoBrowserActivity::class.java).setup().get()
+        var status = ""
+        AccessSignIn(host, { time }, { code, _ -> status = code }) {}.start(origin)
+        assertEquals("auth-browser", status)
+        assertTrue(prefs.all.isEmpty())
     }
 
     @Test fun importsOnlyMatchingUnexpiredRequestAndConsumesItOnce() {

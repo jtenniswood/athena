@@ -74,6 +74,32 @@ test('semantic adapters preserve identity and reject upstream drift', () => {
   }
 })
 
+test('saved messaging conversations survive missing channel configuration', () => {
+  const api = load('src/upstream/browser-plugin.ts')
+  const adapted = api.useBrowserSectionIds(source('app/chat/sidebar/index.tsx'), root)
+  const start = adapted.indexOf('  const messagingGroups = useMemo')
+  const end = adapted.indexOf('\n  // Recents and every messaging platform', start)
+  assert.ok(start >= 0 && end > start)
+  const context = vm.createContext({
+    useMemo: callback => callback(),
+    browserChannels: [{ sourceId: 'api_server' }],
+    visibleMessagingSessions: [{ id: 'telegram-history', source: 'telegram', started_at: 20 }],
+    normalizeSessionSource: value => value,
+    isPinnedSession: () => false,
+    messagingPlatformTotals: {}, messagingTruncated: false, messagingProfile: 'default',
+    messagingTotalsKey: (profile, source) => `${profile}:${source}`,
+    sessionTime: session => session.started_at,
+    sessionSourceLabel: source => source === 'telegram' ? 'Telegram' : 'API'
+  })
+  const code = ts.transpileModule(adapted.slice(start, end) + '\nglobalThis.groups = messagingGroups', {
+    compilerOptions: { target: ts.ScriptTarget.ES2022 }
+  }).outputText
+  vm.runInContext(code, context)
+  assert.deepEqual(JSON.parse(JSON.stringify(context.groups)).map(group => [group.sourceId, group.sessions.map(session => session.id)]), [
+    ['telegram', ['telegram-history']], ['api_server', []]
+  ])
+})
+
 function channelHarness(fetchPlatforms) {
   const stores = Object.fromEntries(['$activeConnectionId', '$gatewayState', '$platformsChangeTick', '$profiles', '$profileScope'].map(key => [key, { value: null }]))
   stores.$activeConnectionId.value = 'server-a'

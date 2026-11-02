@@ -800,7 +800,6 @@ export function useBrowserSectionIds(source: string, root: string): string {
   return `import { useBrowserSidebarChannels } from ${owner}\n` + replaceBrowserContract(source, [
     ['  const messagingProfile = sidebarProfileForScope(profileScope)', '  const messagingProfile = sidebarProfileForScope(profileScope)\n  const browserChannels = useBrowserSidebarChannels()'],
     ['    if (!visibleMessagingSessions.length) {\n      return []\n    }\n\n    const bySource = new Map<string, SessionInfo[]>()', '    const bySource = new Map<string, SessionInfo[]>(browserChannels.map(channel => [channel.sourceId, []]))'],
-    ['      if (!sourceId) {', '      if (!sourceId || !bySource.has(sourceId)) {'],
     ['sessionTime(b.sessions[0]) - sessionTime(a.sessions[0])', '(b.sessions[0] ? sessionTime(b.sessions[0]) : 0) - (a.sessions[0] ? sessionTime(a.sessions[0]) : 0)'],
     ['  }, [visibleMessagingSessions, messagingPlatformTotals, messagingTruncated, isPinnedSession, messagingProfile])', '  }, [browserChannels, visibleMessagingSessions, messagingPlatformTotals, messagingTruncated, isPinnedSession, messagingProfile])'],
     ['            {!trimmedQuery &&\n              !worktreeGroupingActive &&\n              messagingGroups.map', '            {!trimmedQuery &&\n              messagingGroups.map'],

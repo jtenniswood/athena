@@ -25,9 +25,8 @@ class AccessSignIn(private val activity: Activity, private val now: () -> Long =
     private fun decode(text: String) = Base64.decode(text, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
 
     private var generation = 0
-    private var confirmation: androidx.appcompat.app.AlertDialog? = null
-    fun close() { generation++; confirmation?.dismiss() }
-    fun cancel() { generation++; confirmation?.dismiss(); confirmation = null; prefs.edit().clear().apply() }
+    fun close() { generation++ }
+    fun cancel() { generation++; prefs.edit().clear().apply() }
     fun resume(origin: String) {
         if (prefs.getString("origin", null) != origin) return
         if (now() - prefs.getLong("started", 0) !in 0..300000) {
@@ -37,22 +36,16 @@ class AccessSignIn(private val activity: Activity, private val now: () -> Long =
 
     fun start(origin: String) {
         cancel()
-        val request = generation
+        if (activity.isFinishing || activity.isDestroyed) return
         val pair = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
         val state = encode(ByteArray(32).also { SecureRandom().nextBytes(it) })
         val url = Uri.parse("$origin/api/athena/android/auth/access").buildUpon()
             .appendQueryParameter("state", state).appendQueryParameter("key", encode(pair.public.encoded)).build()
-        confirmation = SignInConfirmation.builder(activity, origin)
-            .setNegativeButton(R.string.cancel) { _, _ -> progress("auth-cancelled", "Access sign-in cancelled. Choose Try again when you’re ready.") }
-            .setOnCancelListener { progress("auth-cancelled", "Access sign-in cancelled. Choose Try again when you’re ready.") }
-            .setPositiveButton(R.string.open_browser) { _, _ ->
-                if (activity.isDestroyed || request != generation) return@setPositiveButton
-                // Private app storage, excluded from backups. The short-lived key never leaves this device.
-                prefs.edit().putString("origin", origin).putString("state", state)
-                    .putString("private", encode(pair.private.encoded)).putLong("started", now()).apply()
-                try { CustomTabsIntent.Builder().build().launchUrl(activity, url); progress("waiting", "") }
-                catch (_: Exception) { cancel(); progress("auth-browser", "No browser could open Access sign-in. Choose Try again to retry.") }
-            }.show()
+        // Private app storage, excluded from backups. The short-lived key never leaves this device.
+        prefs.edit().putString("origin", origin).putString("state", state)
+            .putString("private", encode(pair.private.encoded)).putLong("started", now()).apply()
+        try { CustomTabsIntent.Builder().build().launchUrl(activity, url); progress("waiting", "") }
+        catch (_: Exception) { cancel(); progress("auth-browser", "No browser could open Access sign-in. Choose Try again to retry.") }
     }
 
     fun receive(uri: Uri?, origin: String): Boolean {

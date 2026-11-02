@@ -3331,6 +3331,34 @@ test.describe('Bots touch refresh', () => {
   })
 })
 
+test('saved Telegram conversations remain visible without detected configuration', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await page.route(/\/api\/messaging\/platforms(?:\?|$)/, route => route.fulfill({ json: { platforms: [] } }))
+  await page.route(/\/api\/profiles\/sessions\/sidebar(?:\?|$)/, async route => {
+    const response = await route.fetch()
+    const result = await response.json()
+    result.messaging.sessions = [{
+      ...result.recents.sessions[0], id: 'saved-telegram', profile: 'default', source: 'telegram',
+      title: 'Saved Telegram conversation', message_count: 2
+    }]
+    await route.fulfill({ response, json: result })
+  })
+  await open(page)
+  const telegram = page.locator('[data-browser-section-id="messaging:telegram"]')
+  await expect(telegram).toBeVisible()
+  await telegram.getByRole('button', { name: 'Telegram', exact: true }).click()
+  await expect(telegram).toContainText('Saved Telegram conversation')
+  await page.getByRole('button', { name: 'Navigation tabs', exact: true }).click()
+  const menu = page.getByRole('menu', { name: 'Settings and workspace', exact: true })
+  const toggle = menu.getByRole('menuitemcheckbox', { name: 'Telegram', exact: true })
+  await expect(toggle).toHaveCount(1)
+  await toggle.click()
+  await expect(telegram).toBeHidden()
+  await toggle.click()
+  await page.keyboard.press('Escape')
+  await expect(telegram).toBeVisible()
+})
+
 for (const width of [1440, 390]) {
   touchTest(`sessions from every profile share pictured sections at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 960 })

@@ -12,12 +12,12 @@ export function useBrowserProfileSection(profile: string | undefined) {
   const name = item?.botName ?? profile
   return {
     label: item?.label ?? profile,
-    picture: <span data-browser-profile-picture={profile} className="inline-flex shrink-0"><BotFace
+    picture: <span data-browser-profile-picture={profile} className="inline-flex shrink-0 overflow-hidden rounded-full"><BotFace
       color={avatarColor(item?.appearance.color ?? null, name)}
       image={item?.appearance.image}
       name={name}
       shape={item?.appearance.shape ?? 'squircle'}
-      size={20}
+      size={24}
     /></span>
   }
 }

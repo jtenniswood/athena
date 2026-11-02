@@ -54,8 +54,9 @@ export function useBrowserSidebarSections() {
       return next
     })
   }, [])
-  const renderedSections = [...registered.values()].filter(section => !section.key.startsWith('messaging:'))
-  const availableSections = [...new Map(renderedSections.map(section => [section.key, section])).values(), ...channels]
+  // Saved conversations remain available even when a channel is disabled or its
+  // credentials are managed outside the configuration endpoint.
+  const availableSections = [...new Map([...registered.values(), ...channels].map(section => [section.key, section])).values()]
   if (!availableSections.some(section => section.key === 'cron-jobs')) availableSections.push({ key: 'cron-jobs', label: 'Cron jobs' })
   const actions: BrowserAction[] = availableSections.filter(section => section.key !== 'sessions').map(section => ({
     key: section.key,
