@@ -1176,6 +1176,39 @@ export function useBrowserProfileSectionPictures(source: string, root: string): 
   return `import { useBrowserPreference } from ${JSON.stringify(path.join(root, 'src/platform/preferences'))}\nimport { BrowserProfileProjectRows } from ${JSON.stringify(path.join(root, 'src/upstream/profile-projects'))}\nimport { $browserPresentationMode } from 'hermes:web-session-presentation'\nimport { useBrowserProfileSection } from ${owner}\n` + output
 }
 
+export function useBrowserSessionReordering(source: string, surface: 'sidebar' | 'section' | 'groups' | 'row'): string {
+  const replacements: [string, string][] = surface === 'sidebar' ? [
+    ['  useEffect(() => {\n    const next = resolveManualSessionOrderIds(', '  useEffect(() => {\n    if (sessionsLoading) return\n    const next = resolveManualSessionOrderIds('],
+    ['[agentOrderIds, agentOrderManual, unpinnedAgentSessions]', '[agentOrderIds, agentOrderManual, unpinnedAgentSessions, sessionsLoading]'],
+    ['onReorderSessions={showAllProfiles ? undefined : reorderSessions}', 'onReorderSessions={reorderSessions}'],
+    ['sortable={!showAllProfiles && agentSessions.length > 1}', 'sortable={agentSessions.length > 1}']
+  ] : surface === 'section' ? [
+    [`    (items: SessionInfo[]) =>
+      flattenSessionsWithBranches(items).map(({ branchStem, session }) => renderRow(session, false, branchStem)),
+    [renderRow]`, `    (items: SessionInfo[]) => {
+      const rows = orderRowsWithinGroups(toSessionRows(flattenSessionsWithBranches(items)), manualOrderIds ?? [])
+      const content = rows.map(row => renderListRow(row, sessionsDraggable))
+      if (!sessionsDraggable) return content
+      const allIds = reorderableRowIds(orderRowsWithinGroups(toSessionRows(flattenSessionsWithBranches(sessions)), manualOrderIds ?? []))
+      return <ReorderableList ids={reorderableRowIds(rows)} sensors={dndSensors}
+        onReorder={ids => onReorderSessions?.(mergeVisibleReorder(allIds, ids))}>
+        {content}
+      </ReorderableList>
+    },
+    [renderListRow, sessionsDraggable, manualOrderIds, sessions, dndSensors, onReorderSessions]`]
+  ] : surface === 'row' ? [
+    ["          startSessionDrag({ id: session.id, profile: session.profile || 'default', title }, event)", "          if (!reorderable) startSessionDrag({ id: session.id, profile: session.profile || 'default', title }, event)"]
+  ] : [
+    ['  const rankIds = useStore($sidebarSessionRankIds)', `  const rankedIds = useStore($sidebarSessionRankIds)
+  const manualIds = useStore($sidebarSessionOrderIds)
+  const manual = useStore($sidebarSessionOrderManual)
+  const rankIds = manual ? manualIds : rankedIds`]
+  ]
+  let output = replaceBrowserContract(source, replacements)
+  if (surface === 'groups') output = "import { $sidebarSessionOrderIds, $sidebarSessionOrderManual } from '@/store/layout'\n" + output
+  return output
+}
+
 export function useBrowserSessionPresentation(source: string, surface: 'store' | 'sidebar'): string {
   const replacements: [string, string][] = surface === 'store' ? [
     ['[$sidebarAgentsGrouped, $sidebarFlatGrouping, $sidebarAllProfilesGrouping, $showAllProfiles],', '[$sidebarAgentsGrouped, $sidebarFlatGrouping, $sidebarAllProfilesGrouping, $showAllProfiles, $browserPresentationMode],'],
@@ -1463,6 +1496,10 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserSettingsFrame: source => useBrowserSettingsFrame(source, root),
     useBrowserSearchLabel: source => useBrowserSearchLabel(source, root),
     useBrowserProfileSectionPictures: source => useBrowserProfileSectionPictures(source, root),
+    sessionReorderingRow: source => useBrowserSessionReordering(source, 'row'),
+    sessionReorderingSidebar: source => useBrowserSessionReordering(source, 'sidebar'),
+    sessionReorderingSection: source => useBrowserSessionReordering(source, 'section'),
+    sessionReorderingGroups: source => useBrowserSessionReordering(source, 'groups'),
     sessionPresentationStore: source => useBrowserSessionPresentation(source, 'store'),
     sessionPresentationSidebar: source => useBrowserSessionPresentation(source, 'sidebar'),
     ungroupedStore: source => enableBrowserUngroupedSessions(source, 'store'),

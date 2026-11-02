@@ -155,8 +155,8 @@ function BrowserLayout() {
     if (!row || target.closest('[data-reorder-handle], [data-row-actions]')) return
 
     // Sidebar session drags can reorder sessions or move them into a project.
-    // Stop the desktop pane-drop gesture, which is unsupported in this shell.
-    event.stopPropagation()
+    // Let sortable rows receive the press; their adapter suppresses desktop pane dragging.
+    if (!row.querySelector('[data-reorder-handle]')) event.stopPropagation()
     if (event.button !== 0) return
     sessionProjectDrag.current = {
       pointerId: event.pointerId,
