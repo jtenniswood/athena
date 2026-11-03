@@ -46,13 +46,13 @@ body > [data-radix-popper-content-wrapper] > .tooltip-bubble.browser-session-pre
   width: 22rem;
   max-height: min(32rem, var(--radix-tooltip-content-available-height));
   overflow: hidden;
-  padding: 1rem;
+  padding: 0.75rem;
   border: 1px solid var(--dt-border);
   border-radius: 0.75rem;
   background: var(--ui-bg-elevated);
   color: var(--ui-text-primary);
   box-shadow: 0 10px 32px #0003;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 400;
 }
 .tooltip-bubble.browser-session-preview [data-slot='tooltip-arrow'] {
@@ -72,9 +72,9 @@ body > [data-radix-popper-content-wrapper] > .tooltip-bubble.browser-session-pre
   border-bottom: 1px solid var(--dt-border);
   transform: translate(-50%, -50%) rotate(45deg);
 }
-.browser-session-preview-title { font-size: 0.9375rem; font-weight: 600; white-space: normal; overflow-wrap: anywhere; }
-.browser-session-preview-meta { margin-top: 0.625rem; color: var(--ui-text-tertiary); font-size: 0.6875rem; }
-.browser-session-generation { margin-top: 0.625rem; border-top: 1px solid var(--dt-border); padding-top: 0.625rem; }
+.browser-session-preview-title { font-size: 0.8125rem; font-weight: 600; white-space: normal; overflow-wrap: anywhere; }
+.browser-session-preview-meta { margin-top: 0.5rem; color: var(--ui-text-tertiary); font-size: 0.625rem; }
+.browser-session-generation { margin-top: 0.5rem; border-top: 1px solid var(--dt-border); padding-top: 0.5rem; }
 .browser-session-generation p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden; }
 .hermes-startup-recovery {
   box-sizing: border-box;
