@@ -35,7 +35,7 @@ export type BrowserActionAnchor = {
 }
 
 /** One command list, with keyboard menus on desktop and a modal phone sheet. */
-export function BrowserActionSurface({ title, hideTitle = false, actions = [], groups, anchor, compact, onClose, fallbackFocus, className = '' }: {
+export function BrowserActionSurface({ title, hideTitle = false, actions = [], groups, anchor, compact, onClose, fallbackFocus, toggleTrigger, className = '' }: {
   title: string
   hideTitle?: boolean
   actions?: BrowserAction[]
@@ -45,6 +45,7 @@ export function BrowserActionSurface({ title, hideTitle = false, actions = [], g
   compact: boolean
   onClose: () => void
   fallbackFocus?: RefObject<HTMLElement | null>
+  toggleTrigger?: RefObject<HTMLElement | null>
 }) {
   const returnToTrigger = useRef(true)
   const nextAction = useRef<BrowserAction | null>(null)
@@ -158,7 +159,11 @@ export function BrowserActionSurface({ title, hideTitle = false, actions = [], g
   return <DropdownMenu.Root open modal={false} onOpenChange={open => { if (!open) onClose() }}>
     {createPortal(<DropdownMenu.Trigger tabIndex={-1} aria-hidden className="browser-action-anchor" style={{ left: anchor.x / scale, top: anchor.y / scale }} />, document.body)}
     <DropdownMenu.Portal>
-      <DropdownMenu.Content className={`browser-action-menu ${className}`} data-browser-action-surface aria-label={title} side="bottom" align="start" sideOffset={2} collisionPadding={8} onInteractOutside={() => { returnToTrigger.current = false }} onCloseAutoFocus={restoreFocus}>
+      <DropdownMenu.Content className={`browser-action-menu ${className}`} data-browser-action-surface aria-label={title} side="bottom" align="start" sideOffset={2} collisionPadding={8} onInteractOutside={event => {
+        // Let the opening button toggle on click, after pointer and focus events.
+        if (event.target instanceof Node && toggleTrigger?.current?.contains(event.target)) event.preventDefault()
+        else returnToTrigger.current = false
+      }} onCloseAutoFocus={restoreFocus}>
         {renderDesktopGroups(sections)}
       </DropdownMenu.Content>
     </DropdownMenu.Portal>

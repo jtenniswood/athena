@@ -17,7 +17,7 @@
   width: 100%;
   min-width: 0;
   padding-inline-start: .625rem;
-  padding-inline-end: 1.125rem;
+  padding-inline-end: .625rem;
   border-radius: 0;
 }
 .browser-sessions-pane [data-web-session-selected] {
