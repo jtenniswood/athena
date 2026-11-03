@@ -125,6 +125,13 @@ the alternate action while busy. Queue editing, IME handling, disabled controls,
 attachment fallback and rejected-submit restoration remain engine-owned. No
 document listener finds or clicks composer buttons to apply this preference.
 
+Timeline scrubbing is mounted on the renderer's virtual rail through a checked
+adapter. The browser hook maps pointer coordinates, UI scale and scroll offset
+to the rail's existing entries, then calls its original jump command. Pointer
+capture belongs to the mounted rail; gestures cannot cross into another rail or
+continue after its entry owner changes. Keyboard and ordinary click navigation,
+virtualization, history loading and jump cancellation remain renderer-owned.
+
 ## Capability and lifecycle boundaries
 
 Browser, hosting, and connected-server support facts are described in
