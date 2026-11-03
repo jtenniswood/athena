@@ -296,7 +296,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "store/layout.ts",
-    "reason": "Expose and default browser session grouping to None while preserving saved choices.",
+    "reason": "Expose None grouping and default the browser all-profiles session list to Profile while preserving saved choices.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -306,6 +306,10 @@
       {
         "file": "scripts/unified-session-list.test.mjs",
         "scenario": "profile grouping uses the native all-profile scope"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Profile grouping replaces presentation controls and switches live without gateway nesting"
       }
     ],
     "removal": "Upstream supports None grouping as a persisted option.",
@@ -315,7 +319,7 @@
     "sourceHash": "4ae5310b2f1c0f145baa680483e82698810dbf98d0f6c870f09d33d22b2a3e91",
     "sourceRoot": "renderer",
     "inputHash": "4ae5310b2f1c0f145baa680483e82698810dbf98d0f6c870f09d33d22b2a3e91",
-    "outputHash": "e6c84fd560b3597c0cf4ff58fa719d22df08bad504afc505267f10f75942d509"
+    "outputHash": "d38722e6c126a0db25cdec78be6e6408d1544303857c691f83dfbcc1caf2883d"
   },
   {
     "name": "browser-session-filters",

@@ -3427,7 +3427,11 @@ test('Profile grouping replaces presentation controls and switches live without 
     await page.keyboard.press('Escape')
     await page.keyboard.press('Escape')
   }
-  await chooseGrouping('Profile')
+  await page.getByRole('button', { name: 'Filters', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
+  await expect(page.getByRole('menuitemradio', { name: 'Profile', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
   await expect(page.locator('[data-browser-section-id="sessions"] [data-browser-section-header]')).toContainText('Profiles')
   await expect(page.locator('[data-browser-profile-picture="default"]')).toBeVisible()
   await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
@@ -3445,6 +3449,12 @@ test('Profile grouping replaces presentation controls and switches live without 
   await expect(page.locator('[data-browser-section-id="sessions"] [data-browser-section-header]')).toContainText('Sessions')
   await expect(page.locator('.browser-profile-footer')).toBeVisible()
   await expect(editor(page)).toHaveText('Keep my draft while grouping by profile')
+  await page.reload()
+  await expect(editor(page)).toBeVisible()
+  await expect(page.locator('[data-browser-profile-picture]')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Filters', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
+  await expect(page.getByRole('menuitemradio', { name: 'None', exact: true })).toHaveAttribute('aria-checked', 'true')
 })
 
 test('configured Telegram appears without chats and channel controls exclude unset platforms', async ({ page }) => {
