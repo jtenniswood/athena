@@ -22,15 +22,18 @@ function composer({ preference = 'queue', busy = true, disabled = false, attachm
   })
   const policy = vm.createContext({ exports: {}, require: () => ({ browserPreference: () => preferenceStore }) })
   vm.runInContext(compile(readFileSync(path.join(root, 'src/experience/followup-preferences.ts'), 'utf8')), policy)
-  const realm = vm.createContext({ exports: {}, crypto, require: name => {
+  const realm = vm.createContext({ exports: {}, crypto, document: { activeElement: null }, require: name => {
     if (name.endsWith('/followup-preferences')) return policy.exports
     if (name.endsWith('/accepted-submit')) return { announceBrowserAcceptedSubmit: () => calls.push('accepted') }
     if (name === 'react') return { useRef: current => ({ current }), useLayoutEffect() {} }
     if (name === '@/i18n') return { useI18n: () => ({ t: { desktop: {} } }), translateNow: key => key }
     if (name.endsWith('/chat-runtime')) return { isSlashCommandText: text => /^\/\w/.test(text) }
     if (name.endsWith('/desktop-slash-commands')) return { isSideTaskSlashCommand: () => false }
+    if (name.endsWith('/touch-interaction')) return { isTouchInteraction: () => false }
+    if (name.endsWith('/onboarding-session')) return { isOnboardingChat: () => false }
+    if (name.endsWith('/composer-outbox')) return { journalOutgoingSend: () => ({ move() {}, retire() {} }) }
     if (name.endsWith('/notifications')) return { notify() {} }
-    if (name === '@hermes/shared') return { SLASH_COMMAND_RE: /^\/\w/ }
+    if (name === '@hermes/shared') return { randomUuid: () => crypto.randomUUID(), SLASH_COMMAND_RE: /^\/\w/ }
     if (name.endsWith('pane-visibility')) return { usePaneVisible: () => true }
     if (name.endsWith('/scope')) return { useComposerScope: () => ({ target: 'main', attachments: { clear() {} } }), useComposerSurfaceId: () => 'main' }
     if (name.endsWith('/rich-editor')) return { composerPlainText: editor => editor.textContent }
@@ -45,7 +48,7 @@ function composer({ preference = 'queue', busy = true, disabled = false, attachm
     if (name.endsWith('/prompts')) return { hasBlockingPromptRequest: () => blocking }
     if (name.endsWith('/composer-utils')) return { cloneAttachments: value => value }
     if (name.endsWith('/composer-input-history')) return { resetBrowseState() {} }
-    if (name.endsWith('/composer')) return { clearSessionDraft() {}, isFreshDraftScope: scope => scope?.startsWith('__new__:'), freezeComposerTransportPayload: text => ({ displayText: text, transportText: text, missingLabels: [] }) }
+    if (name.endsWith('/composer')) return { takeSessionDraft: () => ({ text: '', attachments: [] }), clearSessionDraft() {}, isFreshDraftScope: scope => scope?.startsWith('__new__:'), freezeComposerTransportPayload: text => ({ displayText: text, transportText: text, missingLabels: [] }) }
     if (name.endsWith('/composer-draft-retry')) return { draftRetry: (id, text, attachments) => ({ id, text, attachments }) }
     if (name.endsWith('/composer-queue')) return { enqueueQueuedPrompt: () => calls.push('fallback-queue'), serverOwnsComposerQueue: () => false }
     if (name.endsWith('/focus')) return { onComposerSubmitRequest() {} }
@@ -56,7 +59,7 @@ function composer({ preference = 'queue', busy = true, disabled = false, attachm
   const submit = realm.exports.useComposerSubmit({
     activeQueueSessionKey: 'session', activeQueueSessionKeyRef: { current: 'session' },
     attachments, busy, busyInputMode: backendMode, disabled, queueEdit, queuedPrompts: [], sessionId: 'session',
-    draftScopeRef: { current: 'session' }, draftRef, editorRef: { current: { textContent: text } },
+    draftScopeRef: { current: 'session' }, draftRef, editorRef: { current: { textContent: text, contains: () => false } },
     clearDraft: () => calls.push('clear'), focusInput: () => calls.push('focus'),
     queueCurrentDraft: () => { calls.push('queue'); return true },
     exitQueuedEdit: () => { calls.push('save-edit'); return true },

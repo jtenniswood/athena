@@ -1,5 +1,7 @@
 import { useStore } from '@nanostores/react'
-import { $sidebarGrouping } from '@/store/layout'
+import { useEffect } from 'react'
+import { browserPreference } from '../platform/preferences'
+import { $sidebarGrouping, setSidebarGrouping } from '@/store/layout'
 import { useBrowserProfiles } from './profiles'
 import { avatarColor, BotFace } from './browser-api'
 
@@ -20,4 +22,17 @@ export function useBrowserProfileSection(profile: string | undefined) {
       size={20}
     /></span>
   }
+}
+
+/** Keep the legacy browser presentation preference on the renderer's grouping owner. */
+export function useBrowserProfileGrouping(): boolean {
+  const grouping = useStore($sidebarGrouping)
+  useEffect(() => {
+    const legacy = browserPreference('presentationMode')
+    if (legacy.read()) {
+      setSidebarGrouping('profile')
+      legacy.write(false)
+    }
+  }, [])
+  return grouping === 'profile'
 }

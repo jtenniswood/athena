@@ -56,7 +56,7 @@ test('accepted composer submissions report only successful sends', () => {
   const source = readFileSync(path.join(root, '../desktop/src/app/chat/composer/hooks/use-composer-submit.ts'), 'utf8')
   const { useBrowserAcceptedSubmit } = load('src/upstream/browser-plugin.ts')
   const output = useBrowserAcceptedSubmit(source, root)
-  assert.match(output, /if \(accepted === false\) \{\s*rejected\(\)\s*\} else \{\s*announceBrowserAcceptedSubmit\(\{ text, sessionId \}\)/)
+  assert.match(output, /if \(accepted !== false\) announceBrowserAcceptedSubmit\(\{ text, sessionId \}\)/)
   assert.match(output, /if \(!accepted\) \{\s*keep\(\)\s*\} else \{\s*announceBrowserAcceptedSubmit\(\{ text, sessionId \}\)/)
   assert.match(output, /accepted-submit/)
 })
@@ -367,7 +367,7 @@ test('browser microphone capture distinguishes insecure origins and lets getUser
   const context = vm.createContext({
     exports: {}, DOMException,
     window: { isSecureContext: false }, navigator: {},
-    require: () => ({ useState: value => [value, () => {}], useRef: current => ({ current }), useEffect: () => {}, meterContextsClosed: async () => {} })
+    require: () => ({ useState: value => [value, () => {}], useRef: current => ({ current }), useEffect: () => {}, hostHas: () => false, meterContextsClosed: async () => {} })
   })
   vm.runInContext(ts.transpileModule(output, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, context)
   const copy = { microphoneUnsupported: 'Unsupported', microphoneAccessDenied: 'Access denied', microphonePermissionDenied: 'Permission denied', noMicrophone: 'No microphone' }
@@ -387,7 +387,7 @@ test('latest renderer keeps None grouping integrated and handles layout-less too
   const layout = readFileSync(layoutFile, 'utf8')
   const layoutOutput = browserPlugin(root).transform(layout, layoutFile)?.code
   assert.match(layoutOutput, /SIDEBAR_GROUPING_ORDER = \['none', 'date', 'project', 'status', 'profile'\]/)
-  assert.match(layoutOutput, /SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'none'/)
+  assert.match(layoutOutput, /SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'profile'/)
 
   const filterFile = path.join(root, '../desktop/src/app/chat/sidebar/filter-menu.tsx')
   const filter = browserPlugin(root).transform(readFileSync(filterFile, 'utf8'), filterFile)?.code
@@ -418,7 +418,7 @@ test('browser layout storage is isolated, deterministic and checked without movi
   assert.throws(() => scopeBrowserStorage(source + '\n// upstream change'), /no longer matches/)
   assert.throws(() => scopeBrowserStorage(output.replace("key = 'hermes-web.browser.' + key", "key = 'bad'")), /no longer matches/)
   const store = new Map()
-  const context = vm.createContext({ exports: {}, require: createRequire(path.join(root, filename)), document: { documentElement: { dataset: { experience: 'browser' } } }, localStorage: { getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, value), removeItem: key => store.delete(key) } })
+  const context = vm.createContext({ exports: {}, require: name => name === './ui-preferences/keys' ? { isSharedPreferenceKey: () => false } : createRequire(path.join(root, filename))(name), document: { documentElement: { dataset: { experience: 'browser' } } }, localStorage: { getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, value), removeItem: key => store.delete(key) } })
   context.window = { localStorage: context.localStorage }
   vm.runInContext(ts.transpileModule(output, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, context)
   const { readKey, writeKey } = context.exports

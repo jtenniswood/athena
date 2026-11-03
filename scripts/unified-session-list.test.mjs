@@ -37,7 +37,7 @@ test('profile sections reuse configured pictures and keep exact owner routes', (
   assert.match(output, /browserProfile\?\.picture \?\? <ProfileGlyph/)
   assert.match(output, /browserProfile\?\.label/)
   assert.match(output, /newSessionInAgent\(\{ connectionId: group.connectionId, profile \}\)/)
-  assert.match(output, /!group.connectionId \|\| presentationMode/)
+  assert.match(output, /!owner \|\| presentationMode/)
   assert.equal(ts.createSourceFile(module, output, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX).parseDiagnostics.length, 0)
   assert.throws(() => useBrowserProfileSectionPictures(source.replace('name={group.profile}', 'name={other}'), root), /boundary changed/)
   const element = (type, props) => ({ type, props })

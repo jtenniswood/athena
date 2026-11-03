@@ -27,8 +27,11 @@ function groupList() {
   const realm = vm.createContext({ exports: {}, Error, require: name => {
     if (name === '@hermes/plugin-sdk') return {
       atom: value => ({ get: () => value, set: next => { value = next } }),
-      host: { state }, useValue: atom => atom.value, Button: 'button'
+      host: { state }, useValue: atom => atom.value ?? atom.get?.(), Button: 'button'
     }
+    if (name === './canonical-group-labels') return { useCanonicalGroupLabels: () => ({}) }
+    if (name === './canonical-group-row') return { CanonicalGroupRow: 'row' }
+    if (name === './group-panes') return { closeGroupChatMainTab() {} }
     if (name === '@/store/gateway') return { $gateway: socket }
     if (name.endsWith('/browser-bots-refresh')) return { useBotsRefreshSignal: () => [refresh, finishRefresh] }
     if (name === './canonical-groups') return {
