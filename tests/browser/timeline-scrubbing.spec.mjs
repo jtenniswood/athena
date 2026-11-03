@@ -114,4 +114,11 @@ test('timeline scrubbing stops when the command owner changes with stable entrie
   await page.mouse.move(end.x, end.y)
   await page.mouse.up()
   expect(await jumps(page)).toEqual(['research-5'])
+
+  // A press below the drag threshold must not click a new owner either.
+  await page.mouse.move(start.x, start.y)
+  await page.mouse.down()
+  await page.getByRole('button', { name: 'Replace command owner', exact: true }).evaluate(button => button.click())
+  await page.mouse.up()
+  expect(await jumps(page)).toEqual(['research-5'])
 })

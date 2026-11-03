@@ -15,7 +15,7 @@ export function useTimelineScrubbing({ root, owner, entries, pitch, onJump }: Ti
 
   const finish = (event: PointerEvent<HTMLDivElement>) => {
     if (drag.current?.pointerId !== event.pointerId) return
-    suppressClick.current = drag.current.active
+    suppressClick.current = drag.current.active || !Object.is(drag.current.owner, owner)
     drag.current = null
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
   }
