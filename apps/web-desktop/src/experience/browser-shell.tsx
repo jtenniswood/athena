@@ -187,7 +187,7 @@ function BrowserLayout() {
     engine.navigation.openPage(navigate, path)
     navigation.closeDrawer()
   }
-  return <div className="browser-shell" data-browser-shell="" data-android-app={isAndroidApp() || undefined} data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined}>
+  return <div className="browser-shell" data-browser-shell="" data-android-app={isAndroidApp() || undefined} data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined} data-browser-session-id={conversation.sessionId || undefined}>
     <BrowserActionError />
     <div className="browser-workspace">
       {navigation.compact && !navigation.mobile && navigation.drawerOpen && <button type="button" className="browser-scrim" aria-label="Dismiss navigation" tabIndex={-1} onClick={navigation.dismissDrawer} />}

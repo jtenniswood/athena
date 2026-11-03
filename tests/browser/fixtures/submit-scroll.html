@@ -25,6 +25,7 @@
   import { installConversationSubmitScroll } from '../../../apps/web-desktop/src/experience/ui/submit-scroll.ts'
 
   const h = React.createElement
+  const bot = new URLSearchParams(location.search).has('bot')
   function Chat() {
     const [turns, setTurns] = useState([{ id: 0, text: 'Earlier question', height: 200 }])
     const [conversation, setConversation] = useState('initial')
@@ -42,11 +43,12 @@
     }
     window.growReply = height => setTurns(previous => previous.map((turn, i) => i === previous.length - 1 ? { ...turn, height } : turn))
     window.completeReply = () => setTurns(previous => previous.map(turn => ({ ...turn, id: `saved-${turn.id}` })))
+    window.announcePreviousSubmit = () => announceBrowserAcceptedSubmit({ text: turns.at(-1).text, sessionId: 'initial' })
     window.switchConversation = () => {
       setConversation('other')
       setTurns(previous => [{ id: 99, text: previous.at(-1).text, height: 50 }])
     }
-    return h('div', { 'data-browser-shell': '', 'data-browser-conversation-id': conversation },
+    return h('div', { 'data-browser-shell': '', 'data-browser-conversation-id': bot ? 'connection::research-bot' : conversation, 'data-browser-conversation-kind': bot ? 'bot' : 'session', 'data-browser-session-id': conversation },
       h('div', { 'data-slot': 'aui_thread-viewport', 'data-following': String(isAtBottom), ref: scrollRef },
         h('div', { 'data-slot': 'aui_thread-content', ref: contentRef },
           ...turns.map(turn => h('div', { key: turn.id, 'data-slot': 'aui_message-group' },

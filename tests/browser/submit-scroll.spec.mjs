@@ -41,12 +41,12 @@ async function geometry(page) {
   })
 }
 
-for (const [width, height, scale] of [[1100, 800, 1], [390, 844, 1.25]]) {
-  test(`submitted prompt follows the browser layout policy at ${width}px`, async ({ page }) => {
+for (const [width, height, scale, bot] of [[1100, 800, 1, false], [390, 844, 1.25, false], [1100, 800, 1, true]]) {
+  test(`submitted prompt follows the browser layout policy at ${width}px${bot ? ' for a canonical Bot session' : ''}`, async ({ page }) => {
     const errors = []
     page.on('pageerror', error => errors.push(error.message))
     await page.setViewportSize({ width, height })
-    await page.goto(`${origin}/tests/browser/fixtures/submit-scroll.html`)
+    await page.goto(`${origin}/tests/browser/fixtures/submit-scroll.html${bot ? '?bot=1' : ''}`)
     const editor = page.locator('[contenteditable]')
     await expect(editor).toBeVisible()
     await page.evaluate(value => document.documentElement.style.setProperty('--scale', String(value)), scale)
@@ -112,6 +112,11 @@ for (const [width, height, scale] of [[1100, 800, 1], [390, 844, 1.25]]) {
 
     await page.evaluate(() => window.switchConversation())
     await expect(page.locator('[data-slot="aui_turn-pair"]')).toHaveCount(1)
+    expect(await page.locator('[data-slot="aui_turn-pair"]').evaluate(turn => turn.style.minHeight)).toBe('')
+    // A delayed acceptance from the old session must not reserve the new one,
+    // even when its latest message has exactly the same text.
+    await page.evaluate(() => window.announcePreviousSubmit())
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
     expect(await page.locator('[data-slot="aui_turn-pair"]').evaluate(turn => turn.style.minHeight)).toBe('')
     expect(errors).toEqual([])
   })

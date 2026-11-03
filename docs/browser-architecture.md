@@ -140,6 +140,10 @@ index key, including its connection/profile/session scope; refreshing entries
 within that owner does not interrupt a drag. Keyboard and ordinary click navigation,
 virtualization, history loading and jump cancellation remain renderer-owned.
 
+Submit scrolling matches accepted messages to the stored session identity, which
+can differ from a Bot's display identity. Reply-space reservations end when the
+canonical session changes, even if the same Bot remains selected.
+
 ## Capability and lifecycle boundaries
 
 Browser, hosting, and connected-server support facts are described in

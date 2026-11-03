@@ -33,6 +33,7 @@ function reserveResponseSpace(viewport: HTMLElement, prompt: HTMLElement) {
   let turn = initialTurn
   let previousMinHeight = turn.style.minHeight
   let conversationId = shell.getAttribute('data-browser-conversation-id')
+  let sessionId = shell.getAttribute('data-browser-session-id')
   const conversationKind = shell.getAttribute('data-browser-conversation-kind')
   const promptText = (element: HTMLElement) => (element.querySelector('[data-slot="aui_user-message-text"]') ?? element).textContent
   const submittedText = promptText(prompt)
@@ -52,13 +53,16 @@ function reserveResponseSpace(viewport: HTMLElement, prompt: HTMLElement) {
   const sizes = new ResizeObserver(resize)
   const changes = new MutationObserver(() => {
     const nextConversationId = shell.getAttribute('data-browser-conversation-id')
+    const nextSessionId = shell.getAttribute('data-browser-session-id')
     if (!viewport.isConnected || (conversationId && nextConversationId !== conversationId)
+      || (sessionId && nextSessionId !== sessionId)
       || shell.getAttribute('data-browser-conversation-kind') !== conversationKind) {
       dispose()
       return
     }
     // A fresh draft receives its session identity after the first send.
     conversationId ??= nextConversationId
+    sessionId ??= nextSessionId
     const latest = latestUserMessage(viewport)
     if (!latest || latest === prompt) return
 
@@ -94,7 +98,7 @@ function reserveResponseSpace(viewport: HTMLElement, prompt: HTMLElement) {
   sizes.observe(content)
   changes.observe(shell, {
     childList: true, subtree: true, attributes: true,
-    attributeFilter: ['data-browser-conversation-id', 'data-browser-conversation-kind']
+    attributeFilter: ['data-browser-conversation-id', 'data-browser-conversation-kind', 'data-browser-session-id']
   })
 
   return {
@@ -134,8 +138,8 @@ export function installConversationSubmitScroll(): () => void {
     const detail = (event as CustomEvent<BrowserAcceptedSubmit>).detail
     const shell = viewport.closest('[data-browser-shell]')
     if (!detail || !shell) return
-    const conversationId = shell.getAttribute('data-browser-conversation-id')
-    if (detail.sessionId && conversationId && detail.sessionId !== conversationId) return
+    const sessionId = shell.getAttribute('data-browser-session-id')
+    if (detail.sessionId && sessionId && detail.sessionId !== sessionId) return
     const prompt = latestUserMessage(viewport)
     if (!prompt || (prompt.querySelector('[data-slot="aui_user-message-text"]') ?? prompt).textContent !== detail.text) return
 
