@@ -3332,5 +3332,31 @@
     "sourceHash": "2c2857b8dd219b374e195f4836683ca4b84c9a4118240f5dd7afdacea2f9d0aa",
     "inputHash": "2c2857b8dd219b374e195f4836683ca4b84c9a4118240f5dd7afdacea2f9d0aa",
     "outputHash": "a8548d21df5a0e0eeceac41e24bc512cec411287a346ec4f68b48e8720fece12"
+  },
+  {
+    "name": "browser-project-delete-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/projects.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "449905f256cdbfdff6a283ba224ea00955ce57df0a37f3d912694521ee965efe",
+    "inputHash": "449905f256cdbfdff6a283ba224ea00955ce57df0a37f3d912694521ee965efe",
+    "outputHash": "00e2c10e3ddb978ee7cfee3e8a7154430a29e472370c73a6b4cecc6597fbe2da",
+    "handlers": [
+      "useBrowserProjectDeleteOwner"
+    ],
+    "reason": "Resolve saved project ownership across profiles before deletion and keep the confirmation mounted until the request succeeds. Preserve active profile caches when deleting a sibling profile project.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "project deletion follows the owning profile and preserves failed confirmations"
+      },
+      {
+        "file": "scripts/project-delete.test.mjs",
+        "scenario": "project deletion resolves the exact id across profiles including empty projects"
+      }
+    ],
+    "removal": "Remove when upstream routes combined-view project deletion to its owning profile and retains failed confirmations."
   }
 ]
