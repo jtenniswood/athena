@@ -1,4 +1,5 @@
 import type { Alias, Plugin } from 'vite'
+export function createBuildModuleLoader(): { load(file: string): Record<string, unknown>; files(): string[] }
 export function adapterAliases(root: string, env?: NodeJS.ProcessEnv): Alias[]
 export function createRendererAdapter(root?: string): {
   root: string

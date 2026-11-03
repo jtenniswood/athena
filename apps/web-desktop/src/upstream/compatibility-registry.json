@@ -309,7 +309,7 @@
     "order": 20,
     "module": "store/layout.ts",
     "reason": "Expose None grouping and default the browser all-profiles session list to Profile while preserving saved choices.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -339,7 +339,7 @@
     "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
     "reason": "Adapt Gateway & profile grouping to Profile, hide desktop profile/card controls and the grouping summary, expose None grouping, add sidebar action shortcuts, and restore hidden profile groups from the filter control.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -374,7 +374,7 @@
     "order": 20,
     "module": "plugins/hermes-bots/roster-pane-derivation.ts",
     "reason": "Show hidden Bots in the normal roster when requested.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/roster.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -396,7 +396,7 @@
     "order": 20,
     "module": "app/chat/composer/hooks/use-mic-recorder.ts",
     "reason": "Request one recording stream and explain browser permission failures.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/composer.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -418,7 +418,7 @@
     "order": 20,
     "module": "app/chat/composer/hooks/use-composer-metrics.ts",
     "reason": "Use layout pixels for composer breakpoints under UI scaling.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/composer.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -552,7 +552,7 @@
     "order": 20,
     "module": "app/contrib/controller.tsx",
     "reason": "Retain registrations while disabling desktop session-tile mirrors and the unsupported tab-strip palette action.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -579,7 +579,7 @@
     "order": 20,
     "module": "app/chat/sidebar/session-row.tsx",
     "reason": "Open session rows in place instead of desktop tabs/windows. Route sortable row gestures to chat reordering instead of desktop pane dragging. Fade long titles and show an owner-scoped latest-reply preview beside hovered rows.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/interruptions.spec.mjs",
@@ -611,7 +611,7 @@
     "order": 20,
     "module": "app/chat/sidebar/session-actions-menu.tsx",
     "reason": "Keep browser sidebar session menus single-view and share shortcut labels. Browser toolbar menus and panel commands are owned by Athena components.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -637,7 +637,7 @@
     "order": 20,
     "module": "plugins/hermes-bots/bot-row.tsx",
     "reason": "Keep Bot row menus consistent with one canonical browser conversation.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/roster.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -665,7 +665,7 @@
     "order": 20,
     "module": "app/settings/keybind-settings.tsx",
     "reason": "Hide shortcuts for unavailable desktop tabs, windows, terminals, HUD, and the desktop search bar.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/settings.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -687,7 +687,7 @@
     "order": 20,
     "module": "app/shell/statusbar-controls.tsx",
     "reason": "Expose the shared item renderer to browser toolbar composition.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -709,7 +709,7 @@
     "order": 20,
     "module": "components/pane-shell/tree/store.ts",
     "reason": "Close an empty files/review panel even when its owner state was already false.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -731,7 +731,7 @@
     "order": 20,
     "module": "components/pane-shell/tree/renderer/narrow-overlays.tsx",
     "reason": "Keep mobile tool overlays and close actions without duplicate navigation.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -753,7 +753,7 @@
     "order": 20,
     "module": "lib/storage.ts",
     "reason": "Namespace browser layout preferences while retaining shared drafts and credentials.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/upgrades.spec.mjs",
@@ -775,7 +775,7 @@
     "order": 40,
     "module": "plugins/hermes-bots/roster-actions.ts",
     "reason": "Keep unread and incoming-message notifications while suppressing generic activity toasts.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/host.ts",
     "tests": [
       {
         "file": "scripts/browser.test.mjs",
@@ -1541,7 +1541,7 @@
     "order": 20,
     "module": "plugins/hermes-bots/roster-pane.tsx",
     "reason": "Route group selection through the browser command while retaining engine room ownership.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/roster.ts",
     "tests": [
       {
         "file": "tests/browser/interruptions.spec.mjs",
@@ -1572,7 +1572,7 @@
     "order": 20,
     "module": "plugins/hermes-bots/roster-pane-dialogs.tsx",
     "reason": "Route group selection through the browser command while retaining engine room ownership.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/roster.ts",
     "tests": [
       {
         "file": "tests/browser/interruptions.spec.mjs",
@@ -1627,7 +1627,7 @@
       "useBrowserPinWrites"
     ],
     "reason": "Order pin writes and restore confirmed state with visible failures while preserving engine reconciliation and profile ownership.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/interruptions.spec.mjs",
@@ -1661,7 +1661,7 @@
       "useBrowserOpenSessionOwner"
     ],
     "reason": "Apply browser selection ownership at shared session entry points so older Bot activations cannot replace a newer choice.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/interruptions.spec.mjs",
@@ -1687,7 +1687,7 @@
       "useBrowserFreshSessionOwner"
     ],
     "reason": "Apply browser selection ownership at shared session entry points so older Bot activations cannot replace a newer choice.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/interruptions.spec.mjs",
@@ -1709,7 +1709,7 @@
       "useBrowserOverlayFocusOwner"
     ],
     "reason": "Own focus entry, tab containment, and focus return at each mounted browser workspace overlay.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -1738,7 +1738,7 @@
       "browser-flush-all-composers"
     ],
     "reason": "Keep mobile chat selection from opening the on-screen keyboard and prevent automatic focus from stealing an overlay return target.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -1760,7 +1760,7 @@
       "keepBrowserWorkspaceRoute"
     ],
     "reason": "Keep the conversation route mounted behind browser tool pages and upstream overlays so unsent attachments and composer state survive.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -1782,7 +1782,7 @@
       "useBrowserBotDialogFocus"
     ],
     "reason": "Restore the opening browser control and provide owned viewport bounds for Bot creation and section dialogs.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/roster.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -1804,7 +1804,7 @@
       "useBrowserSectionDialogFocus"
     ],
     "reason": "Restore the opening browser control and provide owned viewport bounds for Bot creation and section dialogs.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/roster.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -1829,7 +1829,7 @@
       "canonical-bot-row-actions"
     ],
     "reason": "Replace Bot and group context menus with one browser action model used by desktop menus and explicit touch controls.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/roster.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -1859,7 +1859,7 @@
       "useBrowserSectionActionSurface"
     ],
     "reason": "Use owned section headings and the same rename, reorder, and delete actions on desktop and touch.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/roster.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -1884,7 +1884,7 @@
       "browser-bot-dialog-return-focus"
     ],
     "reason": "Return focus to the Bot row after managing group memberships and constrain the dialog to the scaled viewport.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/roster.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -1906,7 +1906,7 @@
       "useBrowserRosterDialogFocus"
     ],
     "reason": "Return focus after editing Bot profiles and keep normal and advanced edit dialogs within scaled browser bounds.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/roster.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -1928,7 +1928,7 @@
       "useBrowserRosterDialogFocus"
     ],
     "reason": "Restore browser focus after controlled confirmations and keep their bounds within scaled viewports; confirmation commands and inline failures stay upstream-owned.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/roster.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -1991,7 +1991,7 @@
     "order": 20,
     "module": "app/chat/sidebar/cron-jobs-section.tsx",
     "reason": "Register sidebar sections through React with model-owned identities and explicit styling hooks, preserving visibility when labels or disclosure state change.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/roster.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2042,7 +2042,7 @@
     "order": 20,
     "module": "store/updates.ts",
     "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/host.ts",
     "tests": [
       {
         "file": "scripts/sidebar-contracts.test.mjs",
@@ -2064,7 +2064,7 @@
     "order": 20,
     "module": "components/desktop-install-overlay.tsx",
     "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/host.ts",
     "tests": [
       {
         "file": "scripts/sidebar-contracts.test.mjs",
@@ -2086,7 +2086,7 @@
     "order": 20,
     "module": "components/remote-setup/first-run.tsx",
     "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/host.ts",
     "tests": [
       {
         "file": "scripts/sidebar-contracts.test.mjs",
@@ -2108,7 +2108,7 @@
     "order": 20,
     "module": "app/chat/composer/controls.tsx",
     "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout. Show Queue only while busy so the default follow-up preference cannot intercept idle sends.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/composer.ts",
     "tests": [
       {
         "file": "scripts/sidebar-contracts.test.mjs",
@@ -2138,7 +2138,7 @@
     "order": 20,
     "module": "app/chat/composer/context-menu.tsx",
     "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/composer.ts",
     "tests": [
       {
         "file": "scripts/sidebar-contracts.test.mjs",
@@ -2164,7 +2164,7 @@
     "order": 20,
     "module": "app/chat/composer/model-pill.tsx",
     "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/composer.ts",
     "tests": [
       {
         "file": "scripts/sidebar-contracts.test.mjs",
@@ -2226,7 +2226,7 @@
     "order": 20,
     "module": "app/chat/composer/start-voice-button.tsx",
     "reason": "Remove the standalone full voice-conversation entry from the browser composer.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/composer.ts",
     "tests": [
       {
         "file": "scripts/sidebar-contracts.test.mjs",
@@ -2252,7 +2252,7 @@
     "order": 20,
     "module": "app/chat/composer/status-stack/coding-row.tsx",
     "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/composer.ts",
     "tests": [
       {
         "file": "scripts/sidebar-contracts.test.mjs",
@@ -2395,7 +2395,7 @@
       "filterBrowserSettingsSearch"
     ],
     "reason": "Keep grouped settings labels, legacy search aliases, and visibility policy in the wrapper while upstream owns forms and persistence.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/settings.ts",
     "tests": [
       {
         "file": "scripts/browser.test.mjs",
@@ -2421,7 +2421,7 @@
       "filterBrowserSettingsPalette"
     ],
     "reason": "Keep settings search policy and remove the unavailable Marketplace theme installer from the browser palette.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/settings.ts",
     "tests": [
       {
         "file": "scripts/browser.test.mjs",
@@ -2447,7 +2447,7 @@
       "useBrowserProfileScopeTabs"
     ],
     "reason": "Present the shared settings profile selector as a browser tab strip while preserving its scope selection behavior. Omit the visible Applies to label and profile scope notes across browser pages.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/settings.ts",
     "tests": [
       {
         "file": "apps/desktop/src/app/settings/profile-scope.test.tsx",
@@ -2473,7 +2473,7 @@
       "hideBrowserAppearanceOnlySettings"
     ],
     "reason": "Combine General, Typography, Window & layout, and Chat display into one Appearance page; hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls. Theme selection lives on the separate browser Theme page. Message Bubble transparency is fixed at 0% and its control is hidden. The shared browser settings layout owns the Appearance title and description.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/settings.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2500,7 +2500,7 @@
       "useBrowserArchivedSessionsTable"
     ],
     "reason": "Hide the desktop-local project directory picker while keeping remote working-directory settings. Present archived sessions in a compact semantic table with previews, message counts, workspace labels, and the existing unarchive/delete actions.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/settings.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2515,7 +2515,7 @@
     "order": 20,
     "module": "app/chat/sidebar/projects/overview-row.tsx",
     "reason": "Toggle project previews and expand all sessions inline in single-profile and all-profiles views without entering a project.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2541,7 +2541,7 @@
     "order": 20,
     "module": "app/settings/config-settings.tsx",
     "reason": "Register explicit debounced save commands with browser readiness, flush immediately on transitions, and retain the renderer write queue and profile scope.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/settings.ts",
     "tests": [
       {
         "file": "scripts/pending-work.test.mjs",
@@ -2584,7 +2584,7 @@
       "removeBrowserPetAvatarTab"
     ],
     "reason": "Remove the pet avatar option from browser bot profile editing.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/settings.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2606,7 +2606,7 @@
       "removeBrowserPetSlashCommands"
     ],
     "reason": "Remove pet management and generation slash-command suggestions from the browser app.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/settings.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2621,7 +2621,7 @@
     "order": 20,
     "module": "app/chat/composer/hooks/use-composer-submit.ts",
     "reason": "Apply browser Queue/Steer submission policy through the engine command and report accepted user messages for browser positioning.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/composer.ts",
     "tests": [
       {
         "file": "scripts/browser.test.mjs",
@@ -2687,7 +2687,7 @@
       "useBrowserConnectingVisual"
     ],
     "reason": "Keep the centered browser logo and spinner through gateway boot without desktop blue text or exit movement.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/host.ts",
     "tests": [
       {
         "file": "tests/browser/sign-in.spec.mjs",
@@ -2713,7 +2713,7 @@
       "keepBrowserMessageBubblesSolid"
     ],
     "reason": "Keep message bubble transparency at 0% in the browser, clearing saved transparency through the upstream persistence owner.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/composer.ts",
     "tests": [
       {
         "file": "scripts/browser.test.mjs",
@@ -2735,7 +2735,7 @@
       "useBrowserProfileSettingsTabs"
     ],
     "reason": "Present Profiles settings with horizontal tabs instead of the heading, search, and vertical list, while retaining upstream selection, details, and profile management actions.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/settings.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2757,7 +2757,7 @@
       "keepBrowserProfileTabFocus"
     ],
     "reason": "Keep keyboard focus on profile tabs when the selected SOUL editor loads; other editor surfaces retain mount autofocus.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/settings.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2794,7 +2794,7 @@
     "order": 20,
     "module": "app/chat/composer/index.tsx",
     "reason": "Request the alternate follow-up intent through the same submit command for Cmd/Ctrl+Enter.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/composer.ts",
     "tests": [
       {
         "file": "scripts/composer-policy.test.mjs",
@@ -2866,7 +2866,7 @@
     "order": 20,
     "module": "app/settings/plugin-settings.tsx",
     "reason": "Open plugin management inside the browser Settings surface and clear its page state when changing settings categories.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/settings.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2888,7 +2888,7 @@
     "order": 20,
     "module": "app/settings/plugin-install-modal.tsx",
     "reason": "Return successful plugin installs started in Settings to its embedded plugin manager.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/settings.ts",
     "tests": [
       {
         "file": "scripts/browser.test.mjs",
@@ -3070,7 +3070,7 @@
     "order": 20,
     "module": "plugins/hermes-bots/canonical-group-registry.tsx",
     "reason": "Keep gateway groups loading and reconnect retries behind socket readiness while supporting Bots pull-to-refresh.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/roster.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -3104,7 +3104,7 @@
     "order": 20,
     "module": "app/chat/sidebar/gateway-groups.tsx",
     "reason": "In Profile grouping, show configured profile avatars and display names with chats directly beneath each profile, omitting the gateway nesting and desktop Screen portal. Rank profile previews by the saved manual order when active. Hide profile groups through their menus without changing the selected conversation or messaging groups. Show every chat in each profile without a row cap or Show more button.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "scripts/unified-session-list.test.mjs",
@@ -3189,7 +3189,7 @@
     "order": 20,
     "module": "app/capabilities/catalog/catalog-data.ts",
     "reason": "Use cancellable timer scheduling where browser idle callbacks are unavailable so Capabilities does not crash the application.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/host.ts",
     "tests": [
       {
         "file": "scripts/browser.test.mjs",
@@ -3211,7 +3211,7 @@
     "order": 20,
     "module": "components/error-boundary.tsx",
     "reason": "Keep crash recovery independent of desktop IPC and unmounted modal hosts, with a route escape, visible error details and a local diagnostic download.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/host.ts",
     "tests": [
       {
         "file": "scripts/browser.test.mjs",
@@ -3233,7 +3233,7 @@
     "order": 20,
     "module": "main.tsx",
     "reason": "Load renderer styles through web.css once so a later incomplete Tailwind compilation cannot hide responsive capability tabs.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/host.ts",
     "tests": [
       {
         "file": "scripts/browser.test.mjs",
@@ -3259,7 +3259,7 @@
     "order": 20,
     "module": "app/messaging/index.tsx",
     "reason": "Present messaging with a compact searchable header, readable platform statuses, responsive navigation and grouped setup sections while retaining upstream profile, credential, pairing and save ownership.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/host.ts",
     "tests": [
       {
         "file": "scripts/compatibility-registry.test.mjs",
@@ -3281,7 +3281,7 @@
     "order": 20,
     "module": "components/assistant-ui/directive-text.tsx",
     "reason": "Give chat references real Athena URLs and browser open/copy gestures.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/link-navigation.spec.mjs",
@@ -3303,7 +3303,7 @@
     "order": 20,
     "module": "components/pane-shell/tree/renderer/tree-group.tsx",
     "reason": "Remove desktop tab closing and tab strip controls from pane fallback menus.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/link-navigation.spec.mjs",
@@ -3325,7 +3325,7 @@
     "order": 20,
     "module": "app/context-menu/shell-menu-items.tsx",
     "reason": "Remove the unsupported desktop tab strip action from shell menus.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/link-navigation.spec.mjs",
@@ -3354,7 +3354,7 @@
       "useBrowserProjectDeleteOwner"
     ],
     "reason": "Resolve saved project ownership across profiles before deletion and keep the confirmation mounted until the request succeeds. Preserve active profile caches when deleting a sibling profile project.",
-    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "owner": "apps/web-desktop/src/upstream/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",

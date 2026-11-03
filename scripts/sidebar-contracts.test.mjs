@@ -1,3 +1,4 @@
+import { createBuildModuleLoader } from './renderer-adapter.mjs'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { readFileSync } from 'node:fs'
@@ -9,6 +10,7 @@ import ts from 'typescript'
 const root = path.resolve('apps/web-desktop')
 function load(file, mocks, globals = {}) {
   const filename = path.join(root, file)
+  if (file === 'src/upstream/browser-plugin.ts') return createBuildModuleLoader().load(filename)
   const context = vm.createContext({ exports: {}, require: mocks || createRequire(filename), ...globals })
   vm.runInContext(ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, context)
   return context.exports

@@ -1,3 +1,4 @@
+import { createBuildModuleLoader } from './renderer-adapter.mjs'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs'
@@ -9,6 +10,7 @@ import ts from 'typescript'
 const root = path.resolve('apps/web-desktop')
 function load(file, globals = {}, moduleCache = new Map()) {
   const filename = path.resolve(root, file)
+  if (file === 'src/upstream/browser-plugin.ts') return createBuildModuleLoader().load(filename)
   if (moduleCache.has(filename)) return moduleCache.get(filename)
   const exports = {}
   moduleCache.set(filename, exports)
@@ -522,7 +524,7 @@ test('browser startup keeps shared controller registration without rendering des
 
 test('browser build has an explicit root and no desktop-root fallback', () => {
   const browserRoot = readFileSync(path.join(root, 'src/upstream/browser-root.tsx'), 'utf8')
-  assert.match(browserRoot, /return <BrowserShell \/>/)
+  assert.match(browserRoot, /<BrowserEngineProvider engine=\{browserEngine\}><BrowserShell \/>/)
   assert.doesNotMatch(browserRoot, /ContribController/)
   assert.doesNotMatch(readFileSync(path.join(root, 'src/upstream/browser-plugin.ts'), 'utf8'), /comparison-root|comparison-plugin/)
 })

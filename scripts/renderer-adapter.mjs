@@ -9,7 +9,7 @@ import { loadRegistry, checkGeneratedRegistryFiles, verifyInstalledInputs } from
 
 // Evaluate only wrapper-owned build adapters. Renderer modules are never run
 // to construct this graph, and their fetched source directories stay untouched.
-function transformerLoader() {
+export function createBuildModuleLoader() {
   const cache = new Map()
   const load = file => {
     if (cache.has(file)) return cache.get(file)
@@ -51,7 +51,7 @@ export function createRendererAdapter(root = path.join(repositoryRoot, 'apps/web
   const registry = loadRegistry(path.resolve(root, '../..'))
   checkGeneratedRegistryFiles(registry, path.resolve(root, '../..'))
   verifyInstalledInputs(registry, path.resolve(root, '../..'))
-  const loader = transformerLoader()
+  const loader = createBuildModuleLoader()
   const definitions = ['athena-branding.ts', 'browser-plugin.ts', 'transforms.ts']
     .map(file => path.join(root, 'src/upstream', file))
   const [branding, browser, renderer] = definitions.map(loader.load)

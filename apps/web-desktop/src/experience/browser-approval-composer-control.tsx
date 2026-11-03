@@ -1,7 +1,5 @@
-import { useBrowserApproval } from '../upstream/approval'
-import { useBrowserActiveProfile } from '../upstream/profiles'
+import { useBrowserEngine } from './engine'
 import { Button, Codicon, DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, Tip, useI18n, Brain, Power, ShieldLock } from '../upstream/browser-api'
-import { useBrowserGatewayRequest } from '../upstream/gateway-request'
 import type { BrowserApprovalMode } from './contracts/actions'
 
 function ApprovalModeIcon({ mode }: { mode: BrowserApprovalMode }) {
@@ -11,11 +9,12 @@ function ApprovalModeIcon({ mode }: { mode: BrowserApprovalMode }) {
 }
 
 export function BrowserApprovalComposerControl() {
+  const engine = useBrowserEngine()
   const { t } = useI18n()
   const copy = t.shell.approvalMode
-  const profile = useBrowserActiveProfile()
-  const requestGateway = useBrowserGatewayRequest()
-  const { mode, setMode, ready } = useBrowserApproval(profile, requestGateway)
+  const profile = engine.profiles.useActive()
+  const requestGateway = engine.approval.useRequest()
+  const { mode, setMode, ready } = engine.approval.useMode(profile, requestGateway)
   const labels: Record<BrowserApprovalMode, string> = { manual: copy.manual, smart: copy.smart, off: copy.off }
   const descriptions: Record<BrowserApprovalMode, string> = { manual: copy.manualDescription, smart: 'Ask when needed', off: copy.offDescription }
 

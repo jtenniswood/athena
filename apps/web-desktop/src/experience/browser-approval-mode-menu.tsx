@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 
 import { Brain, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, Power, ShieldLock, useI18n } from '../upstream/browser-api'
-import { useBrowserApproval } from '../upstream/approval'
+import { useBrowserEngine } from './engine'
 import type { BrowserApprovalMode as ApprovalMode, BrowserApprovalRequester as ApprovalModeRequester } from './contracts/actions'
 import type { StatusbarItem } from '../upstream/browser-api'
 
@@ -12,9 +12,10 @@ function ApprovalModeIcon({ mode }: { mode: ApprovalMode }) {
 }
 
 export function useApprovalModeStatusbarItem(profile: string, requestGateway: ApprovalModeRequester, _gatewayState?: string, _routeIdentity?: unknown): StatusbarItem {
+  const engine = useBrowserEngine()
   const { t } = useI18n()
   const copy = t.shell.approvalMode
-  const { mode, setMode } = useBrowserApproval(profile, requestGateway)
+  const { mode, setMode } = engine.approval.useMode(profile, requestGateway)
   const labels = useMemo<Record<ApprovalMode, string>>(() => ({ manual: copy.manual, smart: copy.smart, off: copy.off }), [copy.manual, copy.off, copy.smart])
   const descriptions = useMemo<Record<ApprovalMode, string>>(() => ({ manual: copy.manualDescription, smart: 'Ask when needed', off: 'All request will be automatically approved' }), [copy.manualDescription])
 

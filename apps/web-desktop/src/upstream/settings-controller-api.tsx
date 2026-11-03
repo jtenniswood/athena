@@ -2,8 +2,12 @@ import type { ReactNode } from 'react'
 import { Navigate } from 'react-router'
 import { useRendererSettingsController } from 'hermes:settings-controller'
 import { SettingsBreadcrumbContext } from '@/app/settings/primitives'
-import type { BrowserSettingsPageProps } from '../experience/contracts/settings'
+import type { BrowserSettingsController, BrowserSettingsPageProps } from '../experience/contracts/settings'
 import { BrowserSettingsToolContent, SETTINGS_TOOL_PAGES } from './settings-tools'
+
+export function BrowserSettingsControllerSurface({ children, ...props }: BrowserSettingsPageProps & { children(controller: BrowserSettingsController): ReactNode }) {
+  return children(useBrowserSettingsController(props))
+}
 
 /** Project commands and page controls; schemas, values, caches, and save owners stay in Hermes. */
 export function useBrowserSettingsController({ onClose, onConfigSaved, onMainModelChanged }: BrowserSettingsPageProps) {

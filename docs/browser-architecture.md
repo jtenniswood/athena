@@ -31,6 +31,16 @@ selection, profile and action adapters project the authoritative stores; they do
 not create a second conversation store. `upstream/browser-api.tsx` remains the
 explicit visual primitive boundary.
 
+The core product shell consumes `experience/contracts/engine.ts` through
+`BrowserEngineProvider`. `upstream/engine-host.tsx` implements that interface
+with the pinned renderer's existing owners. Conversation actions, profiles,
+navigation, project drops, approval mode and reusable engine surfaces cross this
+boundary as plain projections, commands or React surfaces. Settings controllers
+remain lazy so opening chat does not eagerly load the settings implementation.
+The provider carries the host implementation; it does not cache or copy engine
+state. Specialized feature adapters and visual primitives retain their separate
+boundaries.
+
 `experience/settings/settings-route.tsx` assembles settings navigation from the
 catalog. The checked settings controller adapter extracts the existing Hermes
 page controls and commands without generating the browser frame. Schemas, values,
@@ -113,6 +123,13 @@ not validate a separate unmodified renderer graph. Original renderer input
 fingerprints stay reviewed and fetched sources remain untouched. Adapter tests
 check final output fingerprints, replacement resolution, and whether introduced
 type errors and missing imports fail compilation.
+
+Browser transforms are grouped by settings, composer, roster, navigation and
+hosting in `upstream/transforms/`. `browser-plugin.ts` assembles their ordered
+pipeline. The registry names the feature owner for each single-feature transform;
+mixed pipelines retain their assembly owner. Build and adapter tests use the
+same wrapper-only module loader. Moving a handler does not accept new renderer
+input or output fingerprints.
 
 `upstream/entry.ts` installs the bridge and restores its profile before loading
 `upstream/engine-registration.ts`. That module contains the pinned renderer's

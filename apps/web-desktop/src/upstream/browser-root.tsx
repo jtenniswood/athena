@@ -1,4 +1,6 @@
 import { BrowserShell } from '../experience/browser-shell'
+import { BrowserEngineProvider } from '../experience/engine'
+import { browserEngine } from './engine-host'
 import { useEffect } from 'react'
 import { restoreBrowserProfile } from './profiles'
 import { setReasoningCollapsedByDefault } from '@/store/reasoning-disclosure'
@@ -14,5 +16,5 @@ export default function BrowserRoot() {
     setReasoningCollapsedByDefault(true)
     return stopRestoringProfile
   }, [])
-  return <BrowserShell />
+  return <BrowserEngineProvider engine={browserEngine}><BrowserShell /></BrowserEngineProvider>
 }
