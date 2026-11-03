@@ -113,3 +113,16 @@ test('restoration preserves a visible saved profile and tolerates all profiles b
     state.stop()
   }
 })
+
+test('restoration keeps saved all-profile grouping when the default profile is hidden', () => {
+  for (const saved of [null, 'default', 'writer']) {
+    const state = restoration({ saved, all: true })
+    state.publish()
+    assert.deepEqual(state.selections, [])
+    assert.equal(state.scope.get(), true)
+    assert.equal(state.window.__HERMES_WEB_ACTIVE_PROFILE__, null)
+    state.publish()
+    assert.equal(state.scope.get(), true)
+    state.stop()
+  }
+})
