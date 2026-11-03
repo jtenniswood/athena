@@ -184,6 +184,10 @@
       {
         "file": "tests/browser/upgrades.spec.mjs",
         "scenario": "candidate composers block conflicting rollback drafts and allow retry after the other tab closes"
+      },
+      {
+        "file": "tests/browser/upgrades.spec.mjs",
+        "scenario": "a candidate update cannot resurrect an unchanged draft sent by another tab"
       }
     ],
     "removal": "Remove when upstream exposes a public complete draft and attachment snapshot for safe browser updates.",
@@ -206,7 +210,15 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "message actions follow the current runtime after conversation switches without losing drafts"
+        "scenario": "message editing follows the current runtime after conversation switches without losing drafts"
+      },
+      {
+        "file": "tests/browser/upgrades.spec.mjs",
+        "scenario": "candidate composers block conflicting rollback drafts and allow retry after the other tab closes"
+      },
+      {
+        "file": "tests/browser/upgrades.spec.mjs",
+        "scenario": "a candidate update cannot resurrect an unchanged draft sent by another tab"
       }
     ],
     "removal": "Remove when upstream exposes a public flush-all-composers operation with queue/history refusal.",
@@ -2967,7 +2979,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "message actions follow the current runtime after conversation switches without losing drafts"
+        "scenario": "message editing follows the current runtime after conversation switches without losing drafts"
       }
     ],
     "removal": "Remove when the pinned renderer uses the assistant-ui client API instead of removed runtime hooks.",
@@ -2989,7 +3001,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "message actions follow the current runtime after conversation switches without losing drafts"
+        "scenario": "message editing follows the current runtime after conversation switches without losing drafts"
       }
     ],
     "removal": "Remove when the pinned renderer uses the assistant-ui client API instead of removed runtime hooks.",
@@ -3029,7 +3041,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "message actions follow the current runtime after conversation switches without losing drafts"
+        "scenario": "message editing follows the current runtime after conversation switches without losing drafts"
       }
     ],
     "removal": "Remove when the pinned renderer no longer imports the removed runtime hooks.",

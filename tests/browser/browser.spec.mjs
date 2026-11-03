@@ -309,7 +309,8 @@ test('response links open a browser tab without losing the conversation or draft
     server.onMessage(message => {
       const frame = JSON.parse(String(message))
       if (Array.isArray(frame.result?.messages)) {
-        for (const row of frame.result.messages) if (row.role === 'assistant') row.content = response
+        const row = frame.result.messages.findLast(row => row.role === 'assistant')
+        if (row) row.content = response
       }
       socket.send(JSON.stringify(frame))
     })
@@ -317,7 +318,8 @@ test('response links open a browser tab without losing the conversation or draft
   await page.route(/\/api\/sessions\/preview-week\/messages/, async route => {
     const upstream = await route.fetch()
     const body = await upstream.json()
-    for (const row of body.messages || []) if (row.role === 'assistant') row.content = response
+    const row = (body.messages || []).findLast(row => row.role === 'assistant')
+    if (row) row.content = response
     await route.fulfill({ response: upstream, json: body })
   })
   await context.route(destination, route => route.fulfill({ contentType: 'text/html', body: '<h1>Reference destination</h1>' }))
@@ -439,23 +441,25 @@ test('workspace snapshots remain stable through draft edits, session changes, an
   browserErrors.assertClean()
 })
 
-test('message actions follow the current runtime after conversation switches without losing drafts', async ({ page, context }) => {
+test('message editing follows the current runtime after conversation switches without losing drafts', async ({ page }) => {
   const browserErrors = installBrowserErrorCollector(page)
-  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await open(page)
   await expect(page.locator('.athena-connecting-overlay')).toBeHidden()
   await editor(page).fill('Keep this draft while using message actions')
-  await page.locator('[data-slot="aui_assistant-message-root"]').hover()
-  await page.locator('[data-slot="aui_assistant-message-root"]').getByRole('button', { name: 'Copy', exact: true }).click()
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('A little more room to think')
+  // Browser presentation deliberately omits response hover actions.
+  const reply = page.locator('[data-slot="aui_assistant-message-root"]').filter({ hasText: 'A little more room to think' }).first()
+  await reply.hover()
+  await expect(reply.getByRole('button', { name: 'Copy', exact: true })).toBeHidden()
+  await page.getByRole('button', { name: 'Edit message', exact: true }).filter({ hasText: 'Help me make a thoughtful plan.' }).first().click()
+  const edit = page.locator('[data-slot="aui_edit-composer-root"]')
+  await expect(edit.locator('[contenteditable="true"]')).toHaveText('Help me make a thoughtful plan.')
+  await edit.locator('[contenteditable="true"]').press('Escape')
+  await expect(edit).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Explore a product idea', exact: true }).click()
   await expect(page).toHaveURL(/#\/preview-idea$/)
-  await page.locator('[data-slot="aui_assistant-message-root"]').hover()
-  await page.locator('[data-slot="aui_assistant-message-root"]').getByRole('button', { name: 'Copy', exact: true }).click()
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('one person, one problem')
-  await page.getByRole('button', { name: 'Edit message', exact: true }).click()
-  const edit = page.locator('[data-slot="aui_edit-composer-root"]')
+  await expect(page.locator('[data-slot="aui_assistant-message-root"]').filter({ hasText: 'one person, one problem' })).toBeVisible()
+  await page.getByRole('button', { name: 'Edit message', exact: true }).filter({ hasText: 'Help me make a thoughtful plan.' }).first().click()
   await expect(edit.locator('[contenteditable="true"]')).toHaveText('Help me make a thoughtful plan.')
   await edit.locator('[contenteditable="true"]').press('Escape')
   await expect(edit).toHaveCount(0)
@@ -2094,10 +2098,12 @@ for (const width of [390, 1440]) {
     await open(page)
     await editor(page).fill('Preserve this draft while settings load')
     for (let attempt = 0; attempt < 2; attempt++) {
-      const trigger = page.getByRole('button', { name: 'Settings', exact: true })
+      const trigger = await settingsTrigger(page)
       await trigger.click()
-      if (width < 896) await page.getByRole('button', { name: 'Models', exact: true }).click()
-      await expect(page.locator('.browser-settings-detail').getByText('Auxiliary models', { exact: true })).toBeVisible()
+      await page.getByRole('button', { name: 'Models', exact: true }).click()
+      const models = page.getByRole('main', { name: 'Models', exact: true })
+      await expect(models.getByRole('combobox', { name: 'Provider', exact: true })).toHaveText('Preview')
+      await expect(models.getByRole('combobox', { name: 'Model', exact: true })).toHaveText('hermes-preview')
       await expect(page.locator('[data-slot="model-settings-skeleton"]')).toHaveCount(0)
       if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
       await page.getByRole('button', { name: 'Chat', exact: true }).click()
@@ -2129,7 +2135,6 @@ for (const width of [390, 1440]) {
     await editor(page).fill('Keep this draft while managing configuration')
     const trigger = await settingsTrigger(page)
     await trigger.click()
-    const menuRole = (await trigger.getAttribute('aria-haspopup')) === 'dialog' ? 'dialog' : 'menu'
     await expect(page.getByRole('button', { name: 'Export config', exact: true })).toHaveCount(0)
     await page.getByRole('button', { name: 'Models', exact: true }).click()
     const modelSettings = page.getByRole('main', { name: 'Models', exact: true })
