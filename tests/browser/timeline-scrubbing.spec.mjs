@@ -93,3 +93,25 @@ test('timeline gestures cannot cross owners or survive replacement and unmount',
   await page.mouse.up()
   expect(await jumps(page)).toEqual(['research-5', 'research-5'])
 })
+
+test('timeline scrubbing continues when entries refresh within the same owner', async ({ page }) => {
+  const start = await position(page, 'research', 0), middle = await position(page, 'research', 5), end = await position(page, 'research', 8)
+  await page.mouse.move(start.x, start.y)
+  await page.mouse.down()
+  await page.mouse.move(middle.x, middle.y)
+  await page.getByRole('button', { name: 'Refresh entries', exact: true }).evaluate(button => button.click())
+  await page.mouse.move(end.x, end.y)
+  await page.mouse.up()
+  expect(await jumps(page)).toEqual(['research-5', 'research-8'])
+})
+
+test('timeline scrubbing stops when the command owner changes with stable entries', async ({ page }) => {
+  const start = await position(page, 'research', 0), middle = await position(page, 'research', 5), end = await position(page, 'research', 8)
+  await page.mouse.move(start.x, start.y)
+  await page.mouse.down()
+  await page.mouse.move(middle.x, middle.y)
+  await page.getByRole('button', { name: 'Replace command owner', exact: true }).evaluate(button => button.click())
+  await page.mouse.move(end.x, end.y)
+  await page.mouse.up()
+  expect(await jumps(page)).toEqual(['research-5'])
+})

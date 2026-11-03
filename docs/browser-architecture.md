@@ -133,7 +133,9 @@ Timeline scrubbing is mounted on the renderer's virtual rail through a checked
 adapter. The browser hook maps pointer coordinates, UI scale and scroll offset
 to the rail's existing entries, then calls its original jump command. Pointer
 capture belongs to the mounted rail; gestures cannot cross into another rail or
-continue after its entry owner changes. Keyboard and ordinary click navigation,
+continue after its conversation owner changes. The owner is the existing timeline
+index key, including its connection/profile/session scope; refreshing entries
+within that owner does not interrupt a drag. Keyboard and ordinary click navigation,
 virtualization, history loading and jump cancellation remain renderer-owned.
 
 ## Capability and lifecycle boundaries

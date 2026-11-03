@@ -188,7 +188,7 @@ import path from 'node:path'
 import type { Plugin } from 'vite'
 import registry from './compatibility-registry.json'
 import { useBrowserSettingsController } from './settings-controller.ts'
-import { useBrowserTimelineScrubbing } from './transforms/timeline'
+import { exposeBrowserTimelineHistoryOwner, useBrowserTimelineOwner, useBrowserTimelineScrubbing } from './transforms/timeline'
 const contracts = registry.filter(entry => entry.sourceRoot === 'renderer' && entry.module && entry.sourceHash)
 
 const browserRootPath = (root: string): string => path.join(root, 'src/upstream/browser-root.tsx')
@@ -256,6 +256,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
   if (digest(code) === entry.outputHash) return { code, map: null }
   if (digest(code) !== entry.inputHash) throw new Error(`Browser compatibility changed: ${entry.name} (${entry.module}). Review this registry entry.`)
   const handlers: Record<string, (source: string) => string> = {
+    exposeBrowserTimelineHistoryOwner,
+    useBrowserTimelineOwner,
     useBrowserComposerLineBreak,
     useBrowserTimelineScrubbing: source => useBrowserTimelineScrubbing(source, root),
     useBrowserSessionSection: source => useBrowserSessionSection(source, root),

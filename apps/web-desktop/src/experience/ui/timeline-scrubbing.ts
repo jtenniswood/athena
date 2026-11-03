@@ -2,14 +2,15 @@ import { useRef, type MouseEvent, type PointerEvent, type RefObject } from 'reac
 
 interface TimelineScrubbing {
   root: RefObject<HTMLDivElement | null>
+  owner: unknown
   entries: readonly { id: string }[]
   pitch: number
   onJump(id: string): void
 }
 
 /** Navigate through the rail's existing owner without discovering or clicking buttons. */
-export function useTimelineScrubbing({ root, entries, pitch, onJump }: TimelineScrubbing) {
-  const drag = useRef<{ pointerId: number; x: number; y: number; active: boolean; entries: TimelineScrubbing['entries']; lastId?: string } | null>(null)
+export function useTimelineScrubbing({ root, owner, entries, pitch, onJump }: TimelineScrubbing) {
+  const drag = useRef<{ pointerId: number; x: number; y: number; active: boolean; owner: unknown; lastId?: string } | null>(null)
   const suppressClick = useRef(false)
 
   const finish = (event: PointerEvent<HTMLDivElement>) => {
@@ -23,12 +24,12 @@ export function useTimelineScrubbing({ root, entries, pitch, onJump }: TimelineS
     onPointerDown(event: PointerEvent<HTMLDivElement>) {
       if (event.button !== 0 || !event.isPrimary || drag.current) return
       suppressClick.current = false
-      drag.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, active: false, entries }
+      drag.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, active: false, owner }
     },
     onPointerMove(event: PointerEvent<HTMLDivElement>) {
       const current = drag.current, element = root.current
       if (!current || current.pointerId !== event.pointerId || !element) return
-      if (current.entries !== entries) { finish(event); return }
+      if (!Object.is(current.owner, owner)) { finish(event); return }
       if (!current.active && Math.hypot(event.clientX - current.x, event.clientY - current.y) < 4) return
       current.active = true
       if (!element.hasPointerCapture(event.pointerId)) element.setPointerCapture(event.pointerId)
