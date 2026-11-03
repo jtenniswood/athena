@@ -3517,12 +3517,20 @@
       {
         "file": "tests/browser/timeline-scrubbing.spec.mjs",
         "scenario": "timeline gestures cannot cross owners or survive replacement and unmount"
+      },
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline scrubbing continues when entries refresh within the same owner"
+      },
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline scrubbing stops when the command owner changes with stable entries"
       }
     ],
     "removal": "Remove when the renderer exposes equivalent scoped pointer scrubbing through its timeline navigation owner.",
     "sourceHash": "6f104cd714617622a569be35e4efb801ed6879889c908489316889443ff3cce7",
     "inputHash": "6f104cd714617622a569be35e4efb801ed6879889c908489316889443ff3cce7",
-    "outputHash": "a1a20318dda29ef1a2f62e5f458b0734eb28ff4dca490d2dac35431bdfc391e2",
+    "outputHash": "a93126af7d269687dfc94b45b59704bd0da5d1a9f5871d1ec4a9498cd130b489",
     "handlers": [
       "useBrowserTimelineScrubbing"
     ],
@@ -3554,6 +3562,58 @@
     "outputHash": "28683ee45060b3a01dfbcdbcca435ef3e2015623ee6d744499eedf95f2a2b6a4",
     "handlers": [
       "useBrowserComposerLineBreak"
+    ],
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-timeline-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/assistant-ui/thread/timeline.tsx",
+    "reason": "Pass the timeline index owner to the mounted rail without deriving conversation identity from refreshed entries.",
+    "owner": "apps/web-desktop/build/renderer/transforms/timeline.ts",
+    "tests": [
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline scrubbing continues when entries refresh within the same owner"
+      },
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline scrubbing stops when the command owner changes with stable entries"
+      }
+    ],
+    "removal": "Remove when the renderer supplies a stable conversation owner to its scoped timeline gesture API.",
+    "sourceHash": "723b1b9773a59fd2590e252ec9975a3b19abb3a3564162623f9c7ecb88350831",
+    "inputHash": "723b1b9773a59fd2590e252ec9975a3b19abb3a3564162623f9c7ecb88350831",
+    "outputHash": "52c810a74568b8cd809a851d06a9e4d123c75f96305ef60e9edf3d8727d519cf",
+    "handlers": [
+      "useBrowserTimelineOwner"
+    ],
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-timeline-history-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/assistant-ui/thread/use-timeline-history.ts",
+    "reason": "Project the existing connection/profile/session index key without creating another state owner.",
+    "owner": "apps/web-desktop/build/renderer/transforms/timeline.ts",
+    "tests": [
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline scrubbing continues when entries refresh within the same owner"
+      },
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline scrubbing stops when the command owner changes with stable entries"
+      }
+    ],
+    "removal": "Remove when the renderer supplies a stable conversation owner to its scoped timeline gesture API.",
+    "sourceHash": "26d7d4eee402f9aa50cdd50ac845bfd31e156ea323b45b15547a980a16d65775",
+    "inputHash": "26d7d4eee402f9aa50cdd50ac845bfd31e156ea323b45b15547a980a16d65775",
+    "outputHash": "bc75e4156a7dfbf52cef12bcbad758acb710b4aec576cba7e6abf195a2f0764e",
+    "handlers": [
+      "exposeBrowserTimelineHistoryOwner"
     ],
     "sourceRoot": "renderer"
   }

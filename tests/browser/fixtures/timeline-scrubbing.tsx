@@ -7,12 +7,13 @@ const fixture = window as typeof window & { timelineJumps: string[]; timelineSyn
 fixture.timelineJumps = []
 fixture.timelineSyntheticClicks = 0
 
-function Rail({ owner }: { owner: string }) {
-  const entries = useMemo(() => Array.from({ length: 5000 }, (_, index) => ({ id: `${owner}-${index}`, preview: `${owner} message ${index}` })), [owner])
+function Rail({ owner, revision = 0, ownerRevision = 0 }: { owner: string; revision?: number; ownerRevision?: number }) {
+  const entries = useMemo(() => Array.from({ length: 5000 }, (_, index) => ({ id: `${owner}-${index}`, preview: `${owner} message ${index}` })), [owner, revision])
+  const commandOwner = useMemo(() => ({ owner, ownerRevision }), [owner, ownerRevision])
   const [active, setActive] = useState(0)
   return <div data-testid={owner} style={{ height: 280, width: 48 }} onClickCapture={event => {
     if (!event.isTrusted) fixture.timelineSyntheticClicks++
-  }}><TimelineRail activeIndex={active} entries={entries} loadingId={null} onJump={id => {
+  }}><TimelineRail browserOwner={commandOwner} activeIndex={active} entries={entries} loadingId={null} onJump={id => {
     fixture.timelineJumps.push(id)
     setActive(entries.findIndex(entry => entry.id === id))
   }} /></div>
@@ -20,13 +21,16 @@ function Rail({ owner }: { owner: string }) {
 
 function Fixture() {
   const [owner, setOwner] = useState('research'), [shown, setShown] = useState(true), [scale, setScale] = useState(1)
+  const [revision, setRevision] = useState(0), [ownerRevision, setOwnerRevision] = useState(0)
   return <>
     <button onClick={() => setOwner('writer')}>Change conversation</button>
     <button onClick={() => setShown(value => !value)}>Toggle rail</button>
     <button onClick={() => setScale(1.25)}>Scale UI</button>
+    <button onClick={() => setRevision(value => value + 1)}>Refresh entries</button>
+    <button onClick={() => setOwnerRevision(value => value + 1)}>Replace command owner</button>
     <label>Draft<input defaultValue="Preserve this draft" /></label>
     <div style={{ display: 'flex', gap: 100, zoom: scale, marginTop: 30 }}>
-      {shown && <Rail owner={owner} />}<Rail owner="other" />
+      {shown && <Rail owner={owner} revision={revision} ownerRevision={ownerRevision} />}<Rail owner="other" />
     </div>
   </>
 }
