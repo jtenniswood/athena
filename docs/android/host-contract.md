@@ -18,6 +18,19 @@ Only the selected HTTPS origin's main frame may call the bridge.
 capabilities before using optional methods. Old APKs may respond `false`; keep
 legacy behaviour available without assuming a new capability.
 
+The retained presentation capabilities are dispatched by `LegacyNativePresentation`:
+
+| Capability | Existing methods | Current web client |
+| --- | --- | --- |
+| `action-menu`, `action-menu-live`, `action-menu-search` | `actionMenu`, `updateActionMenu`, `dismissActionMenu` | Uses shared web menus and model picker |
+| `settings-page` | `settingsPage`, `updateSettingsPage`, `dismissSettingsPage` | Uses shared web Settings |
+
+Older web clients retain these methods and their original command owners.
+`settingsFiles` stays with the Activity's native file picker. Presentation
+capabilities do not replace the active `settings-menu` handover or native App
+settings and recovery controls. APK and server versions can be updated separately;
+no retirement cutoff is introduced by this ownership boundary.
+
 `appSettingsMenu({ mounted, rendered })` hides the native toolbar only after a
 successful handshake and the web menu has rendered its App settings entry.
 Discovery alone must never hide native controls. Unmounting, page navigation,
