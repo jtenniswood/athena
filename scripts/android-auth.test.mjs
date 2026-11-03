@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { createServer } from 'node:http'
 import { test } from 'node:test'
-import { createAndroidAuthHandler } from './android-auth.mjs'
+import { createAndroidAuthHandler } from '../apps/web-desktop/server/android-auth.mjs'
 
 async function fixture(t) {
   let clock = 0

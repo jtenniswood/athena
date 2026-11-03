@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'apps/android/**'
+      - 'apps/web-desktop/server/**'
       - 'apps/web-desktop/src/platform/android*'
       - 'apps/web-desktop/src/experience/settings-menu.tsx'
       - 'apps/web-desktop/src/entry.ts'

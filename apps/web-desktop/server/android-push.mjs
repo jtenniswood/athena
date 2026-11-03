@@ -1,6 +1,7 @@
 import { createAndroidPushStore } from './android-push-store.mjs'
 import { createHash } from 'node:crypto'
 import { WebSocket, WebSocketServer } from 'ws'
+import { accountIdentity, probeIdentity, requestOrigin } from './identity.mjs'
 
 const root = '/api/athena/android/'
 const retentionMs = 24 * 60 * 60 * 1000
@@ -58,14 +59,11 @@ export function createAndroidPush({ target, sender, fetch: request = globalThis.
       'x-hermes-session-token': req.headers['x-hermes-session-token'] || url.searchParams.get('token') || '',
       'x-forwarded-host': req.headers['x-forwarded-host'] || req.headers.host,
       'x-forwarded-proto': req.headers['x-forwarded-proto'] || (req.socket.encrypted ? 'https' : 'http') }
-    const response = await request(target + '/api/auth/me', { headers, redirect: 'manual', signal: AbortSignal.timeout(6000) })
+    const response = await probeIdentity(target, headers, request)
     if (!response.ok) throw new Error('Sign in required')
-    const account = await response.json()
-    if (typeof account.user_id !== 'string' || !account.user_id || typeof account.provider !== 'string') throw new Error('Invalid identity')
-    return { id: createHash('sha256').update(JSON.stringify([target, account.provider, account.org_id || '', account.user_id])).digest('hex'),
+    return { id: accountIdentity(target, await response.json()),
       cookies: response.headers.getSetCookie() }
   }
-  const requestOrigin = req => `${req.headers['x-forwarded-proto'] || (req.socket.encrypted ? 'https' : 'http')}://${req.headers['x-forwarded-host'] || req.headers.host}`
   const keyFor = (account, deviceId) => `${account}:${deviceId}`
   const prune = () => {
     const stale = [...store.devices].filter(([, device]) => now() - device.updated > retentionMs).map(([key]) => key)
@@ -166,9 +164,11 @@ export function createAndroidPush({ target, sender, fetch: request = globalThis.
     server.on('upgrade', async (req, socket, head) => {
       const url = new URL(req.url, 'http://local.invalid')
       if (url.pathname !== root + 'ws') return
+      if (closed) { socket.destroy(); return }
       if (req.headers.origin !== requestOrigin(req) || !sender.enabled) { socket.destroy(); return }
       try {
         const authenticated = await identity(req), account = authenticated.id, deviceId = url.searchParams.get('device')
+        if (closed) { socket.destroy(); return }
         req[refreshedCookies] = authenticated.cookies
         const key = keyFor(account, deviceId)
         const device = store.devices.get(key)

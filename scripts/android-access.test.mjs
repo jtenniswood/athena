@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { constants, createDecipheriv, generateKeyPairSync, privateDecrypt } from 'node:crypto'
 import { createServer } from 'node:http'
 import { test } from 'node:test'
-import { createAndroidAuthHandler } from './android-auth.mjs'
+import { createAndroidAuthHandler } from '../apps/web-desktop/server/android-auth.mjs'
 
 const origin = 'https://athena.example.com'
 const route = '/api/athena/android/auth/access'

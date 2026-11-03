@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
-import { createAndroidPushStore } from './android-push-store.mjs'
+import { createAndroidPushStore } from '../apps/web-desktop/server/android-push-store.mjs'
 
 test('a failed durable write does not commit a different in-memory registration', t => {
   const parent = mkdtempSync(path.join(tmpdir(), 'athena-store-'))

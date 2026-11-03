@@ -4,7 +4,7 @@ import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
-import { createPreferencesHandler, createPreferenceStore, preferencesPath } from './preferences-server.mjs'
+import { createPreferencesHandler, createPreferenceStore, preferencesPath } from '../apps/web-desktop/server/preferences-server.mjs'
 import { isPreferenceKey, validatePreferenceValues } from './preference-schema.mjs'
 
 const theme = 'hermes-desktop-theme-v2'

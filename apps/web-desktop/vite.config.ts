@@ -2,10 +2,7 @@ import { rendererAdapterPlugin, adapterAliases } from '../../scripts/renderer-ad
 import { runtimeConfiguration, runtimeScripts, matchesGatewayRoute, navigationFallbackDenylist, type HostingConfiguration } from '../../scripts/runtime-config.mjs'
 import { compatibilitySingletons } from '../../scripts/aliases.mjs'
 import { buildInfoPlugin } from '../../scripts/build-info.mjs'
-import { createPreferencesHandler, preferencesPath } from '../../scripts/preferences-server.mjs'
-import { createAndroidAuthHandler } from '../../scripts/android-auth.mjs'
-import { createAndroidPush } from '../../scripts/android-push.mjs'
-import { createFirebaseSender } from '../../scripts/firebase-messaging.mjs'
+import { createAthenaServices } from './server/services.mjs'
 import { defineConfig, loadEnv, type Plugin, type PreviewServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -175,16 +172,13 @@ interface ProxyServerLike {
 }
 
 function attachDynamicProxy(server: ProxyServerLike): void {
-  const androidAuth = createAndroidAuthHandler({ target: hosting.target })
-  const androidPush = createAndroidPush({ target: hosting.target, sender: createFirebaseSender(), directory: process.env.HERMES_PREFERENCES_DIR })
-  if (server.httpServer) {
-    androidPush.attach(server.httpServer)
-    server.httpServer.once('close', () => androidPush.close())
-  }
-  const preferences = createPreferencesHandler({
+  const services = createAthenaServices({
     target: hosting.target,
     directory: process.env.HERMES_PREFERENCES_DIR || path.resolve(__dirname, '../../.athena/preferences')
   })
+  if (server.httpServer) {
+    services.attach(server.httpServer)
+  }
   // Route HTTPS hostname-based gateways correctly (including Cloudflare
   // Tunnel) while retaining the app origin in forwarded metadata.
   const proxy: ProxyServer = createProxyServer({ changeOrigin: true, secure: true, ws: true })
@@ -211,16 +205,9 @@ function attachDynamicProxy(server: ProxyServerLike): void {
     }
   })
 
-  server.middlewares.use((req, res, next) => {
+  server.middlewares.use((req, res, next) => { void (async () => {
     const pathname = req.url?.split('?')[0]
-    if (pathname === '/android/sign-in' || pathname?.startsWith('/api/athena/android/')) {
-      void androidAuth(req, res).then(handled => handled || androidPush.handle(req, res)).then(handled => { if (!handled) next() })
-      return
-    }
-    if (pathname === preferencesPath) {
-      void preferences(req, res)
-      return
-    }
+    if (await services.handle(req, res)) return
     const scripts = runtimeScripts(hosting)
     if (pathname && Object.hasOwn(scripts, pathname.slice(1))) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
@@ -230,7 +217,7 @@ function attachDynamicProxy(server: ProxyServerLike): void {
     }
     if (!matchesGatewayRoute(req.url)) return next()
     proxy.web(req, res, { target: hosting.target })
-  })
+  })().catch(next) })
 
   server.httpServer?.on('upgrade', (req, socket, head) => {
     if (req.url?.split('?')[0] === '/api/athena/android/ws') return

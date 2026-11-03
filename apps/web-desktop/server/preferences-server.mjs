@@ -1,7 +1,8 @@
-import { createHash, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { mkdir, open, readFile, rename, unlink } from 'node:fs/promises'
 import path from 'node:path'
-import { MAX_PREFERENCE_BYTES, validatePreferenceValues } from './preference-schema.mjs'
+import { MAX_PREFERENCE_BYTES, validatePreferenceValues } from '../../../scripts/preference-schema.mjs'
+import { accountIdentity, probeIdentity, requestOrigin } from './identity.mjs'
 
 export const preferencesPath = '/api/athena/preferences'
 
@@ -60,9 +61,7 @@ export function createPreferencesHandler({ target, directory, fetch: request = g
     try {
       if (!['GET', 'PATCH'].includes(req.method)) throw httpError(405, 'Method not allowed')
       if (req.method === 'PATCH') {
-        const scheme = req.headers['x-forwarded-proto'] === 'https' || req.socket.encrypted ? 'https' : 'http'
-        const host = req.headers['x-forwarded-host'] || req.headers.host
-        if (req.headers.origin !== `${scheme}://${host}` || !req.headers['content-type']?.startsWith('application/json')) {
+        if (req.headers.origin !== requestOrigin(req) || !req.headers['content-type']?.startsWith('application/json')) {
           throw httpError(403, 'Same-origin JSON requests are required')
         }
       }
@@ -70,19 +69,15 @@ export function createPreferencesHandler({ target, directory, fetch: request = g
       for (const key of ['cookie', 'authorization', 'x-hermes-session-token', 'x-forwarded-host', 'x-forwarded-proto']) {
         if (typeof req.headers[key] === 'string') headers[key] = req.headers[key]
       }
-      const identityResponse = await request(`${target}/api/auth/me`, {
-        headers, redirect: 'manual', signal: AbortSignal.timeout(6000)
-      })
+      const identityResponse = await probeIdentity(target, headers, request)
       // Auth probes can refresh a session. Return the refreshed cookies to the
       // browser instead of leaving it holding an expired or rotated token.
       const cookies = identityResponse.headers.getSetCookie()
       if (cookies.length) res.setHeader('Set-Cookie', cookies)
       if (!identityResponse.ok) throw httpError(identityResponse.status === 401 || identityResponse.status === 403 ? 401 : 503, 'Sign in to sync settings')
-      const identity = await identityResponse.json()
-      if (typeof identity.user_id !== 'string' || !identity.user_id || typeof identity.provider !== 'string' || !identity.provider) {
-        throw httpError(503, 'The server could not verify your account')
-      }
-      const accountId = createHash('sha256').update(JSON.stringify([target, identity.provider, identity.org_id || '', identity.user_id])).digest('hex')
+      let accountId
+      try { accountId = accountIdentity(target, await identityResponse.json()) }
+      catch { throw httpError(503, 'The server could not verify your account') }
       let saved
       if (req.method === 'GET') saved = await store.read(accountId)
       else {

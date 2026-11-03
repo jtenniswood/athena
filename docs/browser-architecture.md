@@ -87,6 +87,23 @@ unsent edits and drain requests already in flight; a completed request from the
 old profile cannot seed the new profile's configuration cache. Failed writes
 continue to block readiness instead of being treated as durable.
 
+## Runtime service ownership
+
+`apps/web-desktop/server/` owns the running preference, Android authentication,
+and notification services. `createAthenaServices` assembles the same route owners
+for Vite development, Vite preview, and the container's Node server. Each host
+attaches it once and closes it with its HTTP server. The gateway proxy and static
+asset server remain hosting concerns.
+
+The services share account identity derivation and non-redirecting Hermes session
+probes. Each endpoint explicitly chooses its accepted credentials; browser
+handoffs continue to transfer only approved Hermes cookies, and native token
+refresh remains restricted to its installation binding. Existing account hashes,
+preference files, push bindings, API routes, and the data volume stay compatible.
+
+`scripts/serve.mjs` starts the production host; the other files in `scripts/`
+are build, maintenance, diagnostic, or verification entry points.
+
 ## Compatibility ownership
 
 `scripts/renderer-adapter.mjs` owns the ordered build adapters, module replacements,
