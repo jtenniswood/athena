@@ -81,6 +81,42 @@ const open = async (page, session = 'preview-week') => {
   await expect(page.getByText('Help me make a thoughtful plan.', { exact: true }).first()).toBeVisible({ timeout: 30000 })
 }
 
+test('chat hover previews show the latest reply without selecting the chat or changing its draft', async ({ page }) => {
+  const fullTitle = 'Explore a product idea with a deliberately long title that should fade at the edge and remain fully readable in the preview card'
+  await page.route(/\/api\/profiles\/sessions/, async route => {
+    const response = await route.fetch()
+    await route.fulfill({ response, body: (await response.text()).replaceAll('Explore a product idea', fullTitle) })
+  })
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await open(page)
+  await editor(page).fill('Keep this draft while previewing another chat')
+  const row = page.locator('[data-web-session-id="preview-idea"]').first()
+  await row.hover()
+  const card = page.locator('.browser-session-preview:visible')
+  await expect(card.locator('.browser-session-preview-title')).toHaveText(fullTitle)
+  await expect(card.locator('.browser-session-generation p')).toContainText('one person, one problem, and one small experiment')
+  const rowBox = await row.boundingBox()
+  const cardBox = await card.boundingBox()
+  expect(cardBox.x).toBeGreaterThanOrEqual(rowBox.x + rowBox.width)
+  await expect(page).toHaveURL(/#\/preview-week$/)
+  await expect(editor(page)).toHaveText('Keep this draft while previewing another chat')
+  const titleStyle = await row.locator('.browser-session-title').evaluate(node => ({
+    overflow: getComputedStyle(node).textOverflow,
+    mask: getComputedStyle(node).maskImage,
+    animation: getComputedStyle(node.firstElementChild).animationName
+  }))
+  expect(titleStyle.overflow).toBe('clip')
+  expect(titleStyle.mask).toContain('linear-gradient')
+  expect(titleStyle.animation).toBe('none')
+  await page.keyboard.press('Escape')
+  await expect(card).toHaveCount(0)
+  await row.getByRole('button', { name: fullTitle, exact: true }).focus()
+  // Focus opens only in keyboard modality, as it does for every app tooltip.
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Shift+Tab')
+  await expect(page.locator('.browser-session-preview:visible')).toBeVisible()
+})
+
 async function setFollowupPreference(page, value) {
   await page.addInitScript(preference => localStorage.setItem('hermes-web.browser.followup-behavior', preference), value)
   // Tests share one synthetic account. Its confirmed server value takes
