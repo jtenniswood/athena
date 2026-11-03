@@ -567,7 +567,7 @@
     "kind": "replacement",
     "order": 10,
     "module": "app/chat/sidebar/session-row.tsx",
-    "reason": "Project engine-owned session metadata and commands into Athena-owned row presentation, browser gestures, sortable handles and owner-scoped previews.",
+    "reason": "Project engine-owned session metadata and commands into Athena-owned row presentation, browser gestures, sortable handles and owner-scoped previews. Preserve the direct archive command beside the menu.",
     "owner": "apps/web-desktop/src/upstream/session-row.tsx",
     "tests": [
       {
@@ -585,6 +585,10 @@
       {
         "file": "tests/browser/session-row.spec.mjs",
         "scenario": "row commands preserve owner identity and exclude action and portal gestures"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "hovered chat archive preserves the selected conversation and draft"
       }
     ],
     "removal": "Remove when Hermes provides an equivalent public row projection and command contract.",

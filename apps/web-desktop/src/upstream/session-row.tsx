@@ -23,7 +23,6 @@ import { SESSION_ROW_AREAS } from '@/lib/session-row-slots'
 import { handoffOriginSource, sessionSourceLabel } from '@/lib/session-source'
 import { coarseElapsed } from '@/lib/time'
 import { useStoreSelector } from '@/lib/use-session-slice'
-import { cn } from '@/lib/utils'
 import { $sidebarRowMeta } from '@/store/layout'
 import { normalizeProfileKey } from '@/store/profile'
 import { $projects } from '@/store/projects'
@@ -105,9 +104,13 @@ function SidebarSessionRowAdapter({ session, branchStem, isPinned, isSelected, u
     leading: <SessionRowSlot area={SESSION_ROW_AREAS.leading} sessionId={sessionPinId(session)} />,
     trailing: <SessionRowSlot area={SESSION_ROW_AREAS.trailing} sessionId={sessionPinId(session)} />,
     figures: trailing.map((node, index) => <span key={index} className={!figures.length && !rowMeta.includes('updated') && index === trailing.length - 1 ? 'session-row-tail inline-flex min-w-5 justify-end transition-opacity group-hover:opacity-0' : undefined}>{node}</span>),
-    actions: <SessionActionsMenu {...menu}><Button aria-label={r.sessionActions} size="icon" variant="ghost" className={cn(
-      'size-5 rounded-[4px] bg-transparent text-transparent transition-colors duration-100 hover:bg-(--ui-control-active-background) hover:text-foreground focus-visible:bg-(--ui-control-active-background) focus-visible:text-foreground focus-visible:ring-0 data-[state=open]:bg-(--ui-control-active-background) data-[state=open]:text-foreground group-hover:text-(--ui-text-tertiary) [&_svg]:size-3.5!',
-      trailing.length > 0 && 'absolute right-0', pr && 'session-row-kebab')}><Codicon name="kebab-vertical" size="0.875rem" /></Button></SessionActionsMenu>,
+    actions: <span data-browser-session-actions=""><SessionActionsMenu {...menu}><Button aria-label={r.sessionActions} size="icon" variant="ghost"
+      className="size-5 rounded-[4px] bg-transparent text-transparent transition-colors duration-100 hover:bg-(--ui-control-active-background) hover:text-foreground focus-visible:bg-(--ui-control-active-background) focus-visible:text-foreground focus-visible:ring-0 data-[state=open]:bg-(--ui-control-active-background) data-[state=open]:text-foreground group-hover:text-(--ui-text-tertiary) [&_svg]:size-3.5!">
+      <Codicon name="ellipsis" size="0.875rem" /></Button></SessionActionsMenu>
+      {!session.archived && <Tip label={r.archive} placement="toolbar"><Button type="button" aria-label={r.archive} size="icon" variant="ghost" onClick={onArchive}>
+        <Codicon name="archive" size="0.875rem" />
+      </Button></Tip>}
+    </span>,
     activate: onResume, togglePin: onPin, archive: onArchive
   }
   return <SessionContextMenu {...menu}><BrowserSessionPreview session={session} title={title} disabled={dragging}>

@@ -119,8 +119,12 @@
 .browser-sessions-pane [data-gateway-group] > :first-child > [data-row-actions] button { margin:0; color:var(--web-text-muted); opacity:1; }
 /* Inset chat ages from the row edge without moving the overlaid actions button. */
 .browser-sessions-pane [data-web-session-id] .session-row-tail:has(time) { padding-inline-end:var(--web-space-2); }
-/* The larger chat action covers the age while hovered or keyboard-focused. */
-.browser-sessions-pane [data-web-session-id]:is(:hover,:has([data-row-actions] button:is(:focus-visible,[data-state="open"]))) .session-row-tail { visibility:hidden; }
+/* Keep metadata in flow and reveal menu/archive controls over it without moving the title. */
+.browser-sessions-pane [data-row-actions]:has(> [data-browser-session-actions]) { min-width:calc(2 * var(--web-control-compact) + var(--web-space-1)); min-height:var(--web-control-compact); }
+.browser-sessions-pane [data-browser-session-actions] { position:absolute; right:0; display:flex; align-items:center; gap:var(--web-space-1); opacity:0; pointer-events:none; }
+.browser-sessions-pane [data-browser-session-actions] > button { color:var(--web-text-subtle); }
+.browser-sessions-pane [data-web-session-id]:is(:hover,:focus-within,:has([data-state="open"])) [data-browser-session-actions] { opacity:1; pointer-events:auto; }
+.browser-sessions-pane [data-web-session-id]:is(:hover,:focus-within,:has([data-state="open"])) [data-row-actions]:has(> [data-browser-session-actions]) > span:not([data-browser-session-actions]) { visibility:hidden; }
 /* Header actions share one square target. Let the filter's grid wrapper grow
    with its button instead of keeping the upstream desktop-only size. */
 .browser-sessions-pane [data-browser-section-header] button[data-size="icon-xs"] { margin:0; }
@@ -214,6 +218,7 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-sessions-pane [data-web-session-id] > :first-child { padding-block:0; }
  .browser-sessions-pane [data-row-actions] { gap:var(--web-space-1); }
  .browser-sessions-pane [data-row-actions] button { position:relative; box-sizing:border-box; min-width:var(--web-touch-min); width:var(--web-touch-min); min-height:var(--web-touch-min); height:var(--web-touch-min); flex-shrink:0; color:var(--web-text-subtle) !important; }
+ .browser-sessions-pane [data-browser-session-actions] { position:relative; opacity:1; pointer-events:auto; }
  /* Session ages can sit beside the row button. Hide their separator too and
     keep the always-visible context button in flow so it has its own space. */
  .browser-sessions-pane :is([data-row-actions], button[data-slot="row-button"]) :is(time, span:has(> time)) { display:none !important; }
