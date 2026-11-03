@@ -200,6 +200,8 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-sessions-pane [data-browser-section-header] { min-height:var(--web-touch-min); align-items:center; }
  .browser-sessions-pane [data-browser-section-label] { box-sizing:border-box; min-width:var(--web-touch-min); align-items:center; }
  .browser-sessions-pane [class*="group/handle"] { box-sizing:border-box; min-width:var(--web-touch-target); min-height:var(--web-touch-target); }
+ /* Trim the inset around the touch-height title to tighten mobile chat rows. */
+ .browser-sessions-pane [data-web-session-id] > :first-child { padding-block:0; }
  .browser-sessions-pane [data-row-actions] { gap:var(--web-space-1); margin-inline-end:calc(-1 * var(--web-space-2)); }
  .browser-sessions-pane [data-row-actions] button { position:relative; box-sizing:border-box; min-width:var(--web-touch-min); width:var(--web-touch-min); min-height:var(--web-touch-min); height:var(--web-touch-min); flex-shrink:0; color:var(--web-text-subtle) !important; }
  /* Session ages can sit beside the row button. Hide their separator too and
