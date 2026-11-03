@@ -1,6 +1,25 @@
 import path from 'node:path'
 import { replaceBrowserContract } from './contract'
 
+/** Keep browser line breaks inside the composer's IME, undo and draft lifecycle. */
+export function useBrowserComposerLineBreak(source: string): string {
+  const target = '    // Undo/redo before anything else — we own the stack (see useComposerUndo),'
+  return replaceBrowserContract(source, [[target, `    if (event.key === 'Enter' && event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey) {
+      event.preventDefault()
+      event.stopPropagation()
+
+      if (!disabled) {
+        recordUndoPoint()
+        event.currentTarget.ownerDocument.execCommand('insertLineBreak')
+        flushEditorToDraft(event.currentTarget)
+      }
+
+      return
+    }
+
+${target}`]])
+}
+
 export function keepBrowserMessageBubblesSolid(source: string): string {
   const replacements: [string, string][] = [
     ['clampIntensity(storedString(KEY))', '(window.__HERMES_WEB_BRIDGE__ ? TRANSLUCENCY_MIN : clampIntensity(storedString(KEY)))'],

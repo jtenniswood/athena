@@ -92,6 +92,13 @@ drill-in parked at the overview. The controller tests protect hook ordering,
 captured command owners and creation
 after branch-switch failures; they do not replace the rendered workflow checks.
 
+Composer keyboard changes have a built-application check in
+`tests/browser/composer-keyboard.spec.mjs`. After `pnpm build`, run it with
+`pnpm exec playwright test tests/browser/composer-keyboard.spec.mjs --project=chromium`;
+WebKit is also supported. The fixture serves the production bundle through Vite
+preview with a temporary synthetic gateway. It checks line-break undo, draft
+restoration, normal submission, composition flags and selection replacement.
+
 The compatibility workflow runs affected declared Node scenarios and uses the
 selection-race entry for a focused built-image check when relevant engine or
 selection boundaries change. It preserves the plans and execution results as
