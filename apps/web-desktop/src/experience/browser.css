@@ -117,6 +117,8 @@
 .browser-sessions-pane [data-gateway-group] > :first-child { padding-inline-end:.625rem; }
 .browser-sessions-pane [data-gateway-group] > :first-child > [data-row-actions] { gap:0; margin-inline-end:0; }
 .browser-sessions-pane [data-gateway-group] > :first-child > [data-row-actions] button { margin:0; color:var(--web-text-muted); opacity:1; }
+/* Inset chat ages from the row edge without moving the overlaid actions button. */
+.browser-sessions-pane [data-web-session-id] .session-row-tail:has(time) { padding-inline-end:var(--web-space-2); }
 /* The larger chat action covers the age while hovered or keyboard-focused. */
 .browser-sessions-pane [data-web-session-id]:is(:hover,:has([data-row-actions] button:is(:focus-visible,[data-state="open"]))) .session-row-tail { visibility:hidden; }
 /* Header actions share one square target. Let the filter's grid wrapper grow
