@@ -175,7 +175,7 @@
       },
       {
         "file": "tests/browser/upgrades.spec.mjs",
-        "scenario": "rollback to the previous tested image waits for active work and retains real drafts in both tabs"
+        "scenario": "UI rollback reconnects a running response and retains real drafts in both tabs"
       },
       {
         "file": "scripts/draft-persistence.test.mjs",
@@ -2019,7 +2019,7 @@
     "tests": [
       {
         "file": "tests/browser/upgrades.spec.mjs",
-        "scenario": "rollback to the previous tested image waits for active work and retains real drafts in both tabs"
+        "scenario": "UI rollback reconnects a running response and retains real drafts in both tabs"
       }
     ],
     "removal": "Remove when upstream saves independent browser drafts under a shared lock.",

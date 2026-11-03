@@ -135,7 +135,7 @@ test('two real composers editing the same conversation cannot overwrite one anot
 })
 
 
-test('rollback to the previous tested image waits for active work and retains real drafts in both tabs', async ({ page, context, upgradeApp }, testInfo) => {
+test('UI rollback reconnects a running response and retains real drafts in both tabs', async ({ page, context, upgradeApp }, testInfo) => {
   await openPrevious(page, upgradeApp, 'preview-week')
   const other = await context.newPage()
   await openPrevious(other, upgradeApp, 'preview-idea')
@@ -153,19 +153,15 @@ test('rollback to the previous tested image waits for active work and retains re
   await editor(page).fill('First draft edited in the candidate')
   await editor(other).fill('Start active work before rollback')
   await editor(other).press('Enter')
-  const stop = other.locator('[data-slot="composer-surface"]').getByRole('button', { name: 'Stop', exact: true })
+  // The older image places Stop beside the message rather than the composer.
+  const stop = other.getByRole('button', { name: 'Stop', exact: true }).first()
   await expect(stop).toBeVisible()
+  await expect(other.getByText('This is a', { exact: false }).last()).toBeVisible({ timeout: 20000 })
+  await editor(other).fill('Second draft edited in the candidate')
   upgradeApp.publishPrevious()
   await page.evaluate(async () => { const registration = await navigator.serviceWorker.getRegistration(); await registration.update() })
   const update = page.getByRole('button', { name: 'Update when safe', exact: true })
   await expect(update).toBeVisible({ timeout: 30000 })
-  await update.click()
-  await expect(page.getByRole('status', { name: 'Application update' })).toContainText(/postponed|active response/)
-  await expect(stop).toBeVisible()
-  await expect(page.locator(`script[type="module"][src="${candidateEntry}"]`)).toHaveCount(1)
-  await stop.click()
-  await expect(stop).toHaveCount(0)
-  await editor(other).fill('Second draft edited in the candidate')
   await attachFile(page)
   await update.click()
   await expect(page.getByRole('status', { name: 'Application update' })).toContainText('unsent attachments')
@@ -188,6 +184,15 @@ test('rollback to the previous tested image waits for active work and retains re
   await Promise.all([
     page.waitForEvent('load', { timeout: 60000 }), other.waitForEvent('load', { timeout: 60000 }), update.click()
   ])
+  await expect(stop).toBeVisible({ timeout: 30000 })
+  await expect(other.getByText('This is a', { exact: false }).last()).toBeVisible()
+  expect(upgradeApp.sessions.get('preview-idea').is_active).toBe(true)
+  expect(upgradeApp.controls.calls.filter(call => call.method === 'prompt.submit')).toHaveLength(1)
+  expect(upgradeApp.controls.calls.filter(call => /interrupt|cancel/.test(call.method))).toHaveLength(0)
+  const completed = 'This task finished after the UI update.'
+  upgradeApp.completeResponse('preview-idea', completed)
+  await expect(stop).toHaveCount(0)
+  await expect(other.getByText(completed, { exact: false }).last()).toBeVisible()
   const previousEntry = await entryFor(upgradeApp.previous)
   for (const [tab, session, draft] of [[page, 'preview-week', 'First draft edited in the candidate'], [other, 'preview-idea', 'Second draft edited in the candidate']]) {
     await expect(tab.locator(`script[type="module"][src="${previousEntry}"]`)).toHaveCount(1)
@@ -198,7 +203,7 @@ test('rollback to the previous tested image waits for active work and retains re
     await expect(editor(tab)).toHaveText(draft)
   }
   expect((await (await page.request.get(`${upgradeApp.origin}/build-info.json`)).json()).wrapperRevision).toBe(upgradeApp.previous.build.wrapperRevision)
-  await testInfo.attach('rollback-result', { body: JSON.stringify({ from: upgradeApp.candidate.build, to: upgradeApp.previous.build, fromImage: upgradeApp.candidate.reference, toImage: upgradeApp.previous.reference, activeResponseBlocked: true, attachmentBlocked: true, draftsRetainedAfterReload: true, gateway: 'synthetic-preview-v1' }, null, 2), contentType: 'application/json' })
+  await testInfo.attach('rollback-result', { body: JSON.stringify({ from: upgradeApp.candidate.build, to: upgradeApp.previous.build, fromImage: upgradeApp.candidate.reference, toImage: upgradeApp.previous.reference, activeResponseResumed: true, attachmentBlocked: true, draftsRetainedAfterReload: true, gateway: 'synthetic-preview-v1' }, null, 2), contentType: 'application/json' })
   await other.close()
 })
 

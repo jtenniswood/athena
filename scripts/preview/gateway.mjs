@@ -19,7 +19,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
   const skills = [{ name: 'preview-planning', category: 'Productivity', description: 'A synthetic planning skill for interface review.', enabled: true, provenance: 'bundled' }]
   const toolsets = [{ name: 'preview', label: 'Preview tools', description: 'Synthetic tools; no external services are called.', enabled: true, configured: true, tools: ['preview_note'] }]
   const platforms = [{ id: 'discord', name: 'Discord', description: 'Synthetic preview only. No external messages are sent.', docs_url: '', enabled: false, configured: true, env_vars: [], gateway_running: true, state: 'disabled' }]
-  const sessions = new Map(), messages = new Map(), timers = new Map(), clients = new Set(), approvalModes = new Map()
+  const sessions = new Map(), messages = new Map(), timers = new Map(), inflight = new Map(), clients = new Set(), approvalModes = new Map()
   let count = 0
   function addSession(id, title, profile = 'default', text = '') {
     const rows = text ? [{ id: `${id}-u`, role: 'user', content: 'Help me make a thoughtful plan.', timestamp: now() - 60 }, { id: `${id}-a`, role: 'assistant', content: text, timestamp: now() - 40 }] : []
@@ -41,10 +41,11 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
   }
   function snapshot(id) {
     const session = sessions.get(id) || addSession(id, 'New conversation')
-    return { session_id: id, resumed: id, stored_session_id: id, messages: messages.get(id), message_count: messages.get(id).length, info: { ...info, profile: session.profile }, running: timers.has(id), pending_approval: null, open_requests: [], inflight: null }
+    return { session_id: id, resumed: id, stored_session_id: id, messages: messages.get(id), message_count: messages.get(id).length, info: { ...info, profile: session.profile }, running: timers.has(id), pending_approval: null, open_requests: [], inflight: inflight.get(id) || null }
   }
   function complete(id, status = 'complete', text = '') {
     clearInterval(timers.get(id)); timers.delete(id)
+    inflight.delete(id)
     if (text) messages.get(id)?.push({ id: `${id}-${Date.now()}`, role: 'assistant', content: text, timestamp: now() })
     const session = sessions.get(id)
     if (session) { session.is_active = false; session.message_count = messages.get(id).length }
@@ -129,11 +130,13 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       if (session.title === 'New conversation') session.title = (params.text || 'New conversation').slice(0, 48)
       const text = 'This is a synthetic response for the interface preview. Your message reached the shared Hermes chat engine and its normal streaming flow.\n\nTry reopening this conversation, switching between Sessions and Bots, or changing the Experience after this response finishes. No external model was called.'
       const parts = text.match(/.{1,9}|\n/g) || [text]
+      const turn = { user: params.text || '', assistant: '', streaming: true }
+      inflight.set(id, turn)
       let index = 0, sent = ''
       setTimeout(() => event('message.start', id, { role: 'assistant' }), 20)
       const timer = setInterval(() => {
         if (index >= parts.length) { complete(id, 'complete', sent); return }
-        const piece = parts[index++]; sent += piece; event('message.delta', id, { text: piece })
+        const piece = parts[index++]; sent += piece; turn.assistant = sent; event('message.delta', id, { text: piece })
       }, delay)
       timers.set(id, timer)
       return { status: 'started', session_id: id, submission_id: params.submission_id }
@@ -250,7 +253,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     })
   })
   const disconnect = () => { for (const client of clients) client.terminate() }
-  return { server, sessions, messages, profiles, controls, disconnect, close: async () => { controls.releaseAll(); for (const timer of timers.values()) clearInterval(timer); disconnect(); sockets.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)) } }
+  return { server, sessions, messages, profiles, controls, disconnect, completeResponse: (id, text) => complete(id, 'complete', text), close: async () => { controls.releaseAll(); for (const timer of timers.values()) clearInterval(timer); disconnect(); sockets.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)) } }
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const gateway = createPreviewGateway({ log: (method, route) => console.log(method, route) })
