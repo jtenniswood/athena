@@ -1141,7 +1141,8 @@ function OptionGlyph({ option }: { option: Option }) {`
     ['<DropdownMenuItem onSelect={() => void runImportProfileFlow()}>\n                {t.profiles.importProfile}', '<DropdownMenuItem onSelect={() => void runImportProfileFlow()}>\n                <Codicon name="cloud-download" size="0.8125rem" />\n                {t.profiles.importProfile}'],
     ['<DropdownMenuItem onSelect={resetSidebarView}>{f.resetToDefaults}</DropdownMenuItem>', '<DropdownMenuItem onSelect={resetSidebarView}><Codicon name="refresh" size="0.8125rem" />{f.resetToDefaults}</DropdownMenuItem>'],
     ['            {foldCollapsed ? f.expandAll : f.collapseAll}', '            <Codicon name={foldCollapsed ? "expand-all" : "collapse-all"} size="0.8125rem" />\n            {foldCollapsed ? f.expandAll : f.collapseAll}'],
-    ['          {t.sidebar.markAllRead}\n', '          <Codicon name="check-all" size="0.8125rem" />\n          {browserSidebarActionLabel(\'read\', t.sidebar.markAllRead)}\n']
+    ['          {t.sidebar.markAllRead}\n', '          <Codicon name="check-all" size="0.8125rem" />\n          {browserSidebarActionLabel(\'read\', t.sidebar.markAllRead)}\n'],
+    ['        {foldIds.length > 0 && (', '        <BrowserRestoreProfilesItem />\n        {foldIds.length > 0 && (']
   ]
   let output = source
   for (const [before, after] of replacements) {
@@ -1153,7 +1154,8 @@ function OptionGlyph({ option }: { option: Option }) {`
   if (output.split(manualOrdering).length !== 2) throw new Error('Browser manual ordering option contract changed')
   output = output.replace(manualOrdering, '      return true')
   const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-shortcuts'))
-  return `import { browserSidebarActionLabel, useBrowserSidebarShortcuts } from ${owner}\n` + output.replace(target, target + hideDesktopOnlyRows)
+  const profilesOwner = JSON.stringify(path.join(root, 'src/experience/profile-list-visibility'))
+  return `import { BrowserRestoreProfilesItem } from ${profilesOwner}\nimport { browserSidebarActionLabel, useBrowserSidebarShortcuts } from ${owner}\n` + output.replace(target, target + hideDesktopOnlyRows)
 }
 
 export function showHiddenBotsInBrowserRoster(source: string): string {
@@ -1179,6 +1181,9 @@ export function useBrowserProfileSectionPictures(source: string, root: string): 
     ['              />\n            )}\n            <DropdownMenu>', '              ><Codicon name="add" size="0.75rem" /></Button></Tip>\n            )}\n            <DropdownMenu>'],
     ['  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA)', "  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA).filter(item => item.id !== 'hermes-bots:screen-portal')"],
     ['  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()', "  const presentationMode = useStore($sidebarGrouping) === 'profile'\n  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()"],
+    ['  const order = useStore($gatewayGroupOrder)', '  const order = useStore($gatewayGroupOrder)\n  const hiddenProfileGroups = useHiddenProfileGroups()'],
+    ['  const ordered = [...sections].sort((a, b) => {', "  const ordered = sections.filter(group => embedded || !presentationMode || !hiddenProfileGroups.includes(group.profile ?? '')).sort((a, b) => {"],
+    ['              <DropdownMenuContent align="end">', '              <DropdownMenuContent align="end">\n                {browserProfile && group.profile && !embedded && <BrowserHideProfileItem profile={group.profile} />}'],
     ['if (nested || embedded || !owner) {', 'if (nested || embedded || !owner || presentationMode) {'],
     ['  const label = aliases[group.id] || group.label', '  const browserProfile = useBrowserProfileSection(group.profile)\n  const label = aliases[group.id] || browserProfile?.label || group.label'],
     [`              <ProfileGlyph
@@ -1199,7 +1204,8 @@ export function useBrowserProfileSectionPictures(source: string, root: string): 
     output = output.replace(before, after)
   }
   const owner = JSON.stringify(path.join(root, 'src/upstream/profile-section'))
-  return `import { $sidebarGrouping } from '@/store/layout'\nimport { useBrowserProfileSection } from ${owner}\n` + output
+  const visibilityOwner = JSON.stringify(path.join(root, 'src/experience/profile-list-visibility'))
+  return `import { BrowserHideProfileItem, useHiddenProfileGroups } from ${visibilityOwner}\nimport { $sidebarGrouping } from '@/store/layout'\nimport { useBrowserProfileSection } from ${owner}\n` + output
 }
 
 export function useBrowserSessionReordering(source: string, surface: 'sidebar' | 'section' | 'groups' | 'row'): string {

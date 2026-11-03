@@ -338,7 +338,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
-    "reason": "Adapt Gateway & profile grouping to Profile, hide desktop profile/card controls and the grouping summary, expose None grouping, and add sidebar action shortcuts.",
+    "reason": "Adapt Gateway & profile grouping to Profile, hide desktop profile/card controls and the grouping summary, expose None grouping, add sidebar action shortcuts, and restore hidden profile groups from the filter control.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -352,6 +352,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "Profile grouping replaces presentation controls and switches live without gateway nesting"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "profile menus hide groups and filters restore every profile without losing the draft"
       }
     ],
     "removal": "The browser owns the filter menu or upstream offers composition flags.",
@@ -362,7 +366,7 @@
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
     "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
-    "outputHash": "e0640af842abbed9d9aa057815a83a8396e50821af630512aa6323a62a5ef0d1"
+    "outputHash": "b2baf873a6b29cebe35919bc3ad246d5e483a261610f88d67f7f087da96d125a"
   },
   {
     "name": "hidden-bot-roster",
@@ -3090,7 +3094,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/gateway-groups.tsx",
-    "reason": "In Profile grouping, show configured profile avatars and display names with chats directly beneath each profile, omitting the gateway nesting and desktop Screen portal. Rank profile previews by the saved manual order when active.",
+    "reason": "In Profile grouping, show configured profile avatars and display names with chats directly beneath each profile, omitting the gateway nesting and desktop Screen portal. Rank profile previews by the saved manual order when active. Hide profile groups through their menus without changing the selected conversation or messaging groups.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -3104,6 +3108,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "dragging chats selects manual ordering and preserves the draft"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "profile menus hide groups and filters restore every profile without losing the draft"
       }
     ],
     "removal": "Remove when upstream profile headers use the configured profile picture and support a single shared-gateway list.",
@@ -3114,7 +3122,7 @@
     "sourceHash": "7499db0f9583cdcbadfe66f488cf2dea6562d2e4de0c73674c3013ebb951b83c",
     "sourceRoot": "renderer",
     "inputHash": "7499db0f9583cdcbadfe66f488cf2dea6562d2e4de0c73674c3013ebb951b83c",
-    "outputHash": "e52243755678463d6ec216d22b14f25717dd2f052f30a1621f0b4a9d9c0d95d5"
+    "outputHash": "e3aa36e65af74640abdb1f8184a6481d96240a9183534efac942cd6142ae160d"
   },
   {
     "name": "shared-gateway-profile-route",

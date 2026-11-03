@@ -27,6 +27,7 @@ export const browserPreferences = Object.freeze({
   presentationMode: definition('hermes-web.browser.presentation-mode', 'experience/browser-shell', false, raw => raw === 'true', String, { memoryOnFailure: true }),
   activeTab: definition('hermes-web.browser.navigation', 'experience/browser-preferences', 'sessions', raw => raw === 'bots' ? 'bots' : 'sessions'),
   hiddenProfiles: definition('hermes-web.browser.hidden-profiles', 'experience/browser-preferences', empty, list, JSON.stringify),
+  hiddenProfileGroups: definition('hermes-web.browser.hidden-profile-groups', 'experience/profile-list-visibility', empty, list, JSON.stringify, { memoryOnFailure: true }),
   hideAllProfilesButton: definition('hermes-web.browser.hide-all-profiles-button', 'experience/browser-preferences', false, raw => raw === 'true'),
   navigationTabs: definition('hermes-web.browser.navigation-tabs', 'experience/browser-preferences', NAVIGATION_TABS, raw => {
     const value = json(raw)
