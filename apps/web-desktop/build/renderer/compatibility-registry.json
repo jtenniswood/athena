@@ -3497,5 +3497,35 @@
     "sourceHash": "1023cb3c8ab1ca55c6416f6f87ad75b7eb189a3cdc3589b042ce6c66ab39934b",
     "inputHash": "1023cb3c8ab1ca55c6416f6f87ad75b7eb189a3cdc3589b042ce6c66ab39934b",
     "outputHash": "f328ee78bf6d732508b4d6ba4c548cb13934fa78573d1d4761bd47665fb83957"
+  },
+  {
+    "name": "browser-timeline-scrubbing",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/assistant-ui/thread/timeline-rail.tsx",
+    "reason": "Scope drag navigation to the mounted virtual timeline and its original jump command without document listeners or simulated clicks.",
+    "owner": "apps/web-desktop/build/renderer/transforms/timeline.ts",
+    "tests": [
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline drags call the owning command once per entry without synthetic clicks"
+      },
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline dragging respects virtual scroll offsets and UI scale"
+      },
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline gestures cannot cross owners or survive replacement and unmount"
+      }
+    ],
+    "removal": "Remove when the renderer exposes equivalent scoped pointer scrubbing through its timeline navigation owner.",
+    "sourceHash": "6f104cd714617622a569be35e4efb801ed6879889c908489316889443ff3cce7",
+    "inputHash": "6f104cd714617622a569be35e4efb801ed6879889c908489316889443ff3cce7",
+    "outputHash": "a1a20318dda29ef1a2f62e5f458b0734eb28ff4dca490d2dac35431bdfc391e2",
+    "handlers": [
+      "useBrowserTimelineScrubbing"
+    ],
+    "sourceRoot": "renderer"
   }
 ]

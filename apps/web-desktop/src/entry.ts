@@ -10,7 +10,6 @@ import './web-overrides.css'
 import './platform/sign-in.css'
 import './experience/styles/motion.css'
 import { installBrowserMotionInput } from './experience/ui/motion-input'
-import { installTimelineRailScrubbing } from './experience/ui/timeline-rail-scrubbing'
 import { trackVisualViewport } from './platform/viewport'
 import { installComposerKeyboard } from './platform/composer-keyboard'
 import { installAndroidNavigationGuard } from './platform/android-navigation'
@@ -23,8 +22,6 @@ if (import.meta.hot) import.meta.hot.dispose(stopMotionInput)
 
 const stopTrackingViewport = trackVisualViewport()
 if (import.meta.hot) import.meta.hot.dispose(stopTrackingViewport)
-const stopTimelineRailScrubbing = installTimelineRailScrubbing()
-if (import.meta.hot) import.meta.hot.dispose(stopTimelineRailScrubbing)
 const stopComposerKeyboard = installComposerKeyboard()
 if (import.meta.hot) import.meta.hot.dispose(stopComposerKeyboard)
 const stopAndroidNavigationGuard = installAndroidNavigationGuard()
