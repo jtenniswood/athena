@@ -419,7 +419,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/index.tsx",
-    "reason": "Compose browser search, disclosures, pins, None grouping, and messaging sections from configuration or saved conversations without desktop shortcuts or the duplicate top Capabilities link. Enable drag ordering in all-profile lists and preserve saved orders while sessions load.",
+    "reason": "Compose browser search, disclosures, pins, None grouping, and messaging sections from configuration or saved conversations without split controls, desktop shortcuts or the duplicate top Capabilities link. Enable drag ordering in all-profile lists and preserve saved orders while sessions load.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -459,12 +459,13 @@
       "removeBrowserTopCapabilitiesLink",
       "useBrowserSectionIds",
       "sessionPresentationSidebar",
-      "sessionReorderingSidebar"
+      "sessionReorderingSidebar",
+      "removeBrowserSplitControls"
     ],
     "sourceHash": "194742afb6c422679a0ad0507e1f29e66c4188345e47f7ee47f79dfc8f1fe2e6",
     "sourceRoot": "renderer",
     "inputHash": "194742afb6c422679a0ad0507e1f29e66c4188345e47f7ee47f79dfc8f1fe2e6",
-    "outputHash": "dd688924038d47324dfbd3cbdfcfb6b63d2ee38ab20055cd15999b828e66e8cb"
+    "outputHash": "e197879e984f6aad4fbfbba86d946c0c6b3084cba317a6174b6a70656c72daf3"
   },
   {
     "name": "single-conversation-wiring",
