@@ -551,22 +551,27 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/contrib/controller.tsx",
-    "reason": "Retain registrations while disabling desktop session-tile mirrors.",
+    "reason": "Retain registrations while disabling desktop session-tile mirrors and the unsupported tab-strip palette action.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      },
+      {
+        "file": "tests/browser/link-navigation.spec.mjs",
+        "scenario": "link context menus open browser tabs and copy URLs without desktop tab controls"
       }
     ],
     "removal": "Upstream registration is separable from desktop tile-mirroring side effects.",
     "handlers": [
-      "disableBrowserSessionTileMirrors"
+      "disableBrowserSessionTileMirrors",
+      "removeBrowserTabPaletteControl"
     ],
     "sourceHash": "7f7b2fb007e72f5c79e39d498a8438d62172b02c3844f6fe35bce74408c93b64",
     "sourceRoot": "renderer",
     "inputHash": "7f7b2fb007e72f5c79e39d498a8438d62172b02c3844f6fe35bce74408c93b64",
-    "outputHash": "bacb55edb5a24708012bb8c6f4dea45934aa7e690ea3e22dd04aca22d7cf5486"
+    "outputHash": "5d374be8354e17a595ede9a428c31bde1ded486219d23714e43572c90ed8582d"
   },
   {
     "name": "single-conversation-rows",
@@ -624,7 +629,7 @@
     "sourceHash": "42f9e8057e0b92521d9f636c85c043ce34cdb25c91a49cb1f09fb131e06210c0",
     "sourceRoot": "renderer",
     "inputHash": "42f9e8057e0b92521d9f636c85c043ce34cdb25c91a49cb1f09fb131e06210c0",
-    "outputHash": "2a11a5e8423dfce79208da5f2999d100c12b49ff7b362aa5e08285ad2be1efc2"
+    "outputHash": "99b73764b7ab4a56f843feeec18f993278a9303b9008d57994391b317aa882d2"
   },
   {
     "name": "canonical-bot-row-actions",
@@ -674,7 +679,7 @@
     "sourceHash": "b239650c00df04787873413afacc87d4c004f82b428889d8aa68f302764ccf4b",
     "sourceRoot": "renderer",
     "inputHash": "b239650c00df04787873413afacc87d4c004f82b428889d8aa68f302764ccf4b",
-    "outputHash": "dd8924504170a1361362e383f5ebc5f09ced25a907d7472d3f6aea953019b9a3"
+    "outputHash": "08603e8622bf8f7599d1bb79ddf78eb2af3b05263e97ea559c830f8f7f42e367"
   },
   {
     "name": "statusbar-item-export",
@@ -3261,5 +3266,71 @@
     "sourceHash": "2ef2b6fc46549a2d1066005313811d76278bb3d67925f3d7417f0e431da5ea1a",
     "inputHash": "2ef2b6fc46549a2d1066005313811d76278bb3d67925f3d7417f0e431da5ea1a",
     "outputHash": "7473a0a7ec35644f286c20cb09b11508ae95a1cb064112768d2260f11cc792db"
+  },
+  {
+    "name": "browser-session-reference-links",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/assistant-ui/directive-text.tsx",
+    "reason": "Give chat references real Athena URLs and browser open/copy gestures.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/link-navigation.spec.mjs",
+        "scenario": "chat references open real browser tabs and preserve the original draft"
+      }
+    ],
+    "removal": "Remove when upstream supports a browser host without internal tabs or an embedded browser.",
+    "handlers": [
+      "useBrowserSessionLinks"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "a45fb87126e1508cd6ddea44d871577066c41a127a00c2959c4fc8071d11627c",
+    "inputHash": "a45fb87126e1508cd6ddea44d871577066c41a127a00c2959c4fc8071d11627c",
+    "outputHash": "a81b2ce868632e9f16465f90c9ce9d281861d1e0f373771031d646057b1cbfa7"
+  },
+  {
+    "name": "browser-zone-tab-controls",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/pane-shell/tree/renderer/tree-group.tsx",
+    "reason": "Remove desktop tab closing and tab strip controls from pane fallback menus.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/link-navigation.spec.mjs",
+        "scenario": "link context menus open browser tabs and copy URLs without desktop tab controls"
+      }
+    ],
+    "removal": "Remove when upstream supports a browser host without internal tabs or an embedded browser.",
+    "handlers": [
+      "removeBrowserZoneTabControls"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "af1ece179ff672f9ddfbce8201991d055b7faf4b00201d2f35be23f84ccb2fce",
+    "inputHash": "af1ece179ff672f9ddfbce8201991d055b7faf4b00201d2f35be23f84ccb2fce",
+    "outputHash": "965c90d60ae33346f3e60bdd2d6ca7f5737a77211719708c6fb3403dfe99fb93"
+  },
+  {
+    "name": "browser-shell-tab-control",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/context-menu/shell-menu-items.tsx",
+    "reason": "Remove the unsupported desktop tab strip action from shell menus.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/link-navigation.spec.mjs",
+        "scenario": "link context menus open browser tabs and copy URLs without desktop tab controls"
+      }
+    ],
+    "removal": "Remove when upstream supports a browser host without internal tabs or an embedded browser.",
+    "handlers": [
+      "removeBrowserShellTabControl"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "2c2857b8dd219b374e195f4836683ca4b84c9a4118240f5dd7afdacea2f9d0aa",
+    "inputHash": "2c2857b8dd219b374e195f4836683ca4b84c9a4118240f5dd7afdacea2f9d0aa",
+    "outputHash": "a8548d21df5a0e0eeceac41e24bc512cec411287a346ec4f68b48e8720fece12"
   }
 ]
