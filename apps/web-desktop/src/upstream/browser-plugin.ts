@@ -1015,6 +1015,43 @@ export function useBrowserSettingsFrame(source: string, root: string): string {
   return `import { BrowserSettingsFrame } from ${frame}\n${source.replace(target, replacement)}`
 }
 
+export function useBrowserProjectDeleteOwner(source: string, root: string): string {
+  const start = 'export async function deleteProject(id: string): Promise<void> {\n  const context = await activeProjectsContext(writableProjectProfile())'
+  const request = `  await persistOrRollback(snap, async () => {
+    applyPayload(
+      await gatewayRequestOn<ProjectsPayload>(
+        context.gateway,
+        'projects.delete',
+        projectParams({ id }, context.profile)
+      )
+    )
+  })`
+  const output = replaceBrowserContract(source, [
+    [start, start + `
+  const allProfiles = viewingAllProfiles()
+  const deleteProfile = allProfiles
+    ? await browserProjectDeleteProfile(context.gateway, id, $profiles.get().map(profile => profile.name))
+    : context.profile
+  if (!stillOnWritableProjectOwner(context) || viewingAllProfiles() !== allProfiles) {
+    throw new Error('Active Hermes profile changed before deleting the project')
+  }
+  // Keep the row and its confirmation mounted until the server accepts deletion.
+  const payload = await gatewayRequestOn<ProjectsPayload>(
+    context.gateway, 'projects.delete', projectParams({ id }, deleteProfile)
+  )
+  if (!stillOnWritableProjectOwner(context) || viewingAllProfiles() !== allProfiles) {
+    void refreshProjectTree()
+    return
+  }`],
+    [request, `  // A sibling profile's project list must never replace the active cache.
+  if (deleteProfile === context.profile) applyPayload(payload)`],
+    ["// Optimistic: drop the project from the cached tree + list the instant it's\n// clicked (the entered-scope effect exits if you deleted the project you were\n// inside), reconciling from the server payload. A failed delete restores both.",
+      '// Remove the cached project only after deletion succeeds so failures stay in the confirmation.']
+  ])
+  const owner = JSON.stringify(path.join(root, 'src/upstream/project-delete'))
+  return `import { browserProjectDeleteProfile } from ${owner}\n` + output
+}
+
 export function useBrowserProjectDisclosure(source: string): string {
   const changes: [string, string][] = [
     [
@@ -1415,17 +1452,19 @@ export function useBrowserSessionPreview(source: string, root: string): string {
 export function disableBrowserSessionOpenActions(source: string, root: string): string {
   const tabCondition = "...(surface === 'row' && !alreadyTabbed"
   const windowCondition = '...(canOpenSessionWindow()'
+  const closeCondition = '...(tabPaneId\n'
   const projectTarget = '        >\n          {node.label}\n        </kit.Item>'
   const contextCopyTarget = '      <CopyButton\n        appearance={kit.copyAppearance}'
   const contextProjectTarget = '      <kit.Sub>\n        <kit.SubTrigger disabled={!sessionId}>\n          <Codicon name="folder"'
   const copyImport = "import { CopyButton } from '@/components/ui/copy-button'\n"
   const contract = contracts.find(item => item.module === 'app/chat/sidebar/session-actions-menu.tsx')!
-  if (createHash('sha256').update(source).digest('hex') !== contract.sourceHash || source.split(tabCondition).length !== 2 || source.split(windowCondition).length !== 2 || source.split(projectTarget).length !== 2 || source.split(contextCopyTarget).length !== 2 || source.split(contextProjectTarget).length !== 2 || source.split(copyImport).length !== 2) {
+  if (createHash('sha256').update(source).digest('hex') !== contract.sourceHash || source.split(tabCondition).length !== 2 || source.split(windowCondition).length !== 2 || source.split(closeCondition).length !== 3 || source.split(projectTarget).length !== 2 || source.split(contextCopyTarget).length !== 2 || source.split(contextProjectTarget).length !== 2 || source.split(copyImport).length !== 2) {
     throw new Error('Browser session open-action contract changed')
   }
   // Browser chat is single-view. Remove tab/window and copy/branch/export
   // actions while retaining session mutations and project destinations.
   const output = source.replace(tabCondition, '...(false').replace(windowCondition, '...(false')
+    .replaceAll(closeCondition, '...(tabPaneId && !window.__HERMES_WEB_BRIDGE__\n')
     .replace(projectTarget, '        >\n          <Codicon name="root-folder" size="0.875rem" />\n          {node.label}\n        </kit.Item>')
   const copyStart = output.indexOf(contextCopyTarget)
   const projectStart = output.indexOf(contextProjectTarget, copyStart)
@@ -1447,8 +1486,58 @@ export function disableBrowserSessionOpenActions(source: string, root: string): 
   return `import { browserSessionActionLabel } from ${owner}\n` + menu
 }
 
+/** Session references are browser links, including their native link gestures. */
+export function useBrowserSessionLinks(source: string, root: string): string {
+  const start = source.indexOf('export function openSessionRef(value: string) {')
+  const end = source.indexOf('\n/** What activating a directive', start)
+  if (start < 0 || end < 0) throw new Error('Browser session reference action boundary changed')
+  const output = source.slice(0, start) + `export function openSessionRef(value: string) {
+  const href = browserSessionRefHref(value)
+  if (href) void window.hermesDesktop?.openExternal(href)
+}
+` + source.slice(end)
+  const owner = JSON.stringify(path.join(root, 'src/upstream/browser-session-links'))
+  return `import { browserSessionRefHref } from ${owner}\n` + replaceBrowserContract(output, [
+    ['<DirectiveChip id={value} label={resolved} onClick={() => openSessionRef(value)} type="session" />', '<DirectiveChip id={value} label={resolved} type="session" />'],
+    ["  session: {\n    icon: 'link-external',", "  session: {\n    href: browserSessionRefHref,\n    icon: 'link-external',"],
+    [`<a
+      {...refAttrs('session', 'wrap-anywhere')}
+      href="#"
+      onClick={event => {
+        event.preventDefault()
+        event.stopPropagation()
+        openSessionRef(value)
+      }}`, `<ExternalLink
+      {...refAttrs('session', 'wrap-anywhere')}
+      href={browserSessionRefHref(value)}`],
+    ['      <DirectiveIcon type="session" />\n      {resolved}\n    </a>', '      <DirectiveIcon type="session" />\n      {resolved}\n    </ExternalLink>']
+  ])
+}
+
+/** Pane fallback menus retain reload and app actions without desktop tab verbs. */
+export function removeBrowserZoneTabControls(source: string): string {
+  const start = source.indexOf('        <kit.Separator />\n        {paneTabCloseItems(kit, {')
+  const end = source.indexOf('        {minimizable &&', start)
+  if (start < 0 || end < 0) throw new Error('Browser zone tab menu boundary changed')
+  return source.slice(0, start) + source.slice(end)
+}
+
+export function removeBrowserTabPaletteControl(source: string): string {
+  const start = source.indexOf("  paletteToggle({\n    id: 'view.toggleTabStrip',")
+  const end = source.indexOf("  // The keybind panel's non-titlebar door", start)
+  if (start < 0 || end < 0) throw new Error('Browser tab palette boundary changed')
+  return source.slice(0, start) + source.slice(end)
+}
+
+export function removeBrowserShellTabControl(source: string): string {
+  const start = source.indexOf('      // The pointer-only way back to a hidden tab strip:')
+  const end = source.indexOf('      settings', start)
+  if (start < 0 || end < 0) throw new Error('Browser shell tab menu boundary changed')
+  return source.slice(0, start) + source.slice(end)
+}
+
 export function filterBrowserKeybinds(source: string): string {
-  const browserSet = `const BROWSER_UNSUPPORTED_KEYBINDS = new Set([\n  'session.newTab', 'session.newWindow', 'session.next', 'session.prev',\n  'view.showBrowser', 'view.toggleHud', 'view.showTerminal', 'view.newTerminal',\n  'view.nextTerminal', 'view.prevTerminal', 'view.closeTerminal',\n  'view.terminalCopy', 'view.terminalPaste', 'hud.snapToPointer',\n  'view.findInPage', 'view.findNext', 'view.findPrevious'\n])\n`
+  const browserSet = `const BROWSER_UNSUPPORTED_KEYBINDS = new Set([\n  'session.newTab', 'session.newWindow', 'session.next', 'session.prev', 'view.toggleTabStrip',\n  'view.showBrowser', 'view.toggleHud', 'view.showTerminal', 'view.newTerminal',\n  'view.nextTerminal', 'view.prevTerminal', 'view.closeTerminal',\n  'view.terminalCopy', 'view.terminalPaste', 'hud.snapToPointer',\n  'view.findInPage', 'view.findNext', 'view.findPrevious'\n])\n`
   const actionTarget = '  const actionList = allKeybindActions(contributions)'
   const readonlyTarget = '  const [query, setQuery] = useState(\'\')'
   if (source.includes('BROWSER_UNSUPPORTED_KEYBINDS')) return source
@@ -1551,6 +1640,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     useBrowserProjectDisclosure,
+    useBrowserProjectDeleteOwner: source => useBrowserProjectDeleteOwner(source, root),
     exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut, removeBrowserTopCapabilitiesLink,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
     removeBrowserGatewayGroupsRefresh: source => removeBrowserGatewayGroupsRefresh(source, root),
@@ -1562,6 +1652,10 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserSessionPreview: source => useBrowserSessionPreview(source, root),
     disableBrowserSessionOpenActions: source => disableBrowserSessionOpenActions(source, root),
     filterBrowserKeybinds,
+    useBrowserSessionLinks: source => useBrowserSessionLinks(source, root),
+    removeBrowserZoneTabControls,
+    removeBrowserShellTabControl,
+    removeBrowserTabPaletteControl,
     useBrowserSessionSelection: source => useBrowserSessionSelection(source, root),
     useBrowserBotSelection: source => useBrowserRosterSelection(source, root, 'bot'),
     useBrowserGroupSelection: source => useBrowserRosterSelection(source, root, 'group'),
