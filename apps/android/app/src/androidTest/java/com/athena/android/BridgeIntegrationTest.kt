@@ -20,12 +20,6 @@ class BridgeIntegrationTest {
     private fun field(activity: MainActivity, name: String): Any? = MainActivity::class.java
         .getDeclaredField(name).apply { isAccessible = true }.get(activity)
 
-    private fun legacyMenus(activity: MainActivity): NativeActionMenus {
-        val owner = field(activity, "legacyUi")!!
-        val delegate = LegacyNativePresentation::class.java.getDeclaredField("actionMenus$" + "delegate").apply { isAccessible = true }
-        return (delegate.get(owner) as Lazy<*>).value as NativeActionMenus
-    }
-
     private fun evaluate(view: WebView, script: String): String {
         val completed = CountDownLatch(1)
         var value = ""
@@ -99,7 +93,7 @@ class BridgeIntegrationTest {
                 waitUntil {
                     var shown = false
                     scenario.onActivity {
-                        val menus = legacyMenus(it)
+                        val menus = legacyPresenter(it, "actionMenus") as NativeActionMenus
                         val sheetField = NativeActionMenus::class.java.getDeclaredField("sheet").apply { isAccessible = true }
                         shown = (sheetField.get(menus) as? com.google.android.material.bottomsheet.BottomSheetDialog)?.isShowing == true
                     }
@@ -112,7 +106,7 @@ class BridgeIntegrationTest {
                     }
                 }
                 scenario.onActivity {
-                    val menus = legacyMenus(it)
+                    val menus = legacyPresenter(it, "actionMenus") as NativeActionMenus
                     val sheet = NativeActionMenus::class.java.getDeclaredField("sheet").apply { isAccessible = true }.get(menus) as com.google.android.material.bottomsheet.BottomSheetDialog
                     val root = sheet.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)!!
                     assertFalse(root.findViewWithTag<View>("delete").isEnabled)
