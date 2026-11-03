@@ -131,6 +131,12 @@ HERMES_TEST_IMAGE=hermes-web:verification pnpm exec playwright test tests/browse
 This suite uses a synthetic gateway and an immutable previous image from
 `tests/fixtures/upgrade-baseline.json`. It is optional diagnostic coverage, not a
 release gate. Keep its baseline distinct from the candidate when using it.
+If that historical image is unavailable, build the exact previous commit with
+its `HERMES_WRAPPER_REV` build argument, then set `HERMES_UPGRADE_BASELINE_FILE`
+to a JSON file with `image` (an immutable `sha256:` image ID or registry digest),
+`platform`, `wrapperRevision`, `rendererRevision`, and `verificationRun` fields.
+The fixture verifies the running image's exact revisions before testing updates.
+Report the chosen baseline and any unavailable historical-image check.
 
 ## Renderer updates
 

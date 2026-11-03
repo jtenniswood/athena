@@ -68,6 +68,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'groups.list') return { rooms: [] }
     if (method === 'i18n.languages') return []
     if (method === 'shared_metrics.status') return { decided: true, enabled: false, send: false }
+    if (method === 'shared_metrics.slash_command' && typeof params.command === 'string' && /^[a-z][a-z0-9_-]*$/.test(params.command) && (params.session_id == null || sessions.has(params.session_id))) return { ok: true }
     if (method === 'bot_relay.roster.sync' && Array.isArray(params.agents)) return { ok: true }
     if (method === 'billing.state' || method === 'subscription.state') throw new Error('Billing is unavailable in the synthetic gateway')
     if (method === 'config.set' && ['display.in_app_tips', 'display.in_app_tours', 'display.message_reactions'].includes(params.key)) return { value: params.value }

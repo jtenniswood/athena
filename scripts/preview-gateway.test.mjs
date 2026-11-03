@@ -138,6 +138,16 @@ test('slash completion accepts a slash query and leaves malformed operations str
   assert.throws(() => gateway.controls.assertExpected(), /complete.slash/)
 })
 
+test('slash usage acknowledges typed commands without accepting malformed metrics', async t => {
+  const gateway = await fixture(t)
+  assert.deepEqual((await gateway.request('shared_metrics.slash_command', { command: 'resume', session_id: 'preview-week' })).result, { ok: true })
+  gateway.controls.assertExpected()
+  for (const params of [{ command: '/resume' }, { command: false }, { command: 'resume', session_id: 'missing' }]) {
+    assert.equal((await gateway.request('shared_metrics.slash_command', params)).error.code, -32601)
+  }
+  assert.throws(() => gateway.controls.assertExpected(), /shared_metrics.slash_command/)
+})
+
 test('command center catalogs are explicit reads and archived sessions stay separate', async t => {
   const gateway = await fixture(t)
   assert.deepEqual((await gateway.request('plugins.manage', { action: 'list' })).result, { plugins: [] })

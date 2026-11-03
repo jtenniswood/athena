@@ -58,6 +58,9 @@ export async function openConversation(page, origin, session = 'preview-week') {
     if (localStorage.getItem(key) === null) localStorage.setItem(key, 'none')
   })
   await page.goto(`${origin}/#/${session}`)
+  // Touch-first startup opens chat history until a conversation is explicitly opened.
+  const back = page.getByRole('button', { name: 'Back to chat', exact: true })
+  if (await page.getByRole('dialog', { name: 'Navigation', exact: true }).isVisible()) await back.click()
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
   await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', session)
   await expect(page.getByText('Help me make a thoughtful plan.', { exact: true }).first()).toBeVisible()

@@ -9,7 +9,12 @@ import { installUpdateDiagnostics } from './update-diagnostics.mjs'
 import { installWorkerDiagnostics } from './worker-diagnostics.mjs'
 import { observeWorkerVersions } from './worker-version-diagnostics.mjs'
 
-const baseline = JSON.parse(readFileSync(new URL('../fixtures/upgrade-baseline.json', import.meta.url), 'utf8'))
+// An alternate baseline must still pin an immutable image and exact build revisions;
+// the running images are checked against these identities below.
+const baseline = JSON.parse(readFileSync(process.env.HERMES_UPGRADE_BASELINE_FILE || new URL('../fixtures/upgrade-baseline.json', import.meta.url), 'utf8'))
+if (!/(?:^|@)sha256:[a-f0-9]{64}$/.test(baseline.image) || ![baseline.wrapperRevision, baseline.rendererRevision].every(value => /^[a-f0-9]{40}$/.test(value))) {
+  throw new Error('The upgrade baseline requires an immutable image digest and exact wrapper/renderer commits')
+}
 const docker = args => execFileSync('docker', args, { encoding: 'utf8' }).trim()
 
 export const test = base.extend({
