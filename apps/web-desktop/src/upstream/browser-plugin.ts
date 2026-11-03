@@ -841,10 +841,7 @@ export function useBrowserSectionIdentity(source: string, root: string): string 
 export function useBrowserSectionIds(source: string, root: string): string {
   const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-sections'))
   return `import { useBrowserSidebarChannels } from ${owner}\n` + replaceBrowserContract(source, [
-    ['  const messagingProfile = sidebarProfileForScope(profileScope)', '  const messagingProfile = sidebarProfileForScope(profileScope)\n  const browserChannels = useBrowserSidebarChannels()'],
-    ['    if (!visibleMessagingSessions.length) {\n      return []\n    }\n\n    const bySource = new Map<string, SessionInfo[]>()', '    const bySource = new Map<string, SessionInfo[]>(browserChannels.map(channel => [channel.sourceId, []]))'],
-    ['sessionTime(b.sessions[0]) - sessionTime(a.sessions[0])', '(b.sessions[0] ? sessionTime(b.sessions[0]) : 0) - (a.sessions[0] ? sessionTime(a.sessions[0]) : 0)'],
-    ['  }, [visibleMessagingSessions, messagingPlatformTotals, messagingTruncated, isPinnedSession, messagingProfile])', '  }, [browserChannels, visibleMessagingSessions, messagingPlatformTotals, messagingTruncated, isPinnedSession, messagingProfile])'],
+    ['  const messagingProfile = sidebarProfileForScope(profileScope)', '  const messagingProfile = sidebarProfileForScope(profileScope)\n  useBrowserSidebarChannels()'],
     ['            {!trimmedQuery &&\n              !worktreeGroupingActive &&\n              messagingGroups.map', '            {!trimmedQuery &&\n              messagingGroups.map'],
     // Athena's explicit section preference owns Cron visibility in both modes.
     ['(showsAdvancedChrome && cronJobs.length > 0)', '(cronJobs.length > 0)'],
