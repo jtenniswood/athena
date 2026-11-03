@@ -61,11 +61,11 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'session.active_list') return { sessions: [...sessions.values()].filter(s => s.is_active) }
     if (method === 'commands.catalog') return { commands: [] }
     if (method === 'plugins.manage' && params.action === 'list') return { plugins: [] }
-    if (method === 'ping') return { pong: true }
+    if (method === 'ping' || method === 'gateway.ping') return { pong: true }
     // Optional probes from the pinned renderer, with explicit synthetic support.
     if (method === 'client.capabilities') return { declines_not_shown: true }
     if (method === 'groups.capabilities') return { driver: false, persistent_process: false }
-    if (method === 'groups.list') return { rooms: [] }
+    if (method === 'groups.list') return { rooms: [], next_offset: null }
     if (method === 'i18n.languages') return []
     if (method === 'shared_metrics.status') return { decided: true, enabled: false, send: false }
     if (method === 'shared_metrics.slash_command' && typeof params.command === 'string' && /^[a-z][a-z0-9_-]*$/.test(params.command) && (params.session_id == null || sessions.has(params.session_id))) return { ok: true }

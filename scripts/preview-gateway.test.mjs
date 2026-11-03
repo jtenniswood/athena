@@ -151,6 +151,8 @@ test('slash usage acknowledges typed commands without accepting malformed metric
 test('command center catalogs are explicit reads and archived sessions stay separate', async t => {
   const gateway = await fixture(t)
   assert.deepEqual((await gateway.request('plugins.manage', { action: 'list' })).result, { plugins: [] })
+  assert.deepEqual((await gateway.request('groups.list', { limit: 100, offset: 0 })).result, { rooms: [], next_offset: null })
+  assert.deepEqual((await gateway.request('gateway.ping')).result, { pong: true })
   assert.deepEqual(await (await fetch(gateway.origin + '/api/config/schema')).json(), { fields: {} })
   assert.deepEqual(await (await fetch(gateway.origin + '/api/env')).json(), {})
   const auxiliary = await (await fetch(gateway.origin + '/api/model/auxiliary')).json()

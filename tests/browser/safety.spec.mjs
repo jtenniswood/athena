@@ -98,11 +98,9 @@ test('nginx serves the built app and uncached identity; API stays available for 
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   await page.goto(origin)
-  await expect.poll(() => page.evaluate(() => typeof window.hermesDesktop?.getConnection)).toBe('function')
-  await expect(page.getByRole('button', { name: 'Gateway settings' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Use local gateway' })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Gateway settings' }).click()
-  await expect(page.getByText('This app connects to the server configured by its operator.')).toBeVisible()
   const config = await page.request.get(`${origin}/runtime-config.js`)
   expect(config.headers()['cache-control']).toBe('no-store')
   for (const path of ['/', '/index.html', '/some-client-route', '/sw.js', '/notifications-sw.js', '/update-coordinator-sw.js', '/manifest.webmanifest', '/build-info.json']) {
