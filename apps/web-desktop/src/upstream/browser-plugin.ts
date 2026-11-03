@@ -1015,6 +1015,43 @@ export function useBrowserSettingsFrame(source: string, root: string): string {
   return `import { BrowserSettingsFrame } from ${frame}\n${source.replace(target, replacement)}`
 }
 
+export function useBrowserProjectDeleteOwner(source: string, root: string): string {
+  const start = 'export async function deleteProject(id: string): Promise<void> {\n  const context = await activeProjectsContext(writableProjectProfile())'
+  const request = `  await persistOrRollback(snap, async () => {
+    applyPayload(
+      await gatewayRequestOn<ProjectsPayload>(
+        context.gateway,
+        'projects.delete',
+        projectParams({ id }, context.profile)
+      )
+    )
+  })`
+  const output = replaceBrowserContract(source, [
+    [start, start + `
+  const allProfiles = viewingAllProfiles()
+  const deleteProfile = allProfiles
+    ? await browserProjectDeleteProfile(context.gateway, id, $profiles.get().map(profile => profile.name))
+    : context.profile
+  if (!stillOnWritableProjectOwner(context) || viewingAllProfiles() !== allProfiles) {
+    throw new Error('Active Hermes profile changed before deleting the project')
+  }
+  // Keep the row and its confirmation mounted until the server accepts deletion.
+  const payload = await gatewayRequestOn<ProjectsPayload>(
+    context.gateway, 'projects.delete', projectParams({ id }, deleteProfile)
+  )
+  if (!stillOnWritableProjectOwner(context) || viewingAllProfiles() !== allProfiles) {
+    void refreshProjectTree()
+    return
+  }`],
+    [request, `  // A sibling profile's project list must never replace the active cache.
+  if (deleteProfile === context.profile) applyPayload(payload)`],
+    ["// Optimistic: drop the project from the cached tree + list the instant it's\n// clicked (the entered-scope effect exits if you deleted the project you were\n// inside), reconciling from the server payload. A failed delete restores both.",
+      '// Remove the cached project only after deletion succeeds so failures stay in the confirmation.']
+  ])
+  const owner = JSON.stringify(path.join(root, 'src/upstream/project-delete'))
+  return `import { browserProjectDeleteProfile } from ${owner}\n` + output
+}
+
 export function useBrowserProjectDisclosure(source: string, root: string): string {
   const changes: [string, string][] = [
     ["import { fetchProjectSessions, projectProfile } from '@/store/projects'", "import { notifyError } from '@/store/notifications'"],
@@ -1558,6 +1595,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     useBrowserProjectDisclosure: source => useBrowserProjectDisclosure(source, root),
+    useBrowserProjectDeleteOwner: source => useBrowserProjectDeleteOwner(source, root),
     exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut, removeBrowserTopCapabilitiesLink,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
     removeBrowserGatewayGroupsRefresh: source => removeBrowserGatewayGroupsRefresh(source, root),

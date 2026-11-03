@@ -3766,3 +3766,80 @@ for (const layout of ['flat', 'profiles']) {
     await expect.poll(async () => (await first.boundingBox()).y < (await second.boundingBox()).y).toBe(true)
   })
 }
+
+for (const width of [1440, 390]) {
+  test.extend({ hasTouch: width === 390 })(`project deletion follows the owning profile and preserves failed confirmations at ${width}px`, async ({ page }) => {
+    const errors = []
+    page.on('pageerror', error => errors.push(error.message))
+    const project = { id: 'p_delete_test', slug: 'test', name: 'test', primary_path: null, folders: [], archived: false, created_at: 1 }
+    const node = { id: project.id, label: project.name, path: null, repos: [], sessionCount: 0, previewSessions: [], sessionIds: [] }
+    let deleted = false, rejectDelete = true, releaseDelete
+    const deletes = []
+    await page.route('**/api/athena/preferences', route => route.abort())
+    await page.route(/\/api\/profiles\/projects\/tree/, route => route.fulfill({ json: { projects: deleted ? [] : [node], active_id: null, scoped_session_ids: [] } }))
+    await page.routeWebSocket(/\/api\/ws/, socket => {
+      const server = socket.connectToServer()
+      socket.onMessage(async data => {
+        const frame = JSON.parse(String(data))
+        if (!['projects.list', 'projects.delete'].includes(frame.method)) return server.send(data)
+        const { profile, id } = frame.params
+        if (frame.method === 'projects.delete') {
+          deletes.push({ profile, id })
+          await new Promise(resolve => { releaseDelete = resolve })
+          if (rejectDelete || profile !== 'writer' || id !== project.id) {
+            socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, error: { code: 5062, message: rejectDelete ? 'Synthetic project deletion failed' : 'no such project' } }))
+            return
+          }
+          deleted = true
+        }
+        socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, result: { projects: !deleted && profile === 'writer' ? [project] : [], active_id: null } }))
+      })
+      server.onMessage(data => socket.send(data))
+    })
+    await page.setViewportSize({ width, height: 960 })
+    await open(page)
+    const draft = 'Keep my draft while deleting an empty project'
+    await editor(page).fill(draft)
+    if (width === 390) await openSectionNavigation(page)
+    await page.getByRole('button', { name: 'Filters', exact: true }).click()
+    const grouping = page.getByRole('menuitem', { name: 'Grouping', exact: true })
+    if (width === 390) await grouping.click()
+    else await grouping.hover()
+    await page.getByRole('menuitemradio', { name: 'Project', exact: true }).click()
+    while (await page.getByRole('menu').count()) {
+      const id = await page.getByRole('menu').last().getAttribute('id')
+      await page.keyboard.press('Escape')
+      await expect(page.locator(`[role="menu"][id="${id}"]`)).toBeHidden()
+    }
+    const actions = page.getByRole('button', { name: 'Actions', exact: true })
+    await actions.click()
+    await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: 'Delete "test"?', exact: true })
+    await expect(dialog).toBeVisible()
+    // Cancel must not issue a destructive request.
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+    expect(deletes).toEqual([])
+    await actions.click()
+    await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click()
+    const confirm = dialog.getByRole('button', { name: 'Delete', exact: true })
+    await confirm.click()
+    await expect.poll(() => deletes.length).toBe(1)
+    expect(deletes[0]).toEqual({ profile: 'writer', id: project.id })
+    await expect(dialog).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Actions', exact: true, includeHidden: true })).toHaveCount(1)
+    releaseDelete()
+    await expect(dialog).toContainText('Synthetic project deletion failed')
+    await expect(confirm).toBeEnabled()
+    rejectDelete = false
+    await confirm.click()
+    await expect.poll(() => deletes.length).toBe(2)
+    releaseDelete()
+    await expect(dialog).toBeHidden()
+    await expect(actions).toHaveCount(0)
+    await page.reload()
+    if (width === 390) await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().click()
+    await expect(editor(page)).toHaveText(draft, { timeout: 30000 })
+    await expect(actions).toHaveCount(0)
+    expect(errors).toEqual([])
+  })
+}
