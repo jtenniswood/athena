@@ -178,9 +178,12 @@ test('creating a group selects the new room through the browser command', async 
 test('reconnect preserves the selected conversation and its draft', async ({ page, gatewayApp }) => {
   await openConversation(page, gatewayApp.origin)
   await editor(page).fill('Keep this draft across reconnect')
-  const before = gatewayApp.controls.calls.filter(call => call.method === 'session.resume').length
+  const attachments = () => gatewayApp.controls.calls.filter(call =>
+    ['session.resume', 'session.activate'].includes(call.method) && call.params.session_id === 'preview-week'
+  ).length
+  const before = attachments()
   gatewayApp.disconnect()
-  await expect.poll(() => gatewayApp.controls.calls.filter(call => call.method === 'session.resume').length, { timeout: 30000 }).toBeGreaterThan(before)
+  await expect.poll(attachments, { timeout: 30000 }).toBeGreaterThan(before)
   await expect(page).toHaveURL(/#\/preview-week$/)
   await expect(editor(page)).toHaveText('Keep this draft across reconnect')
 })

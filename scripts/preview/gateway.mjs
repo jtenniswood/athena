@@ -77,6 +77,8 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'wake.status') return { available: false, enabled: false, listening: false }
     if (method === 'pet.info' || method === 'pet.info.meta') return { enabled: false, active: '', spritesheet: null }
     if (method === 'subagent.list') return { subagents: [] }
+    if (method === 'subagent.roster') return { sessions: [] }
+    if (method === 'approval.pending' && sessions.has(params.session_id)) return { approvals: [] }
     if (method === 'process.list') return { processes: [] }
     if (method === 'complete.path') return { items: [] }
     if (method === 'complete.slash' && typeof params.text === 'string' && params.text.startsWith('/')) return { items: [], replace_from: 1 }

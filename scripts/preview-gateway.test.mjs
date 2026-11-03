@@ -168,3 +168,16 @@ test('Bot roster metadata writes validate pin, visibility, and section fields wi
   assert.equal(profiles.find(row => row.name === 'writer').ui_meta, undefined)
   gateway.controls.assertExpected()
 })
+
+
+test('warm reconnect and pending-work probes use the renderer contract without inventing work', async t => {
+  const gateway = await fixture(t)
+  const resumed = (await gateway.request('session.resume', { session_id: 'preview-week' })).result
+  const activated = (await gateway.request('session.activate', { session_id: 'preview-week' })).result
+  assert.equal(activated.session_id, resumed.session_id)
+  assert.deepEqual(activated.messages, resumed.messages)
+  assert.deepEqual((await gateway.request('subagent.roster')).result, { sessions: [] })
+  assert.deepEqual((await gateway.request('approval.pending', { session_id: 'preview-week' })).result, { approvals: [] })
+  gateway.controls.assertExpected()
+  assert.equal((await gateway.request('approval.pending', { session_id: 'missing' })).error.code, -32601)
+})
