@@ -56,9 +56,21 @@ body > [data-radix-popper-content-wrapper] > .tooltip-bubble.browser-session-pre
   font-weight: 400;
 }
 .tooltip-bubble.browser-session-preview [data-slot='tooltip-arrow'] {
-  fill: var(--ui-bg-elevated);
-  stroke: var(--dt-border);
-  stroke-width: 1px;
+  visibility: hidden;
+}
+/* Keep Radix's arrow measurement and rotation, but overlap the card border
+   with a filled corner so the pointer and card share one continuous outline. */
+.tooltip-bubble.browser-session-preview > span:has(> [data-slot='tooltip-arrow'])::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: calc(7px * var(--web-ui-scale, 1));
+  height: calc(7px * var(--web-ui-scale, 1));
+  background: var(--ui-bg-elevated);
+  border-right: 1px solid var(--dt-border);
+  border-bottom: 1px solid var(--dt-border);
+  transform: translate(-50%, -50%) rotate(45deg);
 }
 .browser-session-preview-title { font-size: 0.9375rem; font-weight: 600; white-space: normal; overflow-wrap: anywhere; }
 .browser-session-preview-meta { margin-top: 0.625rem; color: var(--ui-text-tertiary); font-size: 0.6875rem; }
