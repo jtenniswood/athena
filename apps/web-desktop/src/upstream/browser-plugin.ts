@@ -1200,9 +1200,11 @@ export function enableBrowserUngroupedSessions(source: string, surface: 'store' 
       ["export const SIDEBAR_GROUPING_ORDER = ['date', 'project', 'status', 'profile'] as const", "export const SIDEBAR_GROUPING_ORDER = ['none', 'date', 'project', 'status', 'profile'] as const"],
       ["SIDEBAR_GROUPING_STORAGE_KEY,\n  'date',", "SIDEBAR_GROUPING_STORAGE_KEY,\n  'none',"],
       ["oneOf(['date', 'status'], 'date')", "oneOf(['none', 'date', 'status'], 'none')"],
-      ["SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY,\n  'date',", "SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY,\n  'none',"],
-      ["oneOf(['date', 'profile', 'status'], 'date')", "oneOf(['none', 'date', 'profile', 'status'], 'none')"],
-      ["const SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'date'", "const SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'none'"]
+      ["SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY,\n  'date',", "SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY,\n  'profile',"],
+      ["oneOf(['date', 'profile', 'status'], 'date')", "oneOf(['none', 'date', 'profile', 'status'], 'profile')"],
+      ["const SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'date'", "const SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'profile'"],
+      ["$sidebarFlatGrouping.set(SIDEBAR_DEFAULT_GROUPING)", "$sidebarFlatGrouping.set('none')"],
+      ["// reset the choice every time the user flips the rail. Both scopes still ship\n// by day — grouping by owner is something you go and pick.", "// reset the choice every time the user flips the rail. The browser defaults\n// to grouping by profile in the all-profiles scope."]
     ],
     menu: [["  const GROUPING_OPTIONS: Record<SidebarGrouping, Omit<Option<SidebarGrouping>, 'id'>> = {", "  const GROUPING_OPTIONS: Record<SidebarGrouping, Omit<Option<SidebarGrouping>, 'id'>> = {\n    none: { icon: 'list-unordered', label: 'None' },"]],
     sidebar: [["grouping={showArchived || rankedGlobally ? 'none'", "grouping={grouping === 'none' || showArchived || rankedGlobally ? 'none'"]]
@@ -1213,6 +1215,21 @@ export function enableBrowserUngroupedSessions(source: string, surface: 'store' 
     output = output.replace(target, replacement)
   }
   return output
+}
+
+export function removeBrowserSplitControls(source: string): string {
+  const start = '                // New session + route-backed pages can open in a split —\n'
+  const end = '\n              })}'
+  const from = source.indexOf(start)
+  const to = source.indexOf(end, from)
+  if (source.split(start).length !== 2 || to < from || !source.slice(from, to).includes('<SplitSubmenu')) {
+    throw new Error('Browser navigation split menu boundary changed')
+  }
+  // Keep the navigation button without the split-only context menu.
+  return replaceBrowserContract(source.slice(0, from) + `                return <SidebarMenuItem key={item.id}>{button}</SidebarMenuItem>` + source.slice(to), [
+    ["import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu'\n", ''],
+    ["import { CONTEXT_SPLIT_KIT, SplitSubmenu } from './split-submenu'\n", '']
+  ])
 }
 
 export function disableBrowserSessionTabs(source: string): string {
@@ -1453,7 +1470,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserBotsPullRefresh: source => useBrowserBotsPullRefresh(source, root),
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth,
     filterBrowserSessionMenu: source => filterBrowserSessionMenu(source, root),
-    showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
+    showHiddenBotsInBrowserRoster, removeBrowserSplitControls, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
     disableBrowserSessionRowTabs,
     disableBrowserSessionOpenActions: source => disableBrowserSessionOpenActions(source, root),
     filterBrowserKeybinds,
