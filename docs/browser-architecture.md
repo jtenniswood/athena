@@ -212,6 +212,37 @@ input or output fingerprints.
 controller registration dependency. Browser initialization follows registration;
 the desktop controller itself remains absent from the rendered shell.
 
+### Renderer embedding boundary
+
+The browser-facing `BrowserEngine` interface is an Athena contract. Its current
+implementation still obtains core initialization by importing the renderer's
+desktop controller. The plugin SDK's `host.state` projections provide access to
+existing engine state; they do not replace the controller's registration work.
+
+| Initialization responsibility | Current renderer owner | Behavior to preserve |
+| --- | --- | --- |
+| Core panes, status items and commands | `app/contrib/controller.tsx` | Contributions exist before the browser shell consumes them; mount `ContribWiring` once |
+| Default layouts and contributed panes | `app/contrib/layout-presets.ts` and the controller | Retain saved layout compatibility while browser policy suppresses desktop session tile mirrors |
+| Bundled and runtime plugins | `contrib/plugins.ts` and `contrib/runtime-loader.ts` | Core registers before bundled plugins; install discovery watchers once and retain existing enable/disable owners |
+| Pin synchronization, unread acknowledgements and dead-session pruning | `store/session-pin-sync.ts`, `store/session-unread-remote.ts`, `store/dead-session-prune.ts` | Preserve connection scope and authoritative stores; avoid duplicate subscriptions or pruning passes |
+
+An upstream embedding entry point could replace this dependency when it owns
+those registrations explicitly, supports the browser's single-conversation
+capabilities, and keeps settings controllers available without extracting them
+from view implementations. Bridge installation, authentication, preference
+loading and profile restoration must still precede stores that read them.
+
+Lifecycle ownership also needs an explicit contract. Pin and unread watcher
+setup currently returns no disposer, while dead-session pruning returns an
+unsubscribe callback. Wrapping the controller import in a differently named
+function would not make those lifetimes independent or safely repeatable.
+
+Retain the checked registration adapter until such an upstream contract is
+available. Migrate one responsibility at a time through the existing renderer
+update process, preserving plugin ordering, draft durability and selection
+behavior before removing the corresponding compatibility seam. This map does
+not change the existing development or release process.
+
 Renderer-sensitive dependency versions are checked by
 `pnpm check:renderer-dependencies`. They inherit the fetched renderer's manifest;
 `scripts/renderer-dependencies.json` records deliberate version overrides and the
