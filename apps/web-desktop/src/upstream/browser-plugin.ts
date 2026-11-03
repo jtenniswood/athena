@@ -8,6 +8,18 @@ const contracts = registry.filter(entry => entry.sourceRoot === 'renderer' && en
 const storageScope = `\n  if (/^hermes\\.desktop\\.(?:layout|pane|sidebar|fileBrowser|rightRail|profileRail|terminal|statusbar|hiddenStrip|dismissedPanes|userPlaced)/.test(key)) key = 'hermes-web.browser.' + key\n`
 const browserRootPath = (root: string): string => path.join(root, 'src/upstream/browser-root.tsx')
 
+export function useBrowserMessagingPresentation(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/messaging'))
+  return replaceBrowserContract(source, [
+    ["import { DetailColumn, ListColumn, MasterDetail } from '../master-detail'", `import { BrowserMessagingDetail as DetailColumn, BrowserMessagingList as ListColumn, BrowserMessagingLayout as MasterDetail, BrowserMessagingShell as PageSearchShell } from ${owner}`],
+    ["import { PageSearchShell } from '../page-search-shell'\n", ''],
+    ['              <ListColumn>', '              <ListColumn empty={visiblePlatforms.length === 0}>'],
+    ['      onClick={onSelect}\n      type="button"', '      data-browser-messaging-platform={platform.id}\n      aria-current={active ? \'true\' : undefined}\n      onClick={onSelect}\n      type="button"'],
+    ['        <span className="truncate text-[length:var(--conversation-text-font-size)] font-normal">{platform.name}</span>', '<span className="browser-messaging-platform-label"><span>{platform.name}</span><span>{stateLabel(platform.state, t.messaging)}</span></span>'],
+    ['            onClick={() => setShowAdvanced(value => !value)}', '            aria-expanded={showAdvanced}\n            onClick={() => setShowAdvanced(value => !value)}']
+  ])
+}
+
 function assertBrowserRoot(root: string): void {
   const rootFile = browserRootPath(root)
   if (!existsSync(rootFile)) throw new Error(`Browser root is missing: ${rootFile}`)
@@ -1483,6 +1495,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
   if (digest(code) === entry.outputHash) return { code, map: null }
   if (digest(code) !== entry.inputHash) throw new Error(`Browser compatibility changed: ${entry.name} (${entry.module}). Review this registry entry.`)
   const handlers: Record<string, (source: string) => string> = {
+    useBrowserMessagingPresentation: source => useBrowserMessagingPresentation(source, root),
     useBrowserCatalogIdleTask: source => useBrowserCatalogIdleTask(source, root),
     useBrowserErrorFallback: source => useBrowserErrorFallback(source, root),
     useBrowserStylesheetOwner,

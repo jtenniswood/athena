@@ -3219,5 +3219,27 @@
     "sourceHash": "a6a886010f5f9c1c6b94e8ffe777deafe04854e6ac47cbeb0963b87ccd56de6d",
     "inputHash": "a6a886010f5f9c1c6b94e8ffe777deafe04854e6ac47cbeb0963b87ccd56de6d",
     "outputHash": "47ad543012f495c7b28c4054b1b23ad8bc76b78ac66fa4bad7b617cb979a8f0f"
+  },
+  {
+    "name": "browser-messaging-presentation",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/messaging/index.tsx",
+    "reason": "Present messaging with a compact searchable header, readable platform statuses, responsive navigation and grouped setup sections while retaining upstream profile, credential, pairing and save ownership.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/compatibility-registry.test.mjs",
+        "scenario": "registered browser pipeline:"
+      }
+    ],
+    "removal": "Remove when upstream provides an equivalent responsive messaging presentation.",
+    "handlers": [
+      "useBrowserMessagingPresentation"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "2ef2b6fc46549a2d1066005313811d76278bb3d67925f3d7417f0e431da5ea1a",
+    "inputHash": "2ef2b6fc46549a2d1066005313811d76278bb3d67925f3d7417f0e431da5ea1a",
+    "outputHash": "7473a0a7ec35644f286c20cb09b11508ae95a1cb064112768d2260f11cc792db"
   }
 ]
