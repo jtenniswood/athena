@@ -50,6 +50,16 @@ test('RPC holds allow later selections to complete first without timing guesses'
   gateway.controls.assertExpected()
 })
 
+test('the renderer title command persists only the addressed conversation', async t => {
+  const gateway = await fixture(t)
+  const original = gateway.sessions.get('preview-idea').title
+  const reply = await gateway.request('session.title', { session_id: 'preview-week', title: 'A renamed conversation' })
+  assert.equal(reply.result.title, 'A renamed conversation')
+  assert.equal((await (await fetch(gateway.origin + '/api/sessions/preview-week')).json()).title, 'A renamed conversation')
+  assert.equal(gateway.sessions.get('preview-idea').title, original)
+  gateway.controls.assertExpected()
+})
+
 test('rejected REST mutations leave sessions intact and consume the fault once', async t => {
   const gateway = await fixture(t)
   const path = '/api/sessions/preview-week'

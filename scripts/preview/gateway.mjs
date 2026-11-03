@@ -149,7 +149,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       return { attached: true, ref_text: `@file:/workspace/${params.name}`, path: `/workspace/${params.name}` }
     }
     if (method === 'session.attach') return { ok: true, path: `/workspace/${params.filename || 'attachment'}` }
-    if (method === 'session.rename' && sessions.has(id)) { sessions.get(id).title = params.title; return { ok: true, title: params.title } }
+    if (['session.title', 'session.rename'].includes(method) && sessions.has(id)) { sessions.get(id).title = params.title; return { ok: true, title: params.title } }
     if (method === 'session.close') return { ok: true }
     if (method === 'events.replay') return { events: [], cursor: 0 }
     if (strict) return controls.unknown({ transport: 'rpc', method, params, profile })

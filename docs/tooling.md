@@ -14,6 +14,7 @@ Historical plans do not add acceptance gates to ordinary changes.
 | Typecheck and build | `pnpm typecheck`, `pnpm build`; Docker and compatibility workflow | Validate the wrapper and its renderer integration and build the browser app. |
 | Development server | `pnpm dev`; manual local invocation | Serve the app with the same-origin gateway proxy. |
 | Compatibility registry | `pnpm check:compatibility-registry`, `pnpm docs:compatibility`; Vite plugins and compatibility workflow | Check reviewed source/output fingerprints and generate the inventory and TypeScript aliases. Generation does not accept new fingerprints. |
+| Behavioral verification | `pnpm verify:behavior`; compatibility workflow and focused local checks | Plan declared scenarios for selected entries or changed wrapper dependencies, then verify actual Node/Chromium execution results. |
 | Hosting configuration | `scripts/runtime-config.mjs`; Docker entrypoint and Vite | Validate hosting settings and generate runtime scripts and nginx configuration. |
 | Runtime services | `apps/web-desktop/server/services.mjs`; Vite, preview and `scripts/serve.mjs` | Assemble shared preferences, Android sign-in and push services with one HTTP/WebSocket lifecycle. |
 | Build identity | `scripts/build-info.mjs`; Vite | Record wrapper revision, renderer revision and dependency lock identity. |
@@ -33,6 +34,48 @@ Run typecheck/build for application changes and try the affected workflow. Use
 existing focused tests for draft durability, selection races, authentication or
 update activation when relevant. `pnpm test:foundation` is an optional collection
 of Node checks, not a requirement to run every suite for every edit.
+
+## Focused compatibility verification
+
+The registry records which behaviors protect each adapter. List its checks before
+running them:
+
+```sh
+pnpm verify:behavior --entry bot-session-cancellation --list
+pnpm verify:behavior --changed origin/main --runner node --list
+```
+
+`--changed` compares the current tracked tree with a commit, including individual
+registry edits and removed entries. It follows wrapper imports, injected wrapper
+paths, and replacement-module dependencies conservatively. An owner containing
+several handlers can select extra scenarios. Renderer, dependency-lock and shared
+build-adapter changes select all entries. This is a verification plan, not proof
+that tests ran or a measured coverage report.
+
+Add `--run` to execute the selected scenarios. The runner matches literal declared
+scenario text and verifies test names, files and successful execution results.
+Skipped, missing or unmatched scenarios fail verification. An explicit
+`--runner node` or `--runner browser` reports other references as deferred; it does
+not claim to verify them. Upstream Vitest references remain supporting source
+references and cannot satisfy this runner's execution check.
+
+```sh
+pnpm verify:behavior --entry browser-settings-pending-saves --runner node --run
+HERMES_TEST_IMAGE=athena:local pnpm verify:behavior --entry bot-session-cancellation --runner browser --run
+```
+
+Browser scenarios retain their existing fixture requirements: interruption tests
+need a built nginx image and Docker; previous-image upgrade tests also need their
+immutable baseline. `--output test-results/behavior.json` saves the plan or actual
+execution results for inspection.
+Browser screenshots and traces use an isolated temporary directory recorded in
+the execution report, so another Playwright invocation cannot delete them.
+
+The compatibility workflow runs affected declared Node scenarios and uses the
+selection-race entry for a focused built-image check when relevant engine or
+selection boundaries change. It preserves the plans and execution results as
+optional diagnostic artifacts. It does not run the entire browser suite or
+change the deployment process.
 
 ## Optional diagnostics and parked automation
 
