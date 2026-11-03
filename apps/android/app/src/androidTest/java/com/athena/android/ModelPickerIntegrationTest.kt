@@ -75,7 +75,7 @@ class ModelPickerIntegrationTest {
                 assertEquals("true", evaluate(web, "window.host.capabilities.includes('action-menu-search')"))
                 evaluate(web, "window.openModels()")
                 fun sheet(activity: MainActivity): com.google.android.material.bottomsheet.BottomSheetDialog? {
-                    val menus = (field(activity, "actionMenus$" + "delegate") as Lazy<*>).value as NativeActionMenus
+                    val menus = legacyPresenter(activity, "actionMenus") as NativeActionMenus
                     return NativeActionMenus::class.java.getDeclaredField("sheet").apply { isAccessible = true }.get(menus) as? com.google.android.material.bottomsheet.BottomSheetDialog
                 }
                 waitUntil { var shown = false; scenario.onActivity { shown = sheet(it)?.isShowing == true }; shown }
