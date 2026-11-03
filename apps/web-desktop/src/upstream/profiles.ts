@@ -18,6 +18,7 @@ export function useBrowserActiveProfile(): string {
 
 /** Restore the tab's profile without changing its persisted all-profiles scope. */
 export function restoreBrowserProfile(): () => void {
+  const savedAllProfiles = $showAllProfiles.get()
   let saved: string | null = null
   try {
     saved = sessionStorage.getItem('hermes-web.browser.profile')
@@ -32,6 +33,12 @@ export function restoreBrowserProfile(): () => void {
   const hiddenProfiles = readHiddenProfiles()
   let stopSelectingDefault: (() => void) | undefined
   const chooseVisibleDefault = (profiles: ReturnType<typeof $profiles.get>) => {
+    // A saved all-profiles scope also owns Profile grouping. Hidden rail
+    // buttons must not replace that choice with a single profile on refresh.
+    if (savedAllProfiles && $showAllProfiles.get()) {
+      stopSelectingDefault?.()
+      return
+    }
     const defaultProfile = profiles.find(profile => profile.is_default)
     if (!defaultProfile) return
     if (!hiddenProfiles.includes(defaultProfile.name)) {
