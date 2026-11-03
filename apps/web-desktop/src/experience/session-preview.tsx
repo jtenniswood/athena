@@ -1,8 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { getSessionMessages, type SessionInfo } from '@/hermes'
-import { chatMessageText, toChatMessages } from '@/lib/chat-messages'
-import { displayModelName } from '@/lib/model-status-label'
+import { Tooltip, TooltipContent, TooltipTrigger, getSessionMessages, type SessionInfo, chatMessageText, toChatMessages, displayModelName } from '../upstream/session-preview-api'
 
 // Mounted by the tooltip portal only after an intentional hover or keyboard focus.
 // A passive, owner-scoped read never selects a chat or changes its read watermark.
