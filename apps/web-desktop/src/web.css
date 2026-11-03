@@ -9,6 +9,31 @@
 @source "./";
 @import "../../desktop/src/styles.css";
 
+/* Extend row backgrounds through the sidebar gutters while preserving text insets. */
+.browser-sessions-pane [data-sessions-mode] [data-browser-section-header] {
+  padding-inline: .625rem;
+}
+.browser-sessions-pane [data-web-session-id] {
+  width: 100%;
+  min-width: 0;
+  padding-inline-start: .625rem;
+  padding-inline-end: 1.125rem;
+  border-radius: 0;
+}
+.browser-sessions-pane [data-web-session-selected] {
+  background-color: var(--ui-row-active-background);
+}
+.browser-sessions-pane [data-web-session-selected]::before {
+  content: '';
+  position: absolute;
+  inset-block: 25%;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--theme-primary);
+  pointer-events: none;
+}
+
 .browser-sessions-pane button[data-slot="row-button"] .browser-session-title {
   overflow: hidden;
   white-space: nowrap;
