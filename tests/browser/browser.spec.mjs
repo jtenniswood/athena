@@ -2740,6 +2740,56 @@ test('tool modals preserve an active microphone recording until explicit stop', 
   expect(await editor(page).evaluate(node => node === window.modalComposer)).toBe(true)
 })
 
+test('capabilities loads and switches tabs without browser idle APIs', async ({ page }) => {
+  const errors = installBrowserErrorCollector(page)
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await page.addInitScript(() => {
+    delete window.requestIdleCallback
+    delete window.cancelIdleCallback
+  })
+  // Keep the catalog deterministic and avoid downloading the public skills feed.
+  await page.route('https://nousresearch.github.io/hermes-agent/docs/api/*.json', route => route.fulfill({ json: [] }))
+  await page.goto(`${origin}/#/capabilities`)
+  const overlay = page.locator('[data-overlay-surface]')
+  await expect(overlay.getByRole('button', { name: /Skills/ }).first()).toBeVisible({ timeout: 30000 })
+  await expect(overlay.getByRole('button', { name: 'preview-planning', exact: true })).toBeVisible()
+
+  await overlay.getByRole('button', { name: 'Plugins', exact: true }).click()
+  await expect(page).toHaveURL(/tab=plugins/)
+  await overlay.getByRole('button', { name: /Tools/ }).first().click()
+  await expect(overlay.getByRole('button', { name: 'Preview tools', exact: true })).toBeVisible()
+  await page.reload()
+  await expect(overlay.getByRole('button', { name: 'Preview tools', exact: true })).toBeVisible({ timeout: 30000 })
+  await page.getByRole('button', { name: 'Close Capabilities', exact: true }).click()
+  await expect(editor(page)).toBeEditable()
+  errors.assertClean()
+})
+
+test('browser crash actions show details, download diagnostics and return to chat', async ({ page }) => {
+  await page.route('https://nousresearch.github.io/hermes-agent/docs/api/*.json', route => route.fulfill({ json: [] }))
+  // A malformed installed row forces a render failure, after queries succeed.
+  await page.route(/\/api\/skills(?:\?|$)/, route => route.fulfill({ json: [null] }))
+  await page.goto(`${origin}/#/capabilities`)
+  await expect(page.getByRole('heading', { name: 'Something broke in the interface' })).toBeVisible({ timeout: 30000 })
+  const details = page.getByRole('button', { name: 'Show error details', exact: true })
+  await details.click()
+  await expect(page.getByRole('button', { name: 'Hide error details', exact: true })).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.locator('pre')).toContainText('Athena')
+  const downloading = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download diagnostics', exact: true }).click()
+  const download = await downloading
+  expect(download.suggestedFilename()).toBe('athena-diagnostics.json')
+  const stream = await download.createReadStream()
+  const chunks = []
+  for await (const chunk of stream) chunks.push(chunk)
+  const diagnostic = JSON.parse(Buffer.concat(chunks).toString())
+  expect(diagnostic.app).toBe('Athena')
+  expect(diagnostic.error.message).toBeTruthy()
+  await page.getByRole('button', { name: 'Return to chat', exact: true }).click()
+  await expect(page).toHaveURL(/#\/$/)
+  await expect(editor(page)).toBeEditable()
+})
+
 test('tool modal history preserves query state and cold entry closes to a usable chat', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
   await open(page)

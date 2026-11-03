@@ -3149,5 +3149,75 @@
     "outputHash": "aa7f02254984c01d069846673bc79ff236c83feecf615c61333e84ffb0b705ee",
     "handler": "browser-connection-preferences",
     "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-catalog-idle-task",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/capabilities/catalog/catalog-data.ts",
+    "reason": "Use cancellable timer scheduling where browser idle callbacks are unavailable so Capabilities does not crash the application.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "catalog prefetch works without idle callbacks and cancels on unmount"
+      }
+    ],
+    "removal": "Remove when upstream catalog prefetch feature-detects the browser idle APIs.",
+    "handlers": [
+      "useBrowserCatalogIdleTask"
+    ],
+    "sourceHash": "26748edcd4ab686b9806eb0db9b4737f97acda5f0e2e4e54c4d7b0b61281c833",
+    "sourceRoot": "renderer",
+    "inputHash": "26748edcd4ab686b9806eb0db9b4737f97acda5f0e2e4e54c4d7b0b61281c833",
+    "outputHash": "5ae78b58a873063beeb0d5d4f33ac1ce45b7b5e5182b3b5faf333fe5d2061e2d"
+  },
+  {
+    "name": "browser-crash-recovery",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/error-boundary.tsx",
+    "reason": "Keep crash recovery independent of desktop IPC and unmounted modal hosts, with a route escape, visible error details and a local diagnostic download.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser crash recovery keeps the boundary lifecycle and replaces desktop-only actions"
+      }
+    ],
+    "removal": "Remove when upstream error recovery supports standalone browser actions.",
+    "handlers": [
+      "useBrowserErrorFallback"
+    ],
+    "sourceHash": "95c86078f8510f7ffdf558b9b147f387edadbc16f97dd23fa436dfe6c731559e",
+    "sourceRoot": "renderer",
+    "inputHash": "95c86078f8510f7ffdf558b9b147f387edadbc16f97dd23fa436dfe6c731559e",
+    "outputHash": "ecd1229c8ec2ce229c298d34d0f2b52cfaa06884e959c62bb7a190b0d3f357e2"
+  },
+  {
+    "name": "browser-single-stylesheet-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "main.tsx",
+    "reason": "Load renderer styles through web.css once so a later incomplete Tailwind compilation cannot hide responsive capability tabs.",
+    "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser entry loads renderer styles once so responsive tabs remain visible"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "capabilities loads and switches tabs without browser idle APIs"
+      }
+    ],
+    "removal": "Remove when the renderer exposes an entry without its own stylesheet import.",
+    "handlers": [
+      "useBrowserStylesheetOwner"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "a6a886010f5f9c1c6b94e8ffe777deafe04854e6ac47cbeb0963b87ccd56de6d",
+    "inputHash": "a6a886010f5f9c1c6b94e8ffe777deafe04854e6ac47cbeb0963b87ccd56de6d",
+    "outputHash": "47ad543012f495c7b28c4054b1b23ad8bc76b78ac66fa4bad7b617cb979a8f0f"
   }
 ]

@@ -28,6 +28,63 @@ function load(file, globals = {}, moduleCache = new Map()) {
   return context.exports
 }
 const { browserPlugin, scopeBrowserStorage, useBrowserTouchHooks } = load('src/upstream/browser-plugin.ts')
+test('catalog prefetch works without idle callbacks and cancels on unmount', () => {
+  for (const native of [false, true]) {
+    const pending = new Map()
+    const calls = []
+    let next = 0
+    const schedule = (callback, options) => {
+      calls.push(options)
+      pending.set(++next, callback)
+      return next
+    }
+    const { scheduleBrowserIdleTask } = load('src/platform/idle.ts', {
+      setTimeout: schedule, clearTimeout: id => pending.delete(id),
+      ...(native ? { requestIdleCallback: schedule, cancelIdleCallback: id => pending.delete(id) } : {})
+    })
+    let prefetched
+    const { useBrowserCatalogIdleTask } = load('src/upstream/browser-plugin.ts')
+    const source = readFileSync(path.join(root, '../desktop/src/app/capabilities/catalog/catalog-data.ts'), 'utf8')
+    const output = useBrowserCatalogIdleTask(source, root)
+    const parsed = ts.createSourceFile('catalog.ts', output, ts.ScriptTarget.Latest, true)
+    const fn = parsed.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'prefetchCatalogWhenIdle').getText(parsed)
+    const context = vm.createContext({ exports: {}, scheduleBrowserIdleTask,
+      catalogQuery: kind => ({ kind }), queryClient: { prefetchQuery: query => { prefetched = query.kind } } })
+    vm.runInContext(ts.transpileModule(fn, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context)
+    const cancel = context.exports.prefetchCatalogWhenIdle('plugins')
+    assert.equal(prefetched, undefined)
+    assert.equal(pending.size, 1)
+    cancel()
+    assert.equal(pending.size, 0)
+    context.exports.prefetchCatalogWhenIdle('plugins')
+    pending.values().next().value()
+    assert.equal(prefetched, 'plugins')
+    assert.equal(native ? calls[0].timeout : calls[0], native ? 5_000 : 0)
+    assert.throws(() => useBrowserCatalogIdleTask(source.replace('return () => cancelIdleCallback(id)', ''), root), /boundary changed/)
+  }
+})
+
+test('browser crash recovery keeps the boundary lifecycle and replaces desktop-only actions', () => {
+  const { useBrowserErrorFallback } = load('src/upstream/browser-plugin.ts')
+  const source = readFileSync(path.join(root, '../desktop/src/components/error-boundary.tsx'), 'utf8')
+  const output = useBrowserErrorFallback(source, root)
+  assert.match(output, /BrowserErrorFallback as RootErrorFallback/)
+  assert.match(output, /scheduleAutoRecovery\(\)/)
+  assert.match(output, /this\.props\.fallback/)
+  assert.doesNotMatch(output, /revealLogs|requestSendDiagnostics/)
+  assert.throws(() => useBrowserErrorFallback(source.replace('function RootErrorFallback(', 'function ChangedFallback('), root), /boundary changed/)
+})
+
+test('browser entry loads renderer styles once so responsive tabs remain visible', () => {
+  const { useBrowserStylesheetOwner } = load('src/upstream/browser-plugin.ts')
+  const source = readFileSync(path.join(root, '../desktop/src/main.tsx'), 'utf8')
+  const output = useBrowserStylesheetOwner(source)
+  assert.doesNotMatch(output, /import '\.\/styles\.css'/)
+  assert.match(output, /installClipboardShim\(\)/)
+  assert.match(readFileSync(path.join(root, 'src/web.css'), 'utf8'), /@import "\.\.\/\.\.\/desktop\/src\/styles\.css"/)
+  assert.throws(() => useBrowserStylesheetOwner(output), /import changed/)
+})
+
 test('plugin installs return to the settings manager only when launched from settings', () => {
   const { keepBrowserPluginInstallInSettings } = load('src/upstream/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/app/settings/plugin-install-modal.tsx'), 'utf8')

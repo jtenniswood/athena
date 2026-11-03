@@ -16,6 +16,37 @@ function assertBrowserRoot(root: string): void {
     throw new Error('Browser build root is not the browser-only shell')
   }
 }
+
+export function useBrowserCatalogIdleTask(source: string, root: string): string {
+  const before = `  const id = requestIdleCallback(() => void queryClient.prefetchQuery(catalogQuery(kind)), { timeout: 5_000 })
+
+  return () => cancelIdleCallback(id)`
+  if (source.split(before).length !== 2) throw new Error('Catalog idle prefetch boundary changed')
+  return `import { scheduleBrowserIdleTask } from ${JSON.stringify(path.join(root, 'src/platform/idle'))}\n` +
+    source.replace(before, '  return scheduleBrowserIdleTask(() => void queryClient.prefetchQuery(catalogQuery(kind)))')
+}
+
+export function useBrowserStylesheetOwner(source: string): string {
+  // entry.ts loads web.css, which already imports the complete renderer stylesheet.
+  // A second Tailwind compilation loads later and overrides responsive utilities.
+  const before = "import './styles.css'\n"
+  if (source.split(before).length !== 2) throw new Error('Browser renderer stylesheet import changed')
+  return source.replace(before, '')
+}
+
+export function useBrowserErrorFallback(source: string, root: string): string {
+  const start = source.indexOf('function RootErrorFallback({ error, reset }: ErrorBoundaryFallbackProps) {')
+  if (start < 0 || !source.slice(start).includes('t.errors.sendDiagnostics')) throw new Error('Browser error fallback boundary changed')
+  const imports = [
+    "import { Button } from '@/components/ui/button'\n",
+    "import { ErrorState } from '@/components/ui/error-state'\n",
+    "import { useI18n } from '@/i18n'\n",
+    "import { requestSendDiagnostics } from '@/store/send-diagnostics'\n"
+  ]
+  let output = source.slice(0, start)
+  for (const line of imports) output = output.replace(line, '')
+  return `import { BrowserErrorFallback as RootErrorFallback } from ${JSON.stringify(path.join(root, 'src/experience/browser-error-fallback'))}\n` + output
+}
 /** Keep upstream boot/error/reconnect ownership; only adapt its loading visual. */
 export function useBrowserConnectingVisual(source: string): string {
   const start = source.indexOf('function ConnectingOverlayView(')
@@ -1452,6 +1483,9 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
   if (digest(code) === entry.outputHash) return { code, map: null }
   if (digest(code) !== entry.inputHash) throw new Error(`Browser compatibility changed: ${entry.name} (${entry.module}). Review this registry entry.`)
   const handlers: Record<string, (source: string) => string> = {
+    useBrowserCatalogIdleTask: source => useBrowserCatalogIdleTask(source, root),
+    useBrowserErrorFallback: source => useBrowserErrorFallback(source, root),
+    useBrowserStylesheetOwner,
     keepBrowserPluginManagementInSettings,
     keepBrowserPluginInstallInSettings,
     useBrowserRosterDialogFocus: source => useBrowserRosterDialogFocus(source, root),
