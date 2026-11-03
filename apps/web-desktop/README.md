@@ -50,7 +50,7 @@ browser remain unavailable regardless of these presentation preferences.
 The renderer is pinned in the root `flake.lock`. New upstream UI is incorporated
 when that pin is upgraded and reviewed; it does not update in place at runtime.
 The checked settings composition and visibility adapters live in
-`src/upstream/browser-plugin.ts` and are fingerprinted in the compatibility
+`build/renderer/browser-plugin.ts` and are fingerprinted in the compatibility
 registry. Review those contracts when updating the pinned renderer.
 
 Docker and development serve `runtime-config.js` with no caching. Browser

@@ -10,7 +10,7 @@ import ts from 'typescript'
 const root = path.resolve('apps/web-desktop')
 function load(file, globals = {}, moduleCache = new Map()) {
   const filename = path.resolve(root, file)
-  if (file === 'src/upstream/browser-plugin.ts') return createBuildModuleLoader().load(filename)
+  if (file === 'build/renderer/browser-plugin.ts') return createBuildModuleLoader().load(filename)
   if (moduleCache.has(filename)) return moduleCache.get(filename)
   const exports = {}
   moduleCache.set(filename, exports)
@@ -29,7 +29,7 @@ function load(file, globals = {}, moduleCache = new Map()) {
   vm.runInContext(ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, context)
   return context.exports
 }
-const { browserPlugin, scopeBrowserStorage, useBrowserTouchHooks } = load('src/upstream/browser-plugin.ts')
+const { browserPlugin, scopeBrowserStorage, useBrowserTouchHooks } = load('build/renderer/browser-plugin.ts')
 test('catalog prefetch works without idle callbacks and cancels on unmount', () => {
   for (const native of [false, true]) {
     const pending = new Map()
@@ -45,7 +45,7 @@ test('catalog prefetch works without idle callbacks and cancels on unmount', () 
       ...(native ? { requestIdleCallback: schedule, cancelIdleCallback: id => pending.delete(id) } : {})
     })
     let prefetched
-    const { useBrowserCatalogIdleTask } = load('src/upstream/browser-plugin.ts')
+    const { useBrowserCatalogIdleTask } = load('build/renderer/browser-plugin.ts')
     const source = readFileSync(path.join(root, '../desktop/src/app/capabilities/catalog/catalog-data.ts'), 'utf8')
     const output = useBrowserCatalogIdleTask(source, root)
     const parsed = ts.createSourceFile('catalog.ts', output, ts.ScriptTarget.Latest, true)
@@ -67,7 +67,7 @@ test('catalog prefetch works without idle callbacks and cancels on unmount', () 
 })
 
 test('browser crash recovery keeps the boundary lifecycle and replaces desktop-only actions', () => {
-  const { useBrowserErrorFallback } = load('src/upstream/browser-plugin.ts')
+  const { useBrowserErrorFallback } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/components/error-boundary.tsx'), 'utf8')
   const output = useBrowserErrorFallback(source, root)
   assert.match(output, /BrowserErrorFallback as RootErrorFallback/)
@@ -78,7 +78,7 @@ test('browser crash recovery keeps the boundary lifecycle and replaces desktop-o
 })
 
 test('browser entry loads renderer styles once so responsive tabs remain visible', () => {
-  const { useBrowserStylesheetOwner } = load('src/upstream/browser-plugin.ts')
+  const { useBrowserStylesheetOwner } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/main.tsx'), 'utf8')
   const output = useBrowserStylesheetOwner(source)
   assert.doesNotMatch(output, /import '\.\/styles\.css'/)
@@ -88,7 +88,7 @@ test('browser entry loads renderer styles once so responsive tabs remain visible
 })
 
 test('plugin installs return to the settings manager only when launched from settings', () => {
-  const { keepBrowserPluginInstallInSettings } = load('src/upstream/browser-plugin.ts')
+  const { keepBrowserPluginInstallInSettings } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/app/settings/plugin-install-modal.tsx'), 'utf8')
   const output = keepBrowserPluginInstallInSettings(source)
   const parsed = ts.createSourceFile('plugin.tsx', output, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
@@ -113,7 +113,7 @@ test('composer queue action receives an explicit browser identity', () => {
 })
 test('accepted composer submissions report only successful sends', () => {
   const source = readFileSync(path.join(root, '../desktop/src/app/chat/composer/hooks/use-composer-submit.ts'), 'utf8')
-  const { useBrowserAcceptedSubmit } = load('src/upstream/browser-plugin.ts')
+  const { useBrowserAcceptedSubmit } = load('build/renderer/browser-plugin.ts')
   const output = useBrowserAcceptedSubmit(source, root)
   assert.match(output, /if \(accepted !== false\) announceBrowserAcceptedSubmit\(\{ text, sessionId \}\)/)
   assert.match(output, /if \(!accepted\) \{\s*keep\(\)\s*\} else \{\s*announceBrowserAcceptedSubmit\(\{ text, sessionId \}\)/)
@@ -167,7 +167,7 @@ test('settings customization hides known sections and fields while inheriting ne
   }
 })
 test('browser message bubbles stay solid despite saved transparency and later writes', () => {
-  const { keepBrowserMessageBubblesSolid, hideBrowserAppearanceOnlySettings } = load('src/upstream/browser-plugin.ts')
+  const { keepBrowserMessageBubblesSolid, hideBrowserAppearanceOnlySettings } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/store/user-bubble-transparency.ts'), 'utf8')
   const output = keepBrowserMessageBubblesSolid(source)
   for (const browser of [true, false]) {
@@ -260,12 +260,12 @@ test('settings catalog records capability evidence and validates its authored de
   assert.equal(settingsFields.find(field => field.id === 'voice.client_direct').supportState, 'unknown')
 })
 test('settings policy stays aligned across page fields, deep search, and palette links', () => {
-  const { filterBrowserSettingsFields, filterBrowserSettingsSearch, filterBrowserSettingsPalette, useBrowserConfigurationSettings } = load('src/upstream/browser-plugin.ts')
+  const { filterBrowserSettingsFields, filterBrowserSettingsSearch, filterBrowserSettingsPalette, useBrowserConfigurationSettings } = load('build/renderer/browser-plugin.ts')
   const settings = readFileSync(path.join(root, '../desktop/src/app/settings/index.tsx'), 'utf8')
   const config = readFileSync(path.join(root, '../desktop/src/app/settings/config-settings.tsx'), 'utf8')
   const search = readFileSync(path.join(root, '../desktop/src/app/settings/use-settings-search.ts'), 'utf8')
   const palette = readFileSync(path.join(root, '../desktop/src/app/command-palette/index.tsx'), 'utf8')
-  const { useBrowserSettingsController } = load('src/upstream/settings-controller.ts')
+  const { useBrowserSettingsController } = load('build/renderer/settings-controller.ts')
   const adaptedSettings = useBrowserSettingsController(settings, root)
   assert.match(adaptedSettings, /function useRendererSettingsController/)
   assert.doesNotMatch(adaptedSettings, /return \(<OverlayView/)
@@ -299,11 +299,11 @@ test('settings routes preserve aliases, profile scope, field links, and unknown 
   assert.equal(browserSettingsSubpage('future-page', new URLSearchParams('page=new'), () => 'new'), 'new')
 })
 test('browser omits generic activity toasts while preserving unread tracking and incoming messages', () => {
-  const { filterBrowserActivityToasts, browserActivityNotificationsPlugin } = load('src/upstream/browser-plugin.ts')
+  const { filterBrowserActivityToasts, browserActivityNotificationsPlugin } = load('build/renderer/browser-plugin.ts')
   const filename = path.join(root, '../desktop/src/plugins/hermes-bots/roster-actions.ts')
   const source = readFileSync(filename, 'utf8')
   const output = filterBrowserActivityToasts(source)
-  const { transformRenderer } = load('src/upstream/transforms.ts')
+  const { transformRenderer } = load('build/renderer/transforms.ts')
   const compatible = transformRenderer(source, filename).code
   assert.equal(browserActivityNotificationsPlugin(root).transform(compatible, filename).code, filterBrowserActivityToasts(compatible))
   assert.throws(() => filterBrowserActivityToasts(source.replace('host.notify({', 'host.changed({')), /notification target changed/)
@@ -339,36 +339,15 @@ test('browser omits generic activity toasts while preserving unread tracking and
 })
 
 test('browser owns the Bots toolbar instead of rewriting upstream toolbar JSX', () => {
-  const { browserActivityNotificationsPlugin } = load('src/upstream/browser-plugin.ts')
+  const { browserActivityNotificationsPlugin } = load('build/renderer/browser-plugin.ts')
   const filename = path.join(root, '../desktop/src/plugins/hermes-bots/roster-pane-toolbar.tsx')
   const source = readFileSync(filename, 'utf8')
   const plugin = browserActivityNotificationsPlugin(root)
   assert.equal(plugin.transform(source, filename), null)
 })
 
-test('browser sidebar hides the new-session keyboard shortcut hint', () => {
-  const { browserPlugin, removeBrowserNewSessionShortcut } = load('src/upstream/browser-plugin.ts')
-  const filename = path.join(root, '../desktop/src/app/chat/sidebar/index.tsx')
-  const source = readFileSync(filename, 'utf8')
-  const output = removeBrowserNewSessionShortcut(source)
-  assert.doesNotMatch(output, /KbdGroup/)
-  assert.equal(removeBrowserNewSessionShortcut(output), output)
-  assert.equal(browserPlugin(root).transform(source, filename).code.includes('KbdGroup'), false)
-  assert.throws(() => removeBrowserNewSessionShortcut(source.replace('<KbdGroup', '<KbdHint')), /target changed/)
-})
-
-test('browser sidebar keeps Capabilities only in More controls', () => {
-  const { removeBrowserTopCapabilitiesLink } = load('src/upstream/browser-plugin.ts')
-  const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/index.tsx'), 'utf8')
-  const output = removeBrowserTopCapabilitiesLink(source)
-  assert.doesNotMatch(output, /id: 'capabilities'/)
-  assert.doesNotMatch(output, /CAPABILITIES_ROUTE/)
-  assert.match(readFileSync(path.join(root, 'src/experience/tool-routes.ts'), 'utf8'), /path: '\/capabilities', label: 'Capabilities'/)
-  assert.throws(() => removeBrowserTopCapabilitiesLink(source.replace("id: 'capabilities'", "id: 'skills'")), /target changed/)
-})
-
 test('browser moves hidden Bots into the normal roster when the filter option is enabled', () => {
-  const { browserPlugin, showHiddenBotsInBrowserRoster } = load('src/upstream/browser-plugin.ts')
+  const { browserPlugin, showHiddenBotsInBrowserRoster } = load('build/renderer/browser-plugin.ts')
   const filename = path.join(root, '../desktop/src/plugins/hermes-bots/roster-pane-derivation.ts')
   const source = readFileSync(filename, 'utf8')
   const output = showHiddenBotsInBrowserRoster(source)
@@ -381,7 +360,7 @@ test('browser moves hidden Bots into the normal roster when the filter option is
 })
 
 test('browser bot menus omit the new-chat shortcut', () => {
-  const { browserPlugin, removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction, useBrowserRosterSelection } = load('src/upstream/browser-plugin.ts')
+  const { browserPlugin, removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction, useBrowserRosterSelection } = load('build/renderer/browser-plugin.ts')
   const filename = path.join(root, '../desktop/src/plugins/hermes-bots/bot-row.tsx')
   const source = readFileSync(filename, 'utf8')
   const output = removeBrowserNewBotChatAction(source)
@@ -394,7 +373,7 @@ test('browser bot menus omit the new-chat shortcut', () => {
 })
 
 test('browser bot menus omit the open-chat shortcut', () => {
-  const { browserPlugin, removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction, useBrowserRosterSelection } = load('src/upstream/browser-plugin.ts')
+  const { browserPlugin, removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction, useBrowserRosterSelection } = load('build/renderer/browser-plugin.ts')
   const filename = path.join(root, '../desktop/src/plugins/hermes-bots/bot-row.tsx')
   const source = readFileSync(filename, 'utf8')
   const output = removeBrowserOpenBotChatAction(source)
@@ -406,7 +385,7 @@ test('browser bot menus omit the open-chat shortcut', () => {
 })
 
 test('browser approval modes have distinct menu icons and a static toolbar shield', () => {
-  const { browserPlugin } = load('src/upstream/browser-plugin.ts')
+  const { browserPlugin } = load('build/renderer/browser-plugin.ts')
   const filename = path.join(root, '../desktop/src/app/shell/approval-mode-menu.tsx')
   const source = readFileSync(filename, 'utf8')
   assert.equal(browserPlugin(root).transform(source, filename), null)
@@ -418,7 +397,7 @@ test('browser approval modes have distinct menu icons and a static toolbar shiel
 })
 
 test('browser microphone capture distinguishes insecure origins and lets getUserMedia own permission', async () => {
-  const { useBrowserMicrophoneCapture } = load('src/upstream/browser-plugin.ts')
+  const { useBrowserMicrophoneCapture } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/app/chat/composer/hooks/use-mic-recorder.ts'), 'utf8')
   const output = useBrowserMicrophoneCapture(source)
   assert.doesNotMatch(output, /requestMicrophoneAccess/)
@@ -455,14 +434,14 @@ test('latest renderer keeps None grouping integrated and handles layout-less too
   const tooltip = readFileSync(path.join(root, '../desktop/src/components/ui/tooltip.tsx'), 'utf8')
   assert.match(tooltip, /while \(candidate && !hasLayout\(candidate\)\)/)
   assert.match(tooltip, /setPane\(candidate\)/)
-  assert.doesNotMatch(readFileSync(path.join(root, 'src/upstream/compatibility-registry.json'), 'utf8'), /tooltip-boundary/)
+  assert.doesNotMatch(readFileSync(path.join(root, 'build/renderer/compatibility-registry.json'), 'utf8'), /tooltip-boundary/)
 })
 
 test('browser shell contracts reject missing or changed upstream modules', t => {
   browserPlugin(root).buildStart()
   const fixture = mkdtempSync(path.join(tmpdir(), 'browser-contract-'))
   t.after(() => rmSync(fixture, { recursive: true, force: true }))
-  const first = JSON.parse(readFileSync(path.join(root, 'src/upstream/compatibility-registry.json'), 'utf8')).find(entry => entry.sourceRoot === 'renderer' && entry.module && entry.sourceHash)
+  const first = JSON.parse(readFileSync(path.join(root, 'build/renderer/compatibility-registry.json'), 'utf8')).find(entry => entry.sourceRoot === 'renderer' && entry.module && entry.sourceHash)
   mkdirSync(path.dirname(path.join(fixture, 'desktop/src', first.module)), { recursive: true })
   const plugin = browserPlugin(path.join(fixture, 'web-desktop'))
   assert.throws(() => plugin.buildStart(), /ENOENT/)
@@ -501,7 +480,7 @@ test('browser selection always initializes the browser-focused shell', () => {
 })
 
 test('browser shell does not register chat tab creation actions', () => {
-  const { disableBrowserSessionTabs } = load('src/upstream/browser-plugin.ts')
+  const { disableBrowserSessionTabs } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/app/contrib/wiring.tsx'), 'utf8')
   const output = disableBrowserSessionTabs(source)
   assert.doesNotMatch(output, /\n    openNewSessionTab,\n/)
@@ -526,11 +505,11 @@ test('browser build has an explicit root and no desktop-root fallback', () => {
   const browserRoot = readFileSync(path.join(root, 'src/upstream/browser-root.tsx'), 'utf8')
   assert.match(browserRoot, /<BrowserEngineProvider engine=\{browserEngine\}><BrowserShell \/>/)
   assert.doesNotMatch(browserRoot, /ContribController/)
-  assert.doesNotMatch(readFileSync(path.join(root, 'src/upstream/browser-plugin.ts'), 'utf8'), /comparison-root|comparison-plugin/)
+  assert.doesNotMatch(readFileSync(path.join(root, 'build/renderer/browser-plugin.ts'), 'utf8'), /comparison-root|comparison-plugin/)
 })
 
 test('browser settings remove desktop-only keybind rows', () => {
-  const { filterBrowserKeybinds } = load('src/upstream/browser-plugin.ts')
+  const { filterBrowserKeybinds } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/app/settings/keybind-settings.tsx'), 'utf8')
   const output = filterBrowserKeybinds(source)
   assert.match(output, /BROWSER_UNSUPPORTED_KEYBINDS/)
@@ -540,16 +519,8 @@ test('browser settings remove desktop-only keybind rows', () => {
   assert.throws(() => filterBrowserKeybinds(source.replace("const [query, setQuery] = useState('')", "const [query, setQuery] = useState('changed')")), /keybind contract changed/)
 })
 
-test('browser session rows resume chats instead of opening tabs or windows', () => {
-  const { disableBrowserSessionRowTabs } = load('src/upstream/browser-plugin.ts')
-  const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/session-row.tsx'), 'utf8')
-  const output = disableBrowserSessionRowTabs(source)
-  assert.doesNotMatch(output, /openSession\(session\.id, \(\) => undefined, '(?:tab|window)'\)/)
-  assert.equal((output.match(/onResume\(\)/g) || []).length, (source.match(/onResume\(\)/g) || []).length + 3)
-})
-
 test('browser session menus omit tab and window actions while preserving hide-tab-bar props', () => {
-  const { disableBrowserSessionOpenActions } = load('src/upstream/browser-plugin.ts')
+  const { disableBrowserSessionOpenActions } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/session-actions-menu.tsx'), 'utf8')
   const output = disableBrowserSessionOpenActions(source, root)
   assert.doesNotMatch(output, /surface === 'row' && !alreadyTabbed/)
@@ -590,7 +561,7 @@ test('browser pane composition shares the toolbar and workspace ownership rules'
   assert.deepEqual(Array.from(panes.workspacePanelIds), ['plugin:side'])
 })
 test('narrow tool overlays retain upstream behavior without duplicating browser navigation', () => {
-  const { filterBrowserNarrowNavigation } = load('src/upstream/browser-plugin.ts')
+  const { filterBrowserNarrowNavigation } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/components/pane-shell/tree/renderer/narrow-overlays.tsx'), 'utf8')
   const output = filterBrowserNarrowNavigation(source)
   assert.equal(filterBrowserNarrowNavigation(output), output)
@@ -600,7 +571,7 @@ test('narrow tool overlays retain upstream behavior without duplicating browser 
 })
 
 test('empty workspace panels retain a working close action', () => {
-  const { closeBrowserWorkspacePanels } = load('src/upstream/browser-plugin.ts')
+  const { closeBrowserWorkspacePanels } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/components/pane-shell/tree/store.ts'), 'utf8')
   const output = closeBrowserWorkspacePanels(source)
   assert.equal(closeBrowserWorkspacePanels(output), output)
@@ -610,7 +581,7 @@ test('empty workspace panels retain a working close action', () => {
 })
 
 test('browser status chrome reuses the checked upstream item renderer', () => {
-  const { exportBrowserStatusbarItem } = load('src/upstream/browser-plugin.ts')
+  const { exportBrowserStatusbarItem } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/app/shell/statusbar-controls.tsx'), 'utf8')
   const output = exportBrowserStatusbarItem(source)
   assert.equal(exportBrowserStatusbarItem(output), output)
@@ -646,10 +617,3 @@ test('entry recovery has an independent static fallback', () => {
 })
 
 // The split-menu adapter runs after the settings row is inserted.
-test('removing sidebar split menus preserves the Settings and App slot', () => {
-  const { useBrowserSearchLabel, removeBrowserSplitControls } = load('src/upstream/browser-plugin.ts')
-  const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/index.tsx'), 'utf8')
-  const adapted = removeBrowserSplitControls(useBrowserSearchLabel(source, root))
-  assert.equal(adapted.split('{isNewSession && <BrowserSidebarSettings />}').length, 2)
-  assert.doesNotMatch(adapted, /<SplitSubmenu/)
-})

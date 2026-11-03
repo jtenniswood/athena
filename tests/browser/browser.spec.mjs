@@ -190,6 +190,41 @@ for (const width of [1440, 390]) {
   })
 }
 
+test('sidebar cron peek and trigger retain the selected conversation and prevent duplicate runs', async ({ page }) => {
+  await page.route('**/api/athena/preferences', route => route.abort())
+  const job = { id: 'tree-cron-job', name: 'Sidebar cron check', prompt: 'Check rows', enabled: true, state: 'scheduled' }
+  let triggerRequests = 0, finishTrigger
+  await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => route.fulfill({ json: [job] }))
+  await page.route(/\/api\/cron\/jobs\/tree-cron-job\/runs(?:\?|$)/, route => route.fulfill({ json: { runs: [
+    { id: 'cron-fixture-run', source: 'cron', profile: 'default', started_at: 1900000000, last_active: 1900000000 },
+    { id: 'cron-fixture-output', source: 'cron_output', profile: 'default', started_at: 1900000001, last_active: 1900000001 }
+  ] } }))
+  await page.route(/\/api\/cron\/jobs\/tree-cron-job\/trigger(?:\?|$)/, async route => {
+    triggerRequests++
+    await new Promise(resolve => { finishTrigger = resolve })
+    await route.fulfill({ json: job })
+  })
+  await open(page)
+  await editor(page).fill('Keep my cron sidebar draft')
+  const section = page.locator('[data-browser-section-id="cron-jobs"]')
+  await section.getByRole('button', { name: 'Cron jobs', exact: true }).click()
+  await section.getByRole('button', { name: 'Show runs', exact: true }).click()
+  const runs = section.locator('div.mb-1')
+  await expect(runs.getByRole('button')).toHaveCount(1)
+  await expect(runs.locator(':scope > div')).toHaveCount(1)
+  await section.locator('.group\\/cron').hover()
+  const trigger = section.getByRole('button', { name: 'Trigger now', exact: true })
+  await trigger.evaluate(button => { button.click(); button.click() })
+  await expect.poll(() => triggerRequests).toBe(1)
+  await expect(trigger).toBeDisabled()
+  finishTrigger()
+  await expect(trigger).toBeEnabled()
+  await section.getByRole('button', { name: 'Hide runs', exact: true }).click()
+  await expect(runs).toHaveCount(0)
+  await expect(page).toHaveURL(/#\/preview-week$/)
+  await expect(editor(page)).toHaveText('Keep my cron sidebar draft')
+})
+
 test('chat hover previews show the latest reply without selecting the chat or changing its draft', async ({ page }) => {
   const fullTitle = 'Explore a product idea with a deliberately long title that should fade at the edge and remain fully readable in the preview card'
   await page.route(/\/api\/profiles\/sessions/, async route => {
@@ -942,15 +977,19 @@ test('phone session-row actions stay open without resuming the row', async ({ br
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   const page = await context.newPage()
   await open(page)
+  await editor(page).fill('Keep the phone draft while opening row actions')
   await page.getByRole('button', { name: 'Chat actions', exact: true }).tap()
   let addedPin = false
-  if (await page.getByRole('menuitem', { name: 'Pin', exact: true }).count()) {
-    await page.getByRole('menuitem', { name: 'Pin', exact: true }).tap()
+  const chatActions = page.getByRole('dialog', { name: 'Chat actions', exact: true })
+  if (await chatActions.getByRole('button', { name: 'Pin', exact: true }).count()) {
+    await chatActions.getByRole('button', { name: 'Pin', exact: true }).tap()
     addedPin = true
   } else {
     await page.keyboard.press('Escape')
   }
-  await openNavigation(page)
+  await page.getByRole('button', { name: 'Back to chat history', exact: true }).tap()
+  await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Sessions', exact: true })).toBeFocused()
   const section = page.locator('.browser-pinned-section')
   await expect(section).toBeVisible()
   if (!await section.locator('[data-row-actions]').count()) await section.getByRole('button', { name: /Pinned/ }).first().click()
@@ -960,18 +999,20 @@ test('phone session-row actions stay open without resuming the row', async ({ br
   const sheet = page.locator('[data-slot="dropdown-menu-content"]:visible').last()
   await expect(sheet).toBeVisible()
   await expect(sheet.getByRole('menuitem', { name: /Rename/ })).toBeVisible()
-  const bounds = await sheet.boundingBox()
-  expect(bounds.x).toBe(0)
-  expect(bounds.width).toBe(390)
-  expect(bounds.y + bounds.height).toBe(844)
+  await expect.poll(async () => {
+    const bounds = await sheet.boundingBox()
+    return Boolean(bounds && Math.abs(bounds.x) < 0.5 && Math.abs(bounds.width - 390) < 0.5 && Math.abs(bounds.y + bounds.height - 844) < 0.5)
+  }).toBe(true)
   await page.keyboard.press('Escape')
   await expect(row).toBeVisible()
   await expect(page.locator('.browser-navigation.is-open')).toBeVisible()
   await expect(row.getByRole('button', { name: 'Session actions', exact: true })).toBeFocused()
+  await expect(page).toHaveURL(/#\/preview-week$/)
+  await section.getByRole('button', { name: 'Plan a calmer working week', exact: true }).tap()
+  await expect(editor(page)).toHaveText('Keep the phone draft while opening row actions')
   if (addedPin) {
-    await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
     await page.getByRole('button', { name: 'Chat actions', exact: true }).tap()
-    await page.getByRole('menuitem', { name: 'Unpin', exact: true }).tap()
+    await chatActions.getByRole('button', { name: 'Unpin', exact: true }).tap()
   }
   await context.close()
 })
@@ -1714,9 +1755,15 @@ for (const width of [390, 1440]) {
         else await expect(content).toBeHidden()
         const header = section.locator(':scope > [data-browser-section-header]')
         heights.push((await header.boundingBox()).height)
-        const box = await header.boundingBox()
-        expect(box.x).toBeGreaterThanOrEqual(0)
-        expect(box.x + box.width).toBeLessThanOrEqual(width)
+        // Row backgrounds extend into the scrollbar gutter. Check that the
+        // actual focus targets fit the visible navigation, not that backdrop.
+        const navigation = await page.locator('.browser-navigation').boundingBox()
+        for (const control of await header.getByRole('button').all()) {
+          if (!await control.isVisible()) continue
+          const box = await control.boundingBox()
+          expect(box.x).toBeGreaterThanOrEqual(Math.max(0, navigation.x) - 0.5)
+          expect(box.x + box.width).toBeLessThanOrEqual(Math.min(width, navigation.x + navigation.width) + 0.5)
+        }
       }
       expect(Math.abs(heights[0] - heights[1])).toBeLessThan(1)
       if (scale === 150) await page.screenshot({ path: testInfo.outputPath('section-headers-150.png') })
@@ -3348,6 +3395,7 @@ for (const width of [390, 1440]) {
     test.use({ hasTouch: width === 390 })
     test(`sidebar visibility uses stable identity through markup changes and reload at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 960 })
+      await page.route('**/api/athena/preferences', route => route.abort())
       await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => route.fulfill({ json: [{ id: 'stable-section-job', name: 'Test job', prompt: 'Check sections', enabled: true }] }))
       await open(page)
       if (width === 390) {
@@ -3363,25 +3411,33 @@ for (const width of [390, 1440]) {
       // A presentation-only change must not create another persisted identity or
       // remove a collapsed section from the available actions.
       await header.evaluate(node => { node.textContent = 'Renamed schedule' })
-      await page.getByRole('button', { name: 'Settings', exact: true }).click()
-      const action = page.getByRole(width === 390 ? 'checkbox' : 'menuitemcheckbox', { name: 'Cron jobs', exact: true })
+      const settings = page.getByRole('dialog', { name: 'Settings', exact: true })
+      const action = settings.getByRole('group', { name: 'Sections', exact: true }).getByRole('checkbox', { name: 'Cron jobs', exact: true })
+      const openSectionSettings = async () => {
+        await page.getByRole('button', { name: 'Settings', exact: true }).click()
+        await settings.getByRole('button', { name: 'Chat panel', exact: true }).click()
+      }
+      await openSectionSettings()
       await expect(action).toBeChecked()
       await action.click()
       await expect(action).not.toBeChecked()
-      await expect(section).toBeHidden()
+      await expect(section).toHaveAttribute('data-browser-section-hidden', '')
       expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes-web.browser.hidden-sections')))).toEqual({ version: 2, hidden: ['cron-jobs'] })
+      await page.getByRole('button', { name: 'Close settings', exact: true }).click()
       await page.reload()
+      if (width === 390) await page.locator('#browser-navigation').getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
       await expect(editor(page)).toBeVisible({ timeout: 30000 })
       if (width === 390) {
         await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
         await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
       }
       await expect(section).toBeHidden()
-      await page.getByRole('button', { name: 'Settings', exact: true }).click()
+      await openSectionSettings()
       await expect(action).not.toBeChecked()
       await action.click()
-      await expect(section).toBeVisible()
-      await page.keyboard.press('Escape')
+      await expect(section).not.toHaveAttribute('data-browser-section-hidden', '')
+      await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+      if (width === 390 && !await header.isVisible()) await openSectionNavigation(page)
       await expect(header).toHaveText('Cron jobs')
       await header.click()
       await expect(content).toBeVisible()

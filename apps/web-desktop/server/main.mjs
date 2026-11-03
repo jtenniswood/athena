@@ -1,7 +1,7 @@
 import { createServer } from 'node:http'
 import { spawn } from 'node:child_process'
-import { runtimeConfiguration } from './runtime-config.mjs'
-import { createAthenaServices } from '../apps/web-desktop/server/services.mjs'
+import { runtimeConfiguration } from '../../../scripts/runtime-config.mjs'
+import { createAthenaServices } from './services.mjs'
 
 const config = runtimeConfiguration()
 const services = createAthenaServices({ target: config.target, directory: config.preferencesDir })

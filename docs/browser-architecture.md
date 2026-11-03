@@ -12,7 +12,9 @@ renderer remains responsible for conversation state and upstream features.
   connection state, and safe lifecycle transitions such as update and sign-out.
 - `apps/web-desktop/src/upstream/` owns the adapter boundary to the fetched
   renderer: its browser root, desktop-shaped bridge, route and workspace
-  adapters, and reviewed transforms.
+  adapters.
+- `apps/web-desktop/build/renderer/` owns build-only transforms, replacements,
+  branding and the compatibility registry. Runtime modules do not import it.
 - `apps/web-desktop/src/overrides/` replaces a narrow renderer surface when the
   browser needs a different interaction, such as gateway settings.
 - `apps/web-desktop/src/pwa/` owns service-worker registration and the
@@ -73,6 +75,38 @@ reject removed/disabled fields and stale profile scopes, and preserve the
 original file-import and pending-save owners. Unsupported or oversized snapshots
 leave the complete web editor available. This interface does not reactivate
 native Settings or native menus in the current application entry point.
+
+`experience/session-row.tsx` owns session-row geometry, density, primary actions,
+keyboard access and drag handles. `upstream/session-row.tsx` projects live engine
+metadata, status and extension decorations and retains the engine's mutation and
+menu commands. A guarded module replacement connects every list surface to this
+row; source rewrites for row gestures, title previews and reorder handling are
+removed. Row actions and their portalled dialogs cannot resume the conversation.
+`experience/sidebar.tsx`, `sidebar-section.tsx` and `sidebar-project.tsx` own the
+navigation frame, section disclosure and project overview presentation. Typed
+adapters in `upstream/sidebar.tsx` and `sidebar-project.tsx` project the existing
+renderer controller values into those views. Search, filtering, profile scope,
+pagination, lazy project hydration and saved ordering keep their original owners.
+The controller projection replaces a named function's return and removes only
+explicitly identified view bindings; nested callbacks and hooks remain intact.
+Source fingerprints and the compiler validate this boundary on renderer updates.
+
+`experience/sidebar-profile.tsx`, `sidebar-tree.tsx` and `sidebar-cron.tsx` own
+profile headers, tree nesting, repository/worktree lanes, paging affordances and
+scheduled-job rows. The profile and workspace adapters project live owners and
+captured commands. Hermes retains group aliases/order, branch switching, lazy
+lanes, removal confirmations, cron trigger concurrency and live-run polling.
+Profile lists preserve configured pictures, hidden-group preferences and complete
+histories; no parallel profile or project cache is introduced.
+Browser startup deliberately keeps project navigation at the overview. The
+reusable worktree views preserve the renderer's controller boundary without
+enabling drill-in or changing that navigation policy.
+
+The old search-layout, section-markup, profile-avatar, project-disclosure and
+desktop-navigation rewrites are removed. Generic engine primitives such as
+virtualization, sortable lists, context menus and extension contributions remain
+reusable surfaces. Product-specific sidebar views no longer depend on rewriting
+their upstream HTML layout.
 
 The chat action menu and its keyboard shortcuts use the same browser commands.
 Rename and delete dialogs retain the conversation they were opened for even if
@@ -135,8 +169,9 @@ handoffs continue to transfer only approved Hermes cookies, and native token
 refresh remains restricted to its installation binding. Existing account hashes,
 preference files, push bindings, API routes, and the data volume stay compatible.
 
-`scripts/serve.mjs` starts the production host; the other files in `scripts/`
-are build, maintenance, diagnostic, or verification entry points.
+`apps/web-desktop/server/main.mjs` starts the production host. It uses the shared
+runtime configuration generator from `scripts/`; development and preview continue
+to assemble the same services without starting nginx.
 
 ## Compatibility ownership
 
@@ -149,7 +184,7 @@ check final output fingerprints, replacement resolution, and whether introduced
 type errors and missing imports fail compilation.
 
 Browser transforms are grouped by settings, composer, roster, navigation and
-hosting in `upstream/transforms/`. `browser-plugin.ts` assembles their ordered
+hosting in `build/renderer/transforms/`. `build/renderer/browser-plugin.ts` assembles their ordered
 pipeline. The registry names the feature owner for each single-feature transform;
 mixed pipelines retain their assembly owner. Build and adapter tests use the
 same wrapper-only module loader. Moving a handler does not accept new renderer
@@ -174,7 +209,7 @@ explicit override and the same checks.
 `package.json` owns the pnpm version used by Docker and GitHub Actions.
 
 Every renderer replacement or transform is recorded in
-`upstream/compatibility-registry.json` with its owner, reviewed source and output
+`build/renderer/compatibility-registry.json` with its owner, reviewed source and output
 fingerprints, behavioral verification references, and removal condition. The
 generated [browser transform inventory](browser-transform-inventory.md) is the
 human-readable index. Add or change an adapter only in wrapper-owned code, and

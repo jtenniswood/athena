@@ -10,7 +10,7 @@ import ts from 'typescript'
 const root = path.resolve('apps/web-desktop')
 function load(file, mocks, globals = {}) {
   const filename = path.join(root, file)
-  if (file === 'src/upstream/browser-plugin.ts') return createBuildModuleLoader().load(filename)
+  if (file === 'build/renderer/browser-plugin.ts') return createBuildModuleLoader().load(filename)
   const context = vm.createContext({ exports: {}, require: mocks || createRequire(filename), ...globals })
   vm.runInContext(ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, context)
   return context.exports
@@ -36,21 +36,21 @@ test('sidebar preferences migrate known legacy identities without consulting cur
 })
 
 test('semantic adapters preserve identity and reject upstream drift', () => {
-  const api = load('src/upstream/browser-plugin.ts')
+  const api = load('build/renderer/browser-plugin.ts')
   const sidebar = source('app/chat/sidebar/index.tsx')
-  const adapted = api.useBrowserSectionIds(sidebar, root)
-  assert.match(adapted, /browserSectionId="sessions" label=\{sessionsLabel\}/)
-  assert.match(adapted, /browserSectionId=\{`messaging:\$\{group.sourceId\}`\}/)
+  const adapted = api.useBrowserSidebarController(sidebar, root)
+  assert.match(adapted, /BrowserSidebarControllerSurface model=\{\{/)
   assert.match(adapted, /useBrowserSidebarChannels\(\)/)
   assert.doesNotMatch(adapted, /browserChannels.map/)
   assert.doesNotMatch(adapted, /!worktreeGroupingActive &&\s+messagingGroups.map/)
   assert.doesNotMatch(adapted, /showsAdvancedChrome && cronJobs\.length/)
-  assert.throws(() => api.useBrowserSectionIds(sidebar.replace('label={sessionsLabel}', 'label={otherLabel}'), root), /target changed/)
-  for (const name of ['sessions', 'cron-jobs']) {
-    const output = api.useBrowserSectionIdentity(source(`app/chat/sidebar/${name}-section.tsx`), root)
-    assert.match(output, /<SidebarGroup \{\.\.\.browserSection\}/)
-    assert.match(output, /useBrowserSidebarSection\([^\n]*label\)/)
-  }
+  assert.throws(() => api.useBrowserSidebarController(sidebar.replace('function ChatSidebar(', 'function DifferentSidebar('), root), /controller changed/)
+  const section = api.useBrowserSessionSection(source('app/chat/sidebar/sessions-section.tsx'), root)
+  assert.match(section, /<BrowserSidebarSection model=\{\{/)
+  assert.match(section, /id: browserSectionId/)
+  const cron = api.useBrowserCronController(source('app/chat/sidebar/cron-jobs-section.tsx'), root)
+  assert.match(cron, /id: 'cron-jobs', label, open/)
+  assert.match(cron, /BrowserCronRuns loadingLabel/)
   // An upstream icon change cannot alter which notice the browser suppresses.
   const updates = api.omitBrowserDesktopUpdateNotice(source('store/updates.ts').replace("icon: 'gift'", "icon: 'bell'"))
   assert.match(updates, /export function maybeNotifyUpdateAvailable[^\n]+\{\}/)
@@ -62,12 +62,12 @@ test('semantic adapters preserve identity and reject upstream drift', () => {
     assert.equal(output.split('data-browser-overlay-card="setup"').length - 1, count)
   }
 
-  const registry = JSON.parse(readFileSync(path.join(root, 'src/upstream/compatibility-registry.json')))
+  const registry = JSON.parse(readFileSync(path.join(root, 'build/renderer/compatibility-registry.json')))
   const plugin = api.browserPlugin(root)
   for (const entry of registry.filter(entry => entry.kind === 'browser-transform' && entry.tests.some(t => t.file === 'scripts/sidebar-contracts.test.mjs'))) {
     const selectedPlugin = entry.order === 40 ? api.browserActivityNotificationsPlugin(root) : plugin
     const input = entry.order === 40
-      ? load('src/upstream/transforms.ts').transformRenderer(source(entry.module), `/desktop/src/${entry.module}`).code
+      ? load('build/renderer/transforms.ts').transformRenderer(source(entry.module), `/desktop/src/${entry.module}`).code
       : source(entry.module)
     const output = selectedPlugin.transform(input, `/desktop/src/${entry.module}`).code
     const parsed = ts.createSourceFile(entry.module, output, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
@@ -77,8 +77,8 @@ test('semantic adapters preserve identity and reject upstream drift', () => {
 })
 
 test('saved messaging conversations survive missing channel configuration', () => {
-  const api = load('src/upstream/browser-plugin.ts')
-  const adapted = api.useBrowserSectionIds(source('app/chat/sidebar/index.tsx'), root)
+  const api = load('build/renderer/browser-plugin.ts')
+  const adapted = api.useBrowserSidebarController(source('app/chat/sidebar/index.tsx'), root)
   const start = adapted.indexOf('  const messagingGroups = useMemo')
   const end = adapted.indexOf('\n  // Recents and every messaging platform', start)
   assert.ok(start >= 0 && end > start)

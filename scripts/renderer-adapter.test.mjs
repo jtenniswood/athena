@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
 import ts from 'typescript'
@@ -40,6 +40,8 @@ test('compiler and Vite resolve scoped replacements, virtual modules, aliases, a
   const host = adapterCompilerHost(options, adapter)
   const plugin = rendererAdapterPlugin(root)
   const cases = [
+    ['./session-row', 'app/chat/sidebar/sessions-section.tsx', 'src/upstream/session-row.tsx'],
+    ['@/app/chat/sidebar/session-row', 'app/chat/sidebar/virtual-session-list.tsx', 'src/upstream/session-row.tsx'],
     ['@/app/settings', 'app/app.tsx', 'src/experience/settings/settings-route.tsx'],
     ['hermes:settings-controller', 'upstream/settings-controller-api.tsx', '../desktop/src/app/settings/index.tsx'],
     ['@/app/settings/gateway-settings', 'app/settings/index.tsx', 'src/overrides/gateway-settings.tsx'],
@@ -78,4 +80,29 @@ test('the shared source graph applies Athena branding without evaluating rendere
   const output = adapter.transform(readFileSync(file, 'utf8'), file)
   assert.match(output, /const WORDMARK = 'ATHENA'/)
   assert.match(output, /const body = 'Athena for Hermes Agent'/)
+})
+
+test('all build adapter definitions stay outside the browser runtime source tree', () => {
+  assert.ok(adapter.definitions.length > 3)
+  for (const file of adapter.definitions) {
+    assert.ok(file.startsWith(path.join(root, 'build/renderer') + path.sep), file)
+  }
+})
+
+test('browser runtime imports cannot reach the renderer build subsystem', () => {
+  const host = adapterCompilerHost(options, adapter)
+  const visit = directory => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const file = path.join(directory, entry.name)
+      if (entry.isDirectory()) visit(file)
+      else if (/\.tsx?$/.test(file)) {
+        const imports = ts.preProcessFile(readFileSync(file, 'utf8'), true, true).importedFiles
+        for (const imported of imports) {
+          const resolved = host.resolveModuleNames([imported.fileName], file)[0]?.resolvedFileName
+          assert.ok(!resolved?.startsWith(path.join(root, 'build') + path.sep), `${file}: ${imported.fileName}`)
+        }
+      }
+    }
+  }
+  visit(path.join(root, 'src'))
 })

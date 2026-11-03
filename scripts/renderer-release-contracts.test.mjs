@@ -4,7 +4,7 @@ import { createRequire } from 'node:module'
 import vm from 'node:vm'
 import { test } from 'node:test'
 import ts from 'typescript'
-const file = new URL('../apps/web-desktop/src/upstream/transforms.ts', import.meta.url)
+const file = new URL('../apps/web-desktop/build/renderer/transforms.ts', import.meta.url)
 const context = vm.createContext({ exports: {}, require: createRequire(file) })
 vm.runInContext(ts.transpileModule(readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText, context)
 function transformed(module) {

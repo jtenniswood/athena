@@ -10,7 +10,7 @@ import { repositoryRoot } from './renderer.mjs'
 import { rendererAliases } from './aliases.mjs'
 
 const root = path.join(repositoryRoot, 'apps/web-desktop')
-const transformPath = path.join(root, 'src/upstream/transforms.ts')
+const transformPath = path.join(root, 'build/renderer/transforms.ts')
 const context = vm.createContext({ exports: {}, require: createRequire(transformPath) })
 vm.runInContext(ts.transpileModule(readFileSync(transformPath, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText, context)
 const { compatibilityTransforms, transformRenderer } = context.exports
@@ -193,6 +193,7 @@ function assertBrowserModelBoundary(source, filename) {
       const resolved = alias ? specifier.replace(alias.find, alias.replacement)
         : specifier.startsWith('.') || path.isAbsolute(specifier) ? path.resolve(path.dirname(filename), specifier) : null
       if (resolved) {
+        assert.ok(!withinDirectory(resolved, path.join(root, 'build')), `${filename}: runtime modules must not import build tooling`)
         for (const directory of ['desktop', 'shared']) {
           assert.ok(!withinDirectory(resolved, path.join(repositoryRoot, 'apps', directory)), `${filename}: renderer imports must go through browser adapters`)
         }
@@ -227,6 +228,7 @@ test('browser features cannot acquire raw upstream stores through aliases or nam
     "type Store = typeof import('@/store/session')",
     "import { openSession } from '@hermes/plugin-sdk'",
     "import type { Profile } from '@hermes/shared'",
+    "import { browserPlugin } from '../../build/renderer/browser-plugin'",
     "export * from '../upstream/../upstream/browser-api'",
     "const store = await import('@/store/' + name)"
   ]) assert.throws(() => assertBrowserModelBoundary(source, filename), source)

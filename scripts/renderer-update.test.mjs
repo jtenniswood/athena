@@ -16,7 +16,7 @@ function evaluate(source, require, globals = {}) {
   return context.exports
 }
 function adapter(name) {
-  const file = path.join(root, 'src/upstream', name)
+  const file = path.join(root, 'build/renderer', name)
   return createBuildModuleLoader().load(file)
 }
 const canonicalFile = path.join(root, '../desktop/src/plugins/hermes-bots/canonical-chat.ts')

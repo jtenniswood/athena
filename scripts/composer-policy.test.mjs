@@ -8,7 +8,7 @@ import ts from 'typescript'
 import { browserPreferences, createBrowserPreference } from './browser-preference-contract.mjs'
 
 const root = path.resolve('apps/web-desktop')
-const pluginFile = path.join(root, 'src/upstream/browser-plugin.ts')
+const pluginFile = path.join(root, 'build/renderer/browser-plugin.ts')
 const plugin = { exports: createBuildModuleLoader().load(pluginFile) }
 const compile = source => ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText
 const original = readFileSync(path.join(root, '../desktop/src/app/chat/composer/hooks/use-composer-submit.ts'), 'utf8')
