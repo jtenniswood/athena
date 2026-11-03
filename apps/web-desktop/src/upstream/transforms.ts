@@ -123,6 +123,15 @@ registerBrowserDraftSafety({
             blockBrowserDraftSnapshot()
           } else {
             syncDraftRef.current(mode)
+            // Ordinary saves can defer to another tab's newer stash. An update
+            // must describe this editor's visible text so conflicting tabs refuse
+            // activation. Never resurrect a draft cleared by another tab.
+            const text = syncDraftFromEditor()
+            const stashed = takeSessionDraft(draftScopeRef.current)
+            if (mode === 'flush' && text && stashed.text !== text) {
+              if (!stashed.text) blockBrowserDraftSnapshot('Another tab cleared this draft. Clear the stale text or copy it before updating.')
+              else stashAt(draftScopeRef.current, text)
+            }
           }
           return
         }`

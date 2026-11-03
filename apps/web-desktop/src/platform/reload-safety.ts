@@ -38,7 +38,7 @@ export function reloadReadiness(requirePersisted = true): { ready: boolean; reas
   try {
     const drafts = browserDraftSnapshot()
     if (!drafts) return { ready: false, reason: 'Wait for the app to finish connecting.' }
-    if (drafts.blocked) return { ready: false, reason: 'Finish editing the queued message or leave message history first.' }
+    if (drafts.blocked) return { ready: false, reason: drafts.reason || 'Finish editing the queued message or leave message history first.' }
     if (drafts.attachments) return { ready: false, reason: 'Send or remove unsent attachments before reloading.' }
     if (!requirePersisted) return { ready: true, drafts }
     const stored = JSON.parse(window.localStorage.getItem(drafts.storageKey) || '{}')

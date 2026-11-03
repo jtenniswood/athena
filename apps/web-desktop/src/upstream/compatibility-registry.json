@@ -211,7 +211,7 @@
     ],
     "removal": "Remove when upstream exposes a public flush-all-composers operation with queue/history refusal.",
     "sourceHash": "4c1e62ae0eaa782d103740366a4baab2de779409489832e1d308914c1e8c1845",
-    "outputHash": "d19ba6726d78f59274002a442e546e14862192f04fb7a26ae0a5d4bfb7e6d78d",
+    "outputHash": "c314cfb77f58969e00940f07ce7200c4c4e1c16cb54878f664c12d33cec5ca9d",
     "handler": "browser-flush-all-composers",
     "sourceRoot": "renderer"
   },
@@ -1727,8 +1727,8 @@
     "removal": "Remove when upstream avoids automatic composer focus on mobile and respects focus restored by closing browser overlays.",
     "sourceRoot": "renderer",
     "sourceHash": "4c1e62ae0eaa782d103740366a4baab2de779409489832e1d308914c1e8c1845",
-    "inputHash": "2f31d71ab54662a7aba876b5223fcc30be85e27f9ae76cfc8d9060f1fb7386f7",
-    "outputHash": "b4015008406e30259bfb057a93597450481cd713436ed082b4d2cfa7e93d2592"
+    "inputHash": "345485a119d6f1f2a10999e1ae47050f133d791fb3f77a7ad4c8bed3ffea201e",
+    "outputHash": "9983dc284364750c4e9833065c4cf0d6ad0bcc65fa8619f83d2503313749919c"
   },
   {
     "name": "browser-workspace-route-lifetime",

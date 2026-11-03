@@ -176,6 +176,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       if (pathname === '/api/profiles/projects/tree') return send({ projects: [], active_id: null, scoped_session_ids: [] })
       if (pathname === '/api/mcp/catalog') return send({ entries: [], diagnostics: [] })
       if (pathname === '/api/git/status') return send({ is_repo: false, files: [], branch: '' })
+      if (req.method === 'GET' && pathname === '/api/git/review/rev-parse') return send({ sha: null })
       if (/^\/api\/sessions\/[^/]+\/timeline$/.test(pathname)) return send({ events: [], has_more: false })
       if (pathname === '/auth/me' || pathname === '/api/auth/me') return send({ authenticated: true, user_id: 'preview-user', provider: 'preview', org_id: '' })
       if (pathname === '/auth/ws-ticket' || pathname === '/api/auth/ws-ticket') return send({ ticket: `preview-${Date.now()}` })
