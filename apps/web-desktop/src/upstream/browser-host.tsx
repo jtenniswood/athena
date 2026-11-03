@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { BrowserLinkContextMenu } from '../experience/link-context-menu'
 import { ContribWiring, WiredPane } from '@/app/contrib/wiring'
 import { ContribBoundary, ContribRender } from '@/contrib/react/boundary'
 import { useContributions } from '@/contrib/react/use-contributions'
@@ -13,7 +14,7 @@ import { useBrowserSettings } from './settings'
 
 /** Mount engine contributions once; Athena supplies the product shell. */
 export function BrowserEngineHost({ children }: { children: ReactNode }) {
-  return <ContribWiring>{children}<SessionTileCloseConfirm /></ContribWiring>
+  return <ContribWiring>{children}<BrowserLinkContextMenu /><SessionTileCloseConfirm /></ContribWiring>
 }
 
 export function BrowserSessionsSurface() { return <WiredPane part="sidebar" /> }
