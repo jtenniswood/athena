@@ -4,6 +4,9 @@ import ts from 'typescript'
 const compiled = ts.transpileModule(readFileSync('apps/web-desktop/src/upstream/native-settings.ts', 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
 }).outputText
+const presentation = ts.transpileModule(readFileSync('apps/web-desktop/src/platform/settings-presentation.ts', 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+}).outputText
 async function fixture(page, supported = true) {
   await page.setContent(`<div class="browser-settings-fullscreen-card"><button aria-label="Close settings" id="close">Close</button>
     <div data-browser-settings-frame><header class="browser-settings-header"><h1>Settings</h1>
@@ -16,7 +19,7 @@ async function fixture(page, supported = true) {
     <button id="disabled" disabled>Disabled action</button><button id="confirm">Reset settings</button>
     <button id="pick" data-slot="select-trigger" role="combobox" aria-label="Model">Current model</button>
     <div id="status" role="status"></div></div></div>`)
-  await page.evaluate(({ compiled, supported }) => {
+  await page.evaluate(({ compiled, presentation, supported }) => {
     window.models = []; window.events = []; window.dropped = []
     document.getElementById('name').onchange = event => window.events.push(['change', event.target.value])
     document.getElementById('name').onblur = event => window.events.push(['save', event.target.value])
@@ -47,12 +50,15 @@ async function fixture(page, supported = true) {
         return new Promise(resolve => { window.finish = resolve })
       },
       androidUpdateSettingsPage: async model => { window.models.push(model); return true },
-      androidSettingsFiles: async () => [{ name: 'settings.json', type: 'application/json', data: btoa('{"model":"imported"}') }],
+      androidSettingsFiles: async () => window.pendingFiles || [{ name: 'settings.json', type: 'application/json', data: btoa('{"model":"imported"}') }],
       androidDismissSettingsPage: async id => { window.dropped.push(id); window.finish?.() }
     }
-    new Function('exports','require',compiled)(exports, () => api)
+    const descriptors = {}
+    new Function('exports', presentation)(descriptors)
+    window.settingsDescriptors = descriptors
+    new Function('exports','require',compiled)(exports, name => name.endsWith('/settings-presentation') ? descriptors : api)
     window.stopSettings = exports.installNativeSettings()
-  }, { compiled, supported })
+  }, { compiled, presentation, supported })
   if (supported) await expect.poll(() => page.evaluate(() => window.models.length)).toBeGreaterThan(0)
 }
 async function activate(page, label, value) {
@@ -167,4 +173,102 @@ test('native presentation preserves field hierarchy, current values and exclusiv
   await activate(page,'125%')
   await expect.poll(() => page.evaluate(() => window.models.at(-1).rows.find(row=>row.label==='125%').checked)).toBe(true)
   expect(await page.evaluate(()=>window.events)).toEqual([['scale','125%']])
+})
+
+test('explicit settings models bypass HTML inference and refresh values without DOM mutations', async ({ page }) => {
+  await fixture(page)
+  await page.evaluate(() => {
+    const api = window.settingsDescriptors
+    window.ownedValue = 'Owner value'
+    const input = document.getElementById('name')
+    window.releaseDescriptor = api.registerSettingsDescriptor(input, api.createSettingsDescriptor(() => [{
+      id: 'display', kind: 'input', label: 'Owned display name', value: window.ownedValue,
+      run: value => { window.ownedValue = value; window.events.push(['owner', value]); api.settingsPresentationChanged() }
+    }]))
+  })
+  await expect.poll(() => page.evaluate(() => window.models.at(-1).rows.some(row => row.label === 'Owned display name'))).toBe(true)
+  await activate(page, 'Owned display name', 'Direct command')
+  await expect.poll(() => page.evaluate(() => window.models.at(-1).rows.find(row => row.label === 'Owned display name').value)).toBe('Direct command')
+  expect(await page.evaluate(() => window.events)).toEqual([['owner','Direct command']])
+  expect(await page.locator('#name').inputValue()).toBe('Original')
+})
+
+test('explicit field commands cannot cross a profile or owner change, including before the next snapshot', async ({ page }) => {
+  await fixture(page)
+  await page.evaluate(() => {
+    const api = window.settingsDescriptors, root = document.querySelector('[data-browser-settings-frame]')
+    window.profile = 'A'
+    api.registerSettingsFrame(root, () => ({ scope: window.profile, title: 'Owned settings', close() {}, back() {} }))
+    const descriptor = api.createSettingsDescriptor(() => [{ id: 'name', kind: 'input', label: 'Owned field',
+      run: value => window.events.push([window.profile, value]) }])
+    window.releaseDescriptor = api.registerSettingsDescriptor(document.getElementById('name'), descriptor)
+  })
+  await expect.poll(() => page.evaluate(() => window.models.at(-1).title)).toBe('Owned settings')
+  const oldId = await page.evaluate(() => window.models.at(-1).rows.find(row => row.label === 'Owned field').id)
+  await page.evaluate(id => { window.profile = 'B'; window.nativeChange(id, 'Wrong profile'); window.settingsDescriptors.settingsPresentationChanged() }, oldId)
+  await expect.poll(() => page.evaluate(() => window.models.at(-1).rows.find(row => row.label === 'Owned field').id)).not.toBe(oldId)
+  expect(await page.evaluate(() => window.events)).toEqual([])
+  await activate(page, 'Owned field', 'Correct profile')
+  await expect.poll(() => page.evaluate(() => window.events)).toEqual([['B','Correct profile']])
+  const currentId = await page.evaluate(() => window.models.at(-1).rows.find(row => row.label === 'Owned field').id)
+  await page.evaluate(id => { window.releaseDescriptor(); window.nativeChange(id, 'Released owner') }, currentId)
+  expect(await page.evaluate(() => window.events)).toEqual([['B','Correct profile']])
+})
+
+test('explicit commands preserve native file selection and discard a picker returned to another profile', async ({ page }) => {
+  await fixture(page)
+  await page.evaluate(() => {
+    const api = window.settingsDescriptors, root = document.querySelector('[data-browser-settings-frame]')
+    window.profile = 'A'
+    api.registerSettingsFrame(root, () => ({ scope: window.profile, title: 'Owned import', close() {}, back() {} }))
+    const button = document.createElement('button'), input = document.createElement('input')
+    button.textContent = 'Unrelated HTML label'; input.type = 'file'; input.hidden = true
+    input.onchange = async () => window.events.push(['import', input.files[0].name, await input.files[0].text()])
+    root.append(button, input)
+    api.registerSettingsDescriptor(button, api.createSettingsDescriptor(() => [{ id: 'import', kind: 'action',
+      label: 'Owned import command', run: () => input.click() }]))
+  })
+  await expect.poll(() => page.evaluate(() => window.models.at(-1).rows.some(row => row.label === 'Owned import command'))).toBe(true)
+  await activate(page, 'Owned import command')
+  await expect.poll(() => page.evaluate(() => window.events)).toEqual([['import','settings.json','{"model":"imported"}']])
+  await page.evaluate(() => { window.pendingFiles = new Promise(resolve => { window.finishFiles = resolve }) })
+  await activate(page, 'Owned import command')
+  await page.evaluate(() => {
+    window.profile = 'B'
+    window.settingsDescriptors.settingsPresentationChanged()
+    window.finishFiles([{ name: 'wrong-profile.json', type: 'application/json', data: btoa('{}') }])
+  })
+  await page.evaluate(() => new Promise(requestAnimationFrame))
+  expect(await page.evaluate(() => window.events)).toEqual([['import','settings.json','{"model":"imported"}']])
+})
+
+test('failed explicit saves remain visible and late failures do not affect a new settings scope', async ({ page }) => {
+  await fixture(page)
+  await page.evaluate(() => {
+    const api = window.settingsDescriptors
+    window.profile = 'A'
+    api.registerSettingsFrame(document.querySelector('[data-browser-settings-frame]'), () => ({ scope: window.profile, title: 'Save owner', close() {}, back() {} }))
+    api.registerSettingsDescriptor(document.getElementById('name'), api.createSettingsDescriptor(() => [{ id: 'save', kind: 'action', label: 'Save owner command',
+      run: () => window.holdSave ? new Promise((_, reject) => { window.rejectSave = reject }) : Promise.reject(Error('Synthetic failed save')) }]))
+  })
+  await expect.poll(() => page.evaluate(() => window.models.at(-1).title)).toBe('Save owner')
+  await activate(page, 'Save owner command')
+  await expect.poll(() => page.evaluate(() => window.models.at(-1).rows.some(row => row.label === 'This setting could not be changed. Try again.'))).toBe(true)
+  await page.evaluate(() => { window.holdSave = true })
+  await activate(page, 'Save owner command')
+  await page.evaluate(() => { window.profile = 'B'; window.rejectSave(Error('Late failure')); window.settingsDescriptors.settingsPresentationChanged() })
+  await expect.poll(() => page.evaluate(() => window.models.at(-1).scope)).toContain('B')
+  expect(await page.evaluate(() => window.models.at(-1).rows.some(row => row.label === 'This setting could not be changed. Try again.'))).toBe(false)
+})
+
+test('oversized explicit fields retain the complete web editor instead of sending a truncated value', async ({ page }) => {
+  await fixture(page)
+  await page.evaluate(() => {
+    const api = window.settingsDescriptors
+    api.registerSettingsDescriptor(document.getElementById('name'), api.createSettingsDescriptor(() => [{
+      id: 'long', kind: 'input', label: 'Complete value', value: 'x'.repeat(131073), run() {}
+    }]))
+  })
+  await expect(page.locator('[data-browser-settings-frame]')).not.toHaveAttribute('data-native-settings')
+  await expect(page.locator('#name')).toHaveValue('Original')
 })

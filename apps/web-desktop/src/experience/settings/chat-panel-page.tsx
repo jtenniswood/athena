@@ -5,6 +5,7 @@ import { Codicon } from '../../upstream/browser-api'
 import { NAVIGATION_TABS, NAVIGATION_TAB_LABELS } from '../browser-preferences'
 import type { useBrowserNavigation } from '../navigation'
 import type { BrowserActionGroup } from '../ui/action-surface'
+import { useSettingsPresentation } from './presentation'
 
 // Settings overlays are siblings of the shell, so publish its live commands.
 const $chatPanelSettings = atom<BrowserActionGroup[]>([])
@@ -31,7 +32,15 @@ function chatPanelSettingsGroups(navigation: ReturnType<typeof useBrowserNavigat
 
 export function BrowserChatPanelPage() {
   const groups = useStore($chatPanelSettings)
-  return <div className="browser-chat-panel-settings">
+  const presentation = useSettingsPresentation<HTMLDivElement>([
+    ...groups.flatMap(group => [
+      { kind: 'heading' as const, label: group.label || group.key },
+      ...group.actions.map(action => ({ id: `${group.key}:${action.key}`, kind: 'toggle' as const,
+        label: action.label, checked: action.checked, disabled: action.disabled, run: action.run }))
+    ]),
+    { kind: 'text', label: 'Keep at least one tab visible.' }
+  ])
+  return <div ref={presentation} className="browser-chat-panel-settings">
     {groups.map(group => <fieldset key={group.key}>
       <legend>{group.label}</legend>
       {group.actions.map(action => <label key={action.key}>

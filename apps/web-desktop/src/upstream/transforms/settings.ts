@@ -1,6 +1,42 @@
 import path from 'node:path'
 import { replaceBrowserContract } from './contract'
 
+export function exposeBrowserConfigFieldPresentation(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/upstream/config-field-presentation'))
+  const before = '  const dataTour = `field-${schemaKey}`'
+  const after = before + `
+  const browserFieldRef = useBrowserConfigFieldPresentation({
+    schemaKey, schema, value, enumOptions, optionLabels, label, description, onChange,
+    parseList: parseListFieldDraft, prettyName,
+    emptyLabel: schemaKey === 'display.personality' ? c.none : schemaKey === 'memory.provider' ? c.builtinOnly : c.noneParen,
+    defaultLabel: c.systemDefault,
+    extended: Boolean(descriptionExtra) || (FREE_INPUT_KEYS.has(schemaKey) && !schema.searchable)
+  })`
+  if (source.split(before).length !== 2 || source.split('data-tour={dataTour}').length !== 4) throw new Error('Config field presentation boundary changed')
+  return `import { useBrowserConfigFieldPresentation } from ${owner}\n` + source.replace(before, after)
+    .replaceAll('data-tour={dataTour}', 'data-tour={dataTour} presentationRef={browserFieldRef}')
+}
+
+export function exposeBrowserSettingsRowRefs(source: string): string {
+  const listStart = source.indexOf('export function ListRow({')
+  const toggleStart = source.indexOf('export function ToggleRow({')
+  const toggleEnd = source.indexOf('// A quiet follow-up', toggleStart)
+  if (listStart < 0 || toggleStart < listStart || toggleEnd < toggleStart) throw new Error('Settings row ownership boundary changed')
+  const list = replaceBrowserContract(source.slice(listStart, toggleStart), [
+    ['  className\n', '  className,\n  presentationRef\n'],
+    ['  className?: string\n', '  className?: string\n  presentationRef?: Ref<HTMLDivElement>\n'],
+    ["<div className={cn('@container', className)}", "<div ref={presentationRef} className={cn('@container', className)}"]
+  ])
+  const toggle = replaceBrowserContract(source.slice(toggleStart, toggleEnd), [
+    ['  onChange,\n', '  onChange,\n  presentationRef,\n'],
+    ['  onChange: (on: boolean) => void\n', '  onChange: (on: boolean) => void\n  presentationRef?: Ref<HTMLDivElement>\n'],
+    ['      data-tour={dataTour}', '      data-tour={dataTour}\n      presentationRef={presentationRef}']
+  ])
+  return replaceBrowserContract(source.slice(0, listStart), [[
+    "import type { ComponentProps, ReactNode } from 'react'", "import type { ComponentProps, ReactNode, Ref } from 'react'"
+  ]]) + list + toggle + source.slice(toggleEnd)
+}
+
 export function keepBrowserPluginManagementInSettings(source: string): string {
   const target = 'const MANAGE_PLUGINS_HREF = `#${CAPABILITIES_ROUTE}?tab=plugins`'
   const params = 'export const PAGE_SCOPED_PARAMS = ['

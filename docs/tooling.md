@@ -71,6 +71,16 @@ execution results for inspection.
 Browser screenshots and traces use an isolated temporary directory recorded in
 the execution report, so another Playwright invocation cannot delete them.
 
+Settings presentation changes have focused Node checks in
+`scripts/settings-presentation.test.mjs` and
+`scripts/config-field-presentation.test.mjs`. The browser fixtures
+`tests/browser/native-settings.spec.mjs` and
+`tests/browser/settings-presentation.spec.mjs` verify explicit commands, stale
+profile/owner rejection, imports, secret omission, payload limits, React Strict
+Mode and pending-save failures. They do not require a Docker image. The built
+application's Android web-layout and configuration tests additionally exercise
+the real renderer, wrapper pages, profile-scoped saves and draft preservation.
+
 The compatibility workflow runs affected declared Node scenarios and uses the
 selection-race entry for a focused built-image check when relevant engine or
 selection boundaries change. It preserves the plans and execution results as

@@ -28,6 +28,7 @@ function BrowserSettingsRoute({ controller, onClose }: { controller: BrowserSett
   pages.push(...controller.nativePages.filter(page => !known.has(page.id) && settingsPageIsVisible(page.id)))
   return <BrowserSettingsPresentation
     activeView={controller.view} backLabel={controller.labels.back} closeLabel={controller.labels.close}
+    scopeProfile={controller.scope} searchCommand={{ label: controller.search.label, run: controller.search.open }}
     groups={pages} onClose={onClose} title={controller.labels.title}
     search={<button
       type="button" aria-label={controller.search.label} tabIndex={controller.search.active ? -1 : undefined}

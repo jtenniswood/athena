@@ -16,6 +16,7 @@ compatibility boundary needs joint review and testing.
 | `NativePushRegistration` | Rotate the current binding's FCM token using a scoped credential |
 | `WebVisibility` | Expiring acknowledgement of the connected, visible conversation |
 | Shared web shell | Authoritative chat selection, drafts, recordings and navigation safeguards |
+| Shared Settings presentation | Committed rows and commands from existing web/renderer owners; current Android clients retain the web layout |
 | Server adapters | Protected authentication exchanges, account/device bindings and durable delivery attempts |
 
 Page navigation invalidates the document's bridge/menu handshake. A transient
@@ -28,6 +29,12 @@ Native reloads, server changes and notification taps share the web draft/recordi
 guard. An approval carries its request ID so a late response cannot authorize a
 new action. Connection details exposes only selected status fields; copying it
 must not copy cookies, FCM tokens, refresh credentials or chat content.
+
+The retained `NativeSettingsPage` presenter supports older web clients and isolated
+contract tests. The current web entry point does not install it. Explicit Settings
+descriptors can feed that presenter without scraping wrapper controls, while a
+guarded compatibility adapter remains for complex upstream controls. Both paths
+keep validation and pending saves with the original web owners.
 
 ## Completion-event source assessment
 

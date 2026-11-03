@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from 'react'
 import { Codicon, type OverlayNavGroup } from '../../upstream/browser-api'
 import { SettingsFrameSurface, useSettingsFrame } from './frame-behavior'
+import { useSettingsPresentation } from './presentation'
 
 type SettingsEntry = {
   active: boolean
@@ -46,6 +47,8 @@ export function BrowserSettingsFrame({
   }), [groups])
   const activeEntry = entries.find(entry => entry.active)
   const { compact, showingDetail, navigation, heading, select, back } = useSettingsFrame('embedded', activeEntry?.id ?? '')
+  useSettingsPresentation(entries.map(entry => ({ id: entry.id, kind: 'action',
+    presentation: 'navigation', label: entry.label, checked: entry.active, run: () => select(entry.onSelect) })), navigation)
 
   return (
     <SettingsFrameSurface variant="embedded" title={title} closeLabel={closeLabel} onClose={onClose}>

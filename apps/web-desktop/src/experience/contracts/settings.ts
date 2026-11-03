@@ -32,6 +32,7 @@ export interface BrowserSettingsNavigation {
 
 export interface BrowserSettingsController {
   view: string
+  scope: string
   nativePages: BrowserSettingsNavigation[]
   openPage(view: string): void
   labels: { back: string; close: string; title: string }

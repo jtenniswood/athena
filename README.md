@@ -127,17 +127,12 @@ controls. The separate Android header is hidden once that menu is ready and
 returns during page loading or sign-in. Older APKs and older server versions
 retain their native App settings button.
 
-On APKs supporting native Settings, the main Settings page also uses Android
-controls for categories, fields, switches, choices, and actions. The hosted
-settings code still validates and saves changes. Browsers and older APKs retain
-the web Settings page; both the APK and server need this feature.
+Settings, action menus, and the searchable model picker use the shared web
+interface in both browsers and Android. The same Hermes code validates and saves
+configuration changes. Older web clients can still use the APK's retained native
+menu and Settings capabilities.
 
-On supported APKs, the chat model menu uses a native searchable sheet. Tap a
-model to select it; tap its arrow or long-press for favorites and model options.
-Search retains Hermes model matching and large catalogs remain available across
-pages. Browsers and older APKs retain the web menu.
-
-The native setup, settings pages, and confirmation dialogs use Material 3, follow
+The native setup, App settings, and sign-in confirmation dialogs use Material 3, follow
 the system light/dark theme, and use wallpaper colours on Android 12 and later.
 Server setup includes inline address validation and a keyboard Connect action.
 

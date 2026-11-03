@@ -50,6 +50,30 @@ embedded frame variants share compact navigation and focus behavior; each keeps
 its appropriate overlay host and breakpoint. Legacy bookmarks and field links
 are normalized by the browser route policy without dropping other query values.
 
+`experience/contracts/settings-presentation.ts` defines the shared Settings row
+model. Mounted owners publish committed labels, values, availability and commands
+through `experience/settings/presentation.tsx`. Chat panel preferences, themes,
+configuration actions and choices, sync status, notification permission, profile
+tabs, plugin navigation and update controls use their original callbacks for both
+web controls and explicit presentation descriptors. The frame publishes its own
+navigation, search, close/back commands and active configuration scope.
+
+The config-field adapter also projects the renderer's resolved schema metadata
+and original commit callbacks for booleans, numbers, text, lists, JSON and closed
+or searchable choices. Two checked transforms publish the metadata and attach a
+ref to existing row elements; they add no wrapper elements or alternate config
+store. Structured editors, open-ended suggestion fields and extension actions
+retain their existing renderer presentation.
+
+Android continues to use web Settings. The retained optional native presenter
+consumes the same descriptors when explicitly installed by a compatible client
+or test fixture. Its DOM compatibility path remains for renderer controls that
+do not publish descriptors. Explicit commands have opaque owner identities,
+reject removed/disabled fields and stale profile scopes, and preserve the
+original file-import and pending-save owners. Unsupported or oversized snapshots
+leave the complete web editor available. This interface does not reactivate
+native Settings or native menus in the current application entry point.
+
 The chat action menu and its keyboard shortcuts use the same browser commands.
 Rename and delete dialogs retain the conversation they were opened for even if
 selection changes before a request completes. Sidebar row menus still use a

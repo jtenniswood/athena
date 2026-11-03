@@ -1,4 +1,6 @@
 import {
+  exposeBrowserConfigFieldPresentation,
+  exposeBrowserSettingsRowRefs,
   keepBrowserPluginManagementInSettings,
   keepBrowserPluginInstallInSettings,
   useBrowserSettingsToolActions,
@@ -19,6 +21,8 @@ import {
   filterBrowserKeybinds
 } from './transforms/settings'
 export {
+  exposeBrowserConfigFieldPresentation,
+  exposeBrowserSettingsRowRefs,
   keepBrowserPluginManagementInSettings,
   keepBrowserPluginInstallInSettings,
   useBrowserSettingsToolActions,
@@ -263,6 +267,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
   if (digest(code) === entry.outputHash) return { code, map: null }
   if (digest(code) !== entry.inputHash) throw new Error(`Browser compatibility changed: ${entry.name} (${entry.module}). Review this registry entry.`)
   const handlers: Record<string, (source: string) => string> = {
+    exposeBrowserConfigFieldPresentation: source => exposeBrowserConfigFieldPresentation(source, root),
+    exposeBrowserSettingsRowRefs,
     useBrowserMessagingPresentation: source => useBrowserMessagingPresentation(source, root),
     useBrowserCatalogIdleTask: source => useBrowserCatalogIdleTask(source, root),
     useBrowserErrorFallback: source => useBrowserErrorFallback(source, root),

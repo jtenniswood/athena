@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate } from 'react-router'
+import { useStore } from '@nanostores/react'
+import { $settingsRequestProfile } from '@/store/settings-scope'
 import { useRendererSettingsController } from 'hermes:settings-controller'
 import { SettingsBreadcrumbContext } from '@/app/settings/primitives'
 import type { BrowserSettingsController, BrowserSettingsPageProps } from '../experience/contracts/settings'
@@ -12,8 +14,10 @@ export function BrowserSettingsControllerSurface({ children, ...props }: Browser
 /** Project commands and page controls; schemas, values, caches, and save owners stay in Hermes. */
 export function useBrowserSettingsController({ onClose, onConfigSaved, onMainModelChanged }: BrowserSettingsPageProps) {
   const controller = useRendererSettingsController({ onClose, onConfigSaved, onMainModelChanged })
+  const scope = useStore($settingsRequestProfile) ?? ''
   return {
     view: controller.activeView,
+    scope,
     nativePages: controller.navGroups,
     openPage: (view: string) => controller.openSettingsPage(view as Parameters<typeof controller.openSettingsPage>[0]),
     labels: controller.labels,

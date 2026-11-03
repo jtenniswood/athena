@@ -1,4 +1,6 @@
 import { androidDismissSettingsPage, androidSettingsFiles, androidHost, androidOpenSettingsPage, androidUpdateSettingsPage, isAndroidApp, type AndroidSettingsPage, type AndroidSettingsRow } from '../platform/android'
+import { settingsDescriptor, settingsFrameDescriptor, subscribeSettingsPresentation } from '../platform/settings-presentation'
+import type { SettingsDescriptor } from '../experience/contracts/settings-presentation'
 
 const settingsSelector = '[data-browser-settings-frame]'
 const controlSelector = 'button,a[href],input,textarea,select,summary,[role="switch"],[role="checkbox"],[role="radio"],[role="option"],[role="combobox"],[role="menuitem"],[role="menuitemcheckbox"],[role="menuitemradio"]'
@@ -42,20 +44,23 @@ export function installNativeSettings(): () => void {
   let owner: HTMLElement | null = null, current: HTMLElement | null = null
   let pageId = '', signature = '', opening = false
   let nextId = 0, nextPage = 0
+  let commandGeneration = 0, frameScope = '', error = ''
   const ids = new WeakMap<HTMLElement, string>()
   let commands = new Map<string, HTMLElement>()
+  let presented = new Map<string, { element: HTMLElement; descriptor: SettingsDescriptor; commandId: string }>()
   let observer: MutationObserver | undefined
   let closeButton: HTMLElement | null = null
   const id = (node: HTMLElement): string => {
     let value = ids.get(node)
     if (!value) { value = `control-${++nextId}`; ids.set(node, value) }
-    commands.set(value, node)
-    return value
+    const key = `${commandGeneration}:${value}`
+    commands.set(key, node)
+    return key
   }
   const release = () => {
     const old = pageId
     owner?.removeAttribute('data-native-settings')
-    owner = null; current = null; pageId = ''; signature = ''; commands.clear(); closeButton = null; opening = false
+    owner = null; current = null; pageId = ''; signature = ''; commands.clear(); presented.clear(); closeButton = null; opening = false; error = ''; frameScope = ''
     if (old) void androidDismissSettingsPage(old)
   }
   const queue = () => { if (!scheduled && !disposed) scheduled = requestAnimationFrame(sync) }
@@ -63,20 +68,22 @@ export function installNativeSettings(): () => void {
     const root = owner, scope = current
     if (!root?.isConnected || !scope?.isConnected) return
     if (key === 'ready') { root.setAttribute('data-native-settings', ''); return }
-    if (key === 'close') { closeButton?.click(); queue(); return }
+    const frame = settingsFrameDescriptor(root)
+    if ((frame?.scope ?? '') !== frameScope) { queue(); return }
+    const expectedFrameScope = frameScope, expectedGeneration = commandGeneration
+    if (key === 'close') { if (frame) frame.close(); else closeButton?.click(); queue(); return }
     if (key === 'back') {
+      if (scope === root && frame) { frame.back(); queue(); return }
       const back = scope === root ? root.querySelector<HTMLElement>('.browser-settings-back') : null
       if (back && visible(back)) back.click()
       else if (scope === root) closeButton?.click()
       else (scope.querySelector<HTMLElement>('input,[tabindex="0"]') || scope).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
       queue(); return
     }
-    const node = commands.get(key)
-    if (!node || !node.matches(controlSelector) || !visible(node) || node.matches(':disabled,[aria-disabled="true"],[data-disabled]') ||
-      (!scope.contains(node) && !root.querySelector('.browser-settings-header')?.contains(node))) return
     const importFiles = (input: HTMLInputElement) => {
       void androidSettingsFiles(input.multiple).then(files => {
-        if (!input.isConnected || owner !== root || current !== scope) return
+        if (!input.isConnected || owner !== root || current !== scope || commandGeneration !== expectedGeneration ||
+            (settingsFrameDescriptor(root)?.scope ?? '') !== expectedFrameScope) return
         if (!files.length) { input.dispatchEvent(new Event('cancel', { bubbles: true })); return }
         const transfer = new DataTransfer()
         for (const file of files) {
@@ -89,6 +96,32 @@ export function installNativeSettings(): () => void {
         queue()
       }).catch(() => {})
     }
+    const invokeWithFiles = (invoke: () => void | Promise<void>) => {
+      // Legacy configuration imports still own a mounted file input. Intercept
+      // that owner's synchronous picker request, never an inferred button label.
+      const click = HTMLInputElement.prototype.click
+      HTMLInputElement.prototype.click = function () {
+        if (this.type !== 'file') { click.call(this); return }
+        importFiles(this)
+      }
+      try { return invoke() } finally { HTMLInputElement.prototype.click = click }
+    }
+    const explicit = presented.get(key)
+    if (explicit) {
+      if (!visible(explicit.element) || !scope.contains(explicit.element) || settingsDescriptor(explicit.element) !== explicit.descriptor) return
+      error = ''
+      const generation = commandGeneration
+      try { await invokeWithFiles(() => explicit.descriptor.invoke(explicit.commandId, value)) }
+      catch {
+        if (owner === root && current === scope && generation === commandGeneration &&
+            (settingsFrameDescriptor(root)?.scope ?? '') === expectedFrameScope) error = 'This setting could not be changed. Try again.'
+      }
+      queue(); return
+    }
+    if (frame?.search && key === `${commandGeneration}:frame-search`) { frame.search.run(); queue(); return }
+    const node = commands.get(key)
+    if (!node || !node.matches(controlSelector) || !visible(node) || node.matches(':disabled,[aria-disabled="true"],[data-disabled]') ||
+      (!scope.contains(node) && !root.querySelector('.browser-settings-header')?.contains(node))) return
     if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement || node instanceof HTMLSelectElement) {
       if (node instanceof HTMLInputElement && node.type === 'file') importFiles(node)
       else if (node instanceof HTMLInputElement && ['checkbox', 'radio', 'button', 'submit', 'reset'].includes(node.type)) node.click()
@@ -114,14 +147,7 @@ export function installNativeSettings(): () => void {
     } else if (node.matches('[data-slot="select-trigger"]')) {
       node.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }))
     } else {
-      // File inputs require browser user activation, which a bridge callback lacks.
-      // Scope this interception to the originating settings action only.
-      const click = HTMLInputElement.prototype.click
-      HTMLInputElement.prototype.click = function () {
-        if (this.type !== 'file') { click.call(this); return }
-        importFiles(this)
-      }
-      try { node.click() } finally { HTMLInputElement.prototype.click = click }
+      invokeWithFiles(() => node.click())
     }
     queue()
   }
@@ -132,25 +158,40 @@ export function installNativeSettings(): () => void {
     if (owner && owner !== root) release()
     if (!root) return
     if (!owner) { owner = root; pageId = `settings-${++nextPage}` }
+    const frame = settingsFrameDescriptor(root)
+    if ((frame?.scope ?? '') !== frameScope) { frameScope = frame?.scope ?? ''; commandGeneration++; error = '' }
     const card = root.closest('.browser-settings-fullscreen-card') || root
     closeButton = [...card.querySelectorAll<HTMLElement>('button[aria-label]')].find(button =>
       button.getAttribute('aria-label') === root.dataset.browserSettingsCloseLabel) ||
       card.querySelector<HTMLElement>('.pointer-events-none button[aria-label],button[aria-label="Close settings"]')
-    // Portalled dialogs and select lists are also native settings pages. Menus
-    // already have their own native presenter and retain that lifecycle.
+    // Portalled dialogs and select lists retain their original command owners.
+    // Legacy native-menu surfaces own their separate lifecycle when present.
     const portals = [...document.querySelectorAll<HTMLElement>('[role="dialog"],[role="alertdialog"],[role="listbox"]')]
       .filter(node => !root.contains(node) && !node.contains(root) && visible(node) && !node.closest('[data-native-menu]'))
     current = portals.at(-1) || root
     const scope = current
     commands = new Map()
+    presented = new Map()
     const header = scope === root ? root.querySelector<HTMLElement>(':scope > .browser-settings-header') : null
-    const title = clean(header?.querySelector('h1')?.textContent || scope.getAttribute('aria-label') ||
+    const title = clean((scope === root ? frame?.title : undefined) || header?.querySelector('h1')?.textContent || scope.getAttribute('aria-label') ||
       scope.querySelector('h1,h2,[role="heading"]')?.textContent || 'Settings', 240)
     const search = header?.querySelector<HTMLElement>('.browser-settings-search button')
     const rows: AndroidSettingsRow[] = []
-    const append = (row: AndroidSettingsRow) => { if (rows.length < 1000 && row.label) rows.push(row) }
+    const append = (row: AndroidSettingsRow) => {
+      if (rows.length >= 1000) throw new Error('Settings presentation is too large')
+      if (row.label) rows.push(row)
+    }
     const walk = (node: Node) => {
       if (!(node instanceof HTMLElement) || !visible(node) || node === header || node.matches('script,style,svg,kbd,[aria-hidden="true"]')) return
+      const descriptor = settingsDescriptor(node)
+      if (descriptor) {
+        for (const row of descriptor.snapshot()) {
+          const key = row.id ? `presented-${commandGeneration}:${row.id}` : undefined
+          if (key && row.id) presented.set(key, { element: node, descriptor, commandId: row.id })
+          append({ ...row, id: key })
+        }
+        return
+      }
       if (node.matches(controlSelector)) {
         const kind = node.getAttribute('role')
         let label = labelled(node)
@@ -226,14 +267,15 @@ export function installNativeSettings(): () => void {
         } else walk(child)
       }
     }
-    walk(scope)
-    const model: AndroidSettingsPage = { id: pageId, scope: `${id(scope)}:${title}`, title, rows,
-      search: search && visible(search) ? id(search) : undefined }
+    try { walk(scope) } catch { release(); return }
+    if (error) append({ kind: 'text', label: error })
+    const model: AndroidSettingsPage = { id: pageId, scope: `${id(scope)}:${frameScope}:${title}`.slice(0, 500), title, rows,
+      search: scope === root && frame ? frame.search ? `${commandGeneration}:frame-search` : undefined : search && visible(search) ? id(search) : undefined }
     const serialized = JSON.stringify(model)
     if (serialized === signature) return
     // The host has a separate bounded envelope for settings, including large
     // select lists. Do not truncate an editable value or silently save a prefix.
-    if (serialized.length > 240000) { release(); return }
+    if (serialized.length > 240000 || rows.some(row => (row.id?.length ?? 0) > 100)) { release(); return }
     signature = serialized
     if (!opening) {
       opening = true
@@ -252,5 +294,6 @@ export function installNativeSettings(): () => void {
     poll = window.setInterval(queue, 500)
     queue()
   })
-  return () => { disposed = true; observer?.disconnect(); cancelAnimationFrame(scheduled); clearInterval(poll); release() }
+  const stopPresentation = subscribeSettingsPresentation(queue)
+  return () => { disposed = true; stopPresentation(); observer?.disconnect(); cancelAnimationFrame(scheduled); clearInterval(poll); release() }
 }

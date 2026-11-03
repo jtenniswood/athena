@@ -3366,5 +3366,65 @@
       }
     ],
     "removal": "Remove when upstream routes combined-view project deletion to its owning profile and retains failed confirmations."
+  },
+  {
+    "name": "browser-config-field-presentation",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/config-field.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "77ae894827d5b7ff9fb93b02c2e6422a4bd351e324d6a6d61178251cc05c1b02",
+    "inputHash": "77ae894827d5b7ff9fb93b02c2e6422a4bd351e324d6a6d61178251cc05c1b02",
+    "outputHash": "4a8eab00ca8f0634530f25356eebb1fc9cc1b817ce4e0eb5d11cbe81dc37507e",
+    "handlers": [
+      "exposeBrowserConfigFieldPresentation"
+    ],
+    "reason": "Expose resolved schema-field labels, values and original commit commands to the shared Settings presentation.",
+    "owner": "apps/web-desktop/src/upstream/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "scripts/config-field-presentation.test.mjs",
+        "scenario": "schema field descriptors retain renderer boolean, number, list and JSON commit semantics"
+      },
+      {
+        "file": "tests/browser/native-settings.spec.mjs",
+        "scenario": "explicit field commands cannot cross a profile or owner change"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "connection preparation flushes a settings edit with timers paused"
+      }
+    ],
+    "removal": "Remove when the renderer publishes explicit settings field presentation and row registration as a public host contract."
+  },
+  {
+    "name": "browser-settings-row-refs",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/primitives.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "413a1da1d9c04f64203cd4733c608ced8692e2d57b2ac4f75b3c4cf9af63f30a",
+    "inputHash": "413a1da1d9c04f64203cd4733c608ced8692e2d57b2ac4f75b3c4cf9af63f30a",
+    "outputHash": "c2019981e129f609b35ca2847da1a8976ec0a84c9abea00c9950ff60774621a3",
+    "handlers": [
+      "exposeBrowserSettingsRowRefs"
+    ],
+    "reason": "Pass an optional presentation ref to existing settings row elements without changing their layout.",
+    "owner": "apps/web-desktop/src/upstream/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "scripts/config-field-presentation.test.mjs",
+        "scenario": "schema field descriptors retain renderer boolean, number, list and JSON commit semantics"
+      },
+      {
+        "file": "tests/browser/native-settings.spec.mjs",
+        "scenario": "explicit field commands cannot cross a profile or owner change"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "connection preparation flushes a settings edit with timers paused"
+      }
+    ],
+    "removal": "Remove when the renderer publishes explicit settings field presentation and row registration as a public host contract."
   }
 ]
