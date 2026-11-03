@@ -2509,19 +2509,23 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/projects/overview-row.tsx",
-    "reason": "Use open and closed folder glyphs and make the project group icon, title, and disclosure control toggle its preview.",
+    "reason": "Toggle project previews and expand all sessions inline in single-profile and all-profiles views without entering a project.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "section headers preserve disclosure and browser styling"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "project Show all expands sessions inline"
       }
     ],
     "removal": "Remove when upstream project group rows expose a browser-friendly disclosure control across the group header.",
     "sourceRoot": "renderer",
     "sourceHash": "e2cba07ac9067e609b355d6c850597e7e06432210d6d583a7fa9ad97579ac268",
     "inputHash": "e2cba07ac9067e609b355d6c850597e7e06432210d6d583a7fa9ad97579ac268",
-    "outputHash": "cc9497ba86fef1f5e0af7d82b5b6e88eacb09269b9e1055d5d7bbe0ed349a2c6",
+    "outputHash": "b59976fb3df9265ce80ef8555633cf1e36056fb6e3eec1d96b8b6c90d88bd946",
     "handlers": [
       "useBrowserProjectDisclosure"
     ]
