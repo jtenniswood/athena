@@ -105,6 +105,7 @@ change the deployment process.
 | Synthetic gateway and browser fixtures | `scripts/preview/`, `tests/browser/`, `compose.browser-preview.yml` | Optional isolated workflow checks; see [browser preview](browser-preview.md). |
 | Previous-image upgrade baseline | `scripts/prepare-upgrade-baseline.mjs`, `tests/fixtures/upgrade-baseline.json` | Optional real-composer upgrade/rollback diagnosis. |
 | Compatibility report | `pnpm check:upstream`, `scripts/renderer-compatibility-report.mjs` | Useful when reviewing a renderer pin change. |
+| Adapted renderer inspection | `pnpm inspect:renderer`, `scripts/inspect-renderer.mjs` | Export original and adapted modules, replacement policies and input hashes for local inspection. |
 | Renderer proposal tooling | `renderer-update.yml`, `scripts/propose-renderer-update.mjs`, update-state and policy helpers | Retained automation; keep activation parked unless explicitly requested. |
 | Automation setup audit | `pnpm check:update-setup` | Read-only check of the optional updater setup; missing parked setup does not block development. |
 | Repository rules configurator | `scripts/configure-repository.mjs` | Retained for the old automation design. Its apply mode changes repository settings; it is not routine setup. |
@@ -112,6 +113,35 @@ change the deployment process.
 The retained updater is described in [upstream updates](upstream-updates.md).
 It does not replace the active image publisher or the externally maintained
 Komodo deployment configuration.
+
+### Inspect the source used by the renderer adapter
+
+After preparing the pinned renderer and installing dependencies, export a focused
+snapshot with a compatibility entry name:
+
+```sh
+pnpm inspect:renderer --entry browser-settings-controller
+pnpm inspect:renderer --entry browser-timeline-scrubbing --entry browser-dialog-boundary
+```
+
+Without `--entry`, the command exports every registered renderer/shared module.
+It prints a new snapshot directory under ignored `test-results/renderer-inspection/`.
+Use `--output /tmp/athena-renderer-review` to choose a new directory whose parent
+already exists. Existing destinations and fetched renderer directories are refused.
+
+Each snapshot contains `original/`, `adapted/`, `replacements/` and a manifest.
+The adapted files come directly from the shared Vite/TypeScript transform adapter.
+Replacement sources are separate because importer restrictions and bypasses decide
+which source a caller receives; the manifest records those policies. Selecting
+one entry includes the other registered interventions on that same module.
+The manifest records wrapper/renderer revisions, dependency-lock and registry
+hashes, build-adapter input hashes and exact artifact hashes. Normalized adapted
+hashes replace the local web root with `<web-root>` for comparison across checkouts.
+Snapshots retain the actual injected local import paths and should stay local.
+
+This is a diagnostic export, not a standalone build, a complete dependency graph
+or evidence that behavior was tested. The command preserves the normal reviewed
+input/output checks, never accepts fingerprints, and never edits fetched sources.
 
 ## Historical executables and plans
 

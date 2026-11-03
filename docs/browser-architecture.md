@@ -190,6 +190,12 @@ fingerprints stay reviewed and fetched sources remain untouched. Adapter tests
 check final output fingerprints, replacement resolution, and whether introduced
 type errors and missing imports fail compilation.
 
+`pnpm inspect:renderer` exports the same transform output for review, alongside
+original modules, wrapper replacement sources and their importer policies. Its
+manifest identifies the revisions, lockfile, registry, adapter inputs and emitted
+bytes. These ignored snapshots make the integration inspectable without creating
+another build graph or accepting changed fingerprints; see the tooling index.
+
 Browser transforms are grouped by settings, composer, roster, navigation and
 hosting in `build/renderer/transforms/`. `build/renderer/browser-plugin.ts` assembles their ordered
 pipeline. The registry names the feature owner for each single-feature transform;
