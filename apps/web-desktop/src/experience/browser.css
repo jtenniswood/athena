@@ -78,6 +78,7 @@
 .browser-sessions-pane { --browser-session-control-height:var(--web-control-compact); padding-top:var(--web-space-2); }
 .browser-sessions-pane [data-sidebar="menu-button"] { height:var(--browser-session-control-height); min-height:var(--browser-session-control-height); padding-block:0; }
 .browser-sessions-pane [data-browser-section-hidden] { display:none !important; }
+.browser-sessions-pane [data-gateway-group-empty] { display:none; }
 /* Use one stack gap for Pinned, Sessions, messaging services, and Cron. The
    upstream sections carry different content padding, which otherwise makes
    the visible gap change from one section to the next. The session scroller
