@@ -119,8 +119,8 @@
 .browser-sessions-pane [data-gateway-group] > :first-child > [data-row-actions] button { margin:0; color:var(--web-text-muted); opacity:1; }
 /* Give chat ages and their overlaid actions the same trailing inset. */
 .browser-sessions-pane [data-web-session-id] .session-row-tail:has(time) { padding-inline-end:var(--web-space-2); }
-/* Keep metadata in flow and reveal menu/archive controls over it without moving the title. */
-.browser-sessions-pane [data-row-actions]:has(> [data-browser-session-actions]) { min-width:calc(2 * var(--web-control-compact) + var(--web-space-1) + var(--web-space-2)); min-height:var(--web-control-compact); }
+/* Let metadata set the title's fade boundary; hover controls may overlap the title. */
+.browser-sessions-pane [data-row-actions]:has(> [data-browser-session-actions]) { min-height:var(--web-control-compact); }
 .browser-sessions-pane [data-browser-session-actions] { position:absolute; right:var(--web-space-2); display:flex; align-items:center; gap:var(--web-space-1); opacity:0; pointer-events:none; }
 .browser-sessions-pane [data-browser-session-actions] > button { color:var(--web-text-subtle); }
 .browser-sessions-pane [data-web-session-id]:is(:hover,:focus-within,:has([data-state="open"])) [data-browser-session-actions] { opacity:1; pointer-events:auto; }
