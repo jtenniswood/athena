@@ -12,7 +12,9 @@ renderer remains responsible for conversation state and upstream features.
   connection state, and safe lifecycle transitions such as update and sign-out.
 - `apps/web-desktop/src/upstream/` owns the adapter boundary to the fetched
   renderer: its browser root, desktop-shaped bridge, route and workspace
-  adapters, and reviewed transforms.
+  adapters.
+- `apps/web-desktop/build/renderer/` owns build-only transforms, replacements,
+  branding and the compatibility registry. Runtime modules do not import it.
 - `apps/web-desktop/src/overrides/` replaces a narrow renderer surface when the
   browser needs a different interaction, such as gateway settings.
 - `apps/web-desktop/src/pwa/` owns service-worker registration and the
@@ -135,8 +137,9 @@ handoffs continue to transfer only approved Hermes cookies, and native token
 refresh remains restricted to its installation binding. Existing account hashes,
 preference files, push bindings, API routes, and the data volume stay compatible.
 
-`scripts/serve.mjs` starts the production host; the other files in `scripts/`
-are build, maintenance, diagnostic, or verification entry points.
+`apps/web-desktop/server/main.mjs` starts the production host. It uses the shared
+runtime configuration generator from `scripts/`; development and preview continue
+to assemble the same services without starting nginx.
 
 ## Compatibility ownership
 
@@ -149,7 +152,7 @@ check final output fingerprints, replacement resolution, and whether introduced
 type errors and missing imports fail compilation.
 
 Browser transforms are grouped by settings, composer, roster, navigation and
-hosting in `upstream/transforms/`. `browser-plugin.ts` assembles their ordered
+hosting in `build/renderer/transforms/`. `build/renderer/browser-plugin.ts` assembles their ordered
 pipeline. The registry names the feature owner for each single-feature transform;
 mixed pipelines retain their assembly owner. Build and adapter tests use the
 same wrapper-only module loader. Moving a handler does not accept new renderer
@@ -174,7 +177,7 @@ explicit override and the same checks.
 `package.json` owns the pnpm version used by Docker and GitHub Actions.
 
 Every renderer replacement or transform is recorded in
-`upstream/compatibility-registry.json` with its owner, reviewed source and output
+`build/renderer/compatibility-registry.json` with its owner, reviewed source and output
 fingerprints, behavioral verification references, and removal condition. The
 generated [browser transform inventory](browser-transform-inventory.md) is the
 human-readable index. Add or change an adapter only in wrapper-owned code, and

@@ -62,7 +62,7 @@ pnpm build
 
 Renderer preparation refuses to overwrite mismatched or modified source paths.
 Resolve that mismatch before proceeding; never edit fetched renderer files.
-Review changed contracts in `apps/web-desktop/src/upstream/compatibility-registry.json`.
+Review changed contracts in `apps/web-desktop/build/renderer/compatibility-registry.json`.
 Review version overrides in `scripts/renderer-dependencies.json` against the new
 renderer manifest; do not accept dependency differences without focused checks.
 Do not blindly refresh fingerprints to make an upgrade pass. Adjust wrapper-owned

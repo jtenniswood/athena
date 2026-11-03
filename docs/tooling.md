@@ -16,7 +16,7 @@ Historical plans do not add acceptance gates to ordinary changes.
 | Compatibility registry | `pnpm check:compatibility-registry`, `pnpm docs:compatibility`; Vite plugins and compatibility workflow | Check reviewed source/output fingerprints and generate the inventory and TypeScript aliases. Generation does not accept new fingerprints. |
 | Behavioral verification | `pnpm verify:behavior`; compatibility workflow and focused local checks | Plan declared scenarios for selected entries or changed wrapper dependencies, then verify actual Node/Chromium execution results. |
 | Hosting configuration | `scripts/runtime-config.mjs`; Docker entrypoint and Vite | Validate hosting settings and generate runtime scripts and nginx configuration. |
-| Runtime services | `apps/web-desktop/server/services.mjs`; Vite, preview and `scripts/serve.mjs` | Assemble shared preferences, Android sign-in and push services with one HTTP/WebSocket lifecycle. |
+| Runtime services | `apps/web-desktop/server/services.mjs`; Vite, preview and `apps/web-desktop/server/main.mjs` | Assemble shared preferences, Android sign-in and push services with one HTTP/WebSocket lifecycle. |
 | Build identity | `scripts/build-info.mjs`; Vite | Record wrapper revision, renderer revision and dependency lock identity. |
 | Versioned and manual image builds | `.github/workflows/release.yml`; version tag or manual dispatch | Publish the image; only a dispatch on `main` requests Komodo deployment. |
 | Development images | `.github/workflows/dev-image.yml`; manual branch dispatch | Publish `dev-latest` and `dev-sha-<revision>` for testing, without deployment. |

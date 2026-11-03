@@ -3,8 +3,32 @@ import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
-import { behaviorDependencies, selectBehavior, behaviorPlan, verifyObserved, browserObservations, executeBehavior, parseBehaviorArgs } from './verify-behavior.mjs'
+import { behaviorDependencies, selectBehavior, behaviorPlan, verifyObserved, browserObservations, executeBehavior, parseBehaviorArgs, previousRegistry } from './verify-behavior.mjs'
 import { registryPath } from './compatibility-registry.mjs'
+import { execFileSync } from 'node:child_process'
+
+test('behavior comparison reads registries from either side of the build-directory migration', t => {
+  const root = mkdtempSync(path.join(tmpdir(), 'athena-registry-history-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim()
+  git('init', '-q')
+  const commit = () => {
+    git('add', '.')
+    git('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', 'Registry fixture')
+    return git('rev-parse', 'HEAD')
+  }
+  const oldPath = 'apps/web-desktop/src/upstream/compatibility-registry.json'
+  mkdirSync(path.dirname(path.join(root, oldPath)), { recursive: true })
+  writeFileSync(path.join(root, oldPath), JSON.stringify([{ name: 'old' }]))
+  const old = commit()
+  mkdirSync(path.dirname(path.join(root, registryPath)), { recursive: true })
+  writeFileSync(path.join(root, registryPath), JSON.stringify([{ name: 'current' }]))
+  const current = commit()
+  assert.deepEqual(previousRegistry(old, root), [{ name: 'old' }])
+  assert.deepEqual(previousRegistry(current, root), [{ name: 'current' }])
+  writeFileSync(path.join(root, registryPath), 'malformed')
+  assert.throws(() => previousRegistry(commit(), root), SyntaxError)
+})
 
 const entry = (name, file = 'scripts/example.test.mjs', scenario = 'declared scenario') => ({ name, owner: `src/${name}.ts`, tests: [{ file, scenario }] })
 

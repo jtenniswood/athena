@@ -10,7 +10,7 @@ import ts from 'typescript'
 const root = path.resolve('apps/web-desktop')
 function load(file, mocks, globals = {}) {
   const filename = path.join(root, file)
-  if (file === 'src/upstream/browser-plugin.ts') return createBuildModuleLoader().load(filename)
+  if (file === 'build/renderer/browser-plugin.ts') return createBuildModuleLoader().load(filename)
   const context = vm.createContext({ exports: {}, require: mocks || createRequire(filename), ...globals })
   vm.runInContext(ts.transpileModule(readFileSync(filename, 'utf8'), {
     compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true }
@@ -18,7 +18,7 @@ function load(file, mocks, globals = {}) {
   return context.exports
 }
 test('profile grouping uses the native all-profile scope', () => {
-  const { useBrowserSessionPresentation } = load('src/upstream/browser-plugin.ts')
+  const { useBrowserSessionPresentation } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/index.tsx'), 'utf8')
   const output = useBrowserSessionPresentation(source, root)
   assert.match(output, /label=\{grouping === 'profile' \? 'Profiles' : sessionsLabel\}/)
@@ -26,7 +26,7 @@ test('profile grouping uses the native all-profile scope', () => {
 })
 
 test('profile sections reuse configured pictures and keep exact owner routes', () => {
-  const { useBrowserProfileSectionPictures } = load('src/upstream/browser-plugin.ts')
+  const { useBrowserProfileSectionPictures } = load('build/renderer/browser-plugin.ts')
   const module = 'app/chat/sidebar/gateway-groups.tsx'
   const source = readFileSync(path.join(root, '../desktop/src', module), 'utf8')
   const output = useBrowserProfileSectionPictures(source, root)
@@ -84,7 +84,7 @@ test('profile grouping keeps empty configured profiles as new conversation entry
   profiles = [...profiles, { name: 'writing' }]
   assert.equal(useBrowserProfileGroups(input).length, 3)
 
-  const { useBrowserSessionReordering } = load('src/upstream/browser-plugin.ts')
+  const { useBrowserSessionReordering } = load('build/renderer/browser-plugin.ts')
   const section = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/sessions-section.tsx'), 'utf8')
   const output = useBrowserSessionReordering(section, 'section')
   const expression = output.match(/const hasGroupedSessions = ([^\n]+)/)[1]

@@ -10,7 +10,7 @@ import { createBuildModuleLoader, rendererAdapterPlugin } from './renderer-adapt
 
 const root = path.resolve('apps/web-desktop')
 const registry = loadRegistry()
-function load(name) { return createBuildModuleLoader().load(path.join(root, 'src/upstream', name)) }
+function load(name) { return createBuildModuleLoader().load(path.join(root, 'build/renderer', name)) }
 
 const { browserPlugin, browserActivityNotificationsPlugin } = load('browser-plugin.ts')
 const { transformRenderer } = load('transforms.ts')

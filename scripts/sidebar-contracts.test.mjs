@@ -10,7 +10,7 @@ import ts from 'typescript'
 const root = path.resolve('apps/web-desktop')
 function load(file, mocks, globals = {}) {
   const filename = path.join(root, file)
-  if (file === 'src/upstream/browser-plugin.ts') return createBuildModuleLoader().load(filename)
+  if (file === 'build/renderer/browser-plugin.ts') return createBuildModuleLoader().load(filename)
   const context = vm.createContext({ exports: {}, require: mocks || createRequire(filename), ...globals })
   vm.runInContext(ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, context)
   return context.exports
@@ -36,7 +36,7 @@ test('sidebar preferences migrate known legacy identities without consulting cur
 })
 
 test('semantic adapters preserve identity and reject upstream drift', () => {
-  const api = load('src/upstream/browser-plugin.ts')
+  const api = load('build/renderer/browser-plugin.ts')
   const sidebar = source('app/chat/sidebar/index.tsx')
   const adapted = api.useBrowserSectionIds(sidebar, root)
   assert.match(adapted, /browserSectionId="sessions" label=\{sessionsLabel\}/)
@@ -62,12 +62,12 @@ test('semantic adapters preserve identity and reject upstream drift', () => {
     assert.equal(output.split('data-browser-overlay-card="setup"').length - 1, count)
   }
 
-  const registry = JSON.parse(readFileSync(path.join(root, 'src/upstream/compatibility-registry.json')))
+  const registry = JSON.parse(readFileSync(path.join(root, 'build/renderer/compatibility-registry.json')))
   const plugin = api.browserPlugin(root)
   for (const entry of registry.filter(entry => entry.kind === 'browser-transform' && entry.tests.some(t => t.file === 'scripts/sidebar-contracts.test.mjs'))) {
     const selectedPlugin = entry.order === 40 ? api.browserActivityNotificationsPlugin(root) : plugin
     const input = entry.order === 40
-      ? load('src/upstream/transforms.ts').transformRenderer(source(entry.module), `/desktop/src/${entry.module}`).code
+      ? load('build/renderer/transforms.ts').transformRenderer(source(entry.module), `/desktop/src/${entry.module}`).code
       : source(entry.module)
     const output = selectedPlugin.transform(input, `/desktop/src/${entry.module}`).code
     const parsed = ts.createSourceFile(entry.module, output, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
@@ -77,7 +77,7 @@ test('semantic adapters preserve identity and reject upstream drift', () => {
 })
 
 test('saved messaging conversations survive missing channel configuration', () => {
-  const api = load('src/upstream/browser-plugin.ts')
+  const api = load('build/renderer/browser-plugin.ts')
   const adapted = api.useBrowserSectionIds(source('app/chat/sidebar/index.tsx'), root)
   const start = adapted.indexOf('  const messagingGroups = useMemo')
   const end = adapted.indexOf('\n  // Recents and every messaging platform', start)

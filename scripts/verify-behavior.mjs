@@ -11,6 +11,18 @@ const escape = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const globalInputs = new Set(['flake.lock', 'pnpm-lock.yaml', 'package.json', 'pnpm-workspace.yaml',
   'scripts/renderer-adapter.mjs', 'scripts/aliases.mjs', 'apps/web-desktop/vite.config.ts'])
 
+/** Compare across the build-directory migration without accepting malformed registries. */
+export function previousRegistry(commit, root = repositoryRoot) {
+  const paths = [registryPath, 'apps/web-desktop/src/upstream/compatibility-registry.json']
+  for (const file of paths) {
+    const object = `${commit}:${file}`
+    if (spawnSync('git', ['cat-file', '-e', object], { cwd: root, stdio: 'ignore' }).status === 0) {
+      return JSON.parse(execFileSync('git', ['show', object], { cwd: root, encoding: 'utf8' }))
+    }
+  }
+  throw new Error('The comparison commit contains no renderer compatibility registry')
+}
+
 /** Follow wrapper imports and injected wrapper paths without evaluating renderer modules. */
 export function behaviorDependencies(owner, root = repositoryRoot) {
   const visited = new Set(), pending = [owner]
@@ -147,7 +159,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     if (options.changed) {
       const commit = execFileSync('git', ['rev-parse', '--verify', '--end-of-options', `${options.changed}^{commit}`], { cwd: repositoryRoot, encoding: 'utf8' }).trim()
       changed = execFileSync('git', ['diff', '--name-only', commit, '--'], { cwd: repositoryRoot, encoding: 'utf8' }).trim().split('\n').filter(Boolean)
-      previous = JSON.parse(execFileSync('git', ['show', `${commit}:${registryPath}`], { cwd: repositoryRoot, encoding: 'utf8' }))
+      previous = previousRegistry(commit)
     }
     const selected = selectBehavior(loadRegistry(), { ...options, changed, previous })
     if (!selected.length && options.run) throw new Error('No compatibility entries matched; no behavioral verification was performed')
