@@ -36,6 +36,12 @@
   --web-radius-item: .125rem;
   --web-shadow-menu: 0 0 0 1px var(--web-border-subtle), 0 .25rem .75rem #0003;
   --web-shadow-panel: 0 .5rem 1.5rem #0003;
+  /* Short, shared motion for a frequently used chat workspace. */
+  --web-motion-press: 120ms;
+  --web-motion-enter: 180ms;
+  --web-motion-drawer: 240ms;
+  --web-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --web-ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --web-focus-ring: 2px solid var(--web-accent);
 
   /* Keep touch controls compact without shrinking below 44 physical pixels. */

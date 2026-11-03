@@ -557,7 +557,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/session-row.tsx",
-    "reason": "Open session rows in place instead of desktop tabs/windows. Route sortable row gestures to chat reordering instead of desktop pane dragging.",
+    "reason": "Open session rows in place instead of desktop tabs/windows. Route sortable row gestures to chat reordering instead of desktop pane dragging. Fade long titles and show an owner-scoped latest-reply preview beside hovered rows.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -567,17 +567,22 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "dragging chats selects manual ordering and preserves the draft"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "chat hover previews show the latest reply without selecting the chat or changing its draft"
       }
     ],
     "removal": "Browser navigation rows use public selection commands.",
     "handlers": [
       "disableBrowserSessionRowTabs",
-      "sessionReorderingRow"
+      "sessionReorderingRow",
+      "useBrowserSessionPreview"
     ],
     "sourceHash": "bc91540c2f89b27f39c363d92997488d40bae1a9e3bb39650d747bc5337d4c0b",
     "sourceRoot": "renderer",
     "inputHash": "bc91540c2f89b27f39c363d92997488d40bae1a9e3bb39650d747bc5337d4c0b",
-    "outputHash": "abdc2f15e259020a64f14d6acd0c57366d89c6d7a591137662b11afcbf5e649f"
+    "outputHash": "72ffabc34d6a670d8f8ae7a5c3aaeac01f56086b21902f5c2fc1677c8e12fba4"
   },
   {
     "name": "single-conversation-menus",
