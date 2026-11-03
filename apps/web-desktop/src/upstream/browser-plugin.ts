@@ -1334,6 +1334,22 @@ export function disableBrowserSessionRowTabs(source: string): string {
     .replace(rowTarget, `${rowTarget}        data-web-session-id={session.id}\n        data-web-session-profile={session.profile || 'default'}\n`)
 }
 
+export function useBrowserSessionPreview(source: string, root: string): string {
+  const output = replaceBrowserContract(source, [
+    ["import { OverflowTip, Tip } from '@/components/ui/tooltip'", "import { Tip } from '@/components/ui/tooltip'"],
+    ['      <SidebarRowShell\n', '      <BrowserSessionPreview session={session} title={title} disabled={dragging}>\n      <SidebarRowShell\n'],
+    ['      </SidebarRowShell>', '      </SidebarRowShell>\n      </BrowserSessionPreview>']
+  ])
+  // Both list densities use the same static fade and full-row preview.
+  if (output.split('<OverflowTip label={title} placement="row">').length !== 3) throw new Error('Browser session title preview target changed')
+  return `import { BrowserSessionPreview } from ${JSON.stringify(path.join(root, 'src/experience/session-preview'))}\n` + output
+    .replaceAll('<OverflowTip label={title} placement="row">', '<>')
+    .replaceAll('</OverflowTip>', '</>')
+    .replaceAll('hover-marquee ', 'browser-session-title ')
+    .replaceAll('onPointerEnter={armMarquee}', '')
+    .replaceAll('onPointerLeave={disarmMarquee}', '')
+}
+
 export function disableBrowserSessionOpenActions(source: string, root: string): string {
   const tabCondition = "...(surface === 'row' && !alreadyTabbed"
   const windowCondition = '...(canOpenSessionWindow()'
@@ -1477,6 +1493,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     filterBrowserSessionMenu: source => filterBrowserSessionMenu(source, root),
     showHiddenBotsInBrowserRoster, removeBrowserSplitControls, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
     disableBrowserSessionRowTabs,
+    useBrowserSessionPreview: source => useBrowserSessionPreview(source, root),
     disableBrowserSessionOpenActions: source => disableBrowserSessionOpenActions(source, root),
     filterBrowserKeybinds,
     useBrowserSessionSelection: source => useBrowserSessionSelection(source, root),
