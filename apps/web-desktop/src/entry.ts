@@ -8,6 +8,8 @@ import './experience/styles/controls.css'
 import './experience/styles/menus.css'
 import './web-overrides.css'
 import './platform/sign-in.css'
+import './experience/styles/motion.css'
+import { installBrowserMotionInput } from './experience/ui/motion-input'
 import { installTimelineRailScrubbing } from './experience/ui/timeline-rail-scrubbing'
 import { trackVisualViewport } from './platform/viewport'
 import { installComposerKeyboard } from './platform/composer-keyboard'
@@ -15,6 +17,9 @@ import { installAndroidNavigationGuard } from './platform/android-navigation'
 
 // The native bridge is injected before this entry point, including sign-in.
 if (isAndroidApp()) document.documentElement.dataset.androidApp = 'true'
+
+const stopMotionInput = installBrowserMotionInput()
+if (import.meta.hot) import.meta.hot.dispose(stopMotionInput)
 
 const stopTrackingViewport = trackVisualViewport()
 if (import.meta.hot) import.meta.hot.dispose(stopTrackingViewport)
