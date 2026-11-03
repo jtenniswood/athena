@@ -1050,6 +1050,9 @@ export function useBrowserProjectDisclosure(source: string): string {
 }
 
 export function useBrowserSearchLabel(source: string, root: string): string {
+  const navLabel = 's.nav[item.id] ?? item.label'
+  if (source.split(navLabel).length !== 5) throw new Error('Browser sidebar navigation label target changed')
+  source = source.replaceAll(navLabel, "isNewSession ? 'New Session' : (s.nav[item.id] ?? item.label)")
   const ariaTarget = 'aria-label={s.searchAria}'
   const placeholderTarget = 'placeholder={s.searchPlaceholder}'
   if (source.split(ariaTarget).length !== 2 || source.split(placeholderTarget).length !== 2) {
