@@ -53,6 +53,7 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
     title: 'Preferences',
     pages: [
       { id: 'config:appearance', title: 'Appearance', scope: 'mixed' },
+      { id: 'config:chat-panel', title: 'Chat panel', scope: 'browser', icon: 'layout-sidebar-left' },
       { id: 'config:browser-theme', title: 'Theme', aliases: ['Colour themes', 'Color themes'], scope: 'browser', icon: 'color-mode', surface: 'theme' },
       { id: 'notifications', title: 'Notifications', aliases: ['Desktop alerts'], scope: 'browser' },
       { id: 'config:browser-sounds', title: 'Sounds', scope: 'browser', icon: 'unmute', surface: 'sounds' },
@@ -184,6 +185,7 @@ export function settingsPageDefinition(id: string): SettingsPageDefinition | und
 
 const settingsPageDescriptions: Readonly<Record<string, string>> = {
   'config:appearance': 'Adjust text size, layout, and message display.',
+  'config:chat-panel': 'Choose which tabs and sections appear in the chat panel.',
   'config:browser-theme': 'Choose a theme and color mode.',
   notifications: 'Choose which browser alerts to receive.',
   'config:browser-sounds': 'Choose a sound for completed replies.',

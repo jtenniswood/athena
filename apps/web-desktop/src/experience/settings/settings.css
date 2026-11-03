@@ -623,3 +623,12 @@ body:has([data-browser-settings-frame]) [data-browser-command-palette] { width: 
 }
 .browser-settings-search-button kbd { margin-left: auto; font-size: .75rem; }
 .browser-settings-search-button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+.browser-chat-panel-settings { display: grid; gap: var(--web-space-4); }
+.browser-chat-panel-settings fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.browser-chat-panel-settings legend { margin-bottom: var(--web-space-2); font-weight: 600; }
+.browser-chat-panel-settings label { display: flex; align-items: center; gap: var(--web-space-2); min-height: var(--web-touch-min); cursor: pointer; }
+.browser-chat-panel-settings label > span:not(.codicon) { flex: 1; }
+.browser-chat-panel-settings input { width: 1.1rem; height: 1.1rem; accent-color: var(--web-accent); }
+.browser-chat-panel-settings label:has(input:disabled),
+.browser-chat-panel-settings p { color: var(--web-text-muted); }
