@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ComponentProps } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger, getSessionMessages, type SessionInfo, chatMessageText, toChatMessages, displayModelName } from '../upstream/session-preview-api'
 
 // Mounted by the tooltip portal only after an intentional hover or keyboard focus.
@@ -38,17 +38,24 @@ function LatestGeneration({ session }: { session: SessionInfo }) {
   </div>
 }
 
-export function BrowserSessionPreview({ session, title, disabled, children }: {
-  session: SessionInfo; title: string; disabled?: boolean; children: ReactNode
+export function BrowserSessionPreview({ session, title, disabled, children, onFocusCapture, onBlurCapture, onPointerEnter, ...triggerProps }: ComponentProps<typeof TooltipTrigger> & {
+  session: SessionInfo; title: string; disabled?: boolean
 }) {
   const [open, setOpen] = useState(false)
   return <Tooltip delayDuration={500} open={open && !disabled} onOpenChange={setOpen} disableHoverableContent>
-    <TooltipTrigger asChild onFocusCapture={event => {
+    {/* Radix's row context-menu trigger passes its handlers and ref through this wrapper. */}
+    <TooltipTrigger {...triggerProps} asChild onFocusCapture={event => {
+      onFocusCapture?.(event)
+      if (event.defaultPrevented) return
       const target = event.target as Element
       if (target.matches(':focus-visible') && !target.closest('[data-row-actions], [data-reorder-handle]')) setOpen(true)
     }} onBlurCapture={event => {
+      onBlurCapture?.(event)
+      if (event.defaultPrevented) return
       if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false)
     }} onPointerEnter={event => {
+      onPointerEnter?.(event)
+      if (event.defaultPrevented) return
       if (event.pointerType === 'touch' || (event.target as Element).closest('[data-row-actions], [data-reorder-handle]')) event.preventDefault()
     }}>{children}</TooltipTrigger>
     <TooltipContent className="browser-session-preview" side="right" align="start" sideOffset={12} boundary="viewport">
