@@ -84,9 +84,13 @@ the real renderer, wrapper pages, profile-scoped saves and draft preservation.
 Sidebar controller changes use `scripts/sidebar-controller.test.mjs` alongside
 the registry and compiler checks. The built-image scenarios in
 `tests/browser/browser.spec.mjs` exercise search, section disclosure, inline
-project expansion, owner-scoped deletion, drag ordering and draft preservation.
-The controller tests protect hook ordering and captured command owners; they do
-not replace the rendered workflow checks.
+project expansion, owner-scoped deletion, profile visibility, cron peeks, drag
+ordering and draft preservation. The isolated
+`tests/browser/sidebar-tree.spec.mjs` fixture checks repository/worktree disclosure,
+paging and owner callbacks because browser startup deliberately keeps project
+drill-in parked at the overview. The controller tests protect hook ordering,
+captured command owners and creation
+after branch-switch failures; they do not replace the rendered workflow checks.
 
 The compatibility workflow runs affected declared Node scenarios and uses the
 selection-race entry for a focused built-image check when relevant engine or

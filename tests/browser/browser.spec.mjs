@@ -190,6 +190,41 @@ for (const width of [1440, 390]) {
   })
 }
 
+test('sidebar cron peek and trigger retain the selected conversation and prevent duplicate runs', async ({ page }) => {
+  await page.route('**/api/athena/preferences', route => route.abort())
+  const job = { id: 'tree-cron-job', name: 'Sidebar cron check', prompt: 'Check rows', enabled: true, state: 'scheduled' }
+  let triggerRequests = 0, finishTrigger
+  await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => route.fulfill({ json: [job] }))
+  await page.route(/\/api\/cron\/jobs\/tree-cron-job\/runs(?:\?|$)/, route => route.fulfill({ json: { runs: [
+    { id: 'cron-fixture-run', source: 'cron', profile: 'default', started_at: 1900000000, last_active: 1900000000 },
+    { id: 'cron-fixture-output', source: 'cron_output', profile: 'default', started_at: 1900000001, last_active: 1900000001 }
+  ] } }))
+  await page.route(/\/api\/cron\/jobs\/tree-cron-job\/trigger(?:\?|$)/, async route => {
+    triggerRequests++
+    await new Promise(resolve => { finishTrigger = resolve })
+    await route.fulfill({ json: job })
+  })
+  await open(page)
+  await editor(page).fill('Keep my cron sidebar draft')
+  const section = page.locator('[data-browser-section-id="cron-jobs"]')
+  await section.getByRole('button', { name: 'Cron jobs', exact: true }).click()
+  await section.getByRole('button', { name: 'Show runs', exact: true }).click()
+  const runs = section.locator('div.mb-1')
+  await expect(runs.getByRole('button')).toHaveCount(1)
+  await expect(runs.locator(':scope > div')).toHaveCount(1)
+  await section.locator('.group\\/cron').hover()
+  const trigger = section.getByRole('button', { name: 'Trigger now', exact: true })
+  await trigger.evaluate(button => { button.click(); button.click() })
+  await expect.poll(() => triggerRequests).toBe(1)
+  await expect(trigger).toBeDisabled()
+  finishTrigger()
+  await expect(trigger).toBeEnabled()
+  await section.getByRole('button', { name: 'Hide runs', exact: true }).click()
+  await expect(runs).toHaveCount(0)
+  await expect(page).toHaveURL(/#\/preview-week$/)
+  await expect(editor(page)).toHaveText('Keep my cron sidebar draft')
+})
+
 test('chat hover previews show the latest reply without selecting the chat or changing its draft', async ({ page }) => {
   const fullTitle = 'Explore a product idea with a deliberately long title that should fade at the edge and remain fully readable in the preview card'
   await page.route(/\/api\/profiles\/sessions/, async route => {
@@ -3360,6 +3395,7 @@ for (const width of [390, 1440]) {
     test.use({ hasTouch: width === 390 })
     test(`sidebar visibility uses stable identity through markup changes and reload at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 960 })
+      await page.route('**/api/athena/preferences', route => route.abort())
       await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => route.fulfill({ json: [{ id: 'stable-section-job', name: 'Test job', prompt: 'Check sections', enabled: true }] }))
       await open(page)
       if (width === 390) {
@@ -3375,25 +3411,33 @@ for (const width of [390, 1440]) {
       // A presentation-only change must not create another persisted identity or
       // remove a collapsed section from the available actions.
       await header.evaluate(node => { node.textContent = 'Renamed schedule' })
-      await page.getByRole('button', { name: 'Settings', exact: true }).click()
-      const action = page.getByRole(width === 390 ? 'checkbox' : 'menuitemcheckbox', { name: 'Cron jobs', exact: true })
+      const settings = page.getByRole('dialog', { name: 'Settings', exact: true })
+      const action = settings.getByRole('group', { name: 'Sections', exact: true }).getByRole('checkbox', { name: 'Cron jobs', exact: true })
+      const openSectionSettings = async () => {
+        await page.getByRole('button', { name: 'Settings', exact: true }).click()
+        await settings.getByRole('button', { name: 'Chat panel', exact: true }).click()
+      }
+      await openSectionSettings()
       await expect(action).toBeChecked()
       await action.click()
       await expect(action).not.toBeChecked()
-      await expect(section).toBeHidden()
+      await expect(section).toHaveAttribute('data-browser-section-hidden', '')
       expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes-web.browser.hidden-sections')))).toEqual({ version: 2, hidden: ['cron-jobs'] })
+      await page.getByRole('button', { name: 'Close settings', exact: true }).click()
       await page.reload()
+      if (width === 390) await page.locator('#browser-navigation').getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
       await expect(editor(page)).toBeVisible({ timeout: 30000 })
       if (width === 390) {
         await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
         await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
       }
       await expect(section).toBeHidden()
-      await page.getByRole('button', { name: 'Settings', exact: true }).click()
+      await openSectionSettings()
       await expect(action).not.toBeChecked()
       await action.click()
-      await expect(section).toBeVisible()
-      await page.keyboard.press('Escape')
+      await expect(section).not.toHaveAttribute('data-browser-section-hidden', '')
+      await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+      if (width === 390 && !await header.isVisible()) await openSectionNavigation(page)
       await expect(header).toHaveText('Cron jobs')
       await header.click()
       await expect(content).toBeVisible()

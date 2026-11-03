@@ -70,8 +70,6 @@ import {
   useBrowserSectionDialogFocus,
   useBrowserRosterActionSurfaces,
   useBrowserSectionActionSurface,
-  useBrowserSectionIdentity,
-  useBrowserSectionStyleHooks,
   removeBrowserNewBotChatAction,
   removeBrowserOpenBotChatAction,
   removeBrowserGatewayGroupsRefresh,
@@ -85,8 +83,6 @@ export {
   useBrowserSectionDialogFocus,
   useBrowserRosterActionSurfaces,
   useBrowserSectionActionSurface,
-  useBrowserSectionIdentity,
-  useBrowserSectionStyleHooks,
   removeBrowserNewBotChatAction,
   removeBrowserOpenBotChatAction,
   removeBrowserGatewayGroupsRefresh,
@@ -105,8 +101,16 @@ import {
   useBrowserSetupHooks,
   disableBrowserOnboardingTips
 } from './transforms/host'
-import { useBrowserSessionSection, useBrowserProjectController, useBrowserSidebarController } from './transforms/sidebar'
-export { useBrowserSessionSection, useBrowserProjectController, useBrowserSidebarController } from './transforms/sidebar'
+import {
+  useBrowserSessionSection, useBrowserProjectController, useBrowserSidebarController,
+  useBrowserProfileControllers, useBrowserWorkspaceController, useBrowserWorkspacePresentation,
+  useBrowserRepositoryController, useBrowserCronController
+} from './transforms/sidebar'
+export {
+  useBrowserSessionSection, useBrowserProjectController, useBrowserSidebarController,
+  useBrowserProfileControllers, useBrowserWorkspaceController, useBrowserWorkspacePresentation,
+  useBrowserRepositoryController, useBrowserCronController
+} from './transforms/sidebar'
 export {
   useBrowserMessagingPresentation,
   useBrowserCatalogIdleTask,
@@ -139,7 +143,6 @@ import {
   exportBrowserStatusbarItem,
   useBrowserProjectDeleteOwner,
   filterBrowserSessionMenu,
-  useBrowserProfileSectionPictures,
   useBrowserSessionReordering,
   enableBrowserUngroupedSessions,
   disableBrowserSessionTabs,
@@ -166,7 +169,6 @@ export {
   exportBrowserStatusbarItem,
   useBrowserProjectDeleteOwner,
   filterBrowserSessionMenu,
-  useBrowserProfileSectionPictures,
   useBrowserSessionReordering,
   enableBrowserUngroupedSessions,
   disableBrowserSessionTabs,
@@ -291,12 +293,11 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserFreshSessionOwner: source => useBrowserFreshSessionOwner(source, root),
     useBrowserDefaultSessionProfile: source => useBrowserDefaultSessionProfile(source, root),
     useBrowserDirectResumeOwner: source => useBrowserDirectResumeOwner(source),
-    useBrowserSectionIdentity: source => useBrowserSectionIdentity(source, root),
     useBrowserTouchHooks: source => useBrowserTouchHooks(source, root), useBrowserAcceptedSubmit: source => useBrowserAcceptedSubmit(source, root),
     useBrowserFollowupSubmit: source => useBrowserFollowupSubmit(source, root), useBrowserAlternateSubmit: source => useBrowserAlternateSubmit(source, root),
     useBrowserCodingActionHooks, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source),
-    useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
+    scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
     useBrowserProjectDeleteOwner: source => useBrowserProjectDeleteOwner(source, root),
     exportBrowserStatusbarItem, filterBrowserActivityToasts,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
@@ -317,8 +318,12 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserCreatedGroupSelection: source => useBrowserRosterSelection(source, root, 'created-group'),
     trackBrowserSettingsSaves: source => trackBrowserSettingsSaves(source, root),
     useBrowserSettingsFrame: source => useBrowserSettingsFrame(source, root),
-    useBrowserProfileSectionPictures: source => useBrowserProfileSectionPictures(source, root),
     sessionReorderingSection: source => useBrowserSessionReordering(source, 'section'),
+    useBrowserProfileControllers: source => useBrowserProfileControllers(source, root),
+    useBrowserWorkspaceController: source => useBrowserWorkspaceController(source, root),
+    useBrowserWorkspacePresentation: source => useBrowserWorkspacePresentation(source, root),
+    useBrowserRepositoryController: source => useBrowserRepositoryController(source, root),
+    useBrowserCronController: source => useBrowserCronController(source, root),
     sessionReorderingGroups: source => useBrowserSessionReordering(source, 'groups'),
     ungroupedStore: source => enableBrowserUngroupedSessions(source, 'store'),
     ungroupedMenu: source => enableBrowserUngroupedSessions(source, 'menu'),

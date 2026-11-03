@@ -91,9 +91,22 @@ The controller projection replaces a named function's return and removes only
 explicitly identified view bindings; nested callbacks and hooks remain intact.
 Source fingerprints and the compiler validate this boundary on renderer updates.
 
-The old search-layout, section-markup, project-disclosure and desktop-navigation
-rewrites are removed. Engine-supplied profile groups, worktree lanes and transient
-menus remain reusable surfaces while their commands and caches stay upstream.
+`experience/sidebar-profile.tsx`, `sidebar-tree.tsx` and `sidebar-cron.tsx` own
+profile headers, tree nesting, repository/worktree lanes, paging affordances and
+scheduled-job rows. The profile and workspace adapters project live owners and
+captured commands. Hermes retains group aliases/order, branch switching, lazy
+lanes, removal confirmations, cron trigger concurrency and live-run polling.
+Profile lists preserve configured pictures, hidden-group preferences and complete
+histories; no parallel profile or project cache is introduced.
+Browser startup deliberately keeps project navigation at the overview. The
+reusable worktree views preserve the renderer's controller boundary without
+enabling drill-in or changing that navigation policy.
+
+The old search-layout, section-markup, profile-avatar, project-disclosure and
+desktop-navigation rewrites are removed. Generic engine primitives such as
+virtualization, sortable lists, context menus and extension contributions remain
+reusable surfaces. Product-specific sidebar views no longer depend on rewriting
+their upstream HTML layout.
 
 The chat action menu and its keyboard shortcuts use the same browser commands.
 Rename and delete dialogs retain the conversation they were opened for even if

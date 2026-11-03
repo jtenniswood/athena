@@ -58,3 +58,47 @@ test('project presentation projection keeps hydration, exclusion and paging with
   assert.match(output, /BrowserProjectControllerSurface/)
   assert.doesNotMatch(output, /const shell =|const labelLink =|const lead =/)
 })
+
+test('worktree creation retains the captured lane owner and refuses creation after a failed branch switch', async () => {
+  const { useBrowserWorkspaceController } = createBuildModuleLoader().load(path.join(root, 'build/renderer/transforms/sidebar.ts'))
+  const original = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/projects/workspace-group.tsx'), 'utf8')
+  const output = useBrowserWorkspaceController(original, root)
+  const tree = ts.createSourceFile('workspace.tsx', output, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+  const functions = tree.statements.filter(statement => ts.isFunctionDeclaration(statement)).map(statement => statement.getText(tree)).join('\n')
+  const calls = [], errors = []
+  let fail = false
+  const context = vm.createContext({ exports: {}, BrowserWorkspaceControllerSurface: 'browser-worktree',
+    React: { createElement: (type, props) => ({ type, props }) },
+    useI18n: () => ({ t: { sidebar: {}, statusStack: { coding: { switchFailed: label => label } } } }),
+    $sessionProfilesUsage: 'usage', $sidebarSessionRankIds: 'rank', $sidebarShowAllSessions: 'all',
+    useStoreSelector: () => undefined, useStore: key => key === 'all' ? false : [],
+    useWorkspaceNodeOpen: () => [true, () => {}], rankSessions: rows => rows,
+    SIDEBAR_GROUP_PAGE: 5, PROJECT_PREVIEW_COUNT: 5,
+    useRevealedRows: rows => ({ shown: rows.slice(0, 5), more: Math.max(0, rows.length - 5), showMore() {} }),
+    setWorkspaceNodeOpen: id => calls.push(['open', id]),
+    listRepoBranches: async (path, owner) => { calls.push(['branches', path, owner.profile]); return [] },
+    laneSwitchTarget: group => group.label,
+    switchBranchInRepo: async (path, branch, owner) => { calls.push(['switch', path, branch, owner.profile]); if (fail) throw Error('refused') },
+    notifyError: err => errors.push(err.message)
+  })
+  vm.runInContext(ts.transpileModule(functions, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React } }).outputText, context)
+  const create = profile => context.exports.SidebarWorkspaceGroup({
+    group: { id: 'same-lane-id', label: 'main', path: `/repo-${profile}`, mode: 'workspace', isMain: true, sessions: [] },
+    owner: { connectionId: 'shared', profile }, renderRows: rows => rows,
+    onNewSession: path => calls.push(['create', profile, path])
+  })
+  const first = create('research'), second = create('writer')
+  assert.equal(first.type, 'browser-worktree')
+  await first.props.model.handleNewSession()
+  await second.props.model.handleNewSession()
+  assert.deepEqual(calls.filter(call => call[0] === 'switch'), [
+    ['switch', '/repo-research', 'main', 'research'], ['switch', '/repo-writer', 'main', 'writer']
+  ])
+  assert.deepEqual(calls.filter(call => call[0] === 'create'), [
+    ['create', 'research', '/repo-research'], ['create', 'writer', '/repo-writer']
+  ])
+  fail = true
+  await first.props.model.handleNewSession()
+  assert.equal(calls.filter(call => call[0] === 'create').length, 2)
+  assert.deepEqual(errors, ['refused'])
+})

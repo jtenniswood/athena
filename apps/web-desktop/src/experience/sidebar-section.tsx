@@ -14,6 +14,7 @@ export interface BrowserSidebarSectionModel {
   className?: string
   contentClassName?: string
   pinned: boolean
+  acceptsSessionDrops?: boolean
 }
 
 /** Stable identity and disclosure belong to the browser; list state stays in Hermes. */
@@ -23,8 +24,8 @@ export function BrowserSidebarSection({ model, children, footer }: { model: Brow
     <span aria-hidden="true" className="dither inline-block size-2 shrink-0 rounded-[1px]" />
     <span className="min-w-0 truncate leading-none">{model.label}</span>
   </span>{model.meta && <span className="shrink-0 text-[0.6875rem] font-medium text-(--ui-text-quaternary)">{model.meta}</span>}</>
-  return <div {...identity} data-sidebar="group" data-slot="sidebar-group" data-session-pin-drop={model.pinned ? '' : undefined}
-    data-session-unpin-drop={!model.pinned ? '' : undefined}
+  return <div {...identity} data-sidebar="group" data-slot="sidebar-group" data-session-pin-drop={model.acceptsSessionDrops !== false && model.pinned ? '' : undefined}
+    data-session-unpin-drop={model.acceptsSessionDrops !== false && !model.pinned ? '' : undefined}
     className={cn('relative flex w-full min-w-0 flex-col rounded-[6px] p-2 data-[session-drop-hover=true]:outline-2 data-[session-drop-hover=true]:-outline-offset-2 data-[session-drop-hover=true]:outline-sidebar-ring', model.className)}>
     <div data-browser-section-header="" className="group/section flex shrink-0 items-center justify-between gap-1 pb-1 pt-1.5">
       {model.collapsible ? <button type="button" data-browser-section-label="" aria-expanded={model.open} onClick={model.toggle}

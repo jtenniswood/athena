@@ -1980,8 +1980,8 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/cron-jobs-section.tsx",
-    "reason": "Register sidebar sections through React with model-owned identities and explicit styling hooks, preserving visibility when labels or disclosure state change.",
-    "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
+    "reason": "Project the Hermes cron clock, trigger concurrency, live runs and captured job actions into Athena-owned section and job-row presentation.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -1994,17 +1994,20 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "sidebar visibility uses stable identity through markup changes and reload"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "sidebar cron peek and trigger retain the selected conversation and prevent duplicate runs"
       }
     ],
-    "removal": "Remove when a public upstream section API provides stable browser styling hooks or browser components own these headings.",
+    "removal": "Remove when a public renderer controller contract supplies the same job and live-run projections.",
     "handlers": [
-      "useBrowserSectionStyleHooks",
-      "useBrowserSectionIdentity"
+      "useBrowserCronController"
     ],
     "sourceRoot": "renderer",
     "sourceHash": "821785056a2a31bbae394cf642c212e1621be9e7c99dabfe9cb624be9923a308",
     "inputHash": "821785056a2a31bbae394cf642c212e1621be9e7c99dabfe9cb624be9923a308",
-    "outputHash": "5713feaa45474cd84fd3f9f3e963e797068a3765c174be6c265a93a5e825a168"
+    "outputHash": "47c3607a6da58abdf0a4056ba98f57cae369c808e7d1b560893f3674bf3256eb"
   },
   {
     "name": "browser-draft-persistence-alias",
@@ -3093,8 +3096,8 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/gateway-groups.tsx",
-    "reason": "In Profile grouping, show configured profile avatars and display names with chats directly beneath each profile, omitting the gateway nesting and desktop Screen portal. Rank profile previews by the saved manual order when active. Hide profile groups through their menus without changing the selected conversation or messaging groups. Show every chat in each profile without a row cap or Show more button.",
-    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "reason": "Project live profile groups, owner routes, aliases and ordering into Athena-owned group headers, avatars, nesting and disclosure. Keep hidden groups and full profile session lists browser-owned.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
     "tests": [
       {
         "file": "scripts/unified-session-list.test.mjs",
@@ -3119,13 +3122,13 @@
     ],
     "removal": "Remove when upstream profile headers use the configured profile picture and support a single shared-gateway list.",
     "handlers": [
-      "useBrowserProfileSectionPictures",
+      "useBrowserProfileControllers",
       "sessionReorderingGroups"
     ],
     "sourceHash": "7499db0f9583cdcbadfe66f488cf2dea6562d2e4de0c73674c3013ebb951b83c",
     "sourceRoot": "renderer",
     "inputHash": "7499db0f9583cdcbadfe66f488cf2dea6562d2e4de0c73674c3013ebb951b83c",
-    "outputHash": "e7ecf6b03d816eedaa3196979f374a1b3b476dcac213fdc751dd301f01694391"
+    "outputHash": "db4d84f8a02582e672d8919a8de68c60149c2d5961618dd3835058c08ec2637f"
   },
   {
     "name": "shared-gateway-profile-route",
@@ -3416,5 +3419,83 @@
       }
     ],
     "removal": "Remove when the renderer publishes explicit settings field presentation and row registration as a public host contract."
+  },
+  {
+    "name": "browser-workspace-lanes",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/projects/workspace-group.tsx",
+    "reason": "Keep Hermes worktree controllers, captured owner commands and paging while Athena owns sidebar tree presentation.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
+    "tests": [
+      {
+        "file": "tests/browser/sidebar-tree.spec.mjs",
+        "scenario": "tree views preserve disclosure, paging, live owner commands and the draft"
+      },
+      {
+        "file": "scripts/sidebar-controller.test.mjs",
+        "scenario": "worktree creation retains the captured lane owner and refuses creation after a failed branch switch"
+      }
+    ],
+    "removal": "Remove when a public renderer controller contract supplies the same worktree facts and commands.",
+    "handlers": [
+      "useBrowserWorkspaceController"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "a3a0d4ca5b794f508f0df7f328ce632976d04376bd34347f4a5d9fab79f47141",
+    "inputHash": "a3a0d4ca5b794f508f0df7f328ce632976d04376bd34347f4a5d9fab79f47141",
+    "outputHash": "ef00bad0c54dbc4160845614428b835e6ba9e7d0fb80c61d7a10a221dc1ebf06"
+  },
+  {
+    "name": "browser-workspace-controls",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/projects/workspace-header.tsx",
+    "reason": "Keep Hermes worktree controllers, captured owner commands and paging while Athena owns sidebar tree presentation.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
+    "tests": [
+      {
+        "file": "tests/browser/sidebar-tree.spec.mjs",
+        "scenario": "tree views preserve disclosure, paging, live owner commands and the draft"
+      },
+      {
+        "file": "scripts/sidebar-controller.test.mjs",
+        "scenario": "worktree creation retains the captured lane owner and refuses creation after a failed branch switch"
+      }
+    ],
+    "removal": "Remove when a public renderer controller contract supplies the same worktree facts and commands.",
+    "handlers": [
+      "useBrowserWorkspacePresentation"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "34495797a4d9932cfa22555af662e61634fbbbd935f91fd47fc4b6ba86b82803",
+    "inputHash": "34495797a4d9932cfa22555af662e61634fbbbd935f91fd47fc4b6ba86b82803",
+    "outputHash": "1e550a096c30ae728449155adbd4199bd1411fe1556369793cfbcd086c101509"
+  },
+  {
+    "name": "browser-repository-sections",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/projects/entered-content.tsx",
+    "reason": "Keep Hermes worktree controllers, captured owner commands and paging while Athena owns sidebar tree presentation.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
+    "tests": [
+      {
+        "file": "tests/browser/sidebar-tree.spec.mjs",
+        "scenario": "tree views preserve disclosure, paging, live owner commands and the draft"
+      },
+      {
+        "file": "scripts/sidebar-controller.test.mjs",
+        "scenario": "worktree creation retains the captured lane owner and refuses creation after a failed branch switch"
+      }
+    ],
+    "removal": "Remove when a public renderer controller contract supplies the same worktree facts and commands.",
+    "handlers": [
+      "useBrowserRepositoryController"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "1023cb3c8ab1ca55c6416f6f87ad75b7eb189a3cdc3589b042ce6c66ab39934b",
+    "inputHash": "1023cb3c8ab1ca55c6416f6f87ad75b7eb189a3cdc3589b042ce6c66ab39934b",
+    "outputHash": "f328ee78bf6d732508b4d6ba4c548cb13934fa78573d1d4761bd47665fb83957"
   }
 ]

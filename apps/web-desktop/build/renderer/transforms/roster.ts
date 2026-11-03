@@ -128,27 +128,6 @@ export function removeBrowserOpenBotChatAction(source: string): string {
   return source.replace(action, '').replace(tabAction, '')
 }
 
-export function useBrowserSectionIdentity(source: string, root: string): string {
-  const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-sections'))
-  const changes: [string, string][] = [
-    ['}: SidebarCronJobsSectionProps) {', "}: SidebarCronJobsSectionProps) {\n  const browserSection = useBrowserSidebarSection('cron-jobs', label)"],
-    ['<SidebarGroup className="shrink-0 p-0 pb-1">', '<SidebarGroup {...browserSection} className="shrink-0 p-0 pb-1">']
-  ]
-  return `import { useBrowserSidebarSection } from ${owner}\n` + replaceBrowserContract(source, changes)
-}
-
-export function useBrowserSectionStyleHooks(source: string): string {
-  const hooks = [
-    ['<div className="group/section ', '<div data-browser-section-header="" className="group/section '],
-    ['className="group/section-label ', 'data-browser-section-label="" className="group/section-label ']
-  ]
-  for (const [before, after] of hooks) {
-    if (source.split(before).length !== 2) throw new Error('Browser section styling target changed')
-    source = source.replace(before, after)
-  }
-  return source
-}
-
 export function showHiddenBotsInBrowserRoster(source: string): string {
   if (source.includes('$showHiddenBots.get()')) return source
 

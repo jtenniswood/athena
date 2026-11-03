@@ -300,51 +300,6 @@ function OptionGlyph({ option }: { option: Option }) {`
   return `import { BrowserRestoreProfilesItem } from ${profilesOwner}\nimport { browserSidebarActionLabel, useBrowserSidebarShortcuts } from ${owner}\n` + output.replace(target, target + hideDesktopOnlyRows)
 }
 
-export function useBrowserProfileSectionPictures(source: string, root: string): string {
-  const replacements: [string, string][] = [
-    ["import { WorkspaceAddButton, WorkspaceShowMoreButton } from './projects/workspace-header'", "import { Tip } from '@/components/ui/tooltip'"],
-    ["import { SIDEBAR_GROUP_PAGE } from './projects/model'\n", ''],
-    ['  const [visibleCount, setVisibleCount] = useState(SIDEBAR_GROUP_PAGE)\n', ''],
-    ['  const hiddenCount = embedded ? 0 : Math.max(0, sessions.length - visibleCount)\n', ''],
-    ['sessions={embedded ? sessions : sessions.slice(0, visibleCount)}', 'sessions={sessions}'],
-    [`          {hiddenCount > 0 && (
-            <WorkspaceShowMoreButton
-              count={Math.min(SIDEBAR_GROUP_PAGE, hiddenCount)}
-              label={label}
-              onClick={() => setVisibleCount(count => count + SIDEBAR_GROUP_PAGE)}
-            />
-          )}\n`, ''],
-    ['              <WorkspaceAddButton\n                label={s.newSessionIn(label)}', '              <Tip label={s.newSessionIn(label)}><Button\n                aria-label={s.newSessionIn(label)}\n                size="icon-xs"\n                variant="ghost"'],
-    ['              />\n            )}\n            <DropdownMenu>', '              ><Codicon name="add" size="0.75rem" /></Button></Tip>\n            )}\n            <DropdownMenu>'],
-    ['  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA)', "  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA).filter(item => item.id !== 'hermes-bots:screen-portal')"],
-    ['  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()', "  const presentationMode = useStore($sidebarGrouping) === 'profile'\n  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()"],
-    ['  const order = useStore($gatewayGroupOrder)', '  const order = useStore($gatewayGroupOrder)\n  const hiddenProfileGroups = useHiddenProfileGroups()'],
-    ['  const ordered = [...sections].sort((a, b) => {', "  const ordered = sections.filter(group => embedded || !presentationMode || !hiddenProfileGroups.includes(group.profile ?? '')).sort((a, b) => {"],
-    ['              <DropdownMenuContent align="end">', '              <DropdownMenuContent align="end">\n                {browserProfile && group.profile && !embedded && <BrowserHideProfileItem profile={group.profile} />}'],
-    ['if (nested || embedded || !owner) {', 'if (nested || embedded || !owner || presentationMode) {'],
-    ['  const label = aliases[group.id] || group.label', '  const browserProfile = useBrowserProfileSection(group.profile)\n  const label = aliases[group.id] || browserProfile?.label || group.label'],
-    [`              <ProfileGlyph
-                className="size-full"
-                color={group.color ?? null}
-                isDefault={group.profile === 'default'}
-                name={group.profile}
-              />`, `              browserProfile?.picture ?? <ProfileGlyph
-                className="size-full"
-                color={group.color ?? null}
-                isDefault={group.profile === 'default'}
-                name={group.profile}
-              />`]
-  ]
-  let output = source
-  for (const [before, after] of replacements) {
-    if (output.split(before).length !== 2) throw new Error('Browser profile section picture boundary changed')
-    output = output.replace(before, after)
-  }
-  const owner = JSON.stringify(path.join(root, 'src/upstream/profile-section'))
-  const visibilityOwner = JSON.stringify(path.join(root, 'src/experience/profile-list-visibility'))
-  return `import { BrowserHideProfileItem, useHiddenProfileGroups } from ${visibilityOwner}\nimport { $sidebarGrouping } from '@/store/layout'\nimport { useBrowserProfileSection } from ${owner}\n` + output
-}
-
 export function useBrowserSessionReordering(source: string, surface: 'section' | 'groups'): string {
   const replacements: [string, string][] = surface === 'section' ? [
     [`    (items: SessionInfo[]) =>

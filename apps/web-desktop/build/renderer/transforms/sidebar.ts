@@ -73,3 +73,89 @@ export function useBrowserProjectController(source: string, root: string): strin
   return `import { BrowserProjectControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar-project'))}\n` +
     `import { browserExpandedProjectSessions, fetchBrowserProjectSessions } from ${JSON.stringify(path.join(root, 'src/upstream/project-sessions'))}\n` + source
 }
+
+export function useBrowserProfileControllers(source: string, root: string): string {
+  source = replaceBrowserContract(source, [
+    ['  const order = useStore($gatewayGroupOrder)', "  const order = useStore($gatewayGroupOrder)\n  const presentationMode = useStore($sidebarGrouping) === 'profile'\n  const hiddenProfileGroups = useHiddenProfileGroups()"],
+    ['if (nested || embedded || !owner) {', 'if (nested || embedded || !owner || presentationMode) {'],
+    ['  const ordered = [...sections].sort((a, b) => {', "  const ordered = sections.filter(group => embedded || !presentationMode || !hiddenProfileGroups.includes(group.profile ?? '')).sort((a, b) => {"],
+    ['  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA)', "  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA).filter(item => item.id !== 'hermes-bots:screen-portal')"]
+  ])
+  source = projectRendererController(source, 'GatewayProfileGroups', `<BrowserProfileGroupsControllerSurface
+    model={{ ids, ordered, gatewayProfiles, sensors }}
+    renderGroup={(group, index, onMove, children) => <GatewayProfileGroup key={group.id} embedded={embedded}
+      first={index === 0} last={index === ordered.length - 1} group={group} onMove={onMove}
+      onNewSessionSplit={onNewSessionSplit} renderRows={renderRows}>{children}</GatewayProfileGroup>}
+    renderNested={groups => <GatewayProfileGroups groups={oneGroupPerProfile(groups).map(profile => ({ ...profile, label: profile.profile! }))}
+      nested onNewSessionSplit={onNewSessionSplit} renderRows={renderRows} sensors={sensors} />}
+  />`)
+  source = projectRendererController(source, 'GatewayProfileGroup', `<BrowserProfileGroupControllerSurface model={{
+    group, label, open, embedded, first, last, alias: aliases[group.id], sortable, usage,
+    renaming, setRenaming, draft, setDraft, onMove, startSession, onNewSessionSplit, route,
+    empty: sessions.length === 0, rows: renderRows(sessions), children,
+    contribution: group.profile && !embedded ? <ProfileGroupHeaderSlot connectionId={group.connectionId ?? null} profile={group.profile} /> : null
+  }} />`, ['[visibleCount, setVisibleCount]', 'hiddenCount'])
+  return `import { BrowserProfileGroupsControllerSurface, BrowserProfileGroupControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar-profile'))}\n` +
+    `import { useHiddenProfileGroups } from ${JSON.stringify(path.join(root, 'src/experience/profile-list-visibility'))}\n` +
+    "import { $sidebarGrouping } from '@/store/layout'\n" + source
+}
+
+export function useBrowserWorkspaceController(source: string, root: string): string {
+  source = projectRendererController(source, 'SidebarWorkspaceGroup', `<BrowserWorkspaceControllerSurface model={{
+    group, isProfileGroup, usage, open, toggleOpen, nextCount, showMore: lane.showMore,
+    empty: visibleSessions.length === 0, rows: renderRows(visibleSessions), canCreate: Boolean(onNewSession || isProfileGroup),
+    handleNewSession, handleNewSessionSplit, onNewSessionSplit, onRemove
+  }} />`, ['leadingIcon', 'addButton'])
+  return `import { BrowserWorkspaceControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar-workspace'))}\n` + source
+}
+
+export function useBrowserWorkspacePresentation(source: string, root: string): string {
+  const views: [string, string][] = [
+    ['WorkspaceAddButton', '<BrowserTreeAdd label={label} onClick={onClick} onPointerDown={onPointerDown} />'],
+    ['WorkspaceShowMoreRow', '<BrowserTreeMore label={label} onClick={onClick} disabled={disabled} />'],
+    ['WorkspaceShowMoreButton', '<BrowserTreeMore label={text} onClick={onClick} compact />'],
+    ['StartWorkButton', `<BrowserTreeAdd label={p.startWork} icon="git-branch" className="group-hover/section:opacity-100" onClick={() => void openWorktreeDialog({ owner: projectOwnerRoute(project), repoPath: project.path ?? '' })} />`],
+    ['WorkspaceHeader', '<BrowserTreeHeader ref={ref} {...rest} model={{ label, title, open, toggle: onToggle, emphasis, icon, actions: action }} />']
+  ]
+  for (const [name, view] of views) source = projectRendererController(source, name, view)
+  return `import { BrowserTreeAdd, BrowserTreeMore, BrowserTreeHeader } from ${JSON.stringify(path.join(root, 'src/experience/sidebar-tree'))}\n` + source
+}
+
+export function useBrowserRepositoryController(source: string, root: string): string {
+  source = projectRendererController(source, 'RepoFlatSection', `<BrowserRepository model={{
+    label: repo.label, title: repo.path ? displayPath(repo.path) : undefined, open, toggle: toggleOpen, emphasis: true,
+    icon: <Codicon className="shrink-0 text-(--ui-text-tertiary)" name="repo" size="0.75rem" />,
+    actions: onNewSession && <WorkspaceAddButton label={s.newSessionIn(repo.label)} onClick={() => {
+      setWorkspaceNodeOpen(repo.id, true)
+      onNewSession(repo.path)
+    }} onPointerDown={onNewSessionSplit ? event => startNewSessionDrag(placement => {
+      setWorkspaceNodeOpen(repo.id, true)
+      onNewSessionSplit(placement.dir, { anchor: placement.anchor, before: placement.before, cwd: repo.path })
+    }, event, { cwd: repo.path, label: s.newSessionIn(repo.label) }) : undefined} />
+  }} dialogs={removeDialog}>{body}</BrowserRepository>`)
+  return `import { BrowserRepository } from ${JSON.stringify(path.join(root, 'src/experience/sidebar-tree'))}\n` + source
+}
+
+export function useBrowserCronController(source: string, root: string): string {
+  source = projectRendererController(source, 'SidebarCronJobsSection', `<BrowserSidebarSection model={{
+    id: 'cron-jobs', label, open, toggle: onToggle, collapsible: true, pinned: false, acceptsSessionDrops: false,
+    className: 'shrink-0 p-0 pb-1',
+    contentClassName: 'scrollbar-fade flex max-h-72 flex-col gap-px overflow-x-hidden overflow-y-auto overscroll-contain pb-1.75 compact:max-h-none compact:overflow-visible'
+  }}>
+    {shown.map(job => <CronJobSidebarRow busy={triggeringJobIds.has(job.id)} expanded={peekJobId === job.id}
+      job={job} key={job.id} nowMs={nowMs} onManage={() => onManageJob(job.id)} onOpenRun={onOpenRun}
+      onTogglePeek={() => setPeekJobId(prev => prev === job.id ? null : job.id)} onTrigger={() => triggerJob(job.id)} />)}
+    {hiddenCount > 0 && <SidebarLoadMoreRow onClick={() => setVisibleCount(count => count + LOAD_MORE_STEP)} step={Math.min(LOAD_MORE_STEP, hiddenCount)} />}
+  </BrowserSidebarSection>`)
+  source = projectRendererController(source, 'CronJobSidebarRow', `<BrowserCronRow model={{
+    label, meta, stateClass: STATE_DOT[state] ?? 'bg-(--ui-text-quaternary)', running: state === 'running', busy, expanded,
+    toggleLabel: expanded ? c.hideRuns : c.showRuns, triggerLabel: c.triggerNow, manageLabel: c.manage,
+    toggle: onTogglePeek, trigger: onTrigger, manage: onManage,
+    wrap: header => <ActionsContextMenu ariaLabel={c.actionsTitle} contentClassName="w-44" items={items}>{header}</ActionsContextMenu>
+  }}><CronJobSidebarRuns jobId={job.id} onOpenRun={onOpenRun} /></BrowserCronRow>`)
+  source = projectRendererController(source, 'CronJobSidebarRuns', `<BrowserCronRuns loadingLabel={c.loading} emptyLabel={c.noRuns}
+    rows={runs === null ? null : runs.map(run => ({ id: run.id, label: formatRunTime(run.last_active || run.started_at),
+      selected: run.id === selectedSessionId, open: isCronRunRow(run) ? () => openCronRun(run, onOpenRun) : undefined }))} />`)
+  return `import { BrowserSidebarSection } from ${JSON.stringify(path.join(root, 'src/experience/sidebar-section'))}\n` +
+    `import { BrowserCronRow, BrowserCronRuns } from ${JSON.stringify(path.join(root, 'src/experience/sidebar-cron'))}\n` + source
+}

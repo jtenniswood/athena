@@ -48,9 +48,9 @@ test('semantic adapters preserve identity and reject upstream drift', () => {
   const section = api.useBrowserSessionSection(source('app/chat/sidebar/sessions-section.tsx'), root)
   assert.match(section, /<BrowserSidebarSection model=\{\{/)
   assert.match(section, /id: browserSectionId/)
-  const cron = api.useBrowserSectionIdentity(source('app/chat/sidebar/cron-jobs-section.tsx'), root)
-  assert.match(cron, /<SidebarGroup \{\.\.\.browserSection\}/)
-  assert.match(cron, /useBrowserSidebarSection\([^\n]*label\)/)
+  const cron = api.useBrowserCronController(source('app/chat/sidebar/cron-jobs-section.tsx'), root)
+  assert.match(cron, /id: 'cron-jobs', label, open/)
+  assert.match(cron, /BrowserCronRuns loadingLabel/)
   // An upstream icon change cannot alter which notice the browser suppresses.
   const updates = api.omitBrowserDesktopUpdateNotice(source('store/updates.ts').replace("icon: 'gift'", "icon: 'bell'"))
   assert.match(updates, /export function maybeNotifyUpdateAvailable[^\n]+\{\}/)
