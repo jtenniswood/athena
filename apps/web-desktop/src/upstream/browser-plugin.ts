@@ -1165,6 +1165,7 @@ export function useBrowserSessionReordering(source: string, surface: 'sidebar' |
     ['onReorderSessions={showAllProfiles ? undefined : reorderSessions}', 'onReorderSessions={reorderSessions}'],
     ['sortable={!showAllProfiles && agentSessions.length > 1}', 'sortable={agentSessions.length > 1}']
   ] : surface === 'section' ? [
+    ['groups?.some(group => group.sessions.length > 0)', "groups?.some(group => group.mode === 'profile' || group.sessions.length > 0)"],
     [`    (items: SessionInfo[]) =>
       flattenSessionsWithBranches(items).map(({ branchStem, session }) => renderRow(session, false, branchStem)),
     [renderRow]`, `    (items: SessionInfo[]) => {
@@ -1191,8 +1192,12 @@ export function useBrowserSessionReordering(source: string, surface: 'sidebar' |
   return output
 }
 
-export function useBrowserSessionPresentation(source: string): string {
-  return replaceBrowserContract(source, [
+export function useBrowserSessionPresentation(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/upstream/profile-groups'))
+  return `import { useBrowserProfileGroups } from ${owner}\n` + replaceBrowserContract(source, [
+    ['const profileGroups = useGatewaySessionGroups(agentSessions, ownerGrouped)', 'const profileGroups = useBrowserProfileGroups(useGatewaySessionGroups(agentSessions, ownerGrouped))'],
+    ['forceEmptyState={showSessionSkeletons}', 'forceEmptyState={showSessionSkeletons && !displayAgentGroups?.length}'],
+    ['  const showSessionSections =\n', '  const showSessionSections =\n    Boolean(displayAgentGroups?.length) ||\n'],
     ['label={sessionsLabel}', "label={grouping === 'profile' ? 'Profiles' : sessionsLabel}"],
     ['                        <SidebarSectionAddButton', "                        {grouping !== 'profile' && <SidebarSectionAddButton"],
     ['                        />\n                        <div className="grid size-6 place-items-center">', '                        />}\n                        <div className="grid size-6 place-items-center">']
@@ -1508,7 +1513,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     sessionReorderingSidebar: source => useBrowserSessionReordering(source, 'sidebar'),
     sessionReorderingSection: source => useBrowserSessionReordering(source, 'section'),
     sessionReorderingGroups: source => useBrowserSessionReordering(source, 'groups'),
-    sessionPresentationSidebar: source => useBrowserSessionPresentation(source),
+    sessionPresentationSidebar: source => useBrowserSessionPresentation(source, root),
     ungroupedStore: source => enableBrowserUngroupedSessions(source, 'store'),
     ungroupedMenu: source => enableBrowserUngroupedSessions(source, 'menu'),
     ungroupedSidebar: source => enableBrowserUngroupedSessions(source, 'sidebar')

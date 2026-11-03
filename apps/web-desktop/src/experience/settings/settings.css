@@ -361,6 +361,76 @@ body:has([data-browser-settings-frame]) [data-slot='select-item'][data-highlight
 .browser-settings-frame [class*="@2xl:justify-self-end"] { justify-self: start; }
 .browser-settings-frame .flex.flex-col.items-end { align-items: flex-start; }
 
+/* Keep the main model form together; auxiliary and ensemble editors retain
+   their wider layouts. Container queries follow the available detail width. */
+[data-settings-page="config:model"][data-settings-subpage="main"] {
+  max-width: 44rem;
+
+  .browser-settings-detail-header,
+  [data-browser-profile-scope] { margin-bottom: var(--web-space-4); }
+
+  [data-browser-profile-tabs] {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: var(--web-space-2);
+  }
+
+  [data-browser-profile-tabs] > button { flex-shrink: 0; white-space: nowrap; }
+
+  .grid.gap-6 > section {
+    container: model-form / inline-size;
+  }
+
+  .grid.gap-6 > section > p:first-child {
+    margin-bottom: var(--web-space-4);
+    max-width: 38rem;
+    line-height: var(--web-line-body);
+  }
+
+  .grid.gap-6 > section > .grid > [class~="@container"] > .grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--web-space-2);
+    padding-block: var(--web-space-2);
+  }
+
+  .grid.gap-6 > section > .grid > [class~="@container"] > .grid > .flex {
+    width: 100%;
+    justify-self: stretch;
+    justify-content: flex-start;
+  }
+
+  .grid.gap-6 > section > .grid [data-slot="select-trigger"],
+  .grid.gap-6 > section > .grid input,
+  .grid.gap-6 > section > .grid .justify-items-end {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .grid.gap-6 > section > .flex.justify-end {
+    justify-content: flex-start;
+    padding-top: var(--web-space-3);
+  }
+
+  .grid.gap-6 > section > .mt-6.grid {
+    margin-top: var(--web-space-6);
+    padding-top: var(--web-space-4);
+    border-top: 1px solid var(--web-border-subtle);
+  }
+}
+
+@container model-form (min-width: 32rem) {
+  [data-settings-page="config:model"][data-settings-subpage="main"] .grid.gap-6 > section > .grid > [class~="@container"] > .grid {
+    grid-template-columns: 8rem minmax(0, 1fr);
+    align-items: center;
+    column-gap: var(--web-space-4);
+  }
+
+  [data-settings-page="config:model"][data-settings-subpage="main"] .grid.gap-6 > section > .flex.justify-end {
+    padding-left: calc(8rem + var(--web-space-4));
+  }
+}
+
 .browser-advanced-settings {
   margin-top: var(--web-space-4);
   border-top: 1px solid var(--web-border-subtle);
