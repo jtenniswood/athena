@@ -50,7 +50,7 @@ test.afterAll(async () => {
 
 const editor = page => page.locator('[contenteditable="true"]:visible').first()
 const openNavigation = async page => {
-  await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
+  await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
   await expect(page.locator('.browser-navigation.is-open')).toBeVisible()
   await expect(page.getByRole('main', { name: 'Conversation and workspace' })).toBeHidden()
   await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
@@ -64,7 +64,13 @@ const settingsTrigger = async page => {
   if (!await trigger.isVisible()) await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
   return trigger
 }
-const open = async (page, session = 'preview-week') => {
+const open = async (page, session = 'preview-week', { defaultGrouping = false } = {}) => {
+  // Rail workflows select their supported layout explicitly. The default
+  // Profile grouping has its own fresh-context coverage below.
+  if (!defaultGrouping) await page.addInitScript(() => {
+    const key = 'hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles'
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, 'none')
+  })
   await page.goto(`${origin}/#/${session}`)
   if (await page.evaluate(() => matchMedia('(pointer: coarse)').matches && (matchMedia('(width < 48rem)').matches || matchMedia('(max-height: 27rem)').matches))) {
     await page.locator('#browser-navigation').getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().click()
@@ -184,7 +190,7 @@ touchTest('the phone profile actions only manage enabled profiles and preserve t
   await page.setViewportSize({ width: 390, height: 844 })
   await open(page)
   await editor(page).fill('Keep the draft while managing phone profiles')
-  await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
+  await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
   await page.getByRole('button', { name: 'Profile actions', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Default for new sessions', exact: true })).toHaveCount(0)
   await page.getByRole('checkbox', { name: 'Research', exact: true }).click()
@@ -524,7 +530,7 @@ touchTest('phone navigation and action sheets keep touch targets usable across U
     expect(bounds.width, `${name} width`).toBeGreaterThanOrEqual(minSize)
     expect(bounds.height, `${name} height`).toBeGreaterThanOrEqual(minSize)
   }
-  const trigger = page.getByRole('button', { name: /^(Open navigation|Back to home)$/ })
+  const trigger = page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ })
   for (const scale of [50, 75, 100, 125, 150]) {
     await page.evaluate(percent => window.hermesDesktop.zoom.setPercent(percent), scale)
     for (const [name, control] of [
@@ -621,7 +627,7 @@ touchTest('phone navigation and contextual sheets stay tappable at 320px and 200
   for (let index = 1; index < toolbar.length; index++) {
     expect(toolbar[index - 1].right, 'toolbar controls do not overlap').toBeLessThanOrEqual(toolbar[index].left)
   }
-  await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
+  await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
   await expect(page.locator('.browser-navigation')).toBeVisible()
   await expect(page.locator('.browser-main')).toBeHidden()
   expect((await page.locator('.browser-navigation').boundingBox()).width).toBe(320)
@@ -647,7 +653,7 @@ for (const mode of [
     const activate = locator => mode.touch ? locator.tap() : locator.click()
     try {
       await open(page)
-      await activate(page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }))
+      await activate(page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }))
       await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).toBeVisible()
       const filters = page.getByRole('button', { name: 'Filters', exact: true })
       await activate(filters)
@@ -763,11 +769,11 @@ for (const startPath of ['', 'preview-week']) {
       await expect(home).toBeVisible()
       await session.tap()
       await editor(page).fill('Keep this draft when returning to the same chat')
-      await expect(page.getByRole('button', { name: 'Open navigation', exact: true }).locator('.codicon-three-bars')).toBeVisible()
+      await expect(page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).locator('.codicon-three-bars')).toBeVisible()
       const navigation = page.locator('#browser-navigation')
       const main = page.getByRole('main', { name: 'Conversation and workspace' })
       for (const activation of ['touch', 'keyboard']) {
-        await page.getByRole('button', { name: 'Open navigation', exact: true }).tap()
+        await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).tap()
         await expect(navigation).toBeVisible()
         const row = navigation.getByRole('button', { name: 'Plan a calmer working week', exact: true }).first()
         await expect(row).toBeVisible()
@@ -1338,14 +1344,12 @@ test('settings and command center use one upstream overlay and preserve the chat
   const chat = editor(page)
   await chat.fill('Keep this draft while checking settings')
   await (await settingsTrigger(page)).click()
-  await page.getByRole('menuitem', { name: 'Settings', exact: true }).click()
   await expect(page.getByText('Appearance', { exact: true }).first()).toBeVisible()
   await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)
   await page.keyboard.press('Escape')
   await expect(chat).toContainText('Keep this draft while checking settings')
 
   await (await settingsTrigger(page)).click()
-  await page.getByRole('menuitem', { name: 'Settings', exact: true }).click()
   await page.getByRole('button', { name: 'Gateway', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Gateway', exact: true })).toBeVisible()
   await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)
@@ -1359,7 +1363,6 @@ test('settings fills the viewport and uses compact list and detail navigation', 
   const chat = editor(page)
   await chat.fill('Keep this draft while changing settings layout')
   await (await settingsTrigger(page)).click()
-  await page.getByRole('menuitem', { name: 'Settings', exact: true }).click()
 
   const surface = page.getByRole('dialog', { name: 'Settings', exact: true })
   await expect(surface).toBeVisible()
@@ -1403,7 +1406,6 @@ test('approval mode keeps the selected profile mode and composer icon synchroniz
 test('browser settings omit desktop-only keybinds', async ({ page }) => {
   await open(page)
   await (await settingsTrigger(page)).click()
-  await page.getByRole('menuitem', { name: 'Settings', exact: true }).click()
   await page.getByText('Keyboard Shortcuts', { exact: true }).click()
   await expect(page.getByText('Toggle sessions sidebar', { exact: true })).toBeVisible()
   for (const label of ['Toggle HUD mode', 'Toggle terminal', 'New terminal', 'Open browser', 'New session tab']) {
@@ -1417,8 +1419,8 @@ touchTest('browser workspace panels open and close without losing a draft', asyn
   await page.evaluate(() => window.hermesDesktop.zoom.setPercent(50))
   await editor(page).fill('Keep my draft while using panels')
   await expect(page.getByRole('button', { name: 'Open panels', exact: true })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Settings', exact: true }).click()
-  await page.getByRole('dialog', { name: 'Settings and workspace', exact: true }).getByRole('button', { name: 'files', exact: true }).click()
+  await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Chat actions', exact: true }).getByRole('button', { name: 'Files', exact: true }).click()
   const close = page.getByRole('button', { name: 'Close files panel', exact: true })
   await expect(close).toBeVisible()
   const closeBounds = await close.boundingBox()
@@ -1556,7 +1558,7 @@ for (const width of [390, 1440]) {
 }
 
 const openSectionNavigation = async page => {
-  await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
+  await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
   await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
 }
 
@@ -2178,13 +2180,13 @@ for (const width of [390, 1440]) {
   })
 }
 
-test('desktop panel actions follow upstream visibility when reopening settings', async ({ page }) => {
+test('desktop panel actions follow upstream visibility when reopening chat actions', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
   await open(page)
   await editor(page).fill('Keep this pane toggle draft')
-  const trigger = page.getByRole('button', { name: 'Settings', exact: true })
-  const surface = page.getByRole('menu', { name: 'Settings and workspace', exact: true })
-  const files = surface.getByRole('menuitemcheckbox', { name: 'files', exact: true })
+  const trigger = page.getByRole('button', { name: 'Chat actions', exact: true })
+  const surface = page.getByRole('menu', { name: 'Chat actions', exact: true })
+  const files = surface.getByRole('menuitemcheckbox', { name: 'Files', exact: true })
   await trigger.click()
   const initiallyOpen = (await files.getAttribute('aria-checked')) === 'true'
   await files.click()
@@ -2587,7 +2589,7 @@ test.describe('touch profile controls', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await open(page)
     await editor(page).fill('Keep the touch draft')
-    await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).tap()
+    await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).tap()
     const trigger = page.getByRole('button', { name: 'Profile actions', exact: true })
     const sheet = page.getByRole('dialog', { name: 'Profile actions', exact: true })
     await trigger.tap()
@@ -2882,7 +2884,7 @@ test.describe('touch Bots controls', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await open(page)
     await editor(page).fill('Keep this touch Bots draft')
-    await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).tap()
+    await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).tap()
     await page.getByRole('tab', { name: 'Bots', exact: true }).tap()
     const filter = page.getByRole('button', { name: /^Filter roster/ })
     await filter.tap()
@@ -3092,7 +3094,7 @@ for (const scenario of [
       await page.screenshot({ path: testInfo.outputPath('shared-styles.png') })
       await page.keyboard.press('Escape')
       await expect(settings).toBeFocused()
-      if (compact) await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
+      if (compact) await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
       await page.getByRole('button', { name: 'Filters', exact: true }).click()
       const filters = page.locator('[data-slot="dropdown-menu-content"]:visible').last()
       await expect(filters).toBeVisible()
@@ -3129,7 +3131,7 @@ for (const width of [390, 1440]) {
       await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => route.fulfill({ json: [{ id: 'stable-section-job', name: 'Test job', prompt: 'Check sections', enabled: true }] }))
       await open(page)
       if (width === 390) {
-        await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
+        await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
         await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
       }
       const section = page.locator('[data-browser-section-id="cron-jobs"]')
@@ -3151,7 +3153,7 @@ for (const width of [390, 1440]) {
       await page.reload()
       await expect(editor(page)).toBeVisible({ timeout: 30000 })
       if (width === 390) {
-        await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
+        await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
         await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
       }
       await expect(section).toBeHidden()
@@ -3287,7 +3289,7 @@ test.describe('Bots touch refresh', () => {
     if(!await editor(page).isVisible()) { await sessionsTab.click(); await session.click() }
     await expect(editor(page)).toBeVisible()
     await editor(page).fill('Keep this draft while refreshing Bots')
-    await page.getByRole('button',{name:/^(Open navigation|Back to home)$/}).click()
+    await page.getByRole('button',{name:/^(Open navigation|Back to home|Back to chat history)$/}).click()
     await expect(page.getByRole('dialog',{name:'Navigation',exact:true})).toBeVisible()
     await page.getByRole('tab',{name:'Bots',exact:true}).click()
     const surface = page.locator('[data-browser-bots-refresh]')
@@ -3384,7 +3386,7 @@ for (const width of [1440, 390]) {
 test('Profile grouping replaces presentation controls and switches live without gateway nesting', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
   await page.route('**/api/athena/preferences', route => route.abort())
-  await open(page)
+  await open(page, 'preview-week', { defaultGrouping: true })
   await editor(page).fill('Keep my draft while grouping by profile')
   const chooseGrouping = async name => {
     await page.getByRole('button', { name: 'Filters', exact: true }).click()

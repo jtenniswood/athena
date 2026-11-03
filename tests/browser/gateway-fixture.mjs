@@ -52,6 +52,11 @@ export const test = base.extend({
 
 export const editor = page => page.locator('[contenteditable="true"]:visible').first()
 export async function openConversation(page, origin, session = 'preview-week') {
+  // Selection-race scenarios use the profile rail, a supported saved layout.
+  await page.addInitScript(() => {
+    const key = 'hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles'
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, 'none')
+  })
   await page.goto(`${origin}/#/${session}`)
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
   await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', session)
