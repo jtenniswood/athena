@@ -1,7 +1,19 @@
-import { createContext, useContext, useLayoutEffect, useRef, type ReactNode } from 'react'
+import { createContext, lazy, Suspense, useContext, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { Routes, useLocation, type Location } from 'react-router'
 import { appViewForPath, isOverlayView } from '@/app/routes'
-import { isBrowserToolRoute } from '../experience/tool-routes'
+import { registry } from '@/contrib/registry'
+import { isBrowserToolRoute, SCHEDULED_TASKS_ROUTE } from '../experience/tool-routes'
+
+const ScheduledTasksPage = lazy(() => import('../experience/scheduled-tasks-page'))
+// Register before wiring mounts so the session router never treats this path as a chat ID.
+const disposeScheduledTasks = registry.register({
+  id: 'athena:scheduled-tasks',
+  area: 'routes',
+  title: SCHEDULED_TASKS_ROUTE.label,
+  data: { path: SCHEDULED_TASKS_ROUTE.path },
+  render: () => <Suspense fallback={<p role="status">Loading scheduled tasks…</p>}><ScheduledTasksPage /></Suspense>
+})
+if (import.meta.hot) import.meta.hot.dispose(disposeScheduledTasks)
 
 const PageSurface = createContext(false)
 
