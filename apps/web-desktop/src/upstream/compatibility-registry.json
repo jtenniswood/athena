@@ -598,7 +598,7 @@
     "sourceHash": "bc91540c2f89b27f39c363d92997488d40bae1a9e3bb39650d747bc5337d4c0b",
     "sourceRoot": "renderer",
     "inputHash": "bc91540c2f89b27f39c363d92997488d40bae1a9e3bb39650d747bc5337d4c0b",
-    "outputHash": "72ffabc34d6a670d8f8ae7a5c3aaeac01f56086b21902f5c2fc1677c8e12fba4"
+    "outputHash": "ff553c49b8b04e05ab9e93090571c2cc28587bf684d4b1bfb6b1efc89a66e2df"
   },
   {
     "name": "single-conversation-menus",
