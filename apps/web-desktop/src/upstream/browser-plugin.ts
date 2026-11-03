@@ -1382,7 +1382,7 @@ export function disableBrowserSessionRowTabs(source: string): string {
   const rowTarget = '      <SidebarRowShell\n        actions={card ? undefined : actionsNode}\n'
   if (source.split(rowTarget).length !== 2) throw new Error('Browser session project-drop row target changed')
   return source.replaceAll(tabAction, 'onResume()').replace(windowAction, 'onResume()')
-    .replace(rowTarget, `${rowTarget}        data-web-session-id={session.id}\n        data-web-session-profile={session.profile || 'default'}\n`)
+    .replace(rowTarget, `${rowTarget}        data-web-session-id={session.id}\n        data-web-session-profile={session.profile || 'default'}\n        data-web-session-selected={isSelected || undefined}\n`)
 }
 
 export function useBrowserSessionPreview(source: string, root: string): string {
