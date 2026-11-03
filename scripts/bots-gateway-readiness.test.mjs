@@ -7,7 +7,7 @@ import { test } from 'node:test'
 import ts from 'typescript'
 
 const root = path.resolve('apps/web-desktop')
-const pluginFile = path.join(root, 'src/upstream/browser-plugin.ts')
+const pluginFile = path.join(root, 'build/renderer/browser-plugin.ts')
 const compile = source => ts.transpileModule(source, { compilerOptions: {
   module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true
 } }).outputText

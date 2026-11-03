@@ -58,7 +58,7 @@ test('readonly plugin decisions support equality and computed subscriptions with
   const { readFileSync } = await import('node:fs')
   const { default: ts } = await import('typescript')
   const { atom, computed } = await import('nanostores')
-  const file = path.join(root, 'src/upstream/transforms.ts')
+  const file = path.join(root, 'build/renderer/transforms.ts')
   const context = vm.createContext({ exports: {}, require: createRequire(file) })
   vm.runInContext(ts.transpileModule(readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText, context)
   const sourceFile = path.resolve('apps/desktop/src/sdk/bridge.ts')

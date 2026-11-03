@@ -53,7 +53,7 @@ export function createRendererAdapter(root = path.join(repositoryRoot, 'apps/web
   verifyInstalledInputs(registry, path.resolve(root, '../..'))
   const loader = createBuildModuleLoader()
   const definitions = ['athena-branding.ts', 'browser-plugin.ts', 'transforms.ts']
-    .map(file => path.join(root, 'src/upstream', file))
+    .map(file => path.join(root, 'build/renderer', file))
   const [branding, browser, renderer] = definitions.map(loader.load)
   const stages = [
     branding.athenaBranding(),
@@ -128,7 +128,7 @@ export function rendererAdapterPlugin(root) {
       return output === code ? null : { code: output, map: null }
     },
     configureServer(server) {
-      const watched = [...adapter.definitions, path.join(root, 'src/upstream/compatibility-registry.json')]
+      const watched = [...adapter.definitions, path.join(root, 'build/renderer/compatibility-registry.json')]
       server.watcher.add(watched)
       server.watcher.on('change', file => { if (watched.includes(file)) void server.restart() })
     }

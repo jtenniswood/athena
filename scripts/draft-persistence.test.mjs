@@ -97,7 +97,7 @@ test('storage bounds retain the newest keys without mutating malformed records',
 })
 
 test('actual composer flushes preserve stale-tab drafts and ordinary saves remain synchronous', async () => {
-  const filename = new URL('../apps/web-desktop/src/upstream/transforms.ts', import.meta.url)
+  const filename = new URL('../apps/web-desktop/build/renderer/transforms.ts', import.meta.url)
   const transformContext = vm.createContext({ exports: {}, require: createRequire(filename) })
   vm.runInContext(ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText, transformContext)
   const composerFile = new URL('../apps/desktop/src/store/composer.ts', import.meta.url)

@@ -98,47 +98,6 @@ export function useBrowserSetupHooks(source: string): string {
   return source.replace(pattern, (match, indent) => match.replace('<div ', '<div data-browser-overlay="setup" ').replace('\n' + indent + '<div ', '\n' + indent + '<div data-browser-overlay-card="setup" '))
 }
 
-export function useBrowserSearchLabel(source: string, root: string): string {
-  const ariaTarget = 'aria-label={s.searchAria}'
-  const placeholderTarget = 'placeholder={s.searchPlaceholder}'
-  if (source.split(ariaTarget).length !== 2 || source.split(placeholderTarget).length !== 2) {
-    throw new Error('Browser sidebar search label target changed')
-  }
-  const slotTarget = '              value={searchQuery}\n            />'
-  if (source.split(slotTarget).length !== 2) throw new Error('Browser sidebar disclosure target changed')
-  const settingsSlot = '                  </SidebarMenuItem>\n                )\n              })}'
-  if (source.split(settingsSlot).length !== 2) throw new Error('Browser sidebar settings slot changed')
-  const extras = JSON.stringify(path.join(root, 'src/experience/sidebar-extras.tsx'))
-  // Give the browser visibility preference a stable, label-independent target.
-  const pinnedTarget = 'rootClassName="shrink-0 p-0 pb-1"'
-  if (source.split(pinnedTarget).length !== 2) throw new Error('Browser pinned section target changed')
-  const pinnedSection = '{!trimmedQuery && ('
-  const pinnedSectionStart = source.lastIndexOf(pinnedSection, source.indexOf(pinnedTarget))
-  if (pinnedSectionStart < 0 || !source.slice(pinnedSectionStart, source.indexOf(pinnedTarget)).includes('<SidebarSessionsSection')) throw new Error('Browser pinned section visibility target changed')
-  const hooks: [string, string][] = [
-    ['<div className="shrink-0 px-2 pb-1 pt-1">', '<div className="browser-session-search-section shrink-0 px-2 pb-1 pt-1">'],
-    ['<SearchField', '<SearchField containerClassName="browser-session-search"'],
-    ['rootClassName="min-h-32 flex-1 overflow-hidden p-0"', 'rootClassName="browser-session-list-section min-h-32 flex-1 overflow-hidden p-0"'],
-    ["'min-h-32 flex-1 overflow-hidden p-0'", "'browser-session-list-section min-h-32 flex-1 overflow-hidden p-0'"]
-  ]
-  for (const [before, after] of hooks) {
-    if (source.split(before).length !== 2) throw new Error('Browser sidebar styling target changed')
-    source = source.replace(before, after)
-  }
-  // Use resolved pins, including backend pins, rather than DOM rows: a
-  // collapsed populated section must still keep its heading visible.
-  const currentPinnedTarget = source.indexOf(pinnedTarget)
-  const currentPinnedStart = source.lastIndexOf(pinnedSection, currentPinnedTarget)
-  if (currentPinnedStart < 0) throw new Error('Browser pinned section visibility target changed')
-  source = source.slice(0, currentPinnedStart) + source.slice(currentPinnedStart).replace(pinnedSection, '{!trimmedQuery && pinnedSessions.length > 0 && (')
-  return (`import { BrowserSidebarExtras, BrowserSidebarSettings } from ${extras}\n` + source)
-    .replace(pinnedTarget, 'rootClassName="browser-pinned-section shrink-0 p-0 pb-1"')
-    .replace(slotTarget, slotTarget + '\n            <BrowserSidebarExtras />')
-    .replace(settingsSlot, '                    {isNewSession && <BrowserSidebarSettings />}\n' + settingsSlot)
-    .replace(ariaTarget, "aria-label={'Search'}")
-    .replace(placeholderTarget, "placeholder={'Search'}")
-}
-
 export function disableBrowserOnboardingTips(source: string): string {
   const tipImport = "import { TipHost } from '@/components/tips'\n"
   const tipHost = '<TipHost />'

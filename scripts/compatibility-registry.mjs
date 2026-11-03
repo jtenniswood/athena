@@ -4,7 +4,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { repositoryRoot } from './renderer.mjs'
 
-export const registryPath = 'apps/web-desktop/src/upstream/compatibility-registry.json'
+export const registryPath = 'apps/web-desktop/build/renderer/compatibility-registry.json'
 export const sourceRoots = { renderer: 'apps/desktop/src', shared: 'apps/shared/src', dependency: 'node_modules' }
 const kinds = new Set(['renderer-transform', 'browser-transform', 'replacement', 'source-contract', 'dependency-transform', 'alias', 'dedupe', 'virtual-module', 'asset-adapter'])
 const relativeFile = value => typeof value === 'string' && /^[@\w./-]+$/.test(value) && !value.startsWith('/') && !value.split('/').includes('..')
@@ -77,7 +77,7 @@ const cell = value => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ')
 export function inventoryMarkdown(registry) {
   return [
     '# Browser compatibility inventory', '',
-    'Generated from `apps/web-desktop/src/upstream/compatibility-registry.json` by `node scripts/compatibility-registry.mjs --write`. Edit the registry, then regenerate this document. Generation never accepts or recalculates fingerprints.', '',
+    'Generated from `apps/web-desktop/build/renderer/compatibility-registry.json` by `node scripts/compatibility-registry.mjs --write`. Edit the registry, then regenerate this document. Generation never accepts or recalculates fingerprints.', '',
     'Order records the configured resolution/transform stage: aliases and source contracts first, dependency fixes at 5, component replacements at 10, browser composition at 20, renderer transforms at 30, and dependent activity filtering at 40. Handler arrays record composition order within one entry. Resolution and transformation are separate Vite phases; these numbers do not imply a global ordering across modules.', '',
     'Each behavioral reference is a declared verification path checked against test source, not proof that the scenario ran. The compatibility workflow checks the registry, typechecks, and builds the browser; execute focused behavioral tests when relevant to a change. The optional preflight artifact includes `compatibility-coverage.json`; it does not claim measured code coverage.', '',
     '| Entry / kind / order | Target | Purpose / owner | Behavioral verification | Removal condition |',

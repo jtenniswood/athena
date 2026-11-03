@@ -49,7 +49,7 @@ RUN apk add --no-cache nodejs
 # the shared validated configuration generator at container start.
 COPY nginx.conf.template /etc/nginx/hermes.conf.template
 COPY scripts/runtime-config.mjs /opt/hermes/runtime-config.mjs
-COPY scripts/preference-schema.mjs scripts/browser-preference-contract.mjs scripts/runtime-config.mjs scripts/serve.mjs /opt/hermes/scripts/
+COPY scripts/preference-schema.mjs scripts/browser-preference-contract.mjs scripts/runtime-config.mjs /opt/hermes/scripts/
 COPY apps/web-desktop/server /opt/hermes/apps/web-desktop/server
 COPY --from=dependencies /runtime-ws /opt/hermes/node_modules/ws
 COPY docker-entrypoint.sh /docker-entrypoint.sh
@@ -67,4 +67,4 @@ VOLUME /data/athena
 EXPOSE 80
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["node", "/opt/hermes/scripts/serve.mjs"]
+CMD ["node", "/opt/hermes/apps/web-desktop/server/main.mjs"]

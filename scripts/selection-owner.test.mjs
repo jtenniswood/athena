@@ -12,7 +12,7 @@ function evaluate(source, require) {
   vm.runInContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, context)
   return context.exports
 }
-const file = path.join(root, 'src/upstream/browser-plugin.ts')
+const file = path.join(root, 'build/renderer/browser-plugin.ts')
 const { useBrowserOpenSessionOwner } = createBuildModuleLoader().load(file)
 const source = useBrowserOpenSessionOwner(readFileSync('apps/desktop/src/app/open-session.ts', 'utf8'), root)
 function harness() {
