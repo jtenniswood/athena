@@ -115,3 +115,18 @@ test('unread queues do not block other conversations or change a same-ID foreign
   h.requests[0].resolve({ ok: true })
   await first
 })
+
+test('settled unread writes notify subscribers after pending ownership is released', async () => {
+  const h = harness()
+  let observed
+  const observe = () => { observed = h.pendingUnreadValue('chat', 'research') ?? h.sessions.get()[0].unread }
+  h.$unreadWriteGuard.listen(observe)
+  h.sessions.listen(observe)
+  const writing = h.markSessionUnread('chat', true)
+  const rejected = assert.rejects(writing, /Unread rejected/)
+  await flush()
+  assert.equal(observed, true)
+  h.requests[0].reject(new Error('Unread rejected'))
+  await rejected
+  assert.equal(observed, false, 'the last published state must include the rollback and completed ownership')
+})

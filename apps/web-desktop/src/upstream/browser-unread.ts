@@ -54,7 +54,12 @@ export async function markSessionUnread(storedId: string, unread: boolean): Prom
   })
   state.tail = request.catch(() => {})
   try { await request } finally {
-    if (state.latest === operation && writes.get(key) === state) writes.delete(key)
+    if (state.latest === operation && writes.get(key) === state) {
+      writes.delete(key)
+      // Subscribers derive their value from both rows and pending ownership.
+      // Publish after releasing that ownership so a rollback is observable.
+      $unreadWriteGuard.set(new Map($unreadWriteGuard.get()))
+    }
   }
 }
 

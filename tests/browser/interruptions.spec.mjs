@@ -207,12 +207,12 @@ for (const action of ['archive', 'delete']) {
 test('rejected approval change restores the confirmed mode and explains the failure', async ({ page, gatewayApp }) => {
   await openConversation(page, gatewayApp.origin)
   const control = page.locator('.browser-approval-control button')
-  await expect(control.locator('svg')).toHaveClass(/brain/)
+  await expect(control.locator('[data-mode-name]')).toHaveText('Smart')
   gatewayApp.controls.reject({ transport: 'rpc', method: 'config.set' }, 'Approval rejected')
   await control.click()
   await page.getByRole('menuitemradio', { name: /Off/ }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'Could not change approval mode.' })).toBeVisible()
-  await expect(control.locator('svg')).toHaveClass(/brain/)
+  await expect(control.locator('[data-mode-name]')).toHaveText('Smart')
 })
 
 test('a delayed archive cannot navigate away from a newer conversation', async ({ page, gatewayApp }) => {
@@ -246,15 +246,19 @@ test('rejected unread change rolls back the action and preserves the draft', asy
 })
 
 test('a delayed delete cannot navigate away from a newer conversation', async ({ page, gatewayApp }) => {
-  await openConversation(page, gatewayApp.origin)
+  await openConversation(page, gatewayApp.origin, 'preview-idea')
+  await editor(page).fill('Keep the newer conversation after deletion')
+  await page.getByText('Plan a calmer working week', { exact: true }).first().click()
+  await expect(page).toHaveURL(/#\/preview-week$/)
   const deletion = gatewayApp.controls.hold({ transport: 'http', method: 'DELETE', path: '/api/sessions/preview-week' })
   await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
   await page.getByRole('menuitem', { name: 'Delete', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click()
   await deletion.entered
-  await page.getByText('Explore a product idea', { exact: true }).first().click()
+  // Browser address/history navigation can change the route while confirmation is busy.
+  await page.evaluate(() => { location.hash = '/preview-idea' })
   await expect(page).toHaveURL(/#\/preview-idea$/)
-  await editor(page).fill('Keep the newer conversation after deletion')
+  await expect(editor(page)).toHaveText('Keep the newer conversation after deletion')
   const completed = page.waitForResponse(response => response.url().includes('/api/sessions/preview-week') && response.request().method() === 'DELETE')
   deletion.release()
   await completed
@@ -382,7 +386,7 @@ test('opening a session queues its automatic read behind a pending unread write'
 
 test('approval initialization waits for the gateway without a false action error', async ({ page, gatewayApp }) => {
   await openConversation(page, gatewayApp.origin)
-  await expect(page.locator('.browser-approval-control button svg')).toHaveClass(/brain/)
+  await expect(page.locator('.browser-approval-control [data-mode-name]')).toHaveText('Smart')
   await expect.poll(() => gatewayApp.controls.calls.some(call => call.method === 'config.get' && call.params.key === 'approvals.mode')).toBe(true)
   await expect(page.getByRole('alert').filter({ hasText: 'Could not load approval mode.' })).toHaveCount(0)
 })
