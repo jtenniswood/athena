@@ -1217,6 +1217,21 @@ export function enableBrowserUngroupedSessions(source: string, surface: 'store' 
   return output
 }
 
+export function removeBrowserSplitControls(source: string): string {
+  const start = '                // New session + route-backed pages can open in a split —\n'
+  const end = '\n              })}'
+  const from = source.indexOf(start)
+  const to = source.indexOf(end, from)
+  if (source.split(start).length !== 2 || to < from || !source.slice(from, to).includes('<SplitSubmenu')) {
+    throw new Error('Browser navigation split menu boundary changed')
+  }
+  // Keep the navigation button without the split-only context menu.
+  return replaceBrowserContract(source.slice(0, from) + `                return <SidebarMenuItem key={item.id}>{button}</SidebarMenuItem>` + source.slice(to), [
+    ["import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu'\n", ''],
+    ["import { CONTEXT_SPLIT_KIT, SplitSubmenu } from './split-submenu'\n", '']
+  ])
+}
+
 export function disableBrowserSessionTabs(source: string): string {
   const keybind = '    openNewSessionTab,\n'
   const marker = '    // Browser-focused shell does not register chat tab creation.\n    openNewSessionTab: () => undefined,\n'
@@ -1455,7 +1470,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserBotsPullRefresh: source => useBrowserBotsPullRefresh(source, root),
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth,
     filterBrowserSessionMenu: source => filterBrowserSessionMenu(source, root),
-    showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
+    showHiddenBotsInBrowserRoster, removeBrowserSplitControls, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
     disableBrowserSessionRowTabs,
     disableBrowserSessionOpenActions: source => disableBrowserSessionOpenActions(source, root),
     filterBrowserKeybinds,
