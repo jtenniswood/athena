@@ -1,0 +1,103 @@
+/* Motion guidance: https://github.com/emilkowalski/skills/tree/main/skills/emil-design-eng
+   Own motion at the browser boundary, including body-level Radix portals.
+   Keep positioning transforms intact: scale is independent of translate. */
+html[data-experience='browser'] :is(
+  .browser-action-menu, .browser-action-sheet, .browser-action-backdrop,
+  [data-slot='dropdown-menu-content'], [data-slot='dropdown-menu-sub-content'],
+  [data-slot='context-menu-content'], [data-slot='context-menu-sub-content'],
+  [data-slot='dialog-content'], [data-slot='dialog-overlay']
+) {
+  animation: none !important;
+  transition: none;
+}
+
+/* Hidden navigation uses display:none, so its entry is handled by
+   @starting-style below. Closing releases focus and hit testing immediately. */
+html[data-experience='browser'] .browser-navigation {
+  transition: none;
+}
+
+html[data-browser-input='keyboard'] :is(.browser-panel-toggle, .browser-panel-toggle > span) {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-browser-input='pointer'] :is(
+    .browser-action-menu,
+    [data-slot='dropdown-menu-content'], [data-slot='dropdown-menu-sub-content'],
+    [data-slot='context-menu-content'], [data-slot='context-menu-sub-content']
+  ) {
+    transform-origin: var(--radix-dropdown-menu-content-transform-origin, var(--radix-context-menu-content-transform-origin, center));
+    transition: opacity var(--web-motion-enter) var(--web-ease-out),
+      scale var(--web-motion-enter) var(--web-ease-out);
+  }
+
+  html[data-browser-input='pointer'] [data-slot='dialog-content'] {
+    transform-origin: center;
+    transition: opacity var(--web-motion-enter) var(--web-ease-out),
+      scale var(--web-motion-enter) var(--web-ease-out);
+  }
+
+  html[data-browser-input='pointer'] .browser-action-sheet {
+    transition: opacity var(--web-motion-enter) var(--web-ease-out),
+      transform var(--web-motion-drawer) var(--web-ease-drawer);
+  }
+
+  html[data-browser-input='pointer'] :is(.browser-action-backdrop, [data-slot='dialog-overlay']) {
+    transition: opacity var(--web-motion-enter) var(--web-ease-out);
+  }
+
+  html[data-browser-input='pointer'] :is(.browser-action-error, .browser-update-panel) {
+    transition: opacity var(--web-motion-enter) var(--web-ease-out);
+  }
+
+  /* Press feedback applies to the shared toolbar, including portalled tools.
+     Individual scale preserves controls that already translate for alignment. */
+  html[data-browser-input='pointer'] [data-browser-toolbar-button]:not(:disabled) {
+    transition: scale var(--web-motion-press) var(--web-ease-out);
+  }
+  html[data-browser-input='pointer'] [data-browser-toolbar-button]:not(:disabled):active {
+    scale: .97;
+  }
+
+  @starting-style {
+    html[data-browser-input='pointer'] :is(
+      .browser-action-menu, [data-slot='dropdown-menu-content'],
+      [data-slot='dropdown-menu-sub-content'], [data-slot='context-menu-content'],
+      [data-slot='context-menu-sub-content'], [data-slot='dialog-content']
+    ) {
+      opacity: 0;
+      scale: .97;
+    }
+    html[data-browser-input='pointer'] .browser-action-sheet {
+      opacity: 0;
+      transform: translateY(1rem);
+    }
+    html[data-browser-input='pointer'] :is(.browser-action-backdrop, [data-slot='dialog-overlay'], .browser-action-error, .browser-update-panel) {
+      opacity: 0;
+    }
+  }
+
+  @media (width < 48rem), (pointer: coarse) and (max-height: 27rem) {
+    html[data-browser-input='pointer'] .browser-navigation.is-open {
+      transition: opacity var(--web-motion-enter) var(--web-ease-out),
+        transform var(--web-motion-drawer) var(--web-ease-drawer);
+    }
+    @starting-style {
+      html[data-browser-input='pointer'] .browser-navigation.is-open {
+        opacity: 0;
+        transform: translateX(-.75rem);
+      }
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-experience='browser'] :is(.browser-panel-toggle, .browser-panel-toggle > span) {
+    transition: none;
+  }
+  /* Keep the running-session indicator visible without continuous rotation. */
+  .browser-sessions-pane [data-working='true'] time::after {
+    animation: none;
+  }
+}
