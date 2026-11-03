@@ -3368,7 +3368,7 @@ test('Profile grouping replaces presentation controls and switches live without 
   await expect(page.locator('[data-browser-profile-picture="default"]')).toBeVisible()
   await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
   await expect(page.locator('[data-browser-profile-project]')).toHaveCount(0)
-  await expect(page.locator('[data-gateway-group]')).toHaveCount(1)
+  await expect(page.locator('[data-gateway-group]')).toHaveCount(3)
   const sectionHeader = page.locator('[data-browser-section-id="sessions"] [data-browser-section-header]')
   await expect(sectionHeader.getByRole('button', { name: 'New session', exact: true })).toHaveCount(0)
   const profileHeader = page.locator('[data-gateway-group]').first()
@@ -3397,6 +3397,41 @@ test('Profile grouping replaces presentation controls and switches live without 
   await page.getByRole('button', { name: 'Filters', exact: true }).click()
   await page.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
   await expect(page.getByRole('menuitemradio', { name: 'None', exact: true })).toHaveAttribute('aria-checked', 'true')
+})
+
+test('empty profiles stay visible and can start conversations when there are no chats', async ({ page }) => {
+  const creates = []
+  await page.routeWebSocket(/\/api\/ws/, socket => {
+    const server = socket.connectToServer()
+    socket.onMessage(message => {
+      const frame = JSON.parse(String(message))
+      if (frame.method === 'session.create') creates.push(frame.params)
+      server.send(message)
+    })
+    server.onMessage(message => socket.send(message))
+  })
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await page.route('**/api/athena/preferences', route => route.abort())
+  await page.route(/\/api\/(?:profiles\/)?sessions(?:\/sidebar)?(?:\?|$)/, route => {
+    if (route.request().method() !== 'GET') return route.continue()
+    const empty = { sessions: [], total: 0, has_more: false, limit: 40, offset: 0 }
+    return route.fulfill({ json: route.request().url().includes('/sidebar') ? { recents: empty, cron: empty, messaging: empty } : empty })
+  })
+  await page.goto(`${origin}/#/`)
+  await expect(editor(page)).toBeVisible({ timeout: 30000 })
+  const section = page.locator('[data-browser-section-id="sessions"]')
+  await expect(section.locator('[data-gateway-group]')).toHaveCount(3)
+  for (const profile of ['default', 'research', 'writer']) {
+    await expect(section.locator(`[data-browser-profile-picture="${profile}"]`)).toBeVisible()
+  }
+  const research = section.locator('[data-gateway-group]').filter({ has: page.locator('[data-browser-profile-picture="research"]') })
+  await research.hover()
+  await research.getByRole('button', { name: /^New (?:session|conversation) in Research$/ }).click()
+  await expect(editor(page)).toBeVisible()
+  await editor(page).fill('Start a conversation in an empty profile')
+  await editor(page).press('Enter')
+  await expect.poll(() => creates.length).toBe(1)
+  expect(creates[0].profile).toBe('research')
 })
 
 test('configured Telegram appears without chats and channel controls exclude unset platforms', async ({ page }) => {

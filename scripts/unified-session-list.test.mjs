@@ -18,7 +18,7 @@ function load(file, mocks, globals = {}) {
 test('profile grouping uses the native all-profile scope', () => {
   const { useBrowserSessionPresentation } = load('src/upstream/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/index.tsx'), 'utf8')
-  const output = useBrowserSessionPresentation(source)
+  const output = useBrowserSessionPresentation(source, root)
   assert.match(output, /label=\{grouping === 'profile' \? 'Profiles' : sessionsLabel\}/)
   assert.doesNotMatch(output, /browserPresentationMode/)
 })
@@ -52,4 +52,40 @@ test('profile sections reuse configured pictures and keep exact owner routes', (
   assert.equal(useBrowserProfileSection('unknown').label, 'unknown')
   enabled = false
   assert.equal(useBrowserProfileSection('research'), null)
+})
+
+test('profile grouping keeps empty configured profiles as new conversation entry points', () => {
+  let profiles = [{ name: 'default' }, { name: 'research' }]
+  const { useBrowserProfileGroups } = load('src/upstream/profile-groups.ts', id => {
+    if (id === '@nanostores/react') return { useStore: store => store === 'profiles' ? profiles : {} }
+    if (id === '@/store/profile') return { $profiles: 'profiles', $profileColors: 'colors' }
+    if (id === '@/lib/profile-color') return { resolveProfileColor: name => `${name}-color` }
+    if (id === '../platform/connection') return { WEB_CONNECTION_ID: 'web-single' }
+    throw new Error(`Unexpected import: ${id}`)
+  })
+  assert.equal(useBrowserProfileGroups(undefined), undefined)
+  const empty = useBrowserProfileGroups([])
+  assert.deepEqual(Array.from(empty, group => group.profile), ['default', 'research'])
+  assert.ok(empty.every(group => group.sessions.length === 0))
+  assert.equal(empty[1].connectionId, 'web-single')
+  assert.equal(empty[1].id, JSON.stringify(['web-single', 'research']))
+  assert.equal(empty[1].color, 'research-color')
+  const populated = { ...empty[1], sessions: [{ id: 'research-chat' }] }
+  const input = [populated]
+  const mixed = useBrowserProfileGroups(input)
+  assert.equal(mixed.length, 2)
+  assert.equal(mixed[1], populated)
+  assert.equal(input.length, 1)
+  const legacy = { ...populated, id: JSON.stringify([null, 'research']), connectionId: null }
+  assert.equal(useBrowserProfileGroups([legacy]).length, 2)
+  assert.equal(useBrowserProfileGroups([legacy])[1], legacy)
+  profiles = [...profiles, { name: 'writing' }]
+  assert.equal(useBrowserProfileGroups(input).length, 3)
+
+  const { useBrowserSessionReordering } = load('src/upstream/browser-plugin.ts')
+  const section = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/sessions-section.tsx'), 'utf8')
+  const output = useBrowserSessionReordering(section, 'section')
+  const expression = output.match(/const hasGroupedSessions = ([^\n]+)/)[1]
+  assert.equal(vm.runInNewContext(expression, { groups: empty }), true)
+  assert.equal(vm.runInNewContext(expression, { groups: [{ mode: 'project', sessions: [] }] }), false)
 })
