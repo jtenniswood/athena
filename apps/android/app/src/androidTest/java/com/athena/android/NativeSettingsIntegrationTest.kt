@@ -52,7 +52,7 @@ class NativeSettingsIntegrationTest {
                     MainActivity::class.java.getDeclaredMethod("openServer", android.os.Bundle::class.java)
                         .apply { isAccessible = true }.invoke(activity, null)
                     web = field(activity, "web") as WebView
-                    presenter = (field(activity, "settingsPage$" + "delegate") as Lazy<*>).value as NativeSettingsPage
+                    presenter = legacyPresenter(activity, "settingsPage") as NativeSettingsPage
                     web.stopLoading()
                     web.loadDataWithBaseURL("https://athena.example/", """
                         <!doctype html><meta name="viewport" content="width=device-width">
