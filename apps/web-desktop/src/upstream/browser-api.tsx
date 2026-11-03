@@ -1,5 +1,6 @@
 // Renderer visual primitives and presentation helpers stay at this boundary.
 export type { PageSearchShell } from '@/app/page-search-shell'
+export { ErrorState } from '@/components/ui/error-state'
 export { Button, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, SearchField } from '@hermes/plugin-sdk'
 export { SidebarProvider } from '@/components/ui/sidebar'
 export { Codicon } from '@/components/ui/codicon'
