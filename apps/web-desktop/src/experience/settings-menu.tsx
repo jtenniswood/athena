@@ -2,6 +2,7 @@ import { useEffect, useState, type RefObject } from 'react'
 import { androidAppSettingsMenu, androidOpenAppSettings, isAndroidApp } from '../platform/android'
 import { Codicon } from '../upstream/browser-api'
 import { BrowserToolbarButton } from './ui/toolbar-button'
+import { SCHEDULED_TASKS_ROUTE } from './tool-routes'
 
 type SettingsLinkProps = {
   triggerRef: RefObject<HTMLButtonElement | null>
@@ -14,6 +15,12 @@ type SettingsLinkProps = {
 export function SettingsLink({ triggerRef, onOpenRoute, triggerClassName, triggerLabel, triggerTooltip = 'Settings' }: SettingsLinkProps) {
   return <BrowserToolbarButton ref={triggerRef} tooltip={triggerTooltip} className={triggerClassName} aria-label="Settings" onClick={() => onOpenRoute('/settings')}>
     <Codicon name="settings-gear" />{triggerLabel && <span>{triggerLabel}</span>}
+  </BrowserToolbarButton>
+}
+
+export function ScheduledTasksLink({ onOpenRoute }: { onOpenRoute: SettingsLinkProps['onOpenRoute'] }) {
+  return <BrowserToolbarButton tooltip={SCHEDULED_TASKS_ROUTE.label} className="browser-navigation-settings-link" aria-label={SCHEDULED_TASKS_ROUTE.label} onClick={() => onOpenRoute(SCHEDULED_TASKS_ROUTE.path)}>
+    <Codicon name={SCHEDULED_TASKS_ROUTE.icon} /><span>{SCHEDULED_TASKS_ROUTE.label}</span>
   </BrowserToolbarButton>
 }
 

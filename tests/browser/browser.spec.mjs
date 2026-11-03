@@ -87,6 +87,60 @@ const open = async (page, session = 'preview-week', { defaultGrouping = false } 
   await expect(page.getByText('Help me make a thoughtful plan.', { exact: true }).first()).toBeVisible({ timeout: 30000 })
 }
 
+for (const width of [1440, 390]) {
+  test.extend({ hasTouch: width === 390 })(`scheduled tasks show every profile and preserve the chat at ${width}px`, async ({ page }, testInfo) => {
+    const errors = []
+    page.on('pageerror', error => errors.push(error.message))
+    let writerUnavailable = true
+    await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => {
+      const profile = new URL(route.request().url()).searchParams.get('profile')
+      if (profile === 'writer' && writerUnavailable) return route.fulfill({ status: 503, json: { error: 'Temporarily unavailable' } })
+      const jobs = profile === 'writer' ? [] : [{
+        id: 'copied-job', name: profile === 'research' ? 'Research briefing' : 'Morning briefing',
+        enabled: true, state: 'scheduled', schedule_display: 'Every day at 09:00',
+        prompt: `Prepare the ${profile} briefing`, next_run_at: '2099-01-01T09:00:00Z'
+      }]
+      return route.fulfill({ json: jobs })
+    })
+    await page.setViewportSize({ width, height: 900 })
+    await open(page)
+    await editor(page).fill('Keep this draft while reviewing all scheduled tasks')
+    const settings = await settingsTrigger(page)
+    const link = page.getByRole('button', { name: 'Scheduled tasks', exact: true })
+    expect((await link.boundingBox()).y).toBeGreaterThan((await settings.boundingBox()).y)
+    const profileSelection = await page.locator('.browser-profile-choice[aria-pressed="true"]').getAttribute('aria-label')
+    await link.click()
+    const surface = page.getByRole('region', { name: 'Scheduled tasks', exact: true })
+    await expect(surface.getByRole('heading', { name: 'Scheduled tasks', exact: true })).toBeVisible()
+    await expect(surface.locator('details')).toHaveCount(2)
+    await expect(surface.getByRole('alert')).toContainText('Writer')
+    await surface.getByLabel('Profile', { exact: true }).selectOption('research')
+    await expect(surface.locator('details')).toHaveCount(1)
+    await surface.locator('summary').click()
+    await expect(surface.getByText('Prepare the research briefing', { exact: true })).toBeVisible()
+    await surface.getByLabel('Profile', { exact: true }).selectOption('')
+    await surface.getByRole('searchbox', { name: 'Search tasks' }).fill('Morning')
+    await expect(surface.locator('details')).toHaveCount(1)
+    await surface.getByRole('searchbox').fill('No matching task')
+    await expect(surface.getByText('No tasks match your search or profile filter.')).toBeVisible()
+    await surface.getByRole('searchbox').fill('')
+    writerUnavailable = false
+    await surface.getByRole('button', { name: 'Refresh', exact: true }).click()
+    await expect(surface.getByRole('alert')).toHaveCount(0)
+    await expect(surface.locator('details')).toHaveCount(2)
+    expect(await surface.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true)
+    await surface.evaluate(node => { node.scrollTop = 0 })
+    await expect(surface.getByRole('heading', { name: 'Scheduled tasks', exact: true })).toBeInViewport()
+    expect((await surface.locator('.browser-scheduled-task-title').first().boundingBox()).width).toBeGreaterThan(120)
+    await testInfo.attach(`scheduled-tasks-${width}`, { body: await page.screenshot(), contentType: 'image/png' })
+    await page.getByRole('button', { name: 'Close Scheduled tasks', exact: true }).click()
+    await expect(page).toHaveURL(/#\/preview-week$/)
+    await expect(editor(page)).toHaveText('Keep this draft while reviewing all scheduled tasks')
+    expect(await page.locator('.browser-profile-choice[aria-pressed="true"]').getAttribute('aria-label')).toBe(profileSelection)
+    expect(errors).toEqual([])
+  })
+}
+
 test('chat hover previews show the latest reply without selecting the chat or changing its draft', async ({ page }) => {
   const fullTitle = 'Explore a product idea with a deliberately long title that should fade at the edge and remain fully readable in the preview card'
   await page.route(/\/api\/profiles\/sessions/, async route => {
