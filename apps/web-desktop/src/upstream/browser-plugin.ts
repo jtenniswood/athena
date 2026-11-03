@@ -1052,8 +1052,25 @@ export function useBrowserProjectDeleteOwner(source: string, root: string): stri
   return `import { browserProjectDeleteProfile } from ${owner}\n` + output
 }
 
-export function useBrowserProjectDisclosure(source: string): string {
+export function useBrowserProjectDisclosure(source: string, root: string): string {
   const changes: [string, string][] = [
+    ["import { fetchProjectSessions, projectProfile } from '@/store/projects'", "import { notifyError } from '@/store/notifications'"],
+    ['  expandedProjectSessions,\n', ''],
+    ['expandedProjectSessions(recent, visible)', 'browserExpandedProjectSessions(recent, visible)'],
+    [
+      `    // All-profiles view has no single backend to ask for one project's lanes;
+    // drilling in is the reach there.
+    if (!projectProfile()) {
+      onEnter?.(project.id)
+
+      return
+    }
+
+    setExpanding(true)
+    fetchProjectSessions(project.id, { supersedable: false })`,
+      '    setExpanding(true)\n    fetchBrowserProjectSessions(project)'
+    ],
+    ['      .catch(() => onEnter?.(project.id))', "      .catch(error => notifyError(error, 'Could not load project sessions'))"],
     [
       '  if (color && !icon) {\n    return (\n      <SidebarRowLeadGlyph>\n        <span aria-hidden="true" className="size-1 rounded-full" style={{ backgroundColor: color }} />\n      </SidebarRowLeadGlyph>\n    )\n  }\n\n',
       ''
@@ -1083,7 +1100,8 @@ export function useBrowserProjectDisclosure(source: string): string {
       '      onClick={toggleOpen}\n      onDoubleClick={() => onEnter?.(project.id)}\n    >'
     ]
   ]
-  return replaceBrowserContract(source, changes)
+  const owner = JSON.stringify(path.join(root, 'src/upstream/project-sessions'))
+  return `import { browserExpandedProjectSessions, fetchBrowserProjectSessions } from ${owner}\n` + replaceBrowserContract(source, changes)
 }
 
 export function useBrowserSearchLabel(source: string, root: string): string {
@@ -1639,7 +1657,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserCodingActionHooks, useBrowserSectionIds: source => useBrowserSectionIds(source, root), omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
-    useBrowserProjectDisclosure,
+    useBrowserProjectDisclosure: source => useBrowserProjectDisclosure(source, root),
     useBrowserProjectDeleteOwner: source => useBrowserProjectDeleteOwner(source, root),
     exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut, removeBrowserTopCapabilitiesLink,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
