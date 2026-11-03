@@ -1,5 +1,6 @@
 import type { ComponentProps, HTMLAttributes, ReactNode, RefObject } from 'react'
 import { browserClassNames as cn } from './ui/classnames'
+import { preserveNavigationForNextSelection } from './conversation-navigation'
 
 export interface BrowserSidebarProjectModel {
   id: string
@@ -29,7 +30,7 @@ export interface BrowserSidebarProjectModel {
 export function BrowserSidebarProject({ model, children, ...props }: ComponentProps<'div'> & { model: BrowserSidebarProjectModel }) {
   const icon = <i aria-hidden="true" className={`codicon codicon-${model.icon}`} style={{ fontSize: '0.875rem', color: model.color || undefined }} />
   const controls = <>{model.menu}{model.create && <button type="button" aria-label={model.create.label} title={model.create.label}
-    onClick={event => { event.stopPropagation(); model.create?.run() }} onPointerDown={model.create.pointerDown}
+    onClick={event => { event.stopPropagation(); preserveNavigationForNextSelection(); model.create?.run() }} onPointerDown={model.create.pointerDown}
     className="grid size-4 shrink-0 place-items-center rounded-sm bg-transparent text-(--ui-text-quaternary) opacity-0 transition-opacity hover:bg-(--ui-control-hover-background) hover:text-foreground group-hover/workspace:opacity-100 focus-visible:opacity-100">
     <i aria-hidden="true" className="codicon codicon-add" style={{ fontSize: '0.75rem' }} />
   </button>}</>

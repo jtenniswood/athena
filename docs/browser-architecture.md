@@ -98,6 +98,8 @@ captured commands. Hermes retains group aliases/order, branch switching, lazy
 lanes, removal confirmations, cron trigger concurrency and live-run polling.
 Profile lists preserve configured pictures, hidden-group preferences and complete
 histories; no parallel profile or project cache is introduced.
+Project and workspace chat creation commands publish navigation intent directly.
+Compact navigation does not infer those commands from document clicks or CSS classes.
 Browser startup deliberately keeps project navigation at the overview. The
 reusable worktree views preserve the renderer's controller boundary without
 enabling drill-in or changing that navigation policy.

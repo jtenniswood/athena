@@ -6,7 +6,7 @@ import { AppSettingsLink, SettingsLink } from './settings-menu'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { useCompactBrowser, useMobileBrowser } from './ui/use-compact-browser'
 import { useMobileChatHistory } from './mobile-chat-history'
-import { $conversationOpenRequest, $preserveNavigationRequest, preserveNavigationForNextSelection } from './conversation-navigation'
+import { $conversationOpenRequest, $preserveNavigationRequest } from './conversation-navigation'
 import { clampNavigationWidth, DEFAULT_NAVIGATION_WIDTH, MAX_NAVIGATION_WIDTH, MIN_NAVIGATION_WIDTH, NAVIGATION_TAB_LABELS, NAVIGATION_TABS, readNavigationTab, readNavigationWidth, readVisibleNavigationTabs, type NavigationTab, writeBrowserPreference } from './browser-preferences'
 
 /** Browser navigation preferences and focus never own the conversation state. */
@@ -31,22 +31,16 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
   const focusDrawerOnOpen = useRef(false)
   const preserveNextSelection = useRef(false)
   const preserveTimeout = useRef(0)
-  useEffect(() => $preserveNavigationRequest.listen(() => {
-    preserveNextSelection.current = true
-    window.clearTimeout(preserveTimeout.current)
-    // Expire the intent if opening a side chat does not change the selection.
-    preserveTimeout.current = window.setTimeout(() => { preserveNextSelection.current = false }, 2000)
-  }), [])
-  useEffect(() => () => window.clearTimeout(preserveTimeout.current), [])
   useEffect(() => {
     if (!compact) return
-    const preserveProjectChat = (event: globalThis.MouseEvent) => {
-      const button = event.target instanceof Element ? event.target.closest('button') : null
-      if (button?.classList.contains('group-hover/workspace:opacity-100')) preserveNavigationForNextSelection()
-    }
-    document.addEventListener('click', preserveProjectChat, true)
-    return () => document.removeEventListener('click', preserveProjectChat, true)
+    return $preserveNavigationRequest.listen(() => {
+      preserveNextSelection.current = true
+      window.clearTimeout(preserveTimeout.current)
+      // Expire the intent if opening a side chat does not change the selection.
+      preserveTimeout.current = window.setTimeout(() => { preserveNextSelection.current = false }, 2000)
+    })
   }, [compact])
+  useEffect(() => () => window.clearTimeout(preserveTimeout.current), [])
   useEffect(() => { setDrawerOpen(mobile) }, [compact, mobile])
   useEffect(() => $conversationOpenRequest.listen(() => {
     if (!drawerOpen) return
