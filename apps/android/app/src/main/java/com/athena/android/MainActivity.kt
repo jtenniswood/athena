@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity() {
     private val prefs by lazy { getSharedPreferences("athena", MODE_PRIVATE) }
     private val pushRegistration by lazy { NativePushRegistration(this) }
     private val notifications by lazy { NativeNotifications(this) }
-    private val actionMenus by lazy { NativeActionMenus(this) }
+    private val legacyUi = LegacyNativePresentation(this, { web }, { foreground }) { visibility.clear() }
     private val connection = ConnectionCoordinator { renderConnection(it) }
     private var connectionScreen: View? = null
     private var connectionStatus: TextView? = null
@@ -51,7 +51,6 @@ class MainActivity : AppCompatActivity() {
         web?.evaluateJavascript("window.dispatchEvent(new Event('focus'))", null)
     }, { reconnectAthena() }) }
     private val appUpdates by lazy { AppUpdates(this) { action -> prepareNavigation(allowUnloaded = true, action = action) } }
-    private val settingsPage by lazy { NativeSettingsPage(this) }
     private val nativeSettings by lazy { NativeAppSettings(this) }
     private var nativeToolbar: View? = null
     @Volatile private var connectionTest: ConnectionTest? = null
@@ -136,7 +135,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setup() {
-        actionMenus.dismiss()
+        legacyUi.dismissActions()
         visibility.clear()
         connectionTest = null
         connection.setup()
@@ -188,7 +187,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun openServer(state: Bundle?) {
-        actionMenus.dismiss()
+        legacyUi.dismissActions()
         editingServer = false
         documentReady = false
         connectionScreen = null
@@ -261,8 +260,7 @@ class MainActivity : AppCompatActivity() {
             }
             override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
                 if (view !== web) return
-                settingsPage.dismiss()
-                actionMenus.dismiss()
+                legacyUi.dismiss()
                 visibility.clear()
                 documentReady = false
                 navigationAction = null; navigationId = null
@@ -293,7 +291,7 @@ class MainActivity : AppCompatActivity() {
             }
             override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
                 if (view !== web) return true
-                actionMenus.dismiss()
+                legacyUi.dismissActions()
                 (view.parent as? android.view.ViewGroup)?.removeView(view); view.destroy(); web = null
                 errorScreen("Android closed the web renderer. Reopen Athena to reconnect.")
                 return true
@@ -367,6 +365,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleNativeRequest(method: String, payload: JSONObject, respond: (Any) -> Unit) {
+        if (legacyUi.handle(method, payload, respond)) return
         when (method) {
             "hello" -> {
                 if (!connection.handshake(payload.optInt("protocol"))) {
@@ -375,7 +374,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 respond(JSONObject().put("protocol", 1)
                     .put("appVersion", packageManager.getPackageInfo(packageName, 0).versionName)
-                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state", "web-visibility", "push-token-refresh", "push-diagnostics", "action-menu", "action-menu-live", "settings-page", "action-menu-search")))
+                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state", "web-visibility", "push-token-refresh", "push-diagnostics") + LegacyNativePresentation.capabilities))
                     .put("insets", "native").put("typography", "platform"))
             }
             "webState" -> {
@@ -389,7 +388,7 @@ class MainActivity : AppCompatActivity() {
                 respond(true)
             }
             "settingsFiles" -> {
-                if (!settingsPage.isShowing || !foreground) respond(org.json.JSONArray())
+                if (!legacyUi.settingsShowing || !foreground) respond(org.json.JSONArray())
                 else {
                     settingsFilesReply?.invoke(org.json.JSONArray()); settingsFilesReply = respond
                     settingsFilesMultiple = payload.optBoolean("multiple")
@@ -397,22 +396,7 @@ class MainActivity : AppCompatActivity() {
                     catch (_: ActivityNotFoundException) { settingsFilesReply = null; respond(org.json.JSONArray()) }
                 }
             }
-            "settingsPage" -> {
-                val model = NativeSettingsPage.parse(payload)
-                if (web == null || !foreground) respond(JSONObject().put("status", "dismissed"))
-                else { visibility.clear(); settingsPage.show(model, respond) }
-            }
-            "updateSettingsPage" -> respond(settingsPage.update(NativeSettingsPage.parse(payload)))
-            "dismissSettingsPage" -> { settingsPage.dismiss(payload.getString("id")); respond(true) }
             "appSettings" -> { appSettings(); respond(true) }
-            "actionMenu" -> {
-                val model = NativeActionMenus.parse(payload)
-                val view = web
-                if (view == null || !foreground) respond(JSONObject().put("status", "dismissed"))
-                else { visibility.clear(); actionMenus.show(model, view, respond) }
-            }
-            "dismissActionMenu" -> { actionMenus.dismiss(payload.getString("id")); respond(true) }
-            "updateActionMenu" -> { respond(actionMenus.update(NativeActionMenus.parse(payload))) }
             "appSettingsMenu" -> {
                 connection.settings(payload.optBoolean("mounted"), payload.optBoolean("rendered"))
                 renderConnection(connection.state)
@@ -611,8 +595,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun errorScreen(message: String, checkAccess: Boolean = false) {
-        settingsPage.dismiss()
-        actionMenus.dismiss()
+        legacyUi.dismiss()
         visibility.clear()
         connection.recover("web-unreachable", message)
         if (checkAccess) detectAccess(connection.state)
@@ -713,7 +696,7 @@ class MainActivity : AppCompatActivity() {
             setTitleTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface))
         }
         nativeSettings.refresh()
-        settingsPage.refresh()
+        legacyUi.refresh()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -723,13 +706,13 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); if (authentication.receive(intent.data, origin)) intent.data = null else openNotification(intent) }
     override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); if (connectionTest == null) web?.saveState(outState) }
     override fun onResume() { super.onResume(); foreground = true; appUpdates.check(); pushRegistration.schedule(); nativeSettings.refreshNotifications(); web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) { authentication.resume(origin) } }
-    override fun onPause() { actionMenus.dismiss(); foreground = false; visibility.clear(); CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
+    override fun onPause() { legacyUi.dismissActions(); foreground = false; visibility.clear(); CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
     private fun navigateBack() {
         if (nativeSettings.navigateBack()) return
-        if (settingsPage.back()) return
+        if (legacyUi.back()) return
         if (editingServer) { openServer(null); return }
         if (web?.canGoBack() == true) web?.goBack() else moveTaskToBack(true)
     }
-    override fun onDestroy() { connectionTestDialog?.dismiss(); appUpdates.close(); settingsFilesReply?.invoke(org.json.JSONArray()); settingsFilesReply = null; settingsPage.dismiss(); actionMenus.dismiss(); nativeSettings.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); authentication.close(); web?.destroy(); super.onDestroy() }
+    override fun onDestroy() { connectionTestDialog?.dismiss(); appUpdates.close(); settingsFilesReply?.invoke(org.json.JSONArray()); settingsFilesReply = null; legacyUi.dismiss(); nativeSettings.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); authentication.close(); web?.destroy(); super.onDestroy() }
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
 }

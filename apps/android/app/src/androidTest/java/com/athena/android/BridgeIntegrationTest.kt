@@ -90,11 +90,10 @@ class BridgeIntegrationTest {
                         groups:[{items:[{id:'rename',label:'Rename'},{id:'delete',label:'Delete',disabled:true}]}]
                     }
                 }))""")
-                val menuDelegate = MainActivity::class.java.getDeclaredField("actionMenus$" + "delegate").apply { isAccessible = true }
                 waitUntil {
                     var shown = false
                     scenario.onActivity {
-                        val menus = (menuDelegate.get(it) as Lazy<*>).value as NativeActionMenus
+                        val menus = legacyPresenter(it, "actionMenus") as NativeActionMenus
                         val sheetField = NativeActionMenus::class.java.getDeclaredField("sheet").apply { isAccessible = true }
                         shown = (sheetField.get(menus) as? com.google.android.material.bottomsheet.BottomSheetDialog)?.isShowing == true
                     }
@@ -107,7 +106,7 @@ class BridgeIntegrationTest {
                     }
                 }
                 scenario.onActivity {
-                    val menus = (menuDelegate.get(it) as Lazy<*>).value as NativeActionMenus
+                    val menus = legacyPresenter(it, "actionMenus") as NativeActionMenus
                     val sheet = NativeActionMenus::class.java.getDeclaredField("sheet").apply { isAccessible = true }.get(menus) as com.google.android.material.bottomsheet.BottomSheetDialog
                     val root = sheet.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)!!
                     assertFalse(root.findViewWithTag<View>("delete").isEnabled)

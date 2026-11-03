@@ -11,6 +11,7 @@ compatibility boundary needs joint review and testing.
 | `ConnectionCoordinator` | Setup, authentication, loading, ready and recovery state |
 | `NativeAuthentication` | Orchestrate separate Access and Athena browser handoffs |
 | `NativeBridge` | Validate versioned message envelopes and produce structured errors |
+| `LegacyNativePresentation` | Retained native menu/settings capabilities, dispatch and presenter lifetime for older web clients |
 | `NativeAppSettings` | Material 3 settings and connection-details presentation |
 | `AppDiagnostics` | Explicitly limited, credential-free status projection |
 | `NativePushRegistration` | Rotate the current binding's FCM token using a scoped credential |
@@ -35,6 +36,17 @@ contract tests. The current web entry point does not install it. Explicit Settin
 descriptors can feed that presenter without scraping wrapper controls, while a
 guarded compatibility adapter remains for complex upstream controls. Both paths
 keep validation and pending saves with the original web owners.
+
+`LegacyNativePresentation` owns both retained presenters and their six bridge
+methods. Its capability list remains part of protocol 1. The Activity delegates
+presentation dispatch and lifecycle events to that owner; origin validation,
+native file selection, authentication, OS permissions, recovery and App settings
+remain host responsibilities. New presentation features use the shared web UI.
+
+These capabilities remain supported for older web clients. No version cutoff is
+assumed: APK and server updates are independent. Future retirement can remove
+individual presenter capabilities after the supported client combinations have
+an equivalent web path, while retaining native connection and recovery controls.
 
 ## Completion-event source assessment
 
