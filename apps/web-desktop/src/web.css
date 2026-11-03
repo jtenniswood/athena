@@ -30,7 +30,7 @@ body > [data-radix-popper-content-wrapper] > .tooltip-bubble.browser-session-pre
   font-size: 0.8125rem;
   font-weight: 400;
 }
-.browser-session-preview [data-slot='tooltip-arrow'] { fill: var(--ui-bg-elevated); }
+.browser-session-preview [data-slot='tooltip-arrow'] { display: none; }
 .browser-session-preview-title { font-size: 0.9375rem; font-weight: 600; white-space: normal; overflow-wrap: anywhere; }
 .browser-session-preview-meta { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; margin-top: 0.625rem; color: var(--ui-text-tertiary); font-size: 0.6875rem; }
 .browser-session-generation { margin-top: 0.875rem; border-top: 1px solid var(--dt-border); padding-top: 0.75rem; }
