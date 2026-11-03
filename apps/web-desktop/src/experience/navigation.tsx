@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ComponentProps, type ReactNode, type 
 import { useBrowserSidebarSections } from './sidebar-sections'
 import { browserRouteCoversWorkspace } from '../upstream/browser-routes'
 import { Codicon } from '../upstream/browser-api'
-import { AppSettingsLink, SettingsLink } from './settings-menu'
+import { AppSettingsLink, ScheduledTasksLink, SettingsLink } from './settings-menu'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { useCompactBrowser, useMobileBrowser } from './ui/use-compact-browser'
 import { useMobileChatHistory } from './mobile-chat-history'
@@ -206,6 +206,6 @@ export function BrowserNavigationResizer({ navigation }: { navigation: Navigatio
 export function BrowserNavigationSettings({ navigation, onOpenRoute, row = false }: { navigation: Navigation; onOpenRoute: ComponentProps<typeof SettingsLink>['onOpenRoute']; row?: boolean }) {
   return <>
     <SettingsLink onOpenRoute={onOpenRoute} triggerRef={navigation.actionsTrigger} triggerClassName={row ? "browser-navigation-settings-link browser-navigation-actions-trigger" : "browser-navigation-actions-trigger"} triggerLabel={row ? "Settings" : undefined} />
-    {row && <AppSettingsLink />}
+    {row && <><ScheduledTasksLink onOpenRoute={onOpenRoute} /><AppSettingsLink /></>}
   </>
 }
