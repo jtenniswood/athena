@@ -1226,7 +1226,7 @@ export function removeBrowserSplitControls(source: string): string {
     throw new Error('Browser navigation split menu boundary changed')
   }
   // Keep the navigation button without the split-only context menu.
-  return replaceBrowserContract(source.slice(0, from) + `                return <SidebarMenuItem key={item.id}>{button}</SidebarMenuItem>` + source.slice(to), [
+  return replaceBrowserContract(source.slice(0, from) + `                return <SidebarMenuItem key={item.id}>{button}{isNewSession && <BrowserSidebarSettings />}</SidebarMenuItem>` + source.slice(to), [
     ["import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu'\n", ''],
     ["import { CONTEXT_SPLIT_KIT, SplitSubmenu } from './split-submenu'\n", '']
   ])

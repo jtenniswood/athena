@@ -585,3 +585,12 @@ test('entry recovery has an independent static fallback', () => {
   assert.match(source, /Copy diagnostics/)
   assert.match(source, /Stage: \$\{stage\}/)
 })
+
+// The split-menu adapter runs after the settings row is inserted.
+test('removing sidebar split menus preserves the Settings and App slot', () => {
+  const { useBrowserSearchLabel, removeBrowserSplitControls } = load('src/upstream/browser-plugin.ts')
+  const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/index.tsx'), 'utf8')
+  const adapted = removeBrowserSplitControls(useBrowserSearchLabel(source, root))
+  assert.equal(adapted.split('{isNewSession && <BrowserSidebarSettings />}').length, 2)
+  assert.doesNotMatch(adapted, /<SplitSubmenu/)
+})
