@@ -52,7 +52,16 @@ export const test = base.extend({
 
 export const editor = page => page.locator('[contenteditable="true"]:visible').first()
 export async function openConversation(page, origin, session = 'preview-week') {
+  // Selection-race scenarios use the profile rail, a supported saved layout.
+  await page.addInitScript(() => {
+    const key = 'hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles'
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, 'none')
+  })
   await page.goto(`${origin}/#/${session}`)
+  // Touch-first startup opens chat history until a conversation is explicitly opened.
+  if (await page.evaluate(() => matchMedia('(pointer: coarse)').matches && (matchMedia('(width < 48rem)').matches || matchMedia('(max-height: 27rem)').matches))) {
+    await page.locator(`[data-web-session-id="${session}"] .browser-session-title`).first().click()
+  }
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
   await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', session)
   await expect(page.getByText('Help me make a thoughtful plan.', { exact: true }).first()).toBeVisible()

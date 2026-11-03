@@ -87,16 +87,15 @@ function rewrite(code: string, id: string): { code: string; map: null } | null {
     }
 
     if (normalizedId.endsWith('/desktop/src/store/composer.ts')) {
-      let patched = `import { createDraftPersistence } from 'hermes:web-draft-persistence'\nimport { registerBrowserDraftSafety, beginBrowserDraftSnapshot } from 'hermes:web-draft-safety'\n` + code
-      patched = patched.replace('const draftsBySession = new Map<string, SessionDraft>(loadPersistedDraftTexts())', `const draftsBySession = new Map<string, SessionDraft>(loadPersistedDraftTexts())
-const browserDraftPersistence = createDraftPersistence(SESSION_DRAFTS_STORAGE_KEY, MAX_PERSISTED_DRAFTS)
-let browserFlushingDrafts = false
+      const target = '\n/**\n * Patch one asynchronous attachment occurrence'
+      if (code.split(target).length !== 2 || !code.includes('function syncPersistedDrafts(')) {
+        throw new Error('Browser draft stash owner changed')
+      }
+      const registration = `
 registerBrowserDraftSafety({
   snapshot: () => {
     beginBrowserDraftSnapshot()
-    browserFlushingDrafts = true
-    try { requestComposerDraftSync('flush', 'web-all') }
-    finally { browserFlushingDrafts = false }
+    requestComposerDraftSync('flush', 'web-all')
     return {
       storageKey: SESSION_DRAFTS_STORAGE_KEY,
       texts: Object.fromEntries([...draftsBySession].filter(([, draft]) => draft.text).map(([key, draft]) => [key, draft.text])),
@@ -104,15 +103,15 @@ registerBrowserDraftSafety({
     }
   },
   flush: async () => {
-    await browserDraftPersistence.flush()
-    reloadPersistedDrafts()
+    if (!navigator.locks) throw new Error('Shared draft locking is unavailable')
+    await navigator.locks.request(SESSION_DRAFTS_STORAGE_KEY, () => {
+      syncPersistedDrafts()
+      if (!writeDraftStash(persistedDrafts, SESSION_DRAFTS_STORAGE_KEY)) throw new Error('Draft storage did not retain the write')
+    })
   }
-})`)
-        .replace('  persistDraftTexts()', `  if (browserFlushingDrafts) browserDraftPersistence.write(key, text.trim() ? text : "")
-  else { browserDraftPersistence.cancel(key); persistDraftTexts() }`)
-        .replace('  for (const [key, draft] of incoming) {', '  for (const [key, draft] of incoming) {\n    if (browserDraftPersistence.pending(key)) continue')
-        .replace('    if (!incoming.has(key)) {', '    if (!incoming.has(key) && !browserDraftPersistence.pending(key) && !draftsBySession.get(key)?.attachments.length) {')
-      return { map: null, code: patched }
+})
+`
+      return { map: null, code: `import { registerBrowserDraftSafety, beginBrowserDraftSnapshot } from 'hermes:web-draft-safety'\n` + code.replace(target, registration + target) }
     }
     if (normalizedId.endsWith('/desktop/src/app/chat/composer/hooks/use-composer-draft.ts')) {
       code = redirectAssistantRuntimeHooks(code)
@@ -124,6 +123,15 @@ registerBrowserDraftSafety({
             blockBrowserDraftSnapshot()
           } else {
             syncDraftRef.current(mode)
+            // Ordinary saves can defer to another tab's newer stash. An update
+            // must describe this editor's visible text so conflicting tabs refuse
+            // activation. Never resurrect a draft cleared by another tab.
+            const text = syncDraftFromEditor()
+            const stashed = takeSessionDraft(draftScopeRef.current)
+            if (mode === 'flush' && text && stashed.text !== text) {
+              if (!stashed.text) blockBrowserDraftSnapshot('Another tab cleared this draft. Clear the stale text or copy it before updating.')
+              else stashAt(draftScopeRef.current, text)
+            }
           }
           return
         }`
@@ -186,18 +194,19 @@ ${code.slice(scopeMarkerStart + scopeMarker.length)}`
         throw new Error('Web agent activation fast path no longer matches the renderer source')
       }
 
-      const patched = agentPatched.replace(
-        /async function sharedPrimaryRoute[\s\S]*?\{/,
-        `$&
-  if (window.__HERMES_WEB_BRIDGE__) {
-    return true
-  }`
-      )
-
-      if (patched === agentPatched) {
-        throw new Error('Web shared-primary route no longer matches the renderer source')
-      }
-
+      return { code: agentPatched, map: null }
+    }
+    if (normalizedId.endsWith('/desktop/src/store/connections.ts')) {
+      const target = 'if (previous[connectionId] !== profile) {'
+      if (code.split(target).length !== 2) throw new Error('Connection preference listener changed')
+      return { code: code.replace(target, 'if (previous?.[connectionId] !== profile) {'), map: null }
+    }
+    if (normalizedId.endsWith('/desktop/src/store/gateway-shared-route.ts')) {
+      const target = 'export async function sharedPrimaryRoute(profile: string): Promise<boolean> {'
+      if (code.split(target).length !== 2) throw new Error('Web shared-primary route changed')
+      const patched = code.replace(target, target + `
+  if (window.__HERMES_WEB_BRIDGE__) return true
+`)
       return { code: patched, map: null }
     }
 

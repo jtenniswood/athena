@@ -138,9 +138,22 @@ test('slash completion accepts a slash query and leaves malformed operations str
   assert.throws(() => gateway.controls.assertExpected(), /complete.slash/)
 })
 
+test('slash usage acknowledges typed commands without accepting malformed metrics', async t => {
+  const gateway = await fixture(t)
+  assert.deepEqual((await gateway.request('shared_metrics.slash_command', { command: 'resume', session_id: 'preview-week' })).result, { ok: true })
+  gateway.controls.assertExpected()
+  for (const params of [{ command: '/resume' }, { command: false }, { command: 'resume', session_id: 'missing' }]) {
+    assert.equal((await gateway.request('shared_metrics.slash_command', params)).error.code, -32601)
+  }
+  assert.throws(() => gateway.controls.assertExpected(), /shared_metrics.slash_command/)
+})
+
 test('command center catalogs are explicit reads and archived sessions stay separate', async t => {
   const gateway = await fixture(t)
   assert.deepEqual((await gateway.request('plugins.manage', { action: 'list' })).result, { plugins: [] })
+  assert.deepEqual((await gateway.request('groups.list', { limit: 100, offset: 0 })).result, { rooms: [], next_offset: null })
+  assert.deepEqual((await gateway.request('gateway.ping')).result, { pong: true })
+  assert.deepEqual(await (await fetch(gateway.origin + '/api/git/review/rev-parse?path=%2Fworkspace&ref=HEAD')).json(), { sha: null })
   assert.deepEqual(await (await fetch(gateway.origin + '/api/config/schema')).json(), { fields: {} })
   assert.deepEqual(await (await fetch(gateway.origin + '/api/env')).json(), {})
   const auxiliary = await (await fetch(gateway.origin + '/api/model/auxiliary')).json()
@@ -167,4 +180,17 @@ test('Bot roster metadata writes validate pin, visibility, and section fields wi
   assert.deepEqual(profiles.find(row => row.name === 'research').ui_meta['hermes-bots'], metadata)
   assert.equal(profiles.find(row => row.name === 'writer').ui_meta, undefined)
   gateway.controls.assertExpected()
+})
+
+
+test('warm reconnect and pending-work probes use the renderer contract without inventing work', async t => {
+  const gateway = await fixture(t)
+  const resumed = (await gateway.request('session.resume', { session_id: 'preview-week' })).result
+  const activated = (await gateway.request('session.activate', { session_id: 'preview-week' })).result
+  assert.equal(activated.session_id, resumed.session_id)
+  assert.deepEqual(activated.messages, resumed.messages)
+  assert.deepEqual((await gateway.request('subagent.roster')).result, { sessions: [] })
+  assert.deepEqual((await gateway.request('approval.pending', { session_id: 'preview-week' })).result, { approvals: [] })
+  gateway.controls.assertExpected()
+  assert.equal((await gateway.request('approval.pending', { session_id: 'missing' })).error.code, -32601)
 })

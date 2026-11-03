@@ -61,13 +61,14 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'session.active_list') return { sessions: [...sessions.values()].filter(s => s.is_active) }
     if (method === 'commands.catalog') return { commands: [] }
     if (method === 'plugins.manage' && params.action === 'list') return { plugins: [] }
-    if (method === 'ping') return { pong: true }
+    if (method === 'ping' || method === 'gateway.ping') return { pong: true }
     // Optional probes from the pinned renderer, with explicit synthetic support.
     if (method === 'client.capabilities') return { declines_not_shown: true }
     if (method === 'groups.capabilities') return { driver: false, persistent_process: false }
-    if (method === 'groups.list') return { rooms: [] }
+    if (method === 'groups.list') return { rooms: [], next_offset: null }
     if (method === 'i18n.languages') return []
     if (method === 'shared_metrics.status') return { decided: true, enabled: false, send: false }
+    if (method === 'shared_metrics.slash_command' && typeof params.command === 'string' && /^[a-z][a-z0-9_-]*$/.test(params.command) && (params.session_id == null || sessions.has(params.session_id))) return { ok: true }
     if (method === 'bot_relay.roster.sync' && Array.isArray(params.agents)) return { ok: true }
     if (method === 'billing.state' || method === 'subscription.state') throw new Error('Billing is unavailable in the synthetic gateway')
     if (method === 'config.set' && ['display.in_app_tips', 'display.in_app_tours', 'display.message_reactions'].includes(params.key)) return { value: params.value }
@@ -77,6 +78,8 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'wake.status') return { available: false, enabled: false, listening: false }
     if (method === 'pet.info' || method === 'pet.info.meta') return { enabled: false, active: '', spritesheet: null }
     if (method === 'subagent.list') return { subagents: [] }
+    if (method === 'subagent.roster') return { sessions: [] }
+    if (method === 'approval.pending' && sessions.has(params.session_id)) return { approvals: [] }
     if (method === 'process.list') return { processes: [] }
     if (method === 'complete.path') return { items: [] }
     if (method === 'complete.slash' && typeof params.text === 'string' && params.text.startsWith('/')) return { items: [], replace_from: 1 }
@@ -173,6 +176,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       if (pathname === '/api/profiles/projects/tree') return send({ projects: [], active_id: null, scoped_session_ids: [] })
       if (pathname === '/api/mcp/catalog') return send({ entries: [], diagnostics: [] })
       if (pathname === '/api/git/status') return send({ is_repo: false, files: [], branch: '' })
+      if (req.method === 'GET' && pathname === '/api/git/review/rev-parse') return send({ sha: null })
       if (/^\/api\/sessions\/[^/]+\/timeline$/.test(pathname)) return send({ events: [], has_more: false })
       if (pathname === '/auth/me' || pathname === '/api/auth/me') return send({ authenticated: true, user_id: 'preview-user', provider: 'preview', org_id: '' })
       if (pathname === '/auth/ws-ticket' || pathname === '/api/auth/ws-ticket') return send({ ticket: `preview-${Date.now()}` })

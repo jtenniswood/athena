@@ -34,6 +34,10 @@ test('configuration recovery reaches proxy sign-in and preserves browser data', 
         res.writeHead(302, { Location: target.searchParams.get('return') || '/' }); res.end()
       } else if (expired) {
         res.writeHead(302, { Location: `/cdn-cgi/access/login?return=${encodeURIComponent(req.url)}` }); res.end()
+      } else if (target.pathname === '/api/status') {
+        // Model an authenticated edge session before expiry and after sign-in.
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ auth_required: false }))
       } else {
         const proxy = proxyRequest(new URL(req.url, upstream), { method: req.method, headers: req.headers }, response => {
           res.writeHead(response.statusCode, response.headers); response.pipe(res)

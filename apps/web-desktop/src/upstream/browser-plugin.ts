@@ -173,7 +173,7 @@ export function useBrowserDefaultSessionProfile(source: string, root: string): s
   const owner = JSON.stringify(path.join(root, 'src/upstream/default-session-profile'))
   const targets = [
     ['    startFreshSession: startFreshSessionDraft,', '    startFreshSession: () => { prepareDefaultNewSession(); startFreshSessionDraft() },'],
-    ['    onNewSessionInWorkspace: path => startSessionInWorkspace(path),', '    onNewSessionInWorkspace: path => { prepareDefaultNewSession(); startSessionInWorkspace(path) },']
+    ['    onNewSessionInWorkspace: (path, owner) => startSessionInWorkspace(path, { owner }),', '    onNewSessionInWorkspace: (path, owner) => { if (!owner) prepareDefaultNewSession(); startSessionInWorkspace(path, { owner }) },']
   ]
   for (const [target, replacement] of targets) {
     if (source.split(target).length !== 2) throw new Error('Browser default new-session profile entry point changed')
@@ -617,7 +617,7 @@ export function scopeBrowserStorage(source: string): string {
   const original = source.split(storageScope).join('')
   const contract = contracts.find(item => item.module === 'lib/storage.ts')!
   if (createHash('sha256').update(original).digest('hex') !== contract.sourceHash) throw new Error('Browser storage scope no longer matches upstream')
-  const targets = ['export function readKey(key: string): null | string {', 'export function writeKey(key: string, value: null | string) {']
+  const targets = ['export function readKey(key: string): null | string {', 'export function writeKey(\n  key: string,\n  value: null | string,\n  { isDefault = false, provisional = false }: WriteOptions = {}\n) {']
   let output = original
   for (const target of targets) {
     if (output.split(target).length !== 2) throw new Error('Browser storage scope no longer matches upstream')
@@ -734,8 +734,6 @@ export function removeBrowserNewBotChatAction(source: string): string {
 
 export function removeBrowserGatewayGroupsRefresh(source: string, root: string): string {
   const changes: [string, string][] = [
-    ["import { useCanonicalGroupLabels } from './canonical-group-labels'\n", ''],
-    ['  const labels = useCanonicalGroupLabels()\n', ''],
     ['  const profile = useValue(host.state.profile)\n', `  const profile = useValue(host.state.profile)
   const gatewayState = useValue(host.state.gateway)
   const gateway = useValue($gateway)
@@ -748,7 +746,7 @@ export function removeBrowserGatewayGroupsRefresh(source: string, root: string):
       return
     }
 `],
-    ['[connectionId, profile, refresh]', '[connectionId, profile, gatewayState, gateway, refresh, finishRefresh]'],
+    ['[connectionId, profile, refresh, revision]', '[connectionId, profile, gatewayState, gateway, refresh, revision, finishRefresh]'],
     ["})().catch(e => { if (!cancelled) {setError(e instanceof Error ? e.message : String(e))} })", "})().catch(e => { if (!cancelled) {setError(e instanceof Error ? e.message : String(e))} }).finally(finishRefresh)"],
     ['    <Button onClick={() => setRefresh(value => value + 1)} variant="ghost">{labels.refreshGroups}</Button>\n', '']
   ]
@@ -772,7 +770,9 @@ export function removeBrowserOpenBotChatAction(source: string): string {
   const action = '<ContextMenuItem onSelect={() => void openRosterBot(bot)}>{b.bot.openBotChat}</ContextMenuItem>'
   if (!source.includes('b.bot.openBotChat')) return source
   if (source.split(action).length !== 2) throw new Error('Browser open-bot-chat action target changed')
-  return source.replace(action, '')
+  const tabAction = `<ContextMenuItem onSelect={() => void openRosterBot(bot, { intent: 'tab' })}>{b.bot.openBotChatInNewTab}</ContextMenuItem>`
+  if (source.split(tabAction).length !== 2) throw new Error('Browser bot tab action target changed')
+  return source.replace(action, '').replace(tabAction, '')
 }
 
 // Run after renderer compatibility has validated and transformed this module.
@@ -844,7 +844,7 @@ export function useBrowserSectionIds(source: string, root: string): string {
     ['  const messagingProfile = sidebarProfileForScope(profileScope)', '  const messagingProfile = sidebarProfileForScope(profileScope)\n  useBrowserSidebarChannels()'],
     ['            {!trimmedQuery &&\n              !worktreeGroupingActive &&\n              messagingGroups.map', '            {!trimmedQuery &&\n              messagingGroups.map'],
     // Athena's explicit section preference owns Cron visibility in both modes.
-    ['(showsAdvancedChrome && cronJobs.length > 0)', '(cronJobs.length > 0)'],
+    ['cronJobs: showsAdvancedChrome ? cronJobs.length : 0,', 'cronJobs: cronJobs.length,'],
     ['!worktreeGroupingActive && showsAdvancedChrome && cronJobs.length > 0', '!worktreeGroupingActive && cronJobs.length > 0'],
     ['label={s.results}', 'browserSectionId="sessions" label={s.results}'],
     ['label={s.pinned}', 'browserSectionId="pinned" label={s.pinned}'],
@@ -894,15 +894,16 @@ export function useBrowserTouchHooks(source: string, root: string): string {
 
 export function useBrowserAcceptedSubmit(source: string, root: string): string {
   const importTarget = 'import '
-  const submitAccepted = '.then(accepted => void (accepted === false ? rejected() : clearSessionDraft(submittedScope)))'
+  const submitAccepted = '.then(accepted => {\n        if (accepted === false) {'
   const steerAccepted = '.then(accepted => {\n        if (!accepted) {\n          keep()\n        }'
   if (!source.startsWith(importTarget) || source.split(submitAccepted).length !== 2 || source.split(steerAccepted).length !== 2) {
     throw new Error('Browser accepted-submit boundary changed')
   }
   const owner = JSON.stringify(path.join(root, 'src/experience/ui/accepted-submit'))
   return `import { announceBrowserAcceptedSubmit } from ${owner}\n` + source
-    .replace(submitAccepted, `.then(accepted => {\n        if (accepted === false) {\n          rejected()\n        } else {\n          announceBrowserAcceptedSubmit({ text, sessionId })\n          clearSessionDraft(submittedScope)\n        }\n      })`)
+    .replace(submitAccepted, `.then(accepted => {\n        if (accepted !== false) announceBrowserAcceptedSubmit({ text, sessionId })\n        if (accepted === false) {`)
     .replace(steerAccepted, `.then(accepted => {\n        if (!accepted) {\n          keep()\n        } else {\n          announceBrowserAcceptedSubmit({ text, sessionId })\n        }`)
+
 }
 
 /** Keep the renderer's submit/restore engine; supply the browser's follow-up policy. */
@@ -1180,7 +1181,7 @@ export function useBrowserProfileSectionPictures(source: string, root: string): 
     ['  const order = useStore($gatewayGroupOrder)', '  const order = useStore($gatewayGroupOrder)\n  const hiddenProfileGroups = useHiddenProfileGroups()'],
     ['  const ordered = [...sections].sort((a, b) => {', "  const ordered = sections.filter(group => embedded || !presentationMode || !hiddenProfileGroups.includes(group.profile ?? '')).sort((a, b) => {"],
     ['              <DropdownMenuContent align="end">', '              <DropdownMenuContent align="end">\n                {browserProfile && group.profile && !embedded && <BrowserHideProfileItem profile={group.profile} />}'],
-    ['if (nested || embedded || !group.connectionId) {', 'if (nested || embedded || !group.connectionId || presentationMode) {'],
+    ['if (nested || embedded || !owner) {', 'if (nested || embedded || !owner || presentationMode) {'],
     ['  const label = aliases[group.id] || group.label', '  const browserProfile = useBrowserProfileSection(group.profile)\n  const label = aliases[group.id] || browserProfile?.label || group.label'],
     [`              <ProfileGlyph
                 className="size-full"
@@ -1211,7 +1212,6 @@ export function useBrowserSessionReordering(source: string, surface: 'sidebar' |
     ['onReorderSessions={showAllProfiles ? undefined : reorderSessions}', 'onReorderSessions={reorderSessions}'],
     ['sortable={!showAllProfiles && agentSessions.length > 1}', 'sortable={agentSessions.length > 1}']
   ] : surface === 'section' ? [
-    ['groups?.some(group => group.sessions.length > 0)', "groups?.some(group => group.mode === 'profile' || group.sessions.length > 0)"],
     [`    (items: SessionInfo[]) =>
       flattenSessionsWithBranches(items).map(({ branchStem, session }) => renderRow(session, false, branchStem)),
     [renderRow]`, `    (items: SessionInfo[]) => {
@@ -1241,9 +1241,9 @@ export function useBrowserSessionReordering(source: string, surface: 'sidebar' |
 export function useBrowserSessionPresentation(source: string, root: string): string {
   const owner = JSON.stringify(path.join(root, 'src/upstream/profile-groups'))
   return `import { useBrowserProfileGroups } from ${owner}\n` + replaceBrowserContract(source, [
-    ['const profileGroups = useGatewaySessionGroups(agentSessions, ownerGrouped)', 'const profileGroups = useBrowserProfileGroups(useGatewaySessionGroups(agentSessions, ownerGrouped))'],
+    ['const profileGroups = useGatewaySessionGroups(agentSessions, ownerGrouped, filtersNarrow)', 'const profileGroups = useBrowserProfileGroups(useGatewaySessionGroups(agentSessions, ownerGrouped, filtersNarrow))'],
     ['forceEmptyState={showSessionSkeletons}', 'forceEmptyState={showSessionSkeletons && !displayAgentGroups?.length}'],
-    ['  const showSessionSections =\n', '  const showSessionSections =\n    Boolean(displayAgentGroups?.length) ||\n'],
+    ['  const showSessionSections = hasSessionArea({', '  const showSessionSections = Boolean(displayAgentGroups?.length) || hasSessionArea({'],
     ['label={sessionsLabel}', "label={grouping === 'profile' ? 'Profiles' : sessionsLabel}"],
     ['                        <SidebarSectionAddButton', "                        {grouping !== 'profile' && <SidebarSectionAddButton"],
     ['                        />\n                        <div className="grid size-6 place-items-center">', '                        />}\n                        <div className="grid size-6 place-items-center">']
@@ -1293,8 +1293,8 @@ export function disableBrowserSessionTabs(source: string): string {
   const marker = '    // Browser-focused shell does not register chat tab creation.\n    openNewSessionTab: () => undefined,\n'
   const action = '    $newSessionTabAction.set(openNewSessionTab)'
   const disabledAction = '    $newSessionTabAction.set(null)'
-  const newSession = '    onNewSessionInWorkspace: path => startSessionInWorkspace(path, { openTab: true }),'
-  const browserNewSession = '    onNewSessionInWorkspace: path => startSessionInWorkspace(path),'
+  const newSession = '    onNewSessionInWorkspace: (path, owner) => startSessionInWorkspace(path, { openTab: true, owner }),'
+  const browserNewSession = '    onNewSessionInWorkspace: (path, owner) => startSessionInWorkspace(path, { owner }),'
   const original = source.replace(marker, keybind).replace(disabledAction, action).replace(browserNewSession, newSession)
   const contract = contracts.find(item => item.module === 'app/contrib/wiring.tsx')!
   if (createHash('sha256').update(original).digest('hex') !== contract.sourceHash || original.split(keybind).length !== 2 || original.split(action).length !== 2 || original.split(newSession).length !== 2) {
@@ -1351,7 +1351,7 @@ export function useBrowserRosterSelection(source: string, root: string, surface:
   const replacements: Record<typeof surface, [string, string][]> = {
     bot: [
       ["import { openRosterBot } from './roster-actions'", ''],
-      ['const open = () => void openRosterBot(bot)', 'const open = () => void selectBrowserBot(botSelectionKey(bot))']
+      ["const open = (event?: { ctrlKey?: boolean; metaKey?: boolean }) =>\n    void openRosterBot(bot, { intent: event?.metaKey || event?.ctrlKey ? 'tab' : 'in-place' })", 'const open = () => void selectBrowserBot(botSelectionKey(bot))']
     ],
     group: [
       ["import { GroupChatWorkspace, openGroupChat } from './group-chat-view'", "import { GroupChatWorkspace } from './group-chat-view'"],

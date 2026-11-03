@@ -24,6 +24,7 @@ function harness({ rows = [{ id: 'chat', profile: 'research', pinned: false }], 
   const pins = atom(saved), sessions = atom(rows), cron = atom([]), messaging = atom([]), profile = atom(active)
   const requests = [], errors = []
   const dependencies = {
+    $primaryGatewayRoute: atom({ connectionId: null, mode: 'remote' }), $connection: atom({}), ambientOwnerConnectionId: () => 'local',
     atom, $pinnedSessionIds: pins, $sessions: sessions, $cronSessions: cron, $messagingSessions: messaging, $activeGatewayProfile: profile,
     normalizeProfileKey: value => value || 'default',
     sessionMatchesStoredId: (row, id) => row.id === id || row.root_session_id === id,

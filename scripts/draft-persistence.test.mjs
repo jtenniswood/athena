@@ -103,7 +103,16 @@ test('actual composer flushes preserve stale-tab drafts and ordinary saves remai
   const composerFile = new URL('../apps/desktop/src/store/composer.ts', import.meta.url)
   const composer = transformContext.exports.transformRenderer(readFileSync(composerFile, 'utf8'), composerFile.pathname).code
   const draftSafetySource = readFileSync(new URL('../apps/web-desktop/src/platform/draft-safety.ts', import.meta.url), 'utf8')
-  const store = shared({})
+  const values = new Map()
+  let lockQueue = Promise.resolve()
+  const store = {
+    storage: {
+      get length() { return values.size }, key: index => [...values.keys()][index] ?? null,
+      getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key)
+    },
+    locks: { request: (_key, work) => { const run = lockQueue.then(work); lockQueue = run.catch(() => {}); return run } },
+    read: () => JSON.parse(values.get('hermes:composer-drafts:v3') ?? '{}')
+  }
   const tab = () => {
     const listeners = new Map()
     const window = {
@@ -121,6 +130,12 @@ test('actual composer flushes preserve stale-tab drafts and ordinary saves remai
     const persistence = realm.exports
     realm.exports = {}
     realm.require = name => {
+      if (name === '@hermes/shared') return { randomUuid: () => crypto.randomUUID() }
+      if (name === './composer-draft-stash') {
+        const stashRealm = vm.createContext({ exports: {}, window })
+        vm.runInContext(ts.transpileModule(readFileSync(new URL('../apps/desktop/src/store/composer-draft-stash.ts', import.meta.url), 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText, stashRealm)
+        return stashRealm.exports
+      }
       if (name === 'hermes:web-draft-persistence') return persistence
       if (name === 'hermes:web-draft-safety') return draftSafety
       if (name === 'nanostores') return { atom: initial => { let value = initial; return { get: () => value, set: next => { value = next } } } }
@@ -146,6 +161,10 @@ test('actual composer flushes preserve stale-tab drafts and ordinary saves remai
   first.composer.stashSessionDraft('a', 'pagehide draft', [])
   assert.equal(store.read().a, 'pagehide draft')
   assert.equal(store.read().b, 'second live composer')
+  second.composer.clearSessionDraft('b')
+  first.composer.reloadPersistedDrafts()
+  assert.equal(first.composer.takeSessionDraft('b').text, '')
+  assert.equal(store.read().b, undefined, 'a stale snapshot must not resurrect a draft sent in another tab')
   const attachment = { id: 'file', kind: 'file', label: 'unsent' }
   first.composer.stashSessionDraft('attachment-only', '', [attachment])
   first.composer.reloadPersistedDrafts()

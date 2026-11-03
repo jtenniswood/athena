@@ -1,5 +1,15 @@
 import { expect } from '@playwright/test'
 
+async function finishMotion(locator) {
+  await locator.evaluate(async element => {
+    for (let node = element; node; node = node.parentElement) {
+      await Promise.all(node.getAnimations().filter(animation =>
+        animation.effect?.getComputedTiming().iterations !== Infinity
+      ).map(animation => animation.finished.catch(() => {})))
+    }
+  })
+}
+
 export function narrowDesktopChecks(test, open) {
   test('narrow desktop preserves scale and mouse menus while hiding navigation', async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1280, height: 900 })
@@ -9,31 +19,36 @@ export function narrowDesktopChecks(test, open) {
     const navigation = page.locator('#browser-navigation')
     const main = page.locator('.browser-main')
     const sidebarWidth = (await navigation.boundingBox()).width
-    const settings = page.getByRole('button', { name: 'Open settings menu', exact: true })
+    const chatActions = page.getByRole('button', { name: 'Chat actions', exact: true })
     await editor.fill('Keep my desktop draft through resizing')
-    const initialSize = await settings.boundingBox()
-    await settings.click()
-    const settingsMenu = page.getByRole('menu', { name: 'Settings and workspace', exact: true })
-    const initialRow = await settingsMenu.getByRole('menuitem', { name: 'Settings', exact: true }).boundingBox()
+    await finishMotion(chatActions)
+    const initialSize = await chatActions.boundingBox()
+    await chatActions.click()
+    const actionsMenu = page.getByRole('menu', { name: 'Chat actions', exact: true })
+    await finishMotion(actionsMenu)
+    const initialRow = await actionsMenu.getByRole('menuitem', { name: /^Rename/ }).boundingBox()
     await page.keyboard.press('Escape')
 
     for (const width of [767, 600, 390]) {
       await page.setViewportSize({ width, height: 900 })
       await expect(navigation).toBeHidden()
       await expect(editor).toHaveText('Keep my desktop draft through resizing')
-      expect((await settings.boundingBox()).height).toBeCloseTo(initialSize.height, 1)
+      await finishMotion(chatActions)
+      expect((await chatActions.boundingBox()).height).toBeCloseTo(initialSize.height, 1)
       expect(await page.evaluate(async () => (await window.hermesDesktop.zoom.get()).percent)).toBe(150)
-      await settings.click()
-      await expect(settingsMenu).toBeVisible()
-      expect((await settingsMenu.getByRole('menuitem', { name: 'Settings', exact: true }).boundingBox()).height).toBeCloseTo(initialRow.height, 1)
-      expect((await settingsMenu.boundingBox()).width).toBeLessThan(width)
+      await chatActions.click()
+      await expect(actionsMenu).toBeVisible()
+      await finishMotion(actionsMenu)
+      expect((await actionsMenu.getByRole('menuitem', { name: /^Rename/ }).boundingBox()).height).toBeCloseTo(initialRow.height, 1)
+      expect((await actionsMenu.boundingBox()).width).toBeLessThan(width)
       await expect(page.locator('.browser-action-sheet')).toHaveCount(0)
       await page.keyboard.press('Escape')
 
       const chatBounds = await main.boundingBox()
-      const toggle = page.getByRole('button', { name: 'Open navigation', exact: true })
+      const toggle = page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ })
       await toggle.click()
       await expect(navigation).toBeVisible()
+      await finishMotion(navigation)
       await expect(main).toBeVisible()
       await expect(main).toHaveAttribute('inert', '')
       expect(await main.boundingBox()).toEqual(chatBounds)
@@ -53,11 +68,13 @@ export function narrowDesktopChecks(test, open) {
       await expect(toggle).toBeFocused()
       await toggle.click()
       await page.getByRole('tablist', { name: 'Navigation', exact: true }).click({ button: 'right' })
-      const contextMenu = page.getByRole('menu', { name: 'Navigation tabs', exact: true })
-      await expect(contextMenu).toBeVisible()
-      await expect(contextMenu.getByRole('group', { name: 'Tabs', exact: true }).getByRole('menuitemcheckbox', { name: 'Sessions', exact: true })).toBeChecked()
-      expect((await contextMenu.boundingBox()).width).toBeLessThan(width)
-      await page.keyboard.press('Escape')
+      const settingsPage = page.locator('[data-browser-settings-frame]')
+      await expect(settingsPage).toBeVisible()
+      await settingsPage.getByRole('button', { name: 'Chat panel', exact: true }).click()
+      await expect(settingsPage.getByRole('checkbox', { name: 'Sessions', exact: true })).toBeChecked()
+      await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+      await expect(editor).toHaveText('Keep my desktop draft through resizing')
+      await toggle.click()
 
       await page.getByRole('button', { name: 'Filters', exact: true }).click()
       const parent = page.locator('[data-slot="dropdown-menu-content"]').last()
@@ -90,7 +107,7 @@ export function narrowDesktopChecks(test, open) {
       await editor.fill('Keep the mobile draft')
       for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }]) {
         await page.setViewportSize(viewport)
-        await page.getByRole('button', { name: 'Open navigation', exact: true }).tap()
+        await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).tap()
         const navigation = page.getByRole('dialog', { name: 'Navigation', exact: true })
         await expect(navigation).toBeVisible()
         await expect(page.locator('.browser-main')).toBeHidden()
