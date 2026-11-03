@@ -915,15 +915,19 @@ test('phone session-row actions stay open without resuming the row', async ({ br
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   const page = await context.newPage()
   await open(page)
+  await editor(page).fill('Keep the phone draft while opening row actions')
   await page.getByRole('button', { name: 'Chat actions', exact: true }).tap()
   let addedPin = false
-  if (await page.getByRole('menuitem', { name: 'Pin', exact: true }).count()) {
-    await page.getByRole('menuitem', { name: 'Pin', exact: true }).tap()
+  const chatActions = page.getByRole('dialog', { name: 'Chat actions', exact: true })
+  if (await chatActions.getByRole('button', { name: 'Pin', exact: true }).count()) {
+    await chatActions.getByRole('button', { name: 'Pin', exact: true }).tap()
     addedPin = true
   } else {
     await page.keyboard.press('Escape')
   }
-  await openNavigation(page)
+  await page.getByRole('button', { name: 'Back to chat history', exact: true }).tap()
+  await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Sessions', exact: true })).toBeFocused()
   const section = page.locator('.browser-pinned-section')
   await expect(section).toBeVisible()
   if (!await section.locator('[data-row-actions]').count()) await section.getByRole('button', { name: /Pinned/ }).first().click()
@@ -933,18 +937,20 @@ test('phone session-row actions stay open without resuming the row', async ({ br
   const sheet = page.locator('[data-slot="dropdown-menu-content"]:visible').last()
   await expect(sheet).toBeVisible()
   await expect(sheet.getByRole('menuitem', { name: /Rename/ })).toBeVisible()
-  const bounds = await sheet.boundingBox()
-  expect(bounds.x).toBe(0)
-  expect(bounds.width).toBe(390)
-  expect(bounds.y + bounds.height).toBe(844)
+  await expect.poll(async () => {
+    const bounds = await sheet.boundingBox()
+    return Boolean(bounds && Math.abs(bounds.x) < 0.5 && Math.abs(bounds.width - 390) < 0.5 && Math.abs(bounds.y + bounds.height - 844) < 0.5)
+  }).toBe(true)
   await page.keyboard.press('Escape')
   await expect(row).toBeVisible()
   await expect(page.locator('.browser-navigation.is-open')).toBeVisible()
   await expect(row.getByRole('button', { name: 'Session actions', exact: true })).toBeFocused()
+  await expect(page).toHaveURL(/#\/preview-week$/)
+  await section.getByRole('button', { name: 'Plan a calmer working week', exact: true }).tap()
+  await expect(editor(page)).toHaveText('Keep the phone draft while opening row actions')
   if (addedPin) {
-    await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
     await page.getByRole('button', { name: 'Chat actions', exact: true }).tap()
-    await page.getByRole('menuitem', { name: 'Unpin', exact: true }).tap()
+    await chatActions.getByRole('button', { name: 'Unpin', exact: true }).tap()
   }
   await context.close()
 })

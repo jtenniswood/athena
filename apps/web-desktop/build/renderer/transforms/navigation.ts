@@ -430,7 +430,7 @@ export function useBrowserProfileSectionPictures(source: string, root: string): 
   return `import { BrowserHideProfileItem, useHiddenProfileGroups } from ${visibilityOwner}\nimport { $sidebarGrouping } from '@/store/layout'\nimport { useBrowserProfileSection } from ${owner}\n` + output
 }
 
-export function useBrowserSessionReordering(source: string, surface: 'sidebar' | 'section' | 'groups' | 'row'): string {
+export function useBrowserSessionReordering(source: string, surface: 'sidebar' | 'section' | 'groups'): string {
   const replacements: [string, string][] = surface === 'sidebar' ? [
     ['  useEffect(() => {\n    const next = resolveManualSessionOrderIds(', '  useEffect(() => {\n    if (sessionsLoading) return\n    const next = resolveManualSessionOrderIds('],
     ['[agentOrderIds, agentOrderManual, unpinnedAgentSessions]', '[agentOrderIds, agentOrderManual, unpinnedAgentSessions, sessionsLoading]'],
@@ -450,8 +450,6 @@ export function useBrowserSessionReordering(source: string, surface: 'sidebar' |
       </ReorderableList>
     },
     [renderListRow, sessionsDraggable, manualOrderIds, sessions, dndSensors, onReorderSessions]`]
-  ] : surface === 'row' ? [
-    ["          startSessionDrag({ id: session.id, profile: session.profile || 'default', title }, event)", "          if (!reorderable) startSessionDrag({ id: session.id, profile: session.profile || 'default', title }, event)"]
   ] : [
     ['  const rankIds = useStore($sidebarSessionRankIds)', `  const rankedIds = useStore($sidebarSessionRankIds)
   const manualIds = useStore($sidebarSessionOrderIds)
@@ -558,35 +556,6 @@ export function useBrowserSessionSelection(source: string, root: string): string
   return (`import { selectBrowserSession } from ${adapter}\n` + source).replace(target, `  const openStoredSession = (sessionId: string, session?: SessionInfo) => selectBrowserSession({
     sessionId, connectionId: session?.connection_id, profile: session?.profile
   }, navigate)`)
-}
-
-export function disableBrowserSessionRowTabs(source: string): string {
-  const tabAction = "openSession(session.id, () => undefined, 'tab')"
-  const windowAction = "openSession(session.id, () => undefined, 'window')"
-  const contract = contracts.find(item => item.module === 'app/chat/sidebar/session-row.tsx')!
-  if (createHash('sha256').update(source).digest('hex') !== contract.sourceHash || source.split(tabAction).length !== 3 || source.split(windowAction).length !== 2) {
-    throw new Error('Browser session row tab gesture contract changed')
-  }
-  const rowTarget = '      <SidebarRowShell\n        actions={card ? undefined : actionsNode}\n'
-  if (source.split(rowTarget).length !== 2) throw new Error('Browser session project-drop row target changed')
-  return source.replaceAll(tabAction, 'onResume()').replace(windowAction, 'onResume()')
-    .replace(rowTarget, `${rowTarget}        data-web-session-id={session.id}\n        data-web-session-profile={session.profile || 'default'}\n        data-web-session-selected={isSelected || undefined}\n`)
-}
-
-export function useBrowserSessionPreview(source: string, root: string): string {
-  const output = replaceBrowserContract(source, [
-    ["import { OverflowTip, Tip } from '@/components/ui/tooltip'", "import { Tip } from '@/components/ui/tooltip'"],
-    ['      <SidebarRowShell\n', '      <BrowserSessionPreview session={session} title={title} disabled={dragging}>\n      <SidebarRowShell\n'],
-    ['      </SidebarRowShell>', '      </SidebarRowShell>\n      </BrowserSessionPreview>']
-  ])
-  // Both list densities use the same static fade and full-row preview.
-  if (output.split('<OverflowTip label={title} placement="row">').length !== 3) throw new Error('Browser session title preview target changed')
-  return `import { BrowserSessionPreview } from ${JSON.stringify(path.join(root, 'src/experience/session-preview'))}\n` + output
-    .replaceAll('<OverflowTip label={title} placement="row">', '<>')
-    .replaceAll('</OverflowTip>', '</>')
-    .replaceAll('hover-marquee ', 'browser-session-title ')
-    .replaceAll('onPointerEnter={armMarquee}', '')
-    .replaceAll('onPointerLeave={disarmMarquee}', '')
 }
 
 export function disableBrowserSessionOpenActions(source: string, root: string): string {

@@ -540,14 +540,6 @@ test('browser settings remove desktop-only keybind rows', () => {
   assert.throws(() => filterBrowserKeybinds(source.replace("const [query, setQuery] = useState('')", "const [query, setQuery] = useState('changed')")), /keybind contract changed/)
 })
 
-test('browser session rows resume chats instead of opening tabs or windows', () => {
-  const { disableBrowserSessionRowTabs } = load('build/renderer/browser-plugin.ts')
-  const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/session-row.tsx'), 'utf8')
-  const output = disableBrowserSessionRowTabs(source)
-  assert.doesNotMatch(output, /openSession\(session\.id, \(\) => undefined, '(?:tab|window)'\)/)
-  assert.equal((output.match(/onResume\(\)/g) || []).length, (source.match(/onResume\(\)/g) || []).length + 3)
-})
-
 test('browser session menus omit tab and window actions while preserving hide-tab-bar props', () => {
   const { disableBrowserSessionOpenActions } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/session-actions-menu.tsx'), 'utf8')

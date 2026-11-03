@@ -76,6 +76,14 @@ original file-import and pending-save owners. Unsupported or oversized snapshots
 leave the complete web editor available. This interface does not reactivate
 native Settings or native menus in the current application entry point.
 
+`experience/session-row.tsx` owns session-row geometry, density, primary actions,
+keyboard access and drag handles. `upstream/session-row.tsx` projects live engine
+metadata, status and extension decorations and retains the engine's mutation and
+menu commands. A guarded module replacement connects every list surface to this
+row; source rewrites for row gestures, title previews and reorder handling are
+removed. Row actions and their portalled dialogs cannot resume the conversation.
+Filtering, pagination and section composition still use the engine sidebar.
+
 The chat action menu and its keyboard shortcuts use the same browser commands.
 Rename and delete dialogs retain the conversation they were opened for even if
 selection changes before a request completes. Sidebar row menus still use a

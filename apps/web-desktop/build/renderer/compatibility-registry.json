@@ -575,11 +575,11 @@
   },
   {
     "name": "single-conversation-rows",
-    "kind": "browser-transform",
-    "order": 20,
+    "kind": "replacement",
+    "order": 10,
     "module": "app/chat/sidebar/session-row.tsx",
-    "reason": "Open session rows in place instead of desktop tabs/windows. Route sortable row gestures to chat reordering instead of desktop pane dragging. Fade long titles and show an owner-scoped latest-reply preview beside hovered rows.",
-    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "reason": "Project engine-owned session metadata and commands into Athena-owned row presentation, browser gestures, sortable handles and owner-scoped previews.",
+    "owner": "apps/web-desktop/src/upstream/session-row.tsx",
     "tests": [
       {
         "file": "tests/browser/interruptions.spec.mjs",
@@ -592,18 +592,16 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "chat hover previews show the latest reply without selecting the chat or changing its draft"
+      },
+      {
+        "file": "tests/browser/session-row.spec.mjs",
+        "scenario": "row commands preserve owner identity and exclude action and portal gestures"
       }
     ],
-    "removal": "Browser navigation rows use public selection commands.",
-    "handlers": [
-      "disableBrowserSessionRowTabs",
-      "sessionReorderingRow",
-      "useBrowserSessionPreview"
-    ],
+    "removal": "Remove when Hermes provides an equivalent public row projection and command contract.",
     "sourceHash": "bc91540c2f89b27f39c363d92997488d40bae1a9e3bb39650d747bc5337d4c0b",
     "sourceRoot": "renderer",
-    "inputHash": "bc91540c2f89b27f39c363d92997488d40bae1a9e3bb39650d747bc5337d4c0b",
-    "outputHash": "ff553c49b8b04e05ab9e93090571c2cc28587bf684d4b1bfb6b1efc89a66e2df"
+    "replacement": "src/upstream/session-row.tsx"
   },
   {
     "name": "single-conversation-menus",

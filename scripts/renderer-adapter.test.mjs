@@ -40,6 +40,8 @@ test('compiler and Vite resolve scoped replacements, virtual modules, aliases, a
   const host = adapterCompilerHost(options, adapter)
   const plugin = rendererAdapterPlugin(root)
   const cases = [
+    ['./session-row', 'app/chat/sidebar/sessions-section.tsx', 'src/upstream/session-row.tsx'],
+    ['@/app/chat/sidebar/session-row', 'app/chat/sidebar/virtual-session-list.tsx', 'src/upstream/session-row.tsx'],
     ['@/app/settings', 'app/app.tsx', 'src/experience/settings/settings-route.tsx'],
     ['hermes:settings-controller', 'upstream/settings-controller-api.tsx', '../desktop/src/app/settings/index.tsx'],
     ['@/app/settings/gateway-settings', 'app/settings/index.tsx', 'src/overrides/gateway-settings.tsx'],
