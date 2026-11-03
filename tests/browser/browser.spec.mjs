@@ -3579,7 +3579,7 @@ test('empty profiles stay visible and can start conversations when there are no 
   expect(creates[0].profile).toBe('research')
 })
 
-test('configured Telegram appears without chats and channel controls exclude unset platforms', async ({ page }) => {
+test('empty configured channels stay hidden and channel controls exclude unset platforms', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
   await page.route(/\/api\/messaging\/platforms(?:\?|$)/, route => route.fulfill({ json: { platforms: [
     { id: 'telegram', name: 'Telegram', enabled: true, configured: true },
@@ -3588,8 +3588,7 @@ test('configured Telegram appears without chats and channel controls exclude uns
   ] } }))
   await open(page)
   const telegram = page.locator('[data-browser-section-id="messaging:telegram"]')
-  await expect(telegram).toBeVisible()
-  await expect(telegram.locator('[data-browser-section-header]')).toContainText('Telegram')
+  await expect(telegram).toHaveCount(0)
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await page.getByRole('button', { name: 'Chat panel', exact: true }).click()
   const menu = page.getByRole('main', { name: 'Chat panel', exact: true })
@@ -3600,7 +3599,7 @@ test('configured Telegram appears without chats and channel controls exclude uns
   await expect(telegram).toBeHidden()
   await toggle.click()
   await page.keyboard.press('Escape')
-  await expect(telegram).toBeVisible()
+  await expect(telegram).toHaveCount(0)
 })
 
 for (const layout of ['flat', 'profiles']) {
