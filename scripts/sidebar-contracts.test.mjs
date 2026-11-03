@@ -39,8 +39,8 @@ test('semantic adapters preserve identity and reject upstream drift', () => {
   const adapted = api.useBrowserSectionIds(sidebar, root)
   assert.match(adapted, /browserSectionId="sessions" label=\{sessionsLabel\}/)
   assert.match(adapted, /browserSectionId=\{`messaging:\$\{group.sourceId\}`\}/)
-  assert.match(adapted, /const browserChannels = useBrowserSidebarChannels\(\)/)
-  assert.match(adapted, /browserChannels.map\(channel => \[channel.sourceId, \[\]\]\)/)
+  assert.match(adapted, /useBrowserSidebarChannels\(\)/)
+  assert.doesNotMatch(adapted, /browserChannels.map/)
   assert.doesNotMatch(adapted, /!worktreeGroupingActive &&\s+messagingGroups.map/)
   assert.doesNotMatch(adapted, /showsAdvancedChrome && cronJobs\.length/)
   assert.throws(() => api.useBrowserSectionIds(sidebar.replace('label={sessionsLabel}', 'label={otherLabel}'), root), /target changed/)
@@ -96,7 +96,7 @@ test('saved messaging conversations survive missing channel configuration', () =
   }).outputText
   vm.runInContext(code, context)
   assert.deepEqual(JSON.parse(JSON.stringify(context.groups)).map(group => [group.sourceId, group.sessions.map(session => session.id)]), [
-    ['telegram', ['telegram-history']], ['api_server', []]
+    ['telegram', ['telegram-history']]
   ])
 })
 

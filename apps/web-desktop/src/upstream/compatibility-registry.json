@@ -427,7 +427,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/index.tsx",
-    "reason": "Compose browser search, disclosures, pins, None grouping, and messaging sections from configuration or saved conversations without split controls, desktop shortcuts or the duplicate top Capabilities link. Enable drag ordering in all-profile lists and preserve saved orders while sessions load. Keep configured profiles visible as new conversation entry points even without chats.",
+    "reason": "Compose browser search, disclosures, pins, None grouping, and messaging sections only when they contain saved conversations without split controls, desktop shortcuts or the duplicate top Capabilities link. Enable drag ordering in all-profile lists and preserve saved orders while sessions load. Keep configured profiles visible as new conversation entry points even without chats.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -436,7 +436,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "configured Telegram appears without chats and channel controls exclude unset platforms"
+        "scenario": "empty configured channels stay hidden and channel controls exclude unset platforms"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -477,7 +477,7 @@
     "sourceHash": "194742afb6c422679a0ad0507e1f29e66c4188345e47f7ee47f79dfc8f1fe2e6",
     "sourceRoot": "renderer",
     "inputHash": "194742afb6c422679a0ad0507e1f29e66c4188345e47f7ee47f79dfc8f1fe2e6",
-    "outputHash": "330137643e9bf9b1ad5d12ab08cde19b9f67b4d6cf13189239c8aa3f3c9f3d88"
+    "outputHash": "5961031ed6afb8048850786c16a5e5150256ecd139b4d92b52dc6f5c5952c2b2"
   },
   {
     "name": "single-conversation-wiring",
