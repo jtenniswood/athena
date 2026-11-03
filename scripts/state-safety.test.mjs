@@ -99,3 +99,34 @@ test('reload readiness flushes and verifies text and blocks turns, uploads, file
   assert.match(safety.reloadReadiness().reason, /recording/)
   track.readyState = 'ended'; assert.equal(safety.reloadReadiness().ready, true)
 })
+
+test('UI updates allow running turns but retain every browser work and draft guard', async () => {
+  const draft = { storageKey: 'drafts', texts: { session: 'Keep this draft' }, attachments: 0, blocked: false }
+  let persisted = JSON.stringify(draft.texts), flush = async () => {}
+  const track = { readyState: 'live' }
+  const navigator = { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [track] }) } }
+  const safety = load('reload-safety', { navigator,
+    draftSafety: { browserDraftSnapshot: () => draft, flushBrowserDrafts: () => flush() },
+    window: { localStorage: { getItem: () => persisted } }
+  })
+  const ready = () => safety.reloadReadinessAfterSaving('ui-update')
+  assert.equal((await ready()).ready, false, 'an unconnected renderer is still unsafe')
+  safety.setActiveWork({ count: 2 })
+  assert.equal((await ready()).ready, true)
+  await assert.rejects(safety.assertSafeConnectionChange(), /active response/)
+  assert.throws(() => safety.assertSafeReload(), /active response/)
+  const finish = safety.beginOperation()
+  assert.match((await ready()).reason, /uploading/)
+  finish()
+  draft.attachments = 1; assert.match((await ready()).reason, /attachments/); draft.attachments = 0
+  draft.blocked = true; assert.equal((await ready()).ready, false); draft.blocked = false
+  persisted = '{}'; assert.match((await ready()).reason, /could not be saved/)
+  flush = async () => { persisted = JSON.stringify(draft.texts) }
+  assert.equal((await ready()).ready, true)
+  safety.trackMediaRequests(); await navigator.mediaDevices.getUserMedia({ audio: true })
+  assert.match((await ready()).reason, /recording/)
+  track.readyState = 'ended'
+  // Work can change while draft saves yield. The final check must still run.
+  flush = async () => { draft.attachments = 1 }
+  assert.match((await ready()).reason, /attachments/)
+})

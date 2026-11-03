@@ -55,7 +55,7 @@ export function registerPwa(): void {
     const message = event.data
     if (message?.type === 'HERMES_ABORT_UPDATE') {
       if (message.transaction === transaction) unlock()
-      setStatus('Update postponed. Finish work in all Hermes tabs, or close older tabs, then try again.')
+      setStatus('Update postponed. Save pending changes in all Hermes tabs, or close older tabs, then try again.')
       return
     }
     if (!['HERMES_FLUSH_UPDATE', 'HERMES_VERIFY_UPDATE'].includes(message?.type)) return
@@ -66,14 +66,14 @@ export function registerPwa(): void {
       const root = document.getElementById('root')
       if (root) root.inert = true
       clearTimeout(timer); timer = setTimeout(unlock, 15000)
-      const state = await reloadReadinessAfterSaving()
+      const state = await reloadReadinessAfterSaving('ui-update')
       // A worker timeout/abort must not leave a late save holding the UI locked.
       if (transaction !== message.transaction) { event.ports[0]?.postMessage({ ready: false }); return }
       // Settings owners may need to finish an ordinary gateway save. Keep the
       // network open until those owners and composer drafts have been flushed.
       const drained = state.ready && await network.pause()
       if (transaction !== message.transaction) { event.ports[0]?.postMessage({ ready: false }); return }
-      const verified = drained ? reloadReadiness() : state
+      const verified = drained ? reloadReadiness(true, 'ui-update') : state
       if (verified.ready && drained) {
         snapshot = verified.drafts
       } else {
@@ -89,7 +89,7 @@ export function registerPwa(): void {
       } catch { ready = false }
       // Recheck activity and every prepared entry. Other tabs may have added
       // independently saved drafts while their flushes completed.
-      const state = await reloadReadinessAfterSaving()
+      const state = await reloadReadinessAfterSaving('ui-update')
       const current = state.drafts
       // The upstream stash uses insertion order for recency. A storage sync
       // can reorder unchanged entries without changing any conversation draft.
@@ -101,18 +101,18 @@ export function registerPwa(): void {
   })
   navigator.serviceWorker.addEventListener('controllerchange', async () => {
     const prepared = transaction
-    if (prepared && (await reloadReadinessAfterSaving()).ready && transaction === prepared) window.location.reload()
+    if (prepared && (await reloadReadinessAfterSaving('ui-update')).ready && transaction === prepared) window.location.reload()
     else unlock()
   })
   const showUpdate = (registration: ServiceWorkerRegistration) => {
     if (!registration.waiting || !navigator.serviceWorker.controller || notice) return
     const update = async () => {
-      const state = await reloadReadinessAfterSaving()
+      const state = await reloadReadinessAfterSaving('ui-update')
       if (!state.ready) { setStatus(state.reason || 'Update postponed.'); return }
       setStatus('Checking open Hermes tabs…')
       registration.waiting?.postMessage({ type: 'HERMES_PREPARE_UPDATE' })
     }
-    notice = { update, message: 'A Hermes update is ready.' }
+    notice = { update, message: 'A UI update is ready. Running tasks will continue while the app reconnects.' }
     publishPwaUpdate(notice)
   }
   const register = async () => {
