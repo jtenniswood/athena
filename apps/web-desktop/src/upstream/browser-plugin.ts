@@ -1210,7 +1210,18 @@ export function showHiddenBotsInBrowserRoster(source: string): string {
 
 export function useBrowserProfileSectionPictures(source: string, root: string): string {
   const replacements: [string, string][] = [
-    ["import { WorkspaceAddButton, WorkspaceShowMoreButton } from './projects/workspace-header'", "import { WorkspaceShowMoreButton } from './projects/workspace-header'\nimport { Tip } from '@/components/ui/tooltip'"],
+    ["import { WorkspaceAddButton, WorkspaceShowMoreButton } from './projects/workspace-header'", "import { Tip } from '@/components/ui/tooltip'"],
+    ["import { SIDEBAR_GROUP_PAGE } from './projects/model'\n", ''],
+    ['  const [visibleCount, setVisibleCount] = useState(SIDEBAR_GROUP_PAGE)\n', ''],
+    ['  const hiddenCount = embedded ? 0 : Math.max(0, sessions.length - visibleCount)\n', ''],
+    ['sessions={embedded ? sessions : sessions.slice(0, visibleCount)}', 'sessions={sessions}'],
+    [`          {hiddenCount > 0 && (
+            <WorkspaceShowMoreButton
+              count={Math.min(SIDEBAR_GROUP_PAGE, hiddenCount)}
+              label={label}
+              onClick={() => setVisibleCount(count => count + SIDEBAR_GROUP_PAGE)}
+            />
+          )}\n`, ''],
     ['              <WorkspaceAddButton\n                label={s.newSessionIn(label)}', '              <Tip label={s.newSessionIn(label)}><Button\n                aria-label={s.newSessionIn(label)}\n                size="icon-xs"\n                variant="ghost"'],
     ['              />\n            )}\n            <DropdownMenu>', '              ><Codicon name="add" size="0.75rem" /></Button></Tip>\n            )}\n            <DropdownMenu>'],
     ['  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA)', "  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA).filter(item => item.id !== 'hermes-bots:screen-portal')"],
