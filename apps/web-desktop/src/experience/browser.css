@@ -229,16 +229,11 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
 @media (prefers-reduced-motion:reduce) { .browser-navigation { transition:none; } }
 .browser-upstream-workspace { position:relative; display:flex; flex:1; min-height:0; min-width:0; }
 .browser-upstream-workspace [data-tree-group] :is(aside,[data-slot="sidebar"]) { border-left-width:0; border-right-width:0; box-shadow:none; }
-/* Keep user prompts pinned to the viewport edge. The upstream clip observer
-   compares screen-pixel rectangles with computed CSS top values, so a zero
-   offset avoids zoom-dependent misses. Its clip inset is also measured in
-   screen pixels and must be converted back to CSS pixels before painting. */
-.browser-shell [data-slot="aui_thread-viewport"] [data-slot="aui_user-message-root"].sticky { top:0; }
-.browser-shell [data-slot="aui_thread-viewport"] [data-sticky-prompt-clip] { clip-path:inset(calc(var(--sticky-prompt-clip) / var(--web-ui-scale,1)) 0 0); }
-@media (width < 48rem) {
- .browser-shell [data-slot="aui_thread-viewport"] [data-slot="aui_user-message-root"].sticky { position:static !important; }
- .browser-shell [data-slot="aui_thread-viewport"] [data-sticky-prompt-clip] { clip-path:none; }
-}
+/* Keep prompts in the conversation flow on every screen size. The upstream
+   sticky exclusion grows with scroll distance and can hide large sections of
+   replies under browser UI scaling. Disable its paint clip along with pinning. */
+.browser-shell [data-slot="aui_thread-viewport"] [data-slot="aui_user-message-root"].sticky { position:static !important; }
+.browser-shell [data-slot="aui_thread-viewport"] [data-sticky-prompt-clip] { clip-path:none; }
 .browser-upstream-workspace [data-tree-group] header[class*="h-(--titlebar-height)"] { display:none; }
 .browser-upstream-workspace [data-zone-tabstrip]:has([data-tree-tab="workspace"]) { display:none; }
 /* Chat title and profile ownership are already represented by the browser
