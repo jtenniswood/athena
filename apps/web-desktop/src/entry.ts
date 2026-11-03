@@ -11,7 +11,6 @@ import './platform/sign-in.css'
 import './experience/styles/motion.css'
 import { installBrowserMotionInput } from './experience/ui/motion-input'
 import { trackVisualViewport } from './platform/viewport'
-import { installComposerKeyboard } from './platform/composer-keyboard'
 import { installAndroidNavigationGuard } from './platform/android-navigation'
 
 // The native bridge is injected before this entry point, including sign-in.
@@ -22,8 +21,6 @@ if (import.meta.hot) import.meta.hot.dispose(stopMotionInput)
 
 const stopTrackingViewport = trackVisualViewport()
 if (import.meta.hot) import.meta.hot.dispose(stopTrackingViewport)
-const stopComposerKeyboard = installComposerKeyboard()
-if (import.meta.hot) import.meta.hot.dispose(stopComposerKeyboard)
 const stopAndroidNavigationGuard = installAndroidNavigationGuard()
 if (import.meta.hot) import.meta.hot.dispose(stopAndroidNavigationGuard)
 

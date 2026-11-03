@@ -125,6 +125,10 @@ the alternate action while busy. Queue editing, IME handling, disabled controls,
 attachment fallback and rejected-submit restoration remain engine-owned. No
 document listener finds or clicks composer buttons to apply this preference.
 
+Shift+Enter is handled by that mounted composer's keyboard command after its IME
+guards. The native line-break command uses the existing undo checkpoint and
+immediate draft flush, rather than running ahead of the owner in a global listener.
+
 Timeline scrubbing is mounted on the renderer's virtual rail through a checked
 adapter. The browser hook maps pointer coordinates, UI scale and scroll offset
 to the rail's existing entries, then calls its original jump command. Pointer

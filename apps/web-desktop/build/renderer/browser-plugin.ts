@@ -49,6 +49,7 @@ import {
   useBrowserAcceptedSubmit,
   useBrowserFollowupSubmit,
   useBrowserAlternateSubmit,
+  useBrowserComposerLineBreak,
   removeBrowserConversationalVoiceEntry,
   useBrowserCodingActionHooks,
   keepBrowserMessageBubblesSolid
@@ -60,6 +61,7 @@ export {
   useBrowserAcceptedSubmit,
   useBrowserFollowupSubmit,
   useBrowserAlternateSubmit,
+  useBrowserComposerLineBreak,
   removeBrowserConversationalVoiceEntry,
   useBrowserCodingActionHooks,
   keepBrowserMessageBubblesSolid
@@ -254,6 +256,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
   if (digest(code) === entry.outputHash) return { code, map: null }
   if (digest(code) !== entry.inputHash) throw new Error(`Browser compatibility changed: ${entry.name} (${entry.module}). Review this registry entry.`)
   const handlers: Record<string, (source: string) => string> = {
+    useBrowserComposerLineBreak,
     useBrowserTimelineScrubbing: source => useBrowserTimelineScrubbing(source, root),
     useBrowserSessionSection: source => useBrowserSessionSection(source, root),
     useBrowserProjectController: source => useBrowserProjectController(source, root),
