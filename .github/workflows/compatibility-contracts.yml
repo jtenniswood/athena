@@ -63,7 +63,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Verify Android approval forms and settings in a real browser
         run: |
-          test_files=(tests/browser/android-sign-in.spec.mjs tests/browser/native-settings.spec.mjs tests/browser/settings-presentation.spec.mjs tests/browser/session-row.spec.mjs tests/browser/sidebar-tree.spec.mjs tests/browser/pull-to-refresh.spec.mjs tests/browser/timeline-scrubbing.spec.mjs)
+          test_files=(tests/browser/android-sign-in.spec.mjs tests/browser/native-settings.spec.mjs tests/browser/settings-presentation.spec.mjs tests/browser/session-row.spec.mjs tests/browser/sidebar-tree.spec.mjs tests/browser/navigation-commands.spec.mjs tests/browser/pull-to-refresh.spec.mjs tests/browser/timeline-scrubbing.spec.mjs)
           for file in "${test_files[@]}"; do
             test -f "$file" || { echo "Missing browser test file: $file" >&2; exit 1; }
           done

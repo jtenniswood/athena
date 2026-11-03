@@ -1,5 +1,6 @@
 import type { ComponentProps, HTMLAttributes, ReactNode } from 'react'
 import { browserClassNames as cn } from './ui/classnames'
+import { preserveNavigationForNextSelection } from './conversation-navigation'
 
 export function BrowserTreeStack({ className, ...props }: ComponentProps<'div'>) {
   return <div className={cn('grid grid-cols-[minmax(0,1fr)] gap-px', className)} {...props} />
@@ -8,7 +9,7 @@ export function BrowserTreeStack({ className, ...props }: ComponentProps<'div'>)
 export function BrowserTreeAdd({ label, onClick, onPointerDown, icon = 'add', className }: {
   label: string; onClick(): void; onPointerDown?: ComponentProps<'button'>['onPointerDown']; icon?: string; className?: string
 }) {
-  return <button type="button" aria-label={label} title={label} onClick={onClick} onPointerDown={onPointerDown}
+  return <button type="button" aria-label={label} title={label} onClick={() => { preserveNavigationForNextSelection(); onClick() }} onPointerDown={onPointerDown}
     className={cn('grid size-4 shrink-0 place-items-center rounded-sm bg-transparent text-(--ui-text-quaternary) opacity-0 transition-opacity hover:bg-(--ui-control-hover-background) hover:text-foreground group-hover/workspace:opacity-100 focus-visible:opacity-100', className)}>
     <i aria-hidden="true" className={`codicon codicon-${icon}`} style={{ fontSize: '0.75rem' }} />
   </button>
