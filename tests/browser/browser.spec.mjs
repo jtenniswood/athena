@@ -1247,6 +1247,32 @@ test('chat delete confirmation retains its conversation owner when navigation ch
   await expect(editor(page)).toHaveText('Keep the original delete draft')
 })
 
+test('chat actions toggle closed from the title toolbar', async ({ page }) => {
+  await open(page)
+  const trigger = page.getByRole('button', { name: 'Chat actions', exact: true })
+  const menu = page.getByRole('menu', { name: 'Chat actions', exact: true })
+  for (const key of [null, 'Enter', 'Space']) {
+    const activate = () => key ? page.keyboard.press(key) : trigger.click()
+    await trigger.focus()
+    await activate()
+    await expect(menu).toBeVisible()
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    if (key) await trigger.focus()
+    await activate()
+    await expect(menu).toBeHidden()
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    await expect(trigger).toBeFocused()
+  }
+  await trigger.click()
+  await page.keyboard.press('Escape')
+  await expect(menu).toBeHidden()
+  await expect(trigger).toBeFocused()
+  await trigger.click()
+  await editor(page).click()
+  await expect(menu).toBeHidden()
+  await expect(editor(page)).toBeFocused()
+})
+
 test('chat actions open from the title toolbar with panel controls', async ({ page }) => {
   await open(page)
   const trigger = page.getByRole('button', { name: 'Chat actions', exact: true })
