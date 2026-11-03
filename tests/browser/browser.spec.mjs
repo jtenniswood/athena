@@ -911,6 +911,33 @@ for (const startPath of ['', 'preview-week']) {
   })
 }
 
+test('hovered chat archive preserves the selected conversation and draft', async ({ page }) => {
+  await page.route(/\/api\/sessions\/preview-idea(?:\?.*)?$/, route => route.request().method() === 'PATCH'
+    ? route.fulfill({ json: { ok: true } }) : route.fallback())
+  await open(page)
+  await editor(page).fill('Keep this draft while archiving another chat')
+  const row = page.locator('[data-web-session-id="preview-idea"]').first()
+  const menu = row.getByRole('button', { name: 'Session actions', exact: true })
+  const archive = row.getByRole('button', { name: 'Archive', exact: true })
+  await editor(page).hover()
+  await expect(row.locator('[data-browser-session-actions]')).toHaveCSS('opacity', '0')
+  await row.hover()
+  await expect(row.locator('[data-browser-session-actions]')).toHaveCSS('opacity', '1')
+  const menuBounds = await menu.boundingBox(), archiveBounds = await archive.boundingBox()
+  expect(menuBounds.x + menuBounds.width).toBeLessThanOrEqual(archiveBounds.x)
+  const archived = page.waitForRequest(request => request.method() === 'PATCH' &&
+    new URL(request.url()).pathname === '/api/sessions/preview-idea' && request.postDataJSON()?.archived === true)
+  await archive.click()
+  await archived
+  await expect(row).toHaveCount(0)
+  await expect(page).toHaveURL(/#\/preview-week$/)
+  await expect(editor(page)).toHaveText('Keep this draft while archiving another chat')
+  const selected = page.locator('[data-web-session-id="preview-week"]').first()
+  await selected.hover()
+  await selected.getByRole('button', { name: 'Session actions', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: /^Rename/ })).toBeVisible()
+})
+
 test('phone session-row actions stay open without resuming the row', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   const page = await context.newPage()

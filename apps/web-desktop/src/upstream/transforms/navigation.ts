@@ -569,7 +569,20 @@ export function disableBrowserSessionRowTabs(source: string): string {
   }
   const rowTarget = '      <SidebarRowShell\n        actions={card ? undefined : actionsNode}\n'
   if (source.split(rowTarget).length !== 2) throw new Error('Browser session project-drop row target changed')
-  return source.replaceAll(tabAction, 'onResume()').replace(windowAction, 'onResume()')
+  const actions = replaceBrowserContract(source, [
+    ['      <SessionActionsMenu\n', '      <span data-browser-session-actions>\n      <SessionActionsMenu\n'],
+    ["            trailing.length > 0 && 'absolute right-0',", ''],
+    ['            pr && KEBAB_YIELDS', ''],
+    ['          <Codicon name="kebab-vertical" size="0.875rem" />', '          <Codicon name="ellipsis" size="0.875rem" />'],
+    ['      </SessionActionsMenu>', `      </SessionActionsMenu>
+      {!session.archived && <Tip label={r.archive} placement="toolbar">
+        <Button type="button" aria-label={r.archive} size="icon" variant="ghost" onClick={onArchive}>
+          <Codicon name="archive" size="0.875rem" />
+        </Button>
+      </Tip>}
+      </span>`]
+  ])
+  return actions.replaceAll(tabAction, 'onResume()').replace(windowAction, 'onResume()')
     .replace(rowTarget, `${rowTarget}        data-web-session-id={session.id}\n        data-web-session-profile={session.profile || 'default'}\n        data-web-session-selected={isSelected || undefined}\n`)
 }
 
