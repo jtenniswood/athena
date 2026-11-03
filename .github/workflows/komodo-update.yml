@@ -1,0 +1,67 @@
+name: Trigger Komodo update
+on:
+  workflow_run:
+    workflows: [Build development image]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Update Athena only, or check all auto-update-enabled resources
+        type: choice
+        required: true
+        default: athena
+        options: [athena, global]
+permissions: {}
+concurrency:
+  group: komodo-update
+  cancel-in-progress: false
+jobs:
+  update:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-26.04
+    permissions: {}
+    steps:
+      - name: Send signed update webhook
+        env:
+          TARGET: ${{ inputs.target || 'athena' }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          KOMODO_WEBHOOK_SECRET: ${{ secrets.KOMODO_WEBHOOK_SECRET }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        shell: python
+        run: |
+          import hashlib, hmac, json, os, urllib.error, urllib.request
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+          for name in ('KOMODO_WEBHOOK_SECRET', 'CF_ACCESS_CLIENT_ID', 'CF_ACCESS_CLIENT_SECRET'):
+              if not os.environ.get(name):
+                  raise SystemExit('Missing Actions secret: ' + name)
+          paths = {
+              'athena': '/listener/github/stack/6aca45191ceb67439ffb56d9/deploy',
+              'global': '/listener/github/procedure/68e2b92be5d1f79a0579bf71/main',
+          }
+          target = os.environ['TARGET']
+          body = json.dumps({'ref': 'refs/heads/main', 'after': os.environ['SOURCE_SHA']}, separators=(',', ':')).encode()
+          signature = hmac.new(os.environ['KOMODO_WEBHOOK_SECRET'].encode(), body, hashlib.sha256).hexdigest()
+          request = urllib.request.Request('https://komodo.tenniswoodnetwork.co.uk' + paths[target], data=body, method='POST', headers={
+              'Content-Type': 'application/json',
+              'User-Agent': 'GitHub-Hookshot/athena-actions',
+              'CF-Access-Client-Id': os.environ['CF_ACCESS_CLIENT_ID'],
+              'CF-Access-Client-Secret': os.environ['CF_ACCESS_CLIENT_SECRET'],
+              'X-GitHub-Event': 'push',
+              'X-GitHub-Delivery': os.environ['GITHUB_RUN_ID'] + '-' + os.environ['GITHUB_RUN_ATTEMPT'],
+              'X-Hub-Signature-256': 'sha256=' + signature,
+          })
+          try:
+              with urllib.request.build_opener(NoRedirect()).open(request, timeout=60) as response:
+                  status, result = response.status, response.read(4096)
+          except urllib.error.HTTPError as error:
+              raise SystemExit('Komodo webhook HTTP ' + str(error.code)) from None
+          if not 200 <= status < 300 or result.strip():
+              raise SystemExit('Unexpected webhook response (HTTP ' + str(status) + ')')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('Komodo accepted the signed **' + target + '** webhook for `' + os.environ['SOURCE_SHA'] + '`.\n\nAcceptance is not deployment completion; verify the Komodo update and runtime revision.\n')
