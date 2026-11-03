@@ -112,11 +112,16 @@
 .browser-sessions-pane button[aria-label*="Mark all as read" i] { display:none !important; }
 .browser-sessions-pane :is(button[aria-label="New session"],[data-browser-section-header] button[data-size="icon-xs"]) { color:var(--web-text-muted); opacity:1 !important; }
 .browser-sessions-pane button[aria-label="New session"] { visibility:visible !important; pointer-events:auto !important; }
+/* Match the profile action column to the section header's trailing inset.
+   Target the group's own header so nested session rows keep their spacing. */
+.browser-sessions-pane [data-gateway-group] > :first-child { padding-inline-end:.625rem; }
+.browser-sessions-pane [data-gateway-group] > :first-child > [data-row-actions] { gap:0; margin-inline-end:0; }
+.browser-sessions-pane [data-gateway-group] > :first-child > [data-row-actions] button { margin:0; color:var(--web-text-muted); opacity:1; }
 /* Header actions share one square target. Let the filter's grid wrapper grow
    with its button instead of keeping the upstream desktop-only size. */
 .browser-sessions-pane [data-browser-section-header] button[data-size="icon-xs"] { margin:0; }
-.browser-sessions-pane [data-browser-section-header] button[data-size="icon-xs"] .codicon { font-size:var(--web-icon-small) !important; }
-.browser-sessions-pane [data-browser-section-header] button[data-size="icon-xs"]:is(:hover,:focus-visible) { background:var(--web-hover); color:var(--web-text); opacity:1; }
+.browser-sessions-pane :is([data-browser-section-header] button[data-size="icon-xs"], [data-gateway-group] > :first-child > [data-row-actions] button) .codicon { font-size:var(--web-icon-small) !important; }
+.browser-sessions-pane :is([data-browser-section-header] button[data-size="icon-xs"], [data-gateway-group] > :first-child > [data-row-actions] button):is(:hover,:focus-visible) { background:var(--web-hover); color:var(--web-text); opacity:1; }
 .browser-sessions-pane [data-browser-section-header] div:has(> button[aria-label="Filters"]) { width:auto; height:auto; flex-shrink:0; }
 /* Center the empty state in its chat viewport without composer-dependent
    offsets. The browser sizes the wordmark directly from its available width,
