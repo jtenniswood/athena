@@ -117,7 +117,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
             <h2>{title}</h2>
             <p>{activeVisible ? 'Choose a category to view and change its options.' : 'This settings category is hidden. Choose another category or close settings.'}</p>
           </div>}
-          <div className="browser-settings-content-slot" data-settings-page={activeView} hidden={!showDetail} inert={!showDetail}>
+          <div className="browser-settings-content-slot" data-settings-page={activeView} data-settings-subpage={params.get('page') ?? 'main'} hidden={!showDetail} inert={!showDetail}>
             {pageVisible && activeGroup && <header className="browser-settings-page-header browser-settings-detail-header">
               <h2 className="browser-settings-page-title">{activeGroup.label}</h2>
               {activeView !== 'notifications' && <p className="browser-settings-page-description">{pageDescription}</p>}
