@@ -3103,7 +3103,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/gateway-groups.tsx",
-    "reason": "In Profile grouping, show configured profile avatars and display names with chats directly beneath each profile, omitting the gateway nesting and desktop Screen portal. Rank profile previews by the saved manual order when active. Hide profile groups through their menus without changing the selected conversation or messaging groups.",
+    "reason": "In Profile grouping, show configured profile avatars and display names with chats directly beneath each profile, omitting the gateway nesting and desktop Screen portal. Rank profile previews by the saved manual order when active. Hide profile groups through their menus without changing the selected conversation or messaging groups. Show every chat in each profile without a row cap or Show more button.",
     "owner": "apps/web-desktop/src/upstream/browser-plugin.ts",
     "tests": [
       {
@@ -3121,6 +3121,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "profile menus hide groups and filters restore every profile without losing the draft"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "sessions from every profile share pictured sections"
       }
     ],
     "removal": "Remove when upstream profile headers use the configured profile picture and support a single shared-gateway list.",
@@ -3131,7 +3135,7 @@
     "sourceHash": "7499db0f9583cdcbadfe66f488cf2dea6562d2e4de0c73674c3013ebb951b83c",
     "sourceRoot": "renderer",
     "inputHash": "7499db0f9583cdcbadfe66f488cf2dea6562d2e4de0c73674c3013ebb951b83c",
-    "outputHash": "e3aa36e65af74640abdb1f8184a6481d96240a9183534efac942cd6142ae160d"
+    "outputHash": "e7ecf6b03d816eedaa3196979f374a1b3b476dcac213fdc751dd301f01694391"
   },
   {
     "name": "shared-gateway-profile-route",
