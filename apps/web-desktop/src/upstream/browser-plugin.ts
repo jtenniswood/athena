@@ -1130,6 +1130,9 @@ export function showHiddenBotsInBrowserRoster(source: string): string {
 
 export function useBrowserProfileSectionPictures(source: string, root: string): string {
   const replacements: [string, string][] = [
+    ["import { WorkspaceAddButton, WorkspaceShowMoreButton } from './projects/workspace-header'", "import { WorkspaceShowMoreButton } from './projects/workspace-header'\nimport { Tip } from '@/components/ui/tooltip'"],
+    ['              <WorkspaceAddButton\n                label={s.newSessionIn(label)}', '              <Tip label={s.newSessionIn(label)}><Button\n                aria-label={s.newSessionIn(label)}\n                size="icon-xs"\n                variant="ghost"'],
+    ['              />\n            )}\n            <DropdownMenu>', '              ><Codicon name="add" size="0.75rem" /></Button></Tip>\n            )}\n            <DropdownMenu>'],
     ['  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA)', "  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA).filter(item => item.id !== 'hermes-bots:screen-portal')"],
     ['  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()', "  const presentationMode = useStore($sidebarGrouping) === 'profile'\n  const gatewayProfiles = new Map<string, SidebarSessionGroup[]>()"],
     ['if (nested || embedded || !group.connectionId) {', 'if (nested || embedded || !group.connectionId || presentationMode) {'],
@@ -1190,7 +1193,9 @@ export function useBrowserSessionReordering(source: string, surface: 'sidebar' |
 
 export function useBrowserSessionPresentation(source: string): string {
   return replaceBrowserContract(source, [
-    ['label={sessionsLabel}', "label={grouping === 'profile' ? 'Profiles' : sessionsLabel}"]
+    ['label={sessionsLabel}', "label={grouping === 'profile' ? 'Profiles' : sessionsLabel}"],
+    ['                        <SidebarSectionAddButton', "                        {grouping !== 'profile' && <SidebarSectionAddButton"],
+    ['                        />\n                        <div className="grid size-6 place-items-center">', '                        />}\n                        <div className="grid size-6 place-items-center">']
   ])
 }
 
