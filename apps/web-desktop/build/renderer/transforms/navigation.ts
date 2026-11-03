@@ -198,39 +198,6 @@ export function exportBrowserStatusbarItem(source: string): string {
   return original.replace(before, after)
 }
 
-export function removeBrowserNewSessionShortcut(source: string): string {
-  const importTarget = "import { KbdGroup } from '@/components/ui/kbd'\n"
-  const shortcut = [
-    '                    {isNewSession && (',
-    '                      <KbdGroup',
-    "                        className={cn('ml-auto opacity-55', newSessionKbdFlash && 'opacity-100!')}",
-    '                        keys={newSessionKbd}',
-    '                        size="sm"',
-    '                      />',
-    '                    )}'
-  ].join('\n') + '\n'
-  if (!source.includes('KbdGroup') && !source.includes(importTarget)) return source
-  if (source.split(importTarget).length !== 2 || source.split(shortcut).length !== 2) {
-    throw new Error('Browser new-session shortcut target changed')
-  }
-  return source.replace(importTarget, '').replace(shortcut, '')
-}
-
-export function removeBrowserTopCapabilitiesLink(source: string): string {
-  const replacements = [
-    ["  CAPABILITIES_ROUTE,\n", ''],
-    [
-      "  {\n    id: 'capabilities',\n    label: '',\n    icon: props => <Codicon name=\"symbol-misc\" {...props} />,\n    route: CAPABILITIES_ROUTE,\n    keybindActionId: 'nav.capabilities'\n  },\n",
-      ''
-    ],
-    ["                  (item.id === 'capabilities' && currentView === 'capabilities') ||\n", '']
-  ]
-  for (const [before] of replacements) {
-    if (source.split(before).length !== 2) throw new Error('Browser top Capabilities link target changed')
-  }
-  return replacements.reduce((output, [before, after]) => output.replace(before, after), source)
-}
-
 export function useBrowserProjectDeleteOwner(source: string, root: string): string {
   const start = 'export async function deleteProject(id: string): Promise<void> {\n  const context = await activeProjectsContext(writableProjectProfile())'
   const request = `  await persistOrRollback(snap, async () => {
@@ -266,58 +233,6 @@ export function useBrowserProjectDeleteOwner(source: string, root: string): stri
   ])
   const owner = JSON.stringify(path.join(root, 'src/upstream/project-delete'))
   return `import { browserProjectDeleteProfile } from ${owner}\n` + output
-}
-
-export function useBrowserProjectDisclosure(source: string, root: string): string {
-  const changes: [string, string][] = [
-    ["import { fetchProjectSessions, projectProfile } from '@/store/projects'", "import { notifyError } from '@/store/notifications'"],
-    ['  expandedProjectSessions,\n', ''],
-    ['expandedProjectSessions(recent, visible)', 'browserExpandedProjectSessions(recent, visible)'],
-    [
-      `    // All-profiles view has no single backend to ask for one project's lanes;
-    // drilling in is the reach there.
-    if (!projectProfile()) {
-      onEnter?.(project.id)
-
-      return
-    }
-
-    setExpanding(true)
-    fetchProjectSessions(project.id, { supersedable: false })`,
-      '    setExpanding(true)\n    fetchBrowserProjectSessions(project)'
-    ],
-    ['      .catch(() => onEnter?.(project.id))', "      .catch(error => notifyError(error, 'Could not load project sessions'))"],
-    [
-      '  if (color && !icon) {\n    return (\n      <SidebarRowLeadGlyph>\n        <span aria-hidden="true" className="size-1 rounded-full" style={{ backgroundColor: color }} />\n      </SidebarRowLeadGlyph>\n    )\n  }\n\n',
-      ''
-    ],
-    [
-      "name={icon || (isNoProject ? 'home' : isAuto ? 'repo' : 'folder-library')}",
-      "name={isNoProject ? icon || 'home' : open ? 'folder-opened' : 'folder'}"
-    ],
-    [
-      'export function projectIcon({ color, icon, isAuto, isNoProject }: SidebarProjectTree) {',
-      'export function projectIcon({ color, icon, isNoProject }: SidebarProjectTree, open = false) {'
-    ],
-    [
-      '      {projectIcon(project)}\n    </SidebarRowGrab>',
-      '      <button aria-label={s.projects.toggle(project.label, !open)} className="grid size-full place-items-center bg-transparent" onClick={event => { event.stopPropagation(); toggleOpen() }} type="button">{projectIcon(project, open)}</button>\n    </SidebarRowGrab>'
-    ],
-    [
-      '    <SidebarRowLead>{projectIcon(project)}</SidebarRowLead>',
-      '    <SidebarRowLead><button aria-label={s.projects.toggle(project.label, !open)} className="grid size-full place-items-center bg-transparent" onClick={event => { event.stopPropagation(); toggleOpen() }} type="button">{projectIcon(project, open)}</button></SidebarRowLead>'
-    ],
-    [
-      '      aria-label={\n        project.isAuto\n          ? `${s.projects.enter(project.label)} (${s.projects.autoDiscovered})`\n          : s.projects.enter(project.label)\n      }',
-      '      aria-label={s.projects.toggle(project.label, !open)}'
-    ],
-    [
-      '      onClick={() => onEnter?.(project.id)}\n    >',
-      '      onClick={toggleOpen}\n      onDoubleClick={() => onEnter?.(project.id)}\n    >'
-    ]
-  ]
-  const owner = JSON.stringify(path.join(root, 'src/upstream/project-sessions'))
-  return `import { browserExpandedProjectSessions, fetchBrowserProjectSessions } from ${owner}\n` + replaceBrowserContract(source, changes)
 }
 
 export function filterBrowserSessionMenu(source: string, root: string): string {
@@ -430,13 +345,8 @@ export function useBrowserProfileSectionPictures(source: string, root: string): 
   return `import { BrowserHideProfileItem, useHiddenProfileGroups } from ${visibilityOwner}\nimport { $sidebarGrouping } from '@/store/layout'\nimport { useBrowserProfileSection } from ${owner}\n` + output
 }
 
-export function useBrowserSessionReordering(source: string, surface: 'sidebar' | 'section' | 'groups'): string {
-  const replacements: [string, string][] = surface === 'sidebar' ? [
-    ['  useEffect(() => {\n    const next = resolveManualSessionOrderIds(', '  useEffect(() => {\n    if (sessionsLoading) return\n    const next = resolveManualSessionOrderIds('],
-    ['[agentOrderIds, agentOrderManual, unpinnedAgentSessions]', '[agentOrderIds, agentOrderManual, unpinnedAgentSessions, sessionsLoading]'],
-    ['onReorderSessions={showAllProfiles ? undefined : reorderSessions}', 'onReorderSessions={reorderSessions}'],
-    ['sortable={!showAllProfiles && agentSessions.length > 1}', 'sortable={agentSessions.length > 1}']
-  ] : surface === 'section' ? [
+export function useBrowserSessionReordering(source: string, surface: 'section' | 'groups'): string {
+  const replacements: [string, string][] = surface === 'section' ? [
     [`    (items: SessionInfo[]) =>
       flattenSessionsWithBranches(items).map(({ branchStem, session }) => renderRow(session, false, branchStem)),
     [renderRow]`, `    (items: SessionInfo[]) => {
@@ -461,19 +371,7 @@ export function useBrowserSessionReordering(source: string, surface: 'sidebar' |
   return output
 }
 
-export function useBrowserSessionPresentation(source: string, root: string): string {
-  const owner = JSON.stringify(path.join(root, 'src/upstream/profile-groups'))
-  return `import { useBrowserProfileGroups } from ${owner}\n` + replaceBrowserContract(source, [
-    ['const profileGroups = useGatewaySessionGroups(agentSessions, ownerGrouped, filtersNarrow)', 'const profileGroups = useBrowserProfileGroups(useGatewaySessionGroups(agentSessions, ownerGrouped, filtersNarrow))'],
-    ['forceEmptyState={showSessionSkeletons}', 'forceEmptyState={showSessionSkeletons && !displayAgentGroups?.length}'],
-    ['  const showSessionSections = hasSessionArea({', '  const showSessionSections = Boolean(displayAgentGroups?.length) || hasSessionArea({'],
-    ['label={sessionsLabel}', "label={grouping === 'profile' ? 'Profiles' : sessionsLabel}"],
-    ['                        <SidebarSectionAddButton', "                        {grouping !== 'profile' && <SidebarSectionAddButton"],
-    ['                        />\n                        <div className="grid size-6 place-items-center">', '                        />}\n                        <div className="grid size-6 place-items-center">']
-  ])
-}
-
-export function enableBrowserUngroupedSessions(source: string, surface: 'store' | 'menu' | 'sidebar'): string {
+export function enableBrowserUngroupedSessions(source: string, surface: 'store' | 'menu'): string {
   const replacements: Record<typeof surface, [string, string][]> = {
     store: [
       ["export const SIDEBAR_GROUPING_ORDER = ['date', 'project', 'status', 'profile'] as const", "export const SIDEBAR_GROUPING_ORDER = ['none', 'date', 'project', 'status', 'profile'] as const"],
@@ -485,8 +383,7 @@ export function enableBrowserUngroupedSessions(source: string, surface: 'store' 
       ["$sidebarFlatGrouping.set(SIDEBAR_DEFAULT_GROUPING)", "$sidebarFlatGrouping.set('none')"],
       ["// reset the choice every time the user flips the rail. Both scopes still ship\n// by day — grouping by owner is something you go and pick.", "// reset the choice every time the user flips the rail. The browser defaults\n// to grouping by profile in the all-profiles scope."]
     ],
-    menu: [["  const GROUPING_OPTIONS: Record<SidebarGrouping, Omit<Option<SidebarGrouping>, 'id'>> = {", "  const GROUPING_OPTIONS: Record<SidebarGrouping, Omit<Option<SidebarGrouping>, 'id'>> = {\n    none: { icon: 'list-unordered', label: 'None' },"]],
-    sidebar: [["grouping={showArchived || rankedGlobally ? 'none'", "grouping={grouping === 'none' || showArchived || rankedGlobally ? 'none'"]]
+    menu: [["  const GROUPING_OPTIONS: Record<SidebarGrouping, Omit<Option<SidebarGrouping>, 'id'>> = {", "  const GROUPING_OPTIONS: Record<SidebarGrouping, Omit<Option<SidebarGrouping>, 'id'>> = {\n    none: { icon: 'list-unordered', label: 'None' },"]]
   }
   let output = source
   for (const [target, replacement] of replacements[surface]) {
@@ -494,21 +391,6 @@ export function enableBrowserUngroupedSessions(source: string, surface: 'store' 
     output = output.replace(target, replacement)
   }
   return output
-}
-
-export function removeBrowserSplitControls(source: string): string {
-  const start = '                // New session + route-backed pages can open in a split —\n'
-  const end = '\n              })}'
-  const from = source.indexOf(start)
-  const to = source.indexOf(end, from)
-  if (source.split(start).length !== 2 || to < from || !source.slice(from, to).includes('<SplitSubmenu')) {
-    throw new Error('Browser navigation split menu boundary changed')
-  }
-  // Keep the navigation button without the split-only context menu.
-  return replaceBrowserContract(source.slice(0, from) + `                return <SidebarMenuItem key={item.id}>{button}{isNewSession && <BrowserSidebarSettings />}</SidebarMenuItem>` + source.slice(to), [
-    ["import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu'\n", ''],
-    ["import { CONTEXT_SPLIT_KIT, SplitSubmenu } from './split-submenu'\n", '']
-  ])
 }
 
 export function disableBrowserSessionTabs(source: string): string {

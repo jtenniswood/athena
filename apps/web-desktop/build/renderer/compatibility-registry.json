@@ -439,8 +439,8 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/index.tsx",
-    "reason": "Compose browser search, disclosures, pins, None grouping, and messaging sections only when they contain saved conversations without split controls, desktop shortcuts or the duplicate top Capabilities link. Enable drag ordering in all-profile lists and preserve saved orders while sessions load. Keep configured profiles visible as new conversation entry points even without chats.",
-    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "reason": "Project live navigation, search, scoped session lists and pagination into Athena-owned sidebar composition without a second session store.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -459,10 +459,6 @@
         "scenario": "semantic adapters preserve identity and reject upstream drift"
       },
       {
-        "file": "scripts/browser.test.mjs",
-        "scenario": "browser sidebar keeps Capabilities only in More controls"
-      },
-      {
         "file": "scripts/unified-session-list.test.mjs",
         "scenario": "profile grouping uses the native all-profile scope"
       },
@@ -475,21 +471,14 @@
         "scenario": "profile grouping keeps empty configured profiles as new conversation entry points"
       }
     ],
-    "removal": "A browser-owned navigation surface consumes public session models and actions.",
+    "removal": "Remove when Hermes exposes the same sidebar controller through a public host contract.",
     "handlers": [
-      "useBrowserSearchLabel",
-      "ungroupedSidebar",
-      "removeBrowserNewSessionShortcut",
-      "removeBrowserTopCapabilitiesLink",
-      "useBrowserSectionIds",
-      "sessionPresentationSidebar",
-      "sessionReorderingSidebar",
-      "removeBrowserSplitControls"
+      "useBrowserSidebarController"
     ],
     "sourceHash": "851f2833257195fcf6a4020d5f6f606dbe565de213062de22e5ebcd981f6c0dc",
     "sourceRoot": "renderer",
     "inputHash": "851f2833257195fcf6a4020d5f6f606dbe565de213062de22e5ebcd981f6c0dc",
-    "outputHash": "9ff6addda199ab8b9676d0f043bf647ce67603f7f4a294badf3f1fe8d3d5e10d"
+    "outputHash": "07c43eafd5a2634f5ea0fcf7038b9fe488f4aad1f07c6ef65ca6706e03af0946"
   },
   {
     "name": "single-conversation-wiring",
@@ -1948,8 +1937,8 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/sessions-section.tsx",
-    "reason": "Register sidebar sections through React with model-owned identities and explicit styling hooks, preserving visibility when labels or disclosure state change. Enable drag ordering within profile and project chat lists while merging untouched rows into the saved order. Render empty profile sections so their new conversation actions remain available.",
-    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "reason": "Project renderer-owned list state, grouping and pagination into Athena-owned section geometry, stable identity, disclosure and accessibility.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -1972,16 +1961,15 @@
         "scenario": "profile grouping keeps empty configured profiles as new conversation entry points"
       }
     ],
-    "removal": "Remove when a public upstream section API provides stable browser styling hooks or browser components own these headings.",
+    "removal": "Remove when the renderer exposes the same section controller through a public host contract.",
     "handlers": [
-      "useBrowserSectionStyleHooks",
-      "useBrowserSectionIdentity",
+      "useBrowserSessionSection",
       "sessionReorderingSection"
     ],
     "sourceRoot": "renderer",
     "sourceHash": "2ebde4eff5928b33dddbb4fd00255441c1b9f21180db651389df64fb82fbdc7e",
     "inputHash": "2ebde4eff5928b33dddbb4fd00255441c1b9f21180db651389df64fb82fbdc7e",
-    "outputHash": "fba29508ac896aafe151c6ebf980e92226cb6f13f8fd8014dec4edcc4725c93e"
+    "outputHash": "7bd04a0b4300425b0e3885ae9e2359930f2098d35011835d9968956f5f60715b"
   },
   {
     "name": "browser-cron-jobs-section-styling",
@@ -2512,8 +2500,8 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/projects/overview-row.tsx",
-    "reason": "Toggle project previews and expand all sessions inline in single-profile and all-profiles views without entering a project.",
-    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "reason": "Keep project ownership, lazy hydration, paging and saved disclosure in the renderer controller while Athena owns tree presentation and accessible actions.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2524,13 +2512,13 @@
         "scenario": "project Show all expands sessions inline"
       }
     ],
-    "removal": "Remove when upstream project group rows expose a browser-friendly disclosure control across the group header.",
+    "removal": "Remove when the renderer exports a public project controller with owner-scoped commands.",
     "sourceRoot": "renderer",
     "sourceHash": "e2cba07ac9067e609b355d6c850597e7e06432210d6d583a7fa9ad97579ac268",
     "inputHash": "e2cba07ac9067e609b355d6c850597e7e06432210d6d583a7fa9ad97579ac268",
-    "outputHash": "b59976fb3df9265ce80ef8555633cf1e36056fb6e3eec1d96b8b6c90d88bd946",
+    "outputHash": "f122bc7df77c350fdb75eb16e979368066597c72538ab84a1ee63ee424dd71bf",
     "handlers": [
-      "useBrowserProjectDisclosure"
+      "useBrowserProjectController"
     ]
   },
   {

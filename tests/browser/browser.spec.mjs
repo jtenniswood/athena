@@ -1693,9 +1693,15 @@ for (const width of [390, 1440]) {
         else await expect(content).toBeHidden()
         const header = section.locator(':scope > [data-browser-section-header]')
         heights.push((await header.boundingBox()).height)
-        const box = await header.boundingBox()
-        expect(box.x).toBeGreaterThanOrEqual(0)
-        expect(box.x + box.width).toBeLessThanOrEqual(width)
+        // Row backgrounds extend into the scrollbar gutter. Check that the
+        // actual focus targets fit the visible navigation, not that backdrop.
+        const navigation = await page.locator('.browser-navigation').boundingBox()
+        for (const control of await header.getByRole('button').all()) {
+          if (!await control.isVisible()) continue
+          const box = await control.boundingBox()
+          expect(box.x).toBeGreaterThanOrEqual(Math.max(0, navigation.x) - 0.5)
+          expect(box.x + box.width).toBeLessThanOrEqual(Math.min(width, navigation.x + navigation.width) + 0.5)
+        }
       }
       expect(Math.abs(heights[0] - heights[1])).toBeLessThan(1)
       if (scale === 150) await page.screenshot({ path: testInfo.outputPath('section-headers-150.png') })

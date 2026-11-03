@@ -38,19 +38,19 @@ test('sidebar preferences migrate known legacy identities without consulting cur
 test('semantic adapters preserve identity and reject upstream drift', () => {
   const api = load('build/renderer/browser-plugin.ts')
   const sidebar = source('app/chat/sidebar/index.tsx')
-  const adapted = api.useBrowserSectionIds(sidebar, root)
-  assert.match(adapted, /browserSectionId="sessions" label=\{sessionsLabel\}/)
-  assert.match(adapted, /browserSectionId=\{`messaging:\$\{group.sourceId\}`\}/)
+  const adapted = api.useBrowserSidebarController(sidebar, root)
+  assert.match(adapted, /BrowserSidebarControllerSurface model=\{\{/)
   assert.match(adapted, /useBrowserSidebarChannels\(\)/)
   assert.doesNotMatch(adapted, /browserChannels.map/)
   assert.doesNotMatch(adapted, /!worktreeGroupingActive &&\s+messagingGroups.map/)
   assert.doesNotMatch(adapted, /showsAdvancedChrome && cronJobs\.length/)
-  assert.throws(() => api.useBrowserSectionIds(sidebar.replace('label={sessionsLabel}', 'label={otherLabel}'), root), /target changed/)
-  for (const name of ['sessions', 'cron-jobs']) {
-    const output = api.useBrowserSectionIdentity(source(`app/chat/sidebar/${name}-section.tsx`), root)
-    assert.match(output, /<SidebarGroup \{\.\.\.browserSection\}/)
-    assert.match(output, /useBrowserSidebarSection\([^\n]*label\)/)
-  }
+  assert.throws(() => api.useBrowserSidebarController(sidebar.replace('function ChatSidebar(', 'function DifferentSidebar('), root), /controller changed/)
+  const section = api.useBrowserSessionSection(source('app/chat/sidebar/sessions-section.tsx'), root)
+  assert.match(section, /<BrowserSidebarSection model=\{\{/)
+  assert.match(section, /id: browserSectionId/)
+  const cron = api.useBrowserSectionIdentity(source('app/chat/sidebar/cron-jobs-section.tsx'), root)
+  assert.match(cron, /<SidebarGroup \{\.\.\.browserSection\}/)
+  assert.match(cron, /useBrowserSidebarSection\([^\n]*label\)/)
   // An upstream icon change cannot alter which notice the browser suppresses.
   const updates = api.omitBrowserDesktopUpdateNotice(source('store/updates.ts').replace("icon: 'gift'", "icon: 'bell'"))
   assert.match(updates, /export function maybeNotifyUpdateAvailable[^\n]+\{\}/)
@@ -78,7 +78,7 @@ test('semantic adapters preserve identity and reject upstream drift', () => {
 
 test('saved messaging conversations survive missing channel configuration', () => {
   const api = load('build/renderer/browser-plugin.ts')
-  const adapted = api.useBrowserSectionIds(source('app/chat/sidebar/index.tsx'), root)
+  const adapted = api.useBrowserSidebarController(source('app/chat/sidebar/index.tsx'), root)
   const start = adapted.indexOf('  const messagingGroups = useMemo')
   const end = adapted.indexOf('\n  // Recents and every messaging platform', start)
   assert.ok(start >= 0 && end > start)

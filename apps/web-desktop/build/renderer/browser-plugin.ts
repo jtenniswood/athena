@@ -71,7 +71,6 @@ import {
   useBrowserRosterActionSurfaces,
   useBrowserSectionActionSurface,
   useBrowserSectionIdentity,
-  useBrowserSectionIds,
   useBrowserSectionStyleHooks,
   removeBrowserNewBotChatAction,
   removeBrowserOpenBotChatAction,
@@ -87,7 +86,6 @@ export {
   useBrowserRosterActionSurfaces,
   useBrowserSectionActionSurface,
   useBrowserSectionIdentity,
-  useBrowserSectionIds,
   useBrowserSectionStyleHooks,
   removeBrowserNewBotChatAction,
   removeBrowserOpenBotChatAction,
@@ -105,9 +103,10 @@ import {
   filterBrowserActivityToasts,
   omitBrowserDesktopUpdateNotice,
   useBrowserSetupHooks,
-  useBrowserSearchLabel,
   disableBrowserOnboardingTips
 } from './transforms/host'
+import { useBrowserSessionSection, useBrowserProjectController, useBrowserSidebarController } from './transforms/sidebar'
+export { useBrowserSessionSection, useBrowserProjectController, useBrowserSidebarController } from './transforms/sidebar'
 export {
   useBrowserMessagingPresentation,
   useBrowserCatalogIdleTask,
@@ -117,7 +116,6 @@ export {
   filterBrowserActivityToasts,
   omitBrowserDesktopUpdateNotice,
   useBrowserSetupHooks,
-  useBrowserSearchLabel,
   disableBrowserOnboardingTips
 } from './transforms/host'
 import {
@@ -139,16 +137,11 @@ import {
   filterBrowserNarrowNavigation,
   closeBrowserWorkspacePanels,
   exportBrowserStatusbarItem,
-  removeBrowserNewSessionShortcut,
-  removeBrowserTopCapabilitiesLink,
   useBrowserProjectDeleteOwner,
-  useBrowserProjectDisclosure,
   filterBrowserSessionMenu,
   useBrowserProfileSectionPictures,
   useBrowserSessionReordering,
-  useBrowserSessionPresentation,
   enableBrowserUngroupedSessions,
-  removeBrowserSplitControls,
   disableBrowserSessionTabs,
   disableBrowserSessionTileMirrors,
   useBrowserSessionSelection,
@@ -171,16 +164,11 @@ export {
   filterBrowserNarrowNavigation,
   closeBrowserWorkspacePanels,
   exportBrowserStatusbarItem,
-  removeBrowserNewSessionShortcut,
-  removeBrowserTopCapabilitiesLink,
   useBrowserProjectDeleteOwner,
-  useBrowserProjectDisclosure,
   filterBrowserSessionMenu,
   useBrowserProfileSectionPictures,
   useBrowserSessionReordering,
-  useBrowserSessionPresentation,
   enableBrowserUngroupedSessions,
-  removeBrowserSplitControls,
   disableBrowserSessionTabs,
   disableBrowserSessionTileMirrors,
   useBrowserSessionSelection,
@@ -263,6 +251,9 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
   if (digest(code) === entry.outputHash) return { code, map: null }
   if (digest(code) !== entry.inputHash) throw new Error(`Browser compatibility changed: ${entry.name} (${entry.module}). Review this registry entry.`)
   const handlers: Record<string, (source: string) => string> = {
+    useBrowserSessionSection: source => useBrowserSessionSection(source, root),
+    useBrowserProjectController: source => useBrowserProjectController(source, root),
+    useBrowserSidebarController: source => useBrowserSidebarController(source, root),
     exposeBrowserConfigFieldPresentation: source => exposeBrowserConfigFieldPresentation(source, root),
     exposeBrowserSettingsRowRefs,
     useBrowserMessagingPresentation: source => useBrowserMessagingPresentation(source, root),
@@ -303,18 +294,17 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserSectionIdentity: source => useBrowserSectionIdentity(source, root),
     useBrowserTouchHooks: source => useBrowserTouchHooks(source, root), useBrowserAcceptedSubmit: source => useBrowserAcceptedSubmit(source, root),
     useBrowserFollowupSubmit: source => useBrowserFollowupSubmit(source, root), useBrowserAlternateSubmit: source => useBrowserAlternateSubmit(source, root),
-    useBrowserCodingActionHooks, useBrowserSectionIds: source => useBrowserSectionIds(source, root), omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
+    useBrowserCodingActionHooks, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source),
     useBrowserSectionStyleHooks, scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
-    useBrowserProjectDisclosure: source => useBrowserProjectDisclosure(source, root),
     useBrowserProjectDeleteOwner: source => useBrowserProjectDeleteOwner(source, root),
-    exportBrowserStatusbarItem, filterBrowserActivityToasts, removeBrowserNewSessionShortcut, removeBrowserTopCapabilitiesLink,
+    exportBrowserStatusbarItem, filterBrowserActivityToasts,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
     removeBrowserGatewayGroupsRefresh: source => removeBrowserGatewayGroupsRefresh(source, root),
     useBrowserBotsPullRefresh: source => useBrowserBotsPullRefresh(source, root),
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth,
     filterBrowserSessionMenu: source => filterBrowserSessionMenu(source, root),
-    showHiddenBotsInBrowserRoster, removeBrowserSplitControls, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
+    showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
     disableBrowserSessionOpenActions: source => disableBrowserSessionOpenActions(source, root),
     filterBrowserKeybinds,
     useBrowserSessionLinks: source => useBrowserSessionLinks(source, root),
@@ -327,15 +317,11 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserCreatedGroupSelection: source => useBrowserRosterSelection(source, root, 'created-group'),
     trackBrowserSettingsSaves: source => trackBrowserSettingsSaves(source, root),
     useBrowserSettingsFrame: source => useBrowserSettingsFrame(source, root),
-    useBrowserSearchLabel: source => useBrowserSearchLabel(source, root),
     useBrowserProfileSectionPictures: source => useBrowserProfileSectionPictures(source, root),
-    sessionReorderingSidebar: source => useBrowserSessionReordering(source, 'sidebar'),
     sessionReorderingSection: source => useBrowserSessionReordering(source, 'section'),
     sessionReorderingGroups: source => useBrowserSessionReordering(source, 'groups'),
-    sessionPresentationSidebar: source => useBrowserSessionPresentation(source, root),
     ungroupedStore: source => enableBrowserUngroupedSessions(source, 'store'),
     ungroupedMenu: source => enableBrowserUngroupedSessions(source, 'menu'),
-    ungroupedSidebar: source => enableBrowserUngroupedSessions(source, 'sidebar')
   }
   let output = code
   for (const handler of entry.handlers || []) {

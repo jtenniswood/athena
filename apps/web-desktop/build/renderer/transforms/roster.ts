@@ -130,32 +130,11 @@ export function removeBrowserOpenBotChatAction(source: string): string {
 
 export function useBrowserSectionIdentity(source: string, root: string): string {
   const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-sections'))
-  const sessions = source.includes('interface SidebarSessionsSectionProps')
-  const changes: [string, string][] = sessions ? [
-    ['interface SidebarSessionsSectionProps {', 'interface SidebarSessionsSectionProps {\n  browserSectionId: string'],
-    ['export function SidebarSessionsSection({', 'export function SidebarSessionsSection({\n  browserSectionId,'],
-    ['}: SidebarSessionsSectionProps) {', '}: SidebarSessionsSectionProps) {\n  const browserSection = useBrowserSidebarSection(browserSectionId, label)'],
-    ['<SidebarGroup className={cn(rootClassName, DROP_TARGET_RING)}', '<SidebarGroup {...browserSection} className={cn(rootClassName, DROP_TARGET_RING)}']
-  ] : [
+  const changes: [string, string][] = [
     ['}: SidebarCronJobsSectionProps) {', "}: SidebarCronJobsSectionProps) {\n  const browserSection = useBrowserSidebarSection('cron-jobs', label)"],
     ['<SidebarGroup className="shrink-0 p-0 pb-1">', '<SidebarGroup {...browserSection} className="shrink-0 p-0 pb-1">']
   ]
   return `import { useBrowserSidebarSection } from ${owner}\n` + replaceBrowserContract(source, changes)
-}
-
-export function useBrowserSectionIds(source: string, root: string): string {
-  const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-sections'))
-  return `import { useBrowserSidebarChannels } from ${owner}\n` + replaceBrowserContract(source, [
-    ['  const messagingProfile = sidebarProfileForScope(profileScope)', '  const messagingProfile = sidebarProfileForScope(profileScope)\n  useBrowserSidebarChannels()'],
-    ['            {!trimmedQuery &&\n              !worktreeGroupingActive &&\n              messagingGroups.map', '            {!trimmedQuery &&\n              messagingGroups.map'],
-    // Athena's explicit section preference owns Cron visibility in both modes.
-    ['cronJobs: showsAdvancedChrome ? cronJobs.length : 0,', 'cronJobs: cronJobs.length,'],
-    ['!worktreeGroupingActive && showsAdvancedChrome && cronJobs.length > 0', '!worktreeGroupingActive && cronJobs.length > 0'],
-    ['label={s.results}', 'browserSectionId="sessions" label={s.results}'],
-    ['label={s.pinned}', 'browserSectionId="pinned" label={s.pinned}'],
-    ['label={sessionsLabel}', 'browserSectionId="sessions" label={sessionsLabel}'],
-    ['label={group.label}', 'browserSectionId={`messaging:${group.sourceId}`} label={group.label}']
-  ])
 }
 
 export function useBrowserSectionStyleHooks(source: string): string {

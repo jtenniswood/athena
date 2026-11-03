@@ -346,27 +346,6 @@ test('browser owns the Bots toolbar instead of rewriting upstream toolbar JSX', 
   assert.equal(plugin.transform(source, filename), null)
 })
 
-test('browser sidebar hides the new-session keyboard shortcut hint', () => {
-  const { browserPlugin, removeBrowserNewSessionShortcut } = load('build/renderer/browser-plugin.ts')
-  const filename = path.join(root, '../desktop/src/app/chat/sidebar/index.tsx')
-  const source = readFileSync(filename, 'utf8')
-  const output = removeBrowserNewSessionShortcut(source)
-  assert.doesNotMatch(output, /KbdGroup/)
-  assert.equal(removeBrowserNewSessionShortcut(output), output)
-  assert.equal(browserPlugin(root).transform(source, filename).code.includes('KbdGroup'), false)
-  assert.throws(() => removeBrowserNewSessionShortcut(source.replace('<KbdGroup', '<KbdHint')), /target changed/)
-})
-
-test('browser sidebar keeps Capabilities only in More controls', () => {
-  const { removeBrowserTopCapabilitiesLink } = load('build/renderer/browser-plugin.ts')
-  const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/index.tsx'), 'utf8')
-  const output = removeBrowserTopCapabilitiesLink(source)
-  assert.doesNotMatch(output, /id: 'capabilities'/)
-  assert.doesNotMatch(output, /CAPABILITIES_ROUTE/)
-  assert.match(readFileSync(path.join(root, 'src/experience/tool-routes.ts'), 'utf8'), /path: '\/capabilities', label: 'Capabilities'/)
-  assert.throws(() => removeBrowserTopCapabilitiesLink(source.replace("id: 'capabilities'", "id: 'skills'")), /target changed/)
-})
-
 test('browser moves hidden Bots into the normal roster when the filter option is enabled', () => {
   const { browserPlugin, showHiddenBotsInBrowserRoster } = load('build/renderer/browser-plugin.ts')
   const filename = path.join(root, '../desktop/src/plugins/hermes-bots/roster-pane-derivation.ts')
@@ -638,10 +617,3 @@ test('entry recovery has an independent static fallback', () => {
 })
 
 // The split-menu adapter runs after the settings row is inserted.
-test('removing sidebar split menus preserves the Settings and App slot', () => {
-  const { useBrowserSearchLabel, removeBrowserSplitControls } = load('build/renderer/browser-plugin.ts')
-  const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/index.tsx'), 'utf8')
-  const adapted = removeBrowserSplitControls(useBrowserSearchLabel(source, root))
-  assert.equal(adapted.split('{isNewSession && <BrowserSidebarSettings />}').length, 2)
-  assert.doesNotMatch(adapted, /<SplitSubmenu/)
-})

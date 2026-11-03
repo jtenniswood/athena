@@ -82,7 +82,18 @@ metadata, status and extension decorations and retains the engine's mutation and
 menu commands. A guarded module replacement connects every list surface to this
 row; source rewrites for row gestures, title previews and reorder handling are
 removed. Row actions and their portalled dialogs cannot resume the conversation.
-Filtering, pagination and section composition still use the engine sidebar.
+`experience/sidebar.tsx`, `sidebar-section.tsx` and `sidebar-project.tsx` own the
+navigation frame, section disclosure and project overview presentation. Typed
+adapters in `upstream/sidebar.tsx` and `sidebar-project.tsx` project the existing
+renderer controller values into those views. Search, filtering, profile scope,
+pagination, lazy project hydration and saved ordering keep their original owners.
+The controller projection replaces a named function's return and removes only
+explicitly identified view bindings; nested callbacks and hooks remain intact.
+Source fingerprints and the compiler validate this boundary on renderer updates.
+
+The old search-layout, section-markup, project-disclosure and desktop-navigation
+rewrites are removed. Engine-supplied profile groups, worktree lanes and transient
+menus remain reusable surfaces while their commands and caches stay upstream.
 
 The chat action menu and its keyboard shortcuts use the same browser commands.
 Rename and delete dialogs retain the conversation they were opened for even if

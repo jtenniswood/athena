@@ -18,10 +18,10 @@ function load(file, mocks, globals = {}) {
   return context.exports
 }
 test('profile grouping uses the native all-profile scope', () => {
-  const { useBrowserSessionPresentation } = load('build/renderer/browser-plugin.ts')
+  const { useBrowserSidebarController } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/index.tsx'), 'utf8')
-  const output = useBrowserSessionPresentation(source, root)
-  assert.match(output, /label=\{grouping === 'profile' \? 'Profiles' : sessionsLabel\}/)
+  const output = useBrowserSidebarController(source, root)
+  assert.match(output, /useBrowserProfileGroups\(useGatewaySessionGroups\(agentSessions, ownerGrouped, filtersNarrow\)\)/)
   assert.doesNotMatch(output, /browserPresentationMode/)
 })
 

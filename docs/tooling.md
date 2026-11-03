@@ -81,6 +81,13 @@ Mode and pending-save failures. They do not require a Docker image. The built
 application's Android web-layout and configuration tests additionally exercise
 the real renderer, wrapper pages, profile-scoped saves and draft preservation.
 
+Sidebar controller changes use `scripts/sidebar-controller.test.mjs` alongside
+the registry and compiler checks. The built-image scenarios in
+`tests/browser/browser.spec.mjs` exercise search, section disclosure, inline
+project expansion, owner-scoped deletion, drag ordering and draft preservation.
+The controller tests protect hook ordering and captured command owners; they do
+not replace the rendered workflow checks.
+
 The compatibility workflow runs affected declared Node scenarios and uses the
 selection-race entry for a focused built-image check when relevant engine or
 selection boundaries change. It preserves the plans and execution results as
