@@ -31,6 +31,16 @@ selection, profile and action adapters project the authoritative stores; they do
 not create a second conversation store. `upstream/browser-api.tsx` remains the
 explicit visual primitive boundary.
 
+The core product shell consumes `experience/contracts/engine.ts` through
+`BrowserEngineProvider`. `upstream/engine-host.tsx` implements that interface
+with the pinned renderer's existing owners. Conversation actions, profiles,
+navigation, project drops, approval mode and reusable engine surfaces cross this
+boundary as plain projections, commands or React surfaces. Settings controllers
+remain lazy so opening chat does not eagerly load the settings implementation.
+The provider carries the host implementation; it does not cache or copy engine
+state. Specialized feature adapters and visual primitives retain their separate
+boundaries.
+
 `experience/settings/settings-route.tsx` assembles settings navigation from the
 catalog. The checked settings controller adapter extracts the existing Hermes
 page controls and commands without generating the browser frame. Schemas, values,
@@ -39,6 +49,30 @@ Unknown renderer pages remain available in Other Settings. The fullscreen and
 embedded frame variants share compact navigation and focus behavior; each keeps
 its appropriate overlay host and breakpoint. Legacy bookmarks and field links
 are normalized by the browser route policy without dropping other query values.
+
+`experience/contracts/settings-presentation.ts` defines the shared Settings row
+model. Mounted owners publish committed labels, values, availability and commands
+through `experience/settings/presentation.tsx`. Chat panel preferences, themes,
+configuration actions and choices, sync status, notification permission, profile
+tabs, plugin navigation and update controls use their original callbacks for both
+web controls and explicit presentation descriptors. The frame publishes its own
+navigation, search, close/back commands and active configuration scope.
+
+The config-field adapter also projects the renderer's resolved schema metadata
+and original commit callbacks for booleans, numbers, text, lists, JSON and closed
+or searchable choices. Two checked transforms publish the metadata and attach a
+ref to existing row elements; they add no wrapper elements or alternate config
+store. Structured editors, open-ended suggestion fields and extension actions
+retain their existing renderer presentation.
+
+Android continues to use web Settings. The retained optional native presenter
+consumes the same descriptors when explicitly installed by a compatible client
+or test fixture. Its DOM compatibility path remains for renderer controls that
+do not publish descriptors. Explicit commands have opaque owner identities,
+reject removed/disabled fields and stale profile scopes, and preserve the
+original file-import and pending-save owners. Unsupported or oversized snapshots
+leave the complete web editor available. This interface does not reactivate
+native Settings or native menus in the current application entry point.
 
 The chat action menu and its keyboard shortcuts use the same browser commands.
 Rename and delete dialogs retain the conversation they were opened for even if
@@ -87,6 +121,23 @@ unsent edits and drain requests already in flight; a completed request from the
 old profile cannot seed the new profile's configuration cache. Failed writes
 continue to block readiness instead of being treated as durable.
 
+## Runtime service ownership
+
+`apps/web-desktop/server/` owns the running preference, Android authentication,
+and notification services. `createAthenaServices` assembles the same route owners
+for Vite development, Vite preview, and the container's Node server. Each host
+attaches it once and closes it with its HTTP server. The gateway proxy and static
+asset server remain hosting concerns.
+
+The services share account identity derivation and non-redirecting Hermes session
+probes. Each endpoint explicitly chooses its accepted credentials; browser
+handoffs continue to transfer only approved Hermes cookies, and native token
+refresh remains restricted to its installation binding. Existing account hashes,
+preference files, push bindings, API routes, and the data volume stay compatible.
+
+`scripts/serve.mjs` starts the production host; the other files in `scripts/`
+are build, maintenance, diagnostic, or verification entry points.
+
 ## Compatibility ownership
 
 `scripts/renderer-adapter.mjs` owns the ordered build adapters, module replacements,
@@ -96,6 +147,13 @@ not validate a separate unmodified renderer graph. Original renderer input
 fingerprints stay reviewed and fetched sources remain untouched. Adapter tests
 check final output fingerprints, replacement resolution, and whether introduced
 type errors and missing imports fail compilation.
+
+Browser transforms are grouped by settings, composer, roster, navigation and
+hosting in `upstream/transforms/`. `browser-plugin.ts` assembles their ordered
+pipeline. The registry names the feature owner for each single-feature transform;
+mixed pipelines retain their assembly owner. Build and adapter tests use the
+same wrapper-only module loader. Moving a handler does not accept new renderer
+input or output fingerprints.
 
 `upstream/entry.ts` installs the bridge and restores its profile before loading
 `upstream/engine-registration.ts`. That module contains the pinned renderer's

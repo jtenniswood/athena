@@ -3,12 +3,13 @@ import { BrowserActionSurface, type BrowserActionAnchor } from './ui/action-surf
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { useMobileBrowser } from './ui/use-compact-browser'
 import { BotFace, avatarColor, Codicon, Tip } from '../upstream/browser-api'
-import { useBrowserProfiles } from '../upstream/profiles'
-import { BrowserProfileEditor } from '../upstream/profile-editor'
+import { useBrowserEngine } from './engine'
 import { readHideAllProfilesButton, readHiddenProfiles, writeBrowserPreference } from './browser-preferences'
 
 export function BrowserProfileNavigation({ hidden = false }: { hidden?: boolean }) {
-  const model = useBrowserProfiles()
+  const engine = useBrowserEngine()
+  const BrowserProfileEditor = engine.surfaces.ProfileEditor
+  const model = engine.profiles.useProfiles()
   const compact = useMobileBrowser()
   const actionsTrigger = useRef<HTMLButtonElement>(null), draggedProfile = useRef<string | null>(null)
   const [draggingProfile, setDraggingProfile] = useState<string | null>(null)

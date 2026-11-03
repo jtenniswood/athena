@@ -1,7 +1,7 @@
+import { createBuildModuleLoader } from './renderer-adapter.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { createRequire } from 'node:module'
 import vm from 'node:vm'
 import { test } from 'node:test'
 import ts from 'typescript'
@@ -9,9 +9,8 @@ import { browserPreferences, createBrowserPreference } from './browser-preferenc
 
 const root = path.resolve('apps/web-desktop')
 const pluginFile = path.join(root, 'src/upstream/browser-plugin.ts')
-const plugin = vm.createContext({ exports: {}, require: createRequire(pluginFile) })
+const plugin = { exports: createBuildModuleLoader().load(pluginFile) }
 const compile = source => ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText
-vm.runInContext(compile(readFileSync(pluginFile, 'utf8')), plugin)
 const original = readFileSync(path.join(root, '../desktop/src/app/chat/composer/hooks/use-composer-submit.ts'), 'utf8')
 const source = plugin.exports.useBrowserFollowupSubmit(plugin.exports.useBrowserAcceptedSubmit(original, root), root)
 

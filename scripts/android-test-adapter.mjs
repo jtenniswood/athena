@@ -11,5 +11,7 @@ mkdirSync(path.dirname(destination), { recursive: true })
 writeFileSync(destination, stripTypeScriptTypes(source, { mode: 'strip' }))
 
 const settings = readFileSync(new URL('../apps/web-desktop/src/upstream/native-settings.ts', import.meta.url), 'utf8')
-writeFileSync(path.join(path.dirname(destination), 'native-settings.js'), stripTypeScriptTypes(settings, { mode: 'strip' })
+const presentation = readFileSync(new URL('../apps/web-desktop/src/platform/settings-presentation.ts', import.meta.url), 'utf8')
+writeFileSync(path.join(path.dirname(destination), 'native-settings.js'), stripTypeScriptTypes(presentation, { mode: 'strip' }) + '\n' + stripTypeScriptTypes(settings, { mode: 'strip' })
+  .replace(/^import\s+\{[^}]+\}\s+from\s+['"]\.\.\/platform\/settings-presentation['"];?\s*$/m, '')
   .replace("'../platform/android'", "'./android-adapter.js'"))

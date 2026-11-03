@@ -1,6 +1,6 @@
+import { createBuildModuleLoader } from './renderer-adapter.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
 import path from 'node:path'
 import vm from 'node:vm'
 import { test } from 'node:test'
@@ -17,7 +17,7 @@ function evaluate(source, require, globals = {}) {
 }
 function adapter(name) {
   const file = path.join(root, 'src/upstream', name)
-  return evaluate(readFileSync(file, 'utf8'), createRequire(file))
+  return createBuildModuleLoader().load(file)
 }
 const canonicalFile = path.join(root, '../desktop/src/plugins/hermes-bots/canonical-chat.ts')
 const canonicalSource = adapter('transforms.ts').transformRenderer(readFileSync(canonicalFile, 'utf8'), canonicalFile).code

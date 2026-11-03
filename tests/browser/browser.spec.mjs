@@ -1201,26 +1201,30 @@ for (const width of [390, 1440]) {
 }
 
 test('chat action dialogs retain their conversation owner when navigation changes', async ({ page }) => {
-  const renamed = []
   const nextTitle = `Captured conversation ${Date.now()}`
-  page.on('request', request => {
-    if (request.method() === 'PATCH' && new URL(request.url()).pathname === '/api/sessions/preview-week') renamed.push(request.postDataJSON())
-  })
   await open(page)
-  await editor(page).fill('Keep the original chat draft')
-  await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
-  await page.getByRole('menuitem', { name: 'Rename', exact: true }).click()
-  const rename = page.getByRole('dialog', { name: 'Rename session', exact: true })
-  await expect(rename.getByRole('textbox')).toBeFocused()
-  await rename.getByRole('textbox').fill(nextTitle)
-  await page.evaluate(() => { window.location.hash = '/preview-idea' })
-  await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
-  await rename.getByRole('button', { name: 'Save', exact: true }).click()
-  await expect(rename).toBeHidden()
-  await expect.poll(() => renamed.some(body => body.title === nextTitle)).toBe(true)
-  await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
-  await page.goto(`${origin}/#/preview-week`)
-  await expect(editor(page)).toHaveText('Keep the original chat draft')
+  const readTitle = async id => (await (await page.request.get(`${origin}/api/sessions/${id}`)).json()).title
+  const originalTitle = await readTitle('preview-week')
+  const otherTitle = await readTitle('preview-idea')
+  try {
+    await editor(page).fill('Keep the original chat draft')
+    await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Rename', exact: true }).click()
+    const rename = page.getByRole('dialog', { name: 'Rename session', exact: true })
+    await expect(rename.getByRole('textbox')).toBeFocused()
+    await rename.getByRole('textbox').fill(nextTitle)
+    await page.evaluate(() => { window.location.hash = '/preview-idea' })
+    await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
+    await rename.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(rename).toBeHidden()
+    await expect.poll(() => readTitle('preview-week')).toBe(nextTitle)
+    expect(await readTitle('preview-idea')).toBe(otherTitle)
+    await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
+    await page.goto(`${origin}/#/preview-week`)
+    await expect(editor(page)).toHaveText('Keep the original chat draft')
+  } finally {
+    await page.request.patch(`${origin}/api/sessions/preview-week`, { data: { title: originalTitle } })
+  }
 })
 
 test('chat delete confirmation retains its conversation owner when navigation changes', async ({ page }) => {
@@ -3876,3 +3880,42 @@ for (const width of [1440, 390]) {
     expect(errors).toEqual([])
   })
 }
+
+test.extend({ hasTouch: true })('Android retains web Settings and the original schema save owner', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    window.androidCalls = []
+    window.AthenaAndroid = { onmessage: null, postMessage(raw) {
+      const message = JSON.parse(raw)
+      window.androidCalls.push(message.method)
+      const value = message.method === 'hello' ? { protocol: 1, capabilities: ['settings-page'], appVersion: 'fixture', insets: 'native', typography: 'platform' }
+        : message.method === 'permission' ? 'default' : message.method === 'pushRegistration' ? null : false
+      queueMicrotask(() => window.AthenaAndroid.onmessage?.({ data: JSON.stringify({ id: message.id, value }) }))
+    } }
+  })
+  let config = { security: { redact_secrets: true } }
+  const writes = []
+  await page.route(/\/api\/config(?:\?|$)/, async route => {
+    if (route.request().method() !== 'PUT') return route.fulfill({ json: config })
+    config = route.request().postDataJSON().config
+    writes.push(config)
+    await route.fulfill({ json: { ok: true } })
+  })
+  await page.route(/\/api\/config\/schema(?:\?|$)/, route => route.fulfill({ json: {
+    fields: { 'security.redact_secrets': { type: 'boolean', description: 'Redact saved secrets' } }
+  } }))
+  await open(page)
+  await editor(page).fill('Keep the Android draft')
+  await page.goto(`${origin}/#/settings?tab=config%3Asafety`)
+  const setting = page.locator('[id="setting-field-security.redact_secrets"]').getByRole('switch')
+  await expect(setting).toBeVisible()
+  await expect(setting).toBeChecked()
+  await setting.click()
+  await expect(setting).not.toBeChecked()
+  await expect.poll(() => writes.length).toBe(1)
+  expect(writes[0]).toEqual({ security: { redact_secrets: false } })
+  await expect(page.locator('[data-browser-settings-frame]')).not.toHaveAttribute('data-native-settings')
+  expect(await page.evaluate(() => window.androidCalls.filter(method => ['settingsPage','updateSettingsPage'].includes(method)))).toEqual([])
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+  await expect(editor(page)).toHaveText('Keep the Android draft')
+})

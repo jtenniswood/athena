@@ -1,4 +1,4 @@
-import { createFirebaseSender } from './firebase-messaging.mjs'
+import { createFirebaseSender } from '../apps/web-desktop/server/firebase-messaging.mjs'
 
 const sender = createFirebaseSender()
 if (!sender.enabled) {

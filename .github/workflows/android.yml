@@ -4,11 +4,17 @@ on:
     branches: [main]
     paths:
       - 'apps/android/**'
+      - 'apps/web-desktop/server/**'
       - 'apps/web-desktop/src/platform/android*'
       - 'apps/web-desktop/src/experience/settings-menu.tsx'
       - 'apps/web-desktop/src/entry.ts'
       - 'apps/web-desktop/src/upstream/android-host.ts'
       - 'apps/web-desktop/src/upstream/native-settings.ts'
+      - 'apps/web-desktop/src/upstream/config-field-presentation.ts'
+      - 'apps/web-desktop/src/upstream/transforms/settings.ts'
+      - 'apps/web-desktop/src/experience/settings/**'
+      - 'apps/web-desktop/src/experience/contracts/settings-presentation.ts'
+      - 'apps/web-desktop/src/platform/settings-presentation.ts'
       - 'apps/web-desktop/src/experience/browser-shell.tsx'
       - 'scripts/android*'
       - '.github/workflows/android-release.yml'

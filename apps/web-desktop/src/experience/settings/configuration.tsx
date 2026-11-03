@@ -4,6 +4,7 @@ import { BrowserPreferenceSync } from './preference-sync'
 import { announceSettingsReset } from '../../upstream/settings-interactions'
 import { useFollowupBehavior, writeFollowupBehavior } from '../followup-preferences'
 import { useShowAuxiliaryTranscriptContent, writeShowAuxiliaryTranscriptContent } from '../transcript-preferences'
+import { useSettingsPresentation } from './presentation'
 
 export type BrowserConfigurationCommand = {
   description: string
@@ -31,7 +32,9 @@ export function createBrowserConfigurationCommands(
 /** Keep upstream action handlers and confirmation flows on labelled controls. */
 export function BrowserConfigurationAction({ command, destructive = false }: { command: BrowserConfigurationCommand; destructive?: boolean }) {
   const descriptionId = useId()
-  return <button type="button" className="browser-configuration-action" data-variant={destructive ? 'destructive' : 'outline'} aria-label={command.label} aria-describedby={descriptionId} onClick={() => void command.run()}>
+  const presentation = useSettingsPresentation<HTMLButtonElement>([{ id: 'run', kind: 'action', label: command.label,
+    description: command.description, presentation: destructive ? 'destructive' : 'secondary', run: command.run }])
+  return <button ref={presentation} type="button" className="browser-configuration-action" data-variant={destructive ? 'destructive' : 'outline'} aria-label={command.label} aria-describedby={descriptionId} onClick={() => void command.run()}>
     <span>
       <span className="browser-configuration-action-label">{command.label}</span>
       <span className="browser-configuration-action-description" id={descriptionId}>{command.description}</span>
@@ -42,32 +45,46 @@ export function BrowserConfigurationAction({ command, destructive = false }: { c
 export function BrowserConfigurationPage({ commands }: { commands: BrowserConfigurationCommands; scopeProfile?: string }) {
   const followupBehavior = useFollowupBehavior()
   const showAuxiliaryTranscriptContent = useShowAuxiliaryTranscriptContent()
+  const followupDescription = 'Queue or steer messages sent during a reply. Cmd/Ctrl+Enter uses the other action once.'
+  const options = (['queue', 'steer'] as const).map(value => ({ id: value, kind: 'action' as const,
+    presentation: 'choice' as const, group: 'followup', label: value === 'queue' ? 'Queue' : 'Steer',
+    checked: followupBehavior === value, run: () => writeFollowupBehavior(value) }))
+  const followupPresentation = useSettingsPresentation([
+    { kind: 'heading', label: 'Follow-up behavior' }, { kind: 'text', label: followupDescription }, ...options
+  ])
+  const transcriptDescription = 'Show thoughts, tool calls, timestamps, and activity notices in the chat.'
+  const transcriptLabel = 'Show extra conversation content'
+  const transcriptPresentation = useSettingsPresentation([
+    { kind: 'heading', label: 'Conversation content' }, { kind: 'text', label: transcriptDescription },
+    { id: 'auxiliary', kind: 'toggle', label: transcriptLabel, checked: showAuxiliaryTranscriptContent,
+      run: () => writeShowAuxiliaryTranscriptContent(!showAuxiliaryTranscriptContent) }
+  ])
   return <section className="browser-settings-page browser-configuration-page" aria-label="Configuration management">
     <h2 className="browser-settings-page-title">{settingsPageLabel('config:browser-configuration', 'Configuration')}</h2>
     <BrowserPreferenceSync />
-    <section className="browser-followup-setting" aria-labelledby="browser-followup-setting-title">
+    <section ref={followupPresentation} className="browser-followup-setting" aria-labelledby="browser-followup-setting-title">
       <h3 id="browser-followup-setting-title">Follow-up behavior</h3>
-      <p>Queue or steer messages sent during a reply. Cmd/Ctrl+Enter uses the other action once.</p>
+      <p>{followupDescription}</p>
       <div className="browser-followup-options" role="group" aria-label="Default follow-up behavior">
-        {(['queue', 'steer'] as const).map(value => <button
-          aria-pressed={followupBehavior === value}
-          className={followupBehavior === value ? 'is-selected' : ''}
-          key={value}
-          onClick={() => writeFollowupBehavior(value)}
+        {options.map(option => <button
+          aria-pressed={option.checked}
+          className={option.checked ? 'is-selected' : ''}
+          key={option.id}
+          onClick={option.run}
           type="button"
-        >{value === 'queue' ? 'Queue' : 'Steer'}</button>)}
+        >{option.label}</button>)}
       </div>
     </section>
-    <section className="browser-transcript-setting" aria-labelledby="browser-transcript-setting-title">
+    <section ref={transcriptPresentation} className="browser-transcript-setting" aria-labelledby="browser-transcript-setting-title">
       <h3 id="browser-transcript-setting-title">Conversation content</h3>
-      <p>Show thoughts, tool calls, timestamps, and activity notices in the chat.</p>
+      <p>{transcriptDescription}</p>
       <label className="browser-transcript-setting-toggle">
         <input
           checked={showAuxiliaryTranscriptContent}
           onChange={event => writeShowAuxiliaryTranscriptContent(event.currentTarget.checked)}
           type="checkbox"
         />
-        <span>Show extra conversation content</span>
+        <span>{transcriptLabel}</span>
       </label>
     </section>
     <div className="browser-configuration-actions">

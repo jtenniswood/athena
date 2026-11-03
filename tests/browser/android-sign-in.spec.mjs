@@ -6,7 +6,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { createServer } from 'node:https'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { createAndroidAuthHandler } from '../../scripts/android-auth.mjs'
+import { createAndroidAuthHandler } from '../../apps/web-desktop/server/android-auth.mjs'
 
 test.use({ ignoreHTTPSErrors: true })
 let server, origin, directory

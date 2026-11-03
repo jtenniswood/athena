@@ -1,5 +1,5 @@
 # Hermes Web (hermes-mobile) — root ignore
-node_modules/
+node_modules
 dist/
 result/
 .env

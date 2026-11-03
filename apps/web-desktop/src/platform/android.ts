@@ -157,26 +157,14 @@ export async function androidPushDiagnostics(status: string): Promise<void> {
   try { await call('pushDiagnostics', { status }) } catch { /* Keep diagnostics optional for older APKs. */ }
 }
 
-export interface AndroidSettingsRow {
-  id?: string
-  kind: 'heading' | 'text' | 'action' | 'toggle' | 'radio' | 'input' | 'select'
-  label: string
-  description?: string
-  presentation?: 'navigation' | 'choice' | 'primary' | 'destructive' | 'secondary' | 'value'
-  group?: string
-  icon?: string
-  value?: string
-  inputType?: string
-  checked?: boolean
-  disabled?: boolean
-  options?: { label: string; value: string; disabled?: boolean }[]
-}
+export type { SettingsRow as AndroidSettingsRow } from '../experience/contracts/settings-presentation'
+import type { SettingsRow } from '../experience/contracts/settings-presentation'
 export interface AndroidSettingsPage {
   id: string
   scope: string
   title: string
   search?: string
-  rows: AndroidSettingsRow[]
+  rows: SettingsRow[]
 }
 export async function androidOpenSettingsPage(page: AndroidSettingsPage, change: (id: string, value?: unknown) => void): Promise<void> {
   await call('settingsPage', page, change)

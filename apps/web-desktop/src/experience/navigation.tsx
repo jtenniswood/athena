@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode, type PointerEvent, type RefObject, type MouseEvent } from 'react'
 import { useBrowserSidebarSections } from './sidebar-sections'
-import { browserRouteCoversWorkspace } from '../upstream/browser-routes'
+import { useBrowserEngine } from './engine'
 import { Codicon } from '../upstream/browser-api'
 import { AppSettingsLink, SettingsLink } from './settings-menu'
 import { BrowserToolbarButton } from './ui/toolbar-button'
@@ -20,6 +20,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
   const actionsTrigger = useRef<HTMLButtonElement>(null)
   const drawer = useRef<HTMLElement>(null)
   const compact = useCompactBrowser()
+  const { navigation: { coversWorkspace } } = useBrowserEngine()
   const mobile = useMobileBrowser()
   const [drawerOpen, setDrawerOpen] = useState(mobile)
   const [collapsed, setCollapsed] = useState(false)
@@ -57,7 +58,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
       if (preserveNextSelection.current) {
         preserveNextSelection.current = false
         window.clearTimeout(preserveTimeout.current)
-      } else if (!mobile || (previous.current.path !== path && browserRouteCoversWorkspace(path))) {
+      } else if (!mobile || (previous.current.path !== path && coversWorkspace(path))) {
         // Startup can restore both a session selection and its route. Keep the
         // mobile chat list visible until an explicit conversation-open request.
         setDrawerOpen(false)
@@ -92,7 +93,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
     return () => document.removeEventListener('keydown', keydown)
   }, [drawerOpen])
   const backToHistory = useMobileChatHistory({
-    mobile, drawerOpen, covered: browserRouteCoversWorkspace(path),
+    mobile, drawerOpen, covered: coversWorkspace(path),
     showHistory: () => {
       setVisibleTabs(current => current.includes('sessions') ? current : ['sessions', ...current])
       setTab('sessions')

@@ -4,7 +4,7 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
-import { createFirebaseSender } from './firebase-messaging.mjs'
+import { createFirebaseSender } from '../apps/web-desktop/server/firebase-messaging.mjs'
 
 test('Firebase uses a scoped signed server token, caches it, and sends a data message', async t => {
   const directory = await mkdtemp(path.join(tmpdir(), 'athena-firebase-test-'))

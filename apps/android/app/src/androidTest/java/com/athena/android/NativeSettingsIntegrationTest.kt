@@ -66,8 +66,13 @@ class NativeSettingsIntegrationTest {
                         <script type="module">
                           $adapter
                           $settings
-                          document.getElementById('name').onblur = event => window.saved = event.target.value;
-                          document.getElementById('notifications').onchange = event => window.toggled = event.target.checked;
+                          const name = document.getElementById('name'), notifications = document.getElementById('notifications');
+                          const saveName = value => { name.value = value; window.saved = value; settingsPresentationChanged(); };
+                          const toggle = () => { notifications.checked = !notifications.checked; window.toggled = notifications.checked; settingsPresentationChanged(); };
+                          name.onblur = event => saveName(event.target.value);
+                          notifications.onchange = event => { window.toggled = event.target.checked; };
+                          registerSettingsDescriptor(name, createSettingsDescriptor(() => [{ id: 'name', kind: 'input', label: 'Display name', value: name.value, run: saveName }]));
+                          registerSettingsDescriptor(notifications, createSettingsDescriptor(() => [{ id: 'notifications', kind: 'toggle', label: 'Notifications', checked: notifications.checked, run: toggle }]));
                           document.getElementById('import').onclick = () => document.getElementById('file').click();
                           document.getElementById('close').onclick = () => document.querySelector('[data-browser-settings-frame]').remove();
                           window.stopSettings = installNativeSettings(); window.fixtureReady = true;

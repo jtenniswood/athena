@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { handleAndroidAccess } from './android-access.mjs'
+import { probeIdentity, requestOrigin } from './identity.mjs'
 
 const prefix = '/api/athena/android/auth/'
 const completePath = '/android/sign-in'
@@ -17,9 +18,9 @@ export function createAndroidAuthHandler({ target, fetch: request = globalThis.f
       return true
     }
     if (!url.pathname.startsWith(prefix) && url.pathname !== completePath) return false
-    const scheme = req.headers['x-forwarded-proto'] === 'https' || req.socket.encrypted ? 'https' : 'http'
-    const host = req.headers['x-forwarded-host'] || req.headers.host
-    const origin = `${scheme}://${host}`
+    const origin = requestOrigin(req)
+    const { protocol, host } = new URL(origin)
+    const scheme = protocol.slice(0, -1)
     const access = handleAndroidAccess(req, res, origin, now)
     if (access) return access
     const json = (status, body, headers = {}) => {
@@ -59,10 +60,8 @@ export function createAndroidAuthHandler({ target, fetch: request = globalThis.f
         const id = req.method === 'GET' ? url.searchParams.get('id') : new URLSearchParams(await readBody()).get('id')
         const entry = pending.get(id)
         if (!entry || entry.origin !== origin || entry.cookies) return page(410, 'This request has expired. Start sign-in again from the Android app.'), true
-        const identity = await request(`${target}/api/auth/me`, {
-          headers: { cookie: req.headers.cookie || '', 'x-forwarded-host': host, 'x-forwarded-proto': scheme },
-          redirect: 'manual', signal: AbortSignal.timeout(6000)
-        })
+        const identity = await probeIdentity(target,
+          { cookie: req.headers.cookie || '', 'x-forwarded-host': host, 'x-forwarded-proto': scheme }, request)
         if (!identity.ok) return page(401, 'Sign-in was not completed. Return to the Android app and try again.'), true
         if (req.method === 'GET') {
           const refreshed = identity.headers.getSetCookie()

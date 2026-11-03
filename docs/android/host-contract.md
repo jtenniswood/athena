@@ -127,9 +127,16 @@ clients. Current web clients do not call it.
 
 ## Native Settings presentation
 
+Current web clients retain the shared web Settings layout on Android and do not
+start the native presenter. The APK keeps this capability for older clients. The
+retained adapter and its integration fixtures consume the explicit Settings
+presentation contract without changing that default.
+
 The optional `settings-page` capability enables `settingsPage`,
-`updateSettingsPage`, and `dismissSettingsPage`. The web adapter projects mounted
-Settings controls into bounded rows with opaque command IDs. The host presents
+`updateSettingsPage`, and `dismissSettingsPage`. Mounted Settings owners publish
+bounded rows and their original commands through the shared presentation model.
+The native adapter converts field identities into opaque command IDs; its
+compatibility path still handles upstream controls without descriptors. The host presents
 Material views and sends `changed` events with the current command ID and an
 optional string value. `ready` acknowledges presentation; `back` and `close`
 request navigation from the original settings owner. A final `dismissed` event
@@ -143,6 +150,13 @@ controls in the current page or dialog; removed controls and stale page IDs cann
 change another setting. Dialogs and listboxes become native snapshots too. Masked
 password values are omitted, and native password editors accept a replacement or
 an explicit clear operation. Native editors do not save input state or use autofill.
+
+Frame scope includes the selected configuration profile. A scope change
+invalidates old command IDs before the next native snapshot; a document picker
+returning to another profile is discarded. Explicit property updates notify the
+presenter directly and do not require HTML attributes or a polling interval to
+carry the new value. Callback functions, unknown properties and masked secret
+values are excluded from the serialized rows.
 
 Only settings snapshots may exceed the normal 16,000-character request limit;
 the transport rejects all envelopes over 262,144 characters. The adapter retains
