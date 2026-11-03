@@ -3477,7 +3477,11 @@ for (const width of [1440, 390]) {
       const template = body.recents.sessions.find(session => session.id === 'preview-week')
       body.recents.sessions.push(
         { ...template, id: 'research-history', profile: 'research', title: 'Research session history' },
-        { ...template, id: 'writer-history', profile: 'writer', title: 'Writer session history' }
+        { ...template, id: 'writer-history', profile: 'writer', title: 'Writer session history' },
+        ...Array.from({ length: 8 }, (_, index) => ({
+          ...template, id: `older-research-${index}`, profile: 'research',
+          title: `Older research chat ${index}`, started_at: 1_600_000_000 - index
+        }))
       )
       await route.fulfill({ response, json: body })
     })
@@ -3489,6 +3493,9 @@ for (const width of [1440, 390]) {
       await expect(group).toBeVisible()
       await expect(group.getByRole('button', { name: title, exact: true })).toBeVisible()
     }
+    const research = page.locator('[data-gateway-group]').filter({ has: page.locator('[data-browser-profile-picture="research"]') })
+    await expect(research.getByRole('button', { name: /^Older research chat/ })).toHaveCount(8)
+    await expect(research.getByRole('button', { name: /Show \d+ more/ })).toHaveCount(0)
     await expect(page.locator('#browser-navigation').getByText('Screen', { exact: true })).toHaveCount(0)
     await expect(page.locator('#browser-navigation').getByText('Not installed on host', { exact: true })).toHaveCount(0)
     await expect(page.locator('[data-gateway-section]')).toHaveCount(0)
