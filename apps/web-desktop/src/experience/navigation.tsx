@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ComponentProps, type ReactNode, type 
 import { useBrowserSidebarSections } from './sidebar-sections'
 import { browserRouteCoversWorkspace } from '../upstream/browser-routes'
 import { Codicon } from '../upstream/browser-api'
-import { SettingsMenu } from './settings-menu'
+import { AppSettingsLink, SettingsLink } from './settings-menu'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { useCompactBrowser, useMobileBrowser } from './ui/use-compact-browser'
 import { useMobileChatHistory } from './mobile-chat-history'
@@ -203,9 +203,9 @@ export function BrowserNavigationResizer({ navigation }: { navigation: Navigatio
   }} />
 }
 
-export function BrowserNavigationSettings({ navigation, onOpenRoute, row = false }: { navigation: Navigation; onOpenRoute: ComponentProps<typeof SettingsMenu>['onOpenRoute']; row?: boolean }) {
-  const { actionsTrigger, visibleTabs } = navigation
-  return <SettingsMenu onOpenRoute={onOpenRoute} triggerRef={actionsTrigger} triggerTooltip="Settings" triggerClassName={row ? "browser-navigation-settings-link browser-navigation-actions-trigger" : "browser-navigation-actions-trigger"} triggerLabel={row ? "Settings" : undefined} navigationOpen={navigation.open} additionalGroups={[{ key: 'tabs', label: 'Tabs', actions: NAVIGATION_TABS.map(value => ({
-        key: value, label: NAVIGATION_TAB_LABELS[value], icon: <Codicon name={value === 'sessions' ? 'history' : 'hubot'} size="1rem" />, checked: visibleTabs.includes(value), disabled: visibleTabs.includes(value) && visibleTabs.length === 1, keepOpen: true, run: () => navigation.toggleTab(value)
-      })) }, { key: 'sections', label: 'Sections', actions: navigation.sections.actions }]} />
+export function BrowserNavigationSettings({ navigation, onOpenRoute, row = false }: { navigation: Navigation; onOpenRoute: ComponentProps<typeof SettingsLink>['onOpenRoute']; row?: boolean }) {
+  return <>
+    <SettingsLink onOpenRoute={onOpenRoute} triggerRef={navigation.actionsTrigger} triggerClassName={row ? "browser-navigation-settings-link browser-navigation-actions-trigger" : "browser-navigation-actions-trigger"} triggerLabel={row ? "Settings" : undefined} />
+    {row && <AppSettingsLink />}
+  </>
 }

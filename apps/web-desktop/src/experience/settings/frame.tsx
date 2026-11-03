@@ -3,6 +3,7 @@ import { useLocation } from 'react-router'
 import { Codicon, NotificationsSettings } from '../../upstream/browser-api'
 import { groupSettingsSections, isSettingsSectionVisible, orderSettingsSections, settingsPageLabel, settingsPageDescription, settingsScopeDescription } from './policy'
 import { BrowserToolbarButton } from '../ui/toolbar-button'
+import { BrowserChatPanelPage } from './chat-panel-page'
 import { BrowserColorThemesPage } from './themes-page'
 import { BrowserNotificationPermissionSetting } from './notification-permission'
 import { SettingsFrameSurface, useSettingsFrame } from './frame-behavior'
@@ -122,7 +123,9 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
               {activeView !== 'notifications' && <p className="browser-settings-page-description">{pageDescription}</p>}
             </header>}
             {pageVisible && pageNotice && <p className="browser-settings-page-notice" role="note">{pageNotice}</p>}
-            {pageVisible && managingPlugins
+            {pageVisible && activeView === 'config:chat-panel'
+              ? <BrowserChatPanelPage />
+              : pageVisible && managingPlugins
               ? <Suspense fallback={<p role="status">Loading…</p>}><PluginManager /></Suspense>
               : pageVisible && activeView === 'config:browser-theme'
               ? <BrowserColorThemesPage />

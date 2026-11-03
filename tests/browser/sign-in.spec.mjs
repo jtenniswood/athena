@@ -90,9 +90,6 @@ async function selectSignOut(page, compact = false) {
   const trigger = page.getByRole('button', { name: 'Settings', exact: true })
   if (!await trigger.isVisible()) await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
   await trigger.click()
-  const menu = page.getByRole(compact ? 'dialog' : 'menu', { name: 'Settings and workspace', exact: true })
-  await expect(menu.getByRole(compact ? 'button' : 'menuitem', { name: 'Sign out', exact: true })).toHaveCount(0)
-  await menu.getByRole(compact ? 'button' : 'menuitem', { name: 'Settings', exact: true }).click()
   await page.getByRole('navigation', { name: 'Settings categories' }).getByRole('button', { name: 'Gateway', exact: true }).click()
   await page.getByRole('region', { name: 'Gateway connection', exact: true }).getByRole('button', { name: 'Sign out', exact: true }).click()
 }

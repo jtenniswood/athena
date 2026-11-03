@@ -1,3 +1,4 @@
+import { useChatPanelSettings } from './settings/chat-panel-page'
 import { BrowserProfileNavigation } from './profile-navigation'
 import { browserPreference } from '../platform/preferences'
 import { useStore } from '@nanostores/react'
@@ -185,6 +186,7 @@ function BrowserLayout() {
   const panels = useBrowserHostPanels()
   const main = useRef<HTMLElement>(null), menu = useRef<HTMLButtonElement>(null)
   const navigation = useBrowserNavigation({ selectionKey: conversation.selectionKey, path: location.pathname, main, trigger: menu })
+  useChatPanelSettings(navigation)
   useAndroidVisibleConversation(conversation.status === 'ready' ? conversation.sessionId : null,
     !((navigation.mobile || navigation.compact) && navigation.drawerOpen) && !location.pathname.startsWith('/settings'))
   const { tab } = navigation
