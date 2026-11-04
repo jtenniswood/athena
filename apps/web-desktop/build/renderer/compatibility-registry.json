@@ -1709,7 +1709,7 @@
       "useBrowserFreshSessionOwner",
       "useBrowserArchiveUndo"
     ],
-    "reason": "Apply browser selection ownership at shared session entry points so older Bot activations cannot replace a newer choice. Offer an Undo toast after a confirmed archive using the original session owner.",
+    "reason": "Apply browser selection ownership at shared session entry points so older Bot activations cannot replace a newer choice. Offer an Undo toast after a confirmed archive using the original session owner. Confirm and stop running responses before archiving.",
     "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
     "tests": [
       {
@@ -1719,13 +1719,17 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "hovered chat archive preserves the selected conversation and draft"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "running chat archives require confirmation before stopping work"
       }
     ],
     "removal": "Remove when upstream shared session entry points supersede older Bot selections and release group identity. Remove the archive adapter when upstream provides archive Undo in the browser shell.",
     "sourceRoot": "renderer",
     "sourceHash": "8dd027b61969ce6d0e7fcbe532d9013a8b7e93019a5904dbd93fdd8ba16d8355",
     "inputHash": "8dd027b61969ce6d0e7fcbe532d9013a8b7e93019a5904dbd93fdd8ba16d8355",
-    "outputHash": "522f21b4ae5b70f5d84cabd9ce9a759a5646e8a45d1b43520bb5ce06ff053400"
+    "outputHash": "55a36fcdc8cd7db96c67bf235cbe0f77253a53cd8f4ccc4af8a361c5c9f9f138"
   },
   {
     "name": "browser-overlay-focus-owner",

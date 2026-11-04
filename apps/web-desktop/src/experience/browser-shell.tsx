@@ -8,6 +8,7 @@ import { BrowserToolbarButton } from './ui/toolbar-button'
 import { BrowserNavigationTabs, BrowserNavigationSettings, BrowserNavigationResizer, useBrowserNavigation } from './navigation'
 import { BrowserActionError } from './action-errors'
 import { BrowserArchiveToasts } from './archive-toast'
+import { BrowserArchiveConfirmation } from './archive-confirmation'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { BrowserSidebarNavigation } from './sidebar-extras'
@@ -56,6 +57,7 @@ function BrowserLayout() {
   return <div className="browser-shell" data-browser-shell="" data-android-app={isAndroidApp() || undefined} data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined}>
     <BrowserActionError />
     <BrowserArchiveToasts />
+    <BrowserArchiveConfirmation />
     <div className="browser-workspace">
       {navigation.compact && !navigation.mobile && navigation.drawerOpen && <button type="button" className="browser-scrim" aria-label="Dismiss navigation" tabIndex={-1} onClick={navigation.dismissDrawer} />}
       <aside id="browser-navigation" ref={navigation.drawer} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={navigation.compact && navigation.drawerOpen ? 'dialog' : undefined} aria-modal={navigation.compact && navigation.drawerOpen ? true : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
