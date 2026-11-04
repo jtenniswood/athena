@@ -9,7 +9,7 @@ import * as preferenceContract from './browser-preference-contract.mjs'
 const root = path.resolve('apps/web-desktop/src')
 
 function startupHarness({ configurationError, rendererError, existingBridge, signInReady = Promise.resolve(), preferencesReady = Promise.resolve() } = {}) {
-  const state = { configured: false, tracking: false, tokenConsumed: false, signedIn: false, engineRegistered: false, preferencesLoaded: false, shellInitialized: false, rendererLoaded: false }
+  const state = { configured: false, tracking: false, tokenConsumed: false, signedIn: false, engineRegistered: false, windowsReady: false, preferencesLoaded: false, shellInitialized: false, rendererLoaded: false }
   const listeners = new Map()
   const storage = new Map([['hermes-web.comparison.profile', 'saved-profile']])
   const window = {
@@ -55,9 +55,15 @@ function startupHarness({ configurationError, rendererError, existingBridge, sig
       state.engineRegistered = true
       return {}
     },
+    'upstream/browser-windows.ts': () => {
+      assert.ok(window.hermesDesktop)
+      assert.equal(state.engineRegistered, true, 'window helper dependencies must not evaluate before engine registration')
+      return { installBrowserWindowCommands() { state.windowsReady = true } }
+    },
     'upstream/browser-initialize.ts': { initializeBrowserShell() {
       assert.ok(window.hermesDesktop)
       assert.equal(state.engineRegistered, true)
+      assert.equal(state.windowsReady, true)
       state.shellInitialized = true
     } },
     '../../desktop/src/main.ts': () => {

@@ -34,7 +34,7 @@ jobs:
       - name: Typecheck browser and renderer integration
         run: pnpm typecheck
       - name: Verify shared adapter output and startup ordering
-        run: node --test scripts/renderer-adapter.test.mjs scripts/inspect-renderer.test.mjs scripts/sidebar-controller.test.mjs scripts/startup.test.mjs scripts/state-safety.test.mjs scripts/settings-save.test.mjs scripts/settings-presentation.test.mjs scripts/config-field-presentation.test.mjs scripts/pending-work.test.mjs scripts/verify-behavior.test.mjs scripts/runtime-services.test.mjs
+        run: node --test scripts/renderer-adapter.test.mjs scripts/inspect-renderer.test.mjs scripts/sidebar-controller.test.mjs scripts/startup.test.mjs scripts/browser-windows.test.mjs scripts/state-safety.test.mjs scripts/settings-save.test.mjs scripts/settings-presentation.test.mjs scripts/config-field-presentation.test.mjs scripts/pending-work.test.mjs scripts/verify-behavior.test.mjs scripts/runtime-services.test.mjs
       - name: Verify affected declared Node scenarios
         id: behavior
         env:
@@ -71,7 +71,7 @@ jobs:
       - name: Build browser application
         run: pnpm build
       - name: Verify browser commands in the built application
-        run: pnpm exec playwright test tests/browser/composer-keyboard.spec.mjs tests/browser/external-links.spec.mjs --project=chromium --reporter=line
+        run: pnpm exec playwright test tests/browser/composer-keyboard.spec.mjs tests/browser/external-links.spec.mjs tests/browser/browser-windows.spec.mjs --project=chromium --reporter=line
       - name: Build isolated conversation fixture
         if: steps.behavior.outputs.selection == 'true'
         run: docker build -t athena:compatibility .
