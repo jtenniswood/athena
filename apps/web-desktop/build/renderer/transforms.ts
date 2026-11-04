@@ -47,11 +47,20 @@ function rewrite(code: string, id: string): { code: string; map: null } | null {
       // becoming ready must not replace an explicit user choice.
       const target = `onActiveRouteChanged: profile => {
         const key = normalizeProfileKey(profile)`
-      const patched = code.replace(target, `${target}
+      let patched = code.replace(target, `${target}
         if (window.__HERMES_WEB_BRIDGE__ && window.__HERMES_WEB_ACTIVE_PROFILE__) {
           return
         }`)
       if (patched === code) throw new Error('Browser profile commit guard no longer matches gateway boot')
+      // Credentials refresh the configured gateway; completed boots retain their chat context.
+      const switchTarget = '        switchToken = beginGatewaySwitch()'
+      if (patched.split(switchTarget).length !== 2) throw new Error('Browser connection apply no longer matches gateway boot')
+      patched = patched.replace(switchTarget, `        if (window.__HERMES_WEB_BRIDGE__ && bootCompleted) {
+          await reconnectGateway()
+          return
+        }
+
+${switchTarget}`)
       return { code: patched, map: null }
     }
     if (normalizedId.endsWith('/desktop/src/components/boot-failure-overlay.tsx')) {

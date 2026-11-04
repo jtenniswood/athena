@@ -251,17 +251,21 @@
     "kind": "renderer-transform",
     "order": 30,
     "module": "app/gateway/hooks/use-gateway-boot.ts",
-    "reason": "Keep background Bot route readiness from replacing an explicit browser profile choice",
+    "reason": "Keep background Bot readiness from replacing an explicit browser profile choice, and refresh same-gateway credentials through the existing reconnect command without clearing the selected conversation.",
     "owner": "apps/web-desktop/build/renderer/transforms.ts",
     "tests": [
       {
         "file": "tests/browser/interruptions.spec.mjs",
         "scenario": "an explicit profile choice survives delayed Bot activation"
+      },
+      {
+        "file": "tests/browser/sign-in-credentials.spec.mjs",
+        "scenario": "a confirmed token apply replaces the saved credential and preserves the draft"
       }
     ],
-    "removal": "Remove when public profile activation contracts prevent background readiness overwriting browser selection.",
+    "removal": "Remove when public gateway contracts preserve browser selection during background profile readiness and same-gateway credential refresh.",
     "sourceHash": "0c350dd0c22a17791998c2326e7a4e5142524dfca86951d7919aa29d36f2c060",
-    "outputHash": "ff063799f868d81531bd11439302d054fc2a76a4d336a2b241f5a18a39faf913",
+    "outputHash": "37eb70b2a9268fec9f9ae5d691eb397969cdf1557e1cb91b7b2dcc5a30a9664f",
     "handler": "browser-profile-commit",
     "sourceRoot": "renderer"
   },
@@ -831,6 +835,14 @@
       {
         "file": "tests/browser/gateway-setup.spec.mjs",
         "scenario": "remote gateway sign-in stays reachable with the keyboard"
+      },
+      {
+        "file": "tests/browser/sign-in-credentials.spec.mjs",
+        "scenario": "browser sign-in retains the existing credentials and draft"
+      },
+      {
+        "file": "tests/browser/sign-in-credentials.spec.mjs",
+        "scenario": "browser sign-in commits only after its cookie session is confirmed"
       }
     ],
     "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",

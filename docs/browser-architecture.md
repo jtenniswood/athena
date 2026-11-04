@@ -311,6 +311,15 @@ late cleanup cannot unlock a newer owner. The update protocol, pending-work flus
 and draft verification remain unchanged. Sign-out holds its reservation through
 logout, verified credential removal, and reload, and releases it on failure.
 
+Gateway settings keeps a sign-in attempt separate from the saved connection.
+Browser and Android OAuth completion verifies the cookie session even when an
+existing token is available. Confirmed browser sign-in reaches the bridge's
+guarded connection apply command; failed browser authentication or preparation
+retains the previous credentials and the entered token for retry. Once boot has
+completed, credential application uses the engine's existing reconnect command
+to retain the selected conversation and draft. Initial connection recovery keeps
+the engine's original boot path.
+
 Filesystem plugin discovery uses the renderer's existing disk loader. The bridge
 returns both files and directories, including package markers, with encoded URL
 path components. It omits unsupported directory watching so the loader's visible-tab
