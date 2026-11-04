@@ -124,8 +124,8 @@
    Touch devices keep the controls visible because they cannot hover. */
 .browser-sessions-pane [data-browser-group-header]:is(:focus-within,:has([data-state="open"])) [data-browser-group-figures] { opacity:0; }
 @media (hover:hover) and (pointer:fine) {
- .browser-sessions-pane [data-browser-group-actions] button { opacity:0; pointer-events:none; }
- .browser-sessions-pane [data-browser-group-header]:is(:hover,:focus-within,:has([data-state="open"])) [data-browser-group-actions] button { opacity:1; pointer-events:auto; }
+ .browser-sessions-pane [data-browser-group-actions] button { opacity:0; }
+ .browser-sessions-pane [data-browser-group-header]:is(:hover,:focus-within,:has([data-state="open"])) [data-browser-group-actions] button { opacity:1; }
 }
 /* Inset chat ages and unread dots while aligning hover actions with the header controls. */
 .browser-sessions-pane [data-web-session-id] .session-row-tail:has(time, [data-session-unread]) { padding-inline-end:var(--web-space-2); }
