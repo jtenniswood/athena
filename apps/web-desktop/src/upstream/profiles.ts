@@ -5,6 +5,7 @@ import { botRosterMeta } from '@/plugins/hermes-bots/routing'
 import { botAppearance } from '@/plugins/hermes-bots/avatar'
 import type { BrowserProfile, BrowserProfiles } from '../experience/contracts/profiles'
 import { readHiddenProfiles } from '../experience/browser-preferences'
+import { browserPreference } from '../platform/preferences'
 import { readBrowserTabProfile, rememberBrowserTabProfile } from '../platform/tab-profile'
 
 function label(value: string) {
@@ -19,6 +20,8 @@ export function useBrowserActiveProfile(): string {
 
 /** Restore the tab's profile without changing its persisted all-profiles scope. */
 export function restoreBrowserProfile(): () => void {
+  const combined = browserPreference('combinedProfiles')
+  combined.write(combined.read())
   const savedAllProfiles = $showAllProfiles.get()
   const saved = readBrowserTabProfile()
   if (saved) {
@@ -31,7 +34,7 @@ export function restoreBrowserProfile(): () => void {
   const hiddenProfiles = readHiddenProfiles()
   let stopSelectingDefault: (() => void) | undefined
   const chooseVisibleDefault = (profiles: ReturnType<typeof $profiles.get>) => {
-    // A saved all-profiles scope also owns Profile grouping. Hidden rail
+    // Preserve the saved all-profiles scope. Hidden rail
     // buttons must not replace that choice with a single profile on refresh.
     if (savedAllProfiles && $showAllProfiles.get()) {
       stopSelectingDefault?.()

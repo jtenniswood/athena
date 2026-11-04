@@ -426,7 +426,7 @@ test('latest renderer keeps None grouping integrated and handles layout-less too
   const layout = readFileSync(layoutFile, 'utf8')
   const layoutOutput = browserPlugin(root).transform(layout, layoutFile)?.code
   assert.match(layoutOutput, /SIDEBAR_GROUPING_ORDER = \['none', 'date', 'project', 'status', 'profile'\]/)
-  assert.match(layoutOutput, /SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'profile'/)
+  assert.match(layoutOutput, /SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'none'/)
 
   const filterFile = path.join(root, '../desktop/src/app/chat/sidebar/filter-menu.tsx')
   const filter = browserPlugin(root).transform(readFileSync(filterFile, 'utf8'), filterFile)?.code
