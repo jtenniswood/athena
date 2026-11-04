@@ -76,7 +76,7 @@ docker stop athena
 For microphone access from another device, open Athena over HTTPS (for example,
 through Tailscale Serve).
 
-When **Update when safe** appears, you can refresh the UI during a running task.
+When **Update available** appears, you can refresh the UI during a running task.
 Hermes keeps the task running, and Athena reconnects to the conversation after
 the refresh. Text drafts are saved first; recordings, pending saves, and unsent
 attachments still postpone the update. This applies to UI updates, not gateway

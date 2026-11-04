@@ -143,7 +143,7 @@ export function registerPwa(): void {
         registration.waiting.postMessage({ type: 'HERMES_PREPARE_UPDATE' })
       } catch { setStatus('The interface could not reload. Try again.') }
     }
-    notice = { update, phase: 'available', message: 'A UI update is ready. Running tasks will continue while the app reconnects.' }
+    notice = { update, phase: 'available', message: 'Your running tasks will continue.' }
     publishPwaUpdate(notice)
   }
   const register = async () => {
