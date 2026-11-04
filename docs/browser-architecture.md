@@ -186,9 +186,12 @@ No document search or window event chooses a transcript by display identity.
 
 ## Capability and lifecycle boundaries
 
-Browser, hosting, and connected-server support facts are described in
-`platform/capabilities.ts`. API availability does not imply permission; the
-owning browser operation still handles permission and failure at use time.
+`platform/capabilities.ts` owns direct browser API and native-support facts. API
+availability does not imply permission; the owning operation handles permission
+and failure at use time. The settings catalog owns the support metadata it
+presents, including unknown server capabilities. Runtime hosting configuration
+retains its validated wire format. There is no separate observation registry or
+multi-source capability resolver without a live consumer.
 
 `scripts/browser-preference-contract.mjs` records wrapper preference keys, owners,
 scope, defaults, parsers, serialization, and legacy migrations. The browser's
