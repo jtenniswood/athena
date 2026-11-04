@@ -115,8 +115,8 @@ test('accepted composer submissions report only successful sends', () => {
   const source = readFileSync(path.join(root, '../desktop/src/app/chat/composer/hooks/use-composer-submit.ts'), 'utf8')
   const { useBrowserAcceptedSubmit } = load('build/renderer/browser-plugin.ts')
   const output = useBrowserAcceptedSubmit(source, root)
-  assert.match(output, /if \(accepted !== false\) announceBrowserAcceptedSubmit\(\{ text, sessionId \}\)/)
-  assert.match(output, /if \(!accepted\) \{\s*keep\(\)\s*\} else \{\s*announceBrowserAcceptedSubmit\(\{ text, sessionId \}\)/)
+  assert.match(output, /accepted !== false && !displayKind && draftScopeRef.current === \(restoreScope \?\? browserSubmittedScope\)/)
+  assert.match(output, /else if \(draftScopeRef.current === browserSubmittedScope\) \{\s*announceBrowserAcceptedSubmit\(surfaceId, \{ text \}\)/)
   assert.match(output, /accepted-submit/)
 })
 test('profile switch hook ignores repeated mount effects but handles real profile changes', () => {

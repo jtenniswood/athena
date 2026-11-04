@@ -1,14 +1,19 @@
-export const BROWSER_SUBMIT_ACCEPTED_EVENT = 'athena:composer-submit-accepted'
-
 export interface BrowserAcceptedSubmit {
   text: string
-  sessionId: string | null
 }
 
-/** Announce only after the renderer's submit callback accepts the message. */
-export function announceBrowserAcceptedSubmit(detail: { text: string; sessionId?: string | null }): void {
-  if (typeof window === 'undefined') return
-  window.dispatchEvent(new CustomEvent<BrowserAcceptedSubmit>(BROWSER_SUBMIT_ACCEPTED_EVENT, {
-    detail: { ...detail, sessionId: detail.sessionId ?? null }
-  }))
+type AcceptedSubmit = (detail: BrowserAcceptedSubmit) => void
+const surfaces = new Map<string, AcceptedSubmit>()
+
+/** Only the mounted transcript for this engine surface receives its command. */
+export function subscribeBrowserAcceptedSubmit(surfaceId: string, accept: AcceptedSubmit): () => void {
+  surfaces.set(surfaceId, accept)
+  return () => { if (surfaces.get(surfaceId) === accept) surfaces.delete(surfaceId) }
+}
+
+/** Presentation failures must not reject a send the engine already accepted. */
+export function announceBrowserAcceptedSubmit(surfaceId: string | null, detail: BrowserAcceptedSubmit): void {
+  if (!surfaceId) return
+  try { surfaces.get(surfaceId)?.(detail) }
+  catch (error) { console.error('Could not position the accepted message.', error) }
 }

@@ -5,7 +5,7 @@
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; font: 16px sans-serif; }
-  [data-browser-shell] { height: calc(100vh / var(--scale, 1)); zoom: var(--scale, 1); }
+  [data-browser-shell] { position: relative; height: calc(100vh / var(--scale, 1)); zoom: var(--scale, 1); }
   [data-slot="aui_thread-viewport"] { height: 100%; overflow: auto; overflow-anchor: none; }
   [data-slot="aui_thread-viewport"][data-following="false"] { overflow-anchor: auto; }
   [data-slot="aui_thread-content"] { min-height: 100%; display: flex; flex-direction: column; padding: 12px 20px 0; }
@@ -18,37 +18,45 @@
 </style>
 <div id="root"></div>
 <script type="module">
-  import React, { useState, useEffect } from 'react'
+  import React, { useState, useRef, useId } from 'react'
   import { createRoot } from 'react-dom/client'
   import { useStickToBottom } from 'use-stick-to-bottom'
   import { announceBrowserAcceptedSubmit } from '../../../apps/web-desktop/src/experience/ui/accepted-submit.ts'
-  import { installConversationSubmitScroll } from '../../../apps/web-desktop/src/experience/ui/submit-scroll.ts'
+  import { useBrowserSubmitScroll } from '../../../apps/web-desktop/src/experience/ui/submit-scroll.ts'
 
   const h = React.createElement
   const bot = new URLSearchParams(location.search).has('bot')
-  function Chat() {
+  const multiple = new URLSearchParams(location.search).has('multiple')
+  window.chats = {}
+  function Chat({ name = 'main' }) {
     const [turns, setTurns] = useState([{ id: 0, text: 'Earlier question', height: 200 }])
     const [conversation, setConversation] = useState('initial')
     const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({ initial: 'instant', resize: 'instant' })
-    useEffect(() => installConversationSubmitScroll(), [])
+    const surfaceId = useId(), editorRef = useRef(null)
+    const [visible, setVisible] = useState(true), [profile, setProfile] = useState('default')
+    useBrowserSubmitScroll({ surfaceId, sessionKey: conversation, profile, visible, scrollRef, contentRef })
     const submit = event => {
       event.preventDefault()
-      const input = document.querySelector('[contenteditable]')
+      const input = editorRef.current
       if (!input.textContent.trim()) return
       const text = input.textContent
       setTurns(previous => [...previous, { id: previous.at(-1).id + 1, text, height: 0 }])
       input.textContent = ''
-      requestAnimationFrame(() => announceBrowserAcceptedSubmit({ text, sessionId: conversation }))
+      requestAnimationFrame(() => announceBrowserAcceptedSubmit(surfaceId, { text }))
       void scrollToBottom()
     }
     window.growReply = height => setTurns(previous => previous.map((turn, i) => i === previous.length - 1 ? { ...turn, height } : turn))
     window.completeReply = () => setTurns(previous => previous.map(turn => ({ ...turn, id: `saved-${turn.id}` })))
-    window.announcePreviousSubmit = () => announceBrowserAcceptedSubmit({ text: turns.at(-1).text, sessionId: 'initial' })
     window.switchConversation = () => {
       setConversation('other')
       setTurns(previous => [{ id: 99, text: previous.at(-1).text, height: 50 }])
     }
-    return h('div', { 'data-browser-shell': '', 'data-browser-conversation-id': bot ? 'connection::research-bot' : conversation, 'data-browser-conversation-kind': bot ? 'bot' : 'session', 'data-browser-session-id': conversation },
+    window.chats[name] = {
+      appendPrompt: text => setTurns(previous => [...previous, { id: previous.at(-1).id + 1, text, height: 0 }]),
+      announce: text => announceBrowserAcceptedSubmit(surfaceId, { text }),
+      switchConversation: window.switchConversation, setVisible, setProfile
+    }
+    return h('div', { hidden: !visible, 'data-surface': name, 'data-browser-shell': '', 'data-browser-conversation-id': bot ? 'connection::research-bot' : conversation, 'data-browser-conversation-kind': bot ? 'bot' : 'session' },
       h('div', { 'data-slot': 'aui_thread-viewport', 'data-following': String(isAtBottom), ref: scrollRef },
         h('div', { 'data-slot': 'aui_thread-content', ref: contentRef },
           ...turns.map(turn => h('div', { key: turn.id, 'data-slot': 'aui_message-group' },
@@ -57,11 +65,16 @@
               h('div', { 'data-reply': '', style: { minHeight: turn.height } }, turn.height ? 'Generated response' : null)))),
           h('div', { 'data-slot': 'aui_composer-clearance' }))),
       h('form', { 'data-slot': 'composer-root', onSubmit: submit },
-        h('div', { contentEditable: true, 'data-slot': 'composer-rich-input', onKeyDown: event => {
+        h('div', { ref: editorRef, contentEditable: true, 'data-slot': 'composer-rich-input', onKeyDown: event => {
           if (event.key === 'Enter' && !event.shiftKey) submit(event)
         } }),
         h('button', { type: 'submit' }, 'Send')))
   }
-  createRoot(document.getElementById('root')).render(h(Chat))
+  function Fixture() {
+    const [second, setSecond] = useState(true)
+    window.unmountSecond = () => setSecond(false)
+    return multiple ? h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr' } }, h(Chat, { name: 'first' }), second && h(Chat, { name: 'second' })) : h(Chat)
+  }
+  createRoot(document.getElementById('root')).render(h(Fixture))
 </script>
 </html>

@@ -15,7 +15,6 @@ import { installTranscriptPreferences } from './transcript-preferences'
 import { Codicon, SidebarProvider } from '../upstream/browser-api'
 import { BrowserChatActionsMenu } from './chat-actions-menu'
 import { currentPwaUpdate, subscribePwaUpdate, type PwaUpdateNotice } from '../pwa/register'
-import { installConversationSubmitScroll } from './ui/submit-scroll'
 
 interface SessionProjectDrag {
   pointerId: number
@@ -47,7 +46,6 @@ function BrowserLayout() {
   const engine = useBrowserEngine()
   const { Sessions: BrowserSessionsSurface, Bots: BrowserBotsSurface, Conversation: BrowserConversationSurface, Status: BrowserStatusSurface } = engine.surfaces
   const presentationMode = engine.profiles.useGrouping()
-  useEffect(() => installConversationSubmitScroll(), [])
   useEffect(() => installTranscriptPreferences(), [])
   const sessionProjectDrag = useRef<SessionProjectDrag | null>(null)
   const sessionReorderDrag = useRef<SessionReorderDrag | null>(null)
@@ -187,7 +185,7 @@ function BrowserLayout() {
     engine.navigation.openPage(navigate, path)
     navigation.closeDrawer()
   }
-  return <div className="browser-shell" data-browser-shell="" data-android-app={isAndroidApp() || undefined} data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined} data-browser-session-id={conversation.sessionId || undefined}>
+  return <div className="browser-shell" data-browser-shell="" data-android-app={isAndroidApp() || undefined} data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined}>
     <BrowserActionError />
     <div className="browser-workspace">
       {navigation.compact && !navigation.mobile && navigation.drawerOpen && <button type="button" className="browser-scrim" aria-label="Dismiss navigation" tabIndex={-1} onClick={navigation.dismissDrawer} />}

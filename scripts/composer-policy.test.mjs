@@ -14,8 +14,11 @@ const compile = source => ts.transpileModule(source, { compilerOptions: { module
 const original = readFileSync(path.join(root, '../desktop/src/app/chat/composer/hooks/use-composer-submit.ts'), 'utf8')
 const source = plugin.exports.useBrowserFollowupSubmit(plugin.exports.useBrowserAcceptedSubmit(original, root), root)
 
-function composer({ preference = 'queue', busy = true, disabled = false, attachments = [], queueEdit = null, blocking = false, parked = false, yielded = false, text = 'live draft', backendMode = null, accepted = true } = {}) {
+function composer({ preference = 'queue', busy = true, disabled = false, attachments = [], queueEdit = null, blocking = false, parked = false, yielded = false, text = 'live draft', backendMode = null, accepted = true, draftScope = 'session', onSend, positioningFailure = false } = {}) {
   const calls = []
+  const acceptedUi = vm.createContext({ exports: {}, console: { error: () => calls.push('positioning-error') } })
+  vm.runInContext(compile(readFileSync(path.join(root, 'src/experience/ui/accepted-submit.ts'), 'utf8')), acceptedUi)
+  acceptedUi.exports.subscribeBrowserAcceptedSubmit('main', () => { calls.push('accepted'); if (positioningFailure) throw new Error('Unavailable layout') })
   const preferenceStore = createBrowserPreference(browserPreferences.followupBehavior, {
     storage: () => ({ getItem: () => preference }), persist() {}, events: new EventTarget()
   })
@@ -23,7 +26,7 @@ function composer({ preference = 'queue', busy = true, disabled = false, attachm
   vm.runInContext(compile(readFileSync(path.join(root, 'src/experience/followup-preferences.ts'), 'utf8')), policy)
   const realm = vm.createContext({ exports: {}, crypto, document: { activeElement: null }, require: name => {
     if (name.endsWith('/followup-preferences')) return policy.exports
-    if (name.endsWith('/accepted-submit')) return { announceBrowserAcceptedSubmit: () => calls.push('accepted') }
+    if (name.endsWith('/accepted-submit')) return acceptedUi.exports
     if (name === 'react') return { useRef: current => ({ current }), useLayoutEffect() {} }
     if (name === '@/i18n') return { useI18n: () => ({ t: { desktop: {} } }), translateNow: key => key }
     if (name.endsWith('/chat-runtime')) return { isSlashCommandText: text => /^\/\w/.test(text) }
@@ -54,21 +57,21 @@ function composer({ preference = 'queue', busy = true, disabled = false, attachm
     throw new Error(`Unexpected composer import: ${name}`)
   } })
   vm.runInContext(compile(source), realm)
-  const draftRef = { current: 'stale draft' }
+  const draftRef = { current: 'stale draft' }, draftScopeRef = { current: draftScope }
   const submit = realm.exports.useComposerSubmit({
     activeQueueSessionKey: 'session', activeQueueSessionKeyRef: { current: 'session' },
     attachments, busy, busyInputMode: backendMode, disabled, queueEdit, queuedPrompts: [], sessionId: 'session',
-    draftScopeRef: { current: 'session' }, draftRef, editorRef: { current: { textContent: text, contains: () => false } },
+    draftScopeRef, draftRef, editorRef: { current: { textContent: text, contains: () => false } },
     clearDraft: () => calls.push('clear'), focusInput: () => calls.push('focus'),
     queueCurrentDraft: () => { calls.push('queue'); return true },
     exitQueuedEdit: () => { calls.push('save-edit'); return true },
     setComposerText: value => { draftRef.current = value },
-    onSubmit: value => { calls.push(`send:${value}`); return accepted },
+    onSubmit: (value, details) => { calls.push(`send:${value}`); onSend?.(details, draftScopeRef); return accepted },
     onSteer: (value, mode) => { calls.push(`steer:${value}`); calls.push(`mode:${mode}`); return true },
     onCancel: () => calls.push('stop'), loadIntoComposer: value => calls.push(`restore:${value}`), stashAt() {},
     rememberDraftRetry: (_scope, retry) => calls.push(`retry:${retry.text}`)
   })
-  return { submit, calls, draftRef }
+  return { submit, calls, draftRef, draftScopeRef }
 }
 
 test('composer policy chooses queue or steer regardless of backend policy and alternate reverses it', async () => {
@@ -116,4 +119,48 @@ test('a waiting card consumes typed answers before either browser follow-up pref
   entry.submit.submitDraft()
   assert.ok(entry.calls.includes('queue'))
   assert.ok(!entry.calls.includes('steer:live draft'))
+})
+
+test('accepted sends cannot scroll a different stored or fresh draft owner', async () => {
+  for (const draftScope of ['session', '__new__:first']) {
+    let accept
+    const pending = new Promise(resolve => { accept = resolve })
+    const entry = composer({ busy: false, draftScope, accepted: pending })
+    entry.submit.submitDraft()
+    entry.draftScopeRef.current = draftScope === 'session' ? 'other-session' : '__new__:second'
+    accept(true)
+    await new Promise(resolve => setImmediate(resolve))
+    assert.ok(!entry.calls.includes('accepted'), draftScope)
+    assert.ok(!entry.calls.some(call => call.startsWith('restore:')))
+  }
+})
+
+test('accepted scrolling follows its own fresh-session assignment', async () => {
+  const entry = composer({ busy: false, draftScope: '__new__:first', onSend(details, draftScopeRef) {
+    details.onComposerScopeAssigned('created-session')
+    draftScopeRef.current = 'created-session'
+  } })
+  entry.submit.submitDraft()
+  await new Promise(resolve => setImmediate(resolve))
+  assert.ok(entry.calls.includes('accepted'))
+})
+
+test('hidden sends and late steering cannot scroll the visible transcript', async () => {
+  const hidden = composer({ busy: false })
+  hidden.submit.dispatchSubmit('Machine setup note', [], 'hidden')
+  const steering = composer({ preference: 'steer' })
+  steering.submit.steerDraft()
+  steering.draftScopeRef.current = 'other-session'
+  await new Promise(resolve => setImmediate(resolve))
+  assert.ok(!hidden.calls.includes('accepted'))
+  assert.ok(!steering.calls.includes('accepted'))
+})
+
+test('a positioning failure cannot restore or retry an accepted message', async () => {
+  const entry = composer({ busy: false, positioningFailure: true })
+  entry.submit.submitDraft()
+  await new Promise(resolve => setImmediate(resolve))
+  assert.ok(entry.calls.includes('accepted'))
+  assert.ok(entry.calls.includes('positioning-error'))
+  assert.ok(!entry.calls.some(call => call.startsWith('restore:') || call.startsWith('retry:')))
 })
