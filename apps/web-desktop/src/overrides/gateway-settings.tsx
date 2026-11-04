@@ -7,7 +7,7 @@ import { signOut } from '../platform/sign-out'
 import { useEffect, useId, useState } from 'react'
 import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SettingsContent } from '../upstream/ui'
 import { runtimeConfig } from '../platform/runtime'
-import { getActiveGateway, updateGateway } from '../web-bridge/gateways'
+import { getActiveGateway } from '../web-bridge/gateways'
 import './gateway-settings.css'
 
 export function GatewaySettings({ embedded = false }: { embedded?: boolean; subpage?: string } = {}) {
@@ -52,13 +52,15 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean; subp
     <div className="browser-gateway-settings-actions">
       <Button disabled={busy} onClick={() => void run(async () => {
         await assertSafeConnectionChange()
-        updateGateway(gateway.id, { authMode: mode, ...(mode === 'oauth' ? { token: '' } : token ? { token } : {}) })
         if (mode === 'oauth') {
           const result = await window.hermesDesktop.oauthLoginConnectionConfig(window.location.origin)
           if (!result.connected) { setMessage('Sign-in did not complete. Allow the sign-in window and try again.'); return }
         }
-        setToken('')
-        await window.hermesDesktop.applyConnectionConfig({ mode: 'remote', remoteAuthMode: mode })
+        await window.hermesDesktop.applyConnectionConfig({
+          mode: 'remote', remoteAuthMode: mode,
+          ...(mode === 'oauth' ? { remoteToken: '' } : token ? { remoteToken: token } : {})
+        })
+        setToken(current => current === token ? '' : current)
         setMessage(connectionState().persisted() ? 'Reconnecting to the configured gateway.' : 'Reconnecting. Your sign-in works in this tab but may not survive a reload.')
       })}>{mode === 'oauth' ? 'Sign in' : 'Save and reconnect'}</Button>
       <Button variant="outline" disabled={busy} onClick={() => void run(async () => {
