@@ -85,6 +85,12 @@ no conversation state or storage is added. Missing, refused or failed workers an
 unanswered claims retain the existing emit behavior. Page departure releases the
 port and pending callbacks; a restored page reconnects on its next claim.
 
+File selection owns one temporary input per request. Opening a newer picker
+cancels the previous request, so a late change cannot attach its files to both
+callers. Selection, cancellation, opening errors and the existing missing-cancel
+deadline share one cleanup path for listeners and the reload-safety operation.
+The bridge still registers the selected blobs under its existing file handles.
+
 `experience/settings/settings-route.tsx` assembles settings navigation from the
 catalog. The checked settings controller adapter extracts the existing Hermes
 page controls and commands without generating the browser frame. Schemas, values,
