@@ -13,6 +13,7 @@ import { $unreadWriteGuard, markSessionUnread, pendingUnreadValue } from './brow
 import { reportActionFailure } from '../experience/action-errors'
 import type { BrowserSessionActions } from '../experience/contracts/actions'
 import type { BrowserConversationModel } from '../experience/contracts/conversation'
+import { useBrowserUpdateTitle } from './update-session-title'
 
 /** Retain the displayed owner's runtime for RPC rename, including runtime-only chats. */
 async function renameOwnedSession(id: string, title: string, profile: string, runtimeId: string | null, owner?: SessionOwnerRoute) {
@@ -41,6 +42,7 @@ export function useBrowserSessionActions(conversation: BrowserConversationModel)
   const profile = conversation.profile || activeProfile
   const matches = (row: { id: string; profile?: string | null }) => String(row.id) === selected && (row.profile || 'default') === profile
   const session = sessions.find(matches)
+  const titleUpdate = useBrowserUpdateTitle(selected, profile, owner)
   const pinId = session ? sessionPinId(session) : selected
   const pinned = Boolean(pinId && pins.includes(pinId))
 
@@ -60,6 +62,7 @@ export function useBrowserSessionActions(conversation: BrowserConversationModel)
   }
 
   return {
+    ...titleUpdate,
     sessionId: selected,
     title: session?.title || '',
     profile,

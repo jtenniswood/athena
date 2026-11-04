@@ -5,6 +5,8 @@ export interface BrowserSessionActions {
   profile: string
   pinned: boolean
   unread: boolean
+  updatingTitle: boolean
+  updateTitle(): Promise<void>
   togglePin(): void
   toggleUnread(): Promise<void>
   rename(title: string): Promise<boolean>

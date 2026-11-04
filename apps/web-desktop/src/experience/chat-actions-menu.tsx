@@ -35,6 +35,7 @@ export function BrowserChatActionsMenu({ actions, title, panels, main }: {
   const groups: BrowserActionGroup[] = [
     { key: 'conversation', actions: [
       { key: 'rename', label: renameLabel, labelContent: browserSessionActionLabel('rename', renameLabel), icon: <Codicon name="edit" />, afterClose: true, run: () => openDialog('rename') },
+      { key: 'update-title', label: actions.updatingTitle ? 'Updating title…' : 'Update title', icon: <Codicon name="refresh" />, disabled: actions.updatingTitle, run: () => void actions.updateTitle() },
       { key: 'pin', label: pinLabel, labelContent: browserSessionActionLabel('pin', pinLabel), icon: <Codicon name="pin" />, run: actions.togglePin },
       { key: 'unread', label: unreadLabel, labelContent: browserSessionActionLabel('unread', unreadLabel), icon: <Codicon name={actions.unread ? 'mail-read' : 'mail'} />, run: () => void actions.toggleUnread() },
       ...panelActions
