@@ -15,6 +15,7 @@ import {
 } from '../web-bridge/gateways'
 
 import { buildInfo } from '../build-info'
+import { openBrowserExternalLink } from './external-links'
 import { browserDefaultProfile as defaultProfileRoute } from '../platform/browser-default-profile'
 import { createWebZoomBridge } from '../platform/display'
 import { clipboardImageAsFile, readClipboard, writeClipboard } from '../platform/clipboard'
@@ -396,12 +397,8 @@ export function createWebBridge(): Window['hermesDesktop'] {
     setPreviewShortcutActive: noop,
     setActiveWork,
     setKeepAwake: noop,
-    openExternal: async url => {
-      window.open(url, '_blank', 'noopener')
-    },
-    openPreviewInBrowser: async url => {
-      window.open(url, '_blank', 'noopener')
-    },
+    openExternal: openBrowserExternalLink,
+    openPreviewInBrowser: openBrowserExternalLink,
     fetchLinkTitle: async url => url,
     sanitizeWorkspaceCwd: async cwd => ({ cwd: cwd ?? '', sanitized: false }),
     settings: {
