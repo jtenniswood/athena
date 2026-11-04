@@ -19,7 +19,7 @@ import javax.crypto.spec.PSource
 import javax.crypto.spec.SecretKeySpec
 
 /** Bootstrap Access in the browser without needing an unauthenticated server endpoint. */
-class AccessSignIn(private val activity: Activity, private val now: () -> Long = System::currentTimeMillis, private val progress: (String, String) -> Unit = { _, _ -> }, private val connected: () -> Unit) {
+class AccessSignIn(private val activity: Activity, private val now: () -> Long = System::currentTimeMillis, private val progress: (String, String) -> Unit = { _, _ -> }, private val launch: (Uri) -> Unit = { CustomTabsIntent.Builder().build().launchUrl(activity, it) }, private val connected: () -> Unit) {
     private val prefs = activity.getSharedPreferences("access-sign-in", Context.MODE_PRIVATE)
     private fun encode(bytes: ByteArray) = Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
     private fun decode(text: String) = Base64.decode(text, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
@@ -44,7 +44,7 @@ class AccessSignIn(private val activity: Activity, private val now: () -> Long =
         // Private app storage, excluded from backups. The short-lived key never leaves this device.
         prefs.edit().putString("origin", origin).putString("state", state)
             .putString("private", encode(pair.private.encoded)).putLong("started", now()).apply()
-        try { CustomTabsIntent.Builder().build().launchUrl(activity, url); progress("waiting", "") }
+        try { launch(url); progress("waiting", "") }
         catch (_: Exception) { cancel(); progress("auth-browser", "No browser could open Access sign-in. Choose Try again to retry.") }
     }
 
