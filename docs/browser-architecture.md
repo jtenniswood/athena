@@ -64,6 +64,10 @@ profile to the hash chat route. `upstream/browser-session-routes.ts` admits that
 owner through the engine's existing resume command before initial rendering and
 native history changes. The outer window-profile query can still change with
 the sidebar filter while the chat route retains its own owner.
+When cold connection recovery clears selection without changing that URL, the
+same route owner reissues its unfulfilled intent after the gateway-switch
+barrier falls. A newer engine request or selection takes precedence; recovery
+reads the latest URL and leaves new-chat and tool routes alone.
 
 The captured engine selection distinguishes copied session IDs when projecting
 conversation metadata and toolbar commands. It also precedes historical rows in

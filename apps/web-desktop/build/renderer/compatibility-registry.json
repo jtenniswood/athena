@@ -238,6 +238,26 @@
       {
         "file": "tests/browser/safety.spec.mjs",
         "scenario": "nginx serves the built app and uncached identity; API stays available for recovery"
+      },
+      {
+        "file": "scripts/browser-session-routes.test.mjs",
+        "scenario": "cold recovery reissues a bare chat URL through the engine resume command"
+      },
+      {
+        "file": "scripts/browser-session-routes.test.mjs",
+        "scenario": "a newer resume request wins even before its navigation updates the URL"
+      },
+      {
+        "file": "tests/browser/cold-connection-recovery.spec.mjs",
+        "scenario": "cold token recovery resumes the unowned chat URL without another sidebar click"
+      },
+      {
+        "file": "tests/browser/cold-connection-recovery.spec.mjs",
+        "scenario": "a newer owned URL wins while cold recovery is dialing"
+      },
+      {
+        "file": "tests/browser/cold-connection-recovery.spec.mjs",
+        "scenario": "cold recovery restores the saved draft for its routed conversation"
       }
     ],
     "removal": "Remove when upstream recovery offers configured-gateway actions without native backend/log assumptions.",
