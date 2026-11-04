@@ -5,26 +5,18 @@ import vm from 'node:vm'
 import ts from 'typescript'
 
 function clipboardFixture({ nativeWrite, copy = () => true } = {}) {
-  const textareas = []
+  const copies = []
   const navigator = { clipboard: nativeWrite ? { writeText: nativeWrite } : undefined }
-  const document = {
-    createElement: () => ({
-      value: '', style: {}, setAttribute() {}, select() {},
-      remove() { textareas.splice(textareas.indexOf(this), 1) }
-    }),
-    body: { append: element => textareas.push(element) },
-    execCommand: command => {
-      assert.equal(command, 'copy')
-      return copy(textareas.at(-1).value)
-    }
-  }
   const context = vm.createContext({
-    exports: {}, navigator, document,
-    require: () => ({ browserCapabilities: () => ({ clipboard: Boolean(navigator.clipboard) }) })
+    exports: {}, navigator,
+    require: name => name === '@/lib/clipboard' ? { copyTextThroughSelection(text) {
+      copies.push(text)
+      try { return copy(text) } catch { return false }
+    } } : { browserCapabilities: () => ({ clipboard: Boolean(navigator.clipboard) }) }
   })
   const source = readFileSync(new URL('../apps/web-desktop/src/platform/clipboard.ts', import.meta.url), 'utf8')
   vm.runInContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context)
-  return { writeClipboard: context.exports.writeClipboard, navigator, textareas }
+  return { writeClipboard: context.exports.writeClipboard, navigator, copies }
 }
 
 const code = 'printf "hello" \\\n  --flag "世界"\n\n'
@@ -57,14 +49,14 @@ for (const nativeAvailable of [true, false]) {
     })
     assert.equal(await fixture.writeClipboard(code), true)
     assert.deepEqual(writes, [code])
-    assert.equal(fixture.textareas.length, 0)
+    assert.deepEqual(fixture.copies, [code])
   })
 }
 
 for (const copy of [() => false, () => { throw new Error('Copy denied') }]) {
-  test('clipboard failure rejects so copy controls can report failure, and cleans up', async () => {
+  test('clipboard fallback refusal rejects so copy controls can report failure', async () => {
     const fixture = clipboardFixture({ copy })
     await assert.rejects(fixture.writeClipboard(code), /copy/i)
-    assert.equal(fixture.textareas.length, 0)
+    assert.deepEqual(fixture.copies, [code])
   })
 }
