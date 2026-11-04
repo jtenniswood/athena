@@ -16,6 +16,7 @@ const pending = compile('src/platform/pending-work.ts')
 const drafts = compile('src/platform/draft-safety.ts')
 const state = compile('src/platform/connection-state.ts')
 const network = compile('src/pwa/update-network.ts')
+const notificationRouting = compile('src/platform/notification-navigation.ts')
 const registration = compile('src/pwa/register.ts')
 const coordinator = read('public/update-coordinator-sw.js')
 
@@ -37,10 +38,12 @@ test.beforeAll(async () => {
 };${guard};window.safety=exports;</script>
 <script>window.exports={};window.require=()=>({});${state};window.stateFactory=exports.createConnectionState;</script>
 <script>window.exports={};${network};window.updateNetwork=exports;</script>
+<script>window.exports={};${notificationRouting};window.notificationRouting=exports;</script>
 <script>
 window.exports={};window.require=name=>{
  if (name==='../platform/reload-safety') return window.safety;
  if (name==='./update-network') return window.updateNetwork;
+ if (name==='../platform/notification-navigation') return window.notificationRouting;
  throw new Error('Unexpected safety fixture import: '+name);
 };
 const register=navigator.serviceWorker.register.bind(navigator.serviceWorker);

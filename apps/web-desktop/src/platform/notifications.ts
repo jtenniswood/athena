@@ -1,5 +1,6 @@
 import type { HermesNotification } from '../upstream/types'
 import { browserCapabilities } from './capabilities'
+import { routeBrowserNotification } from './notification-navigation'
 import { androidNotificationPermission, androidNotify, isAndroidApp, refreshAndroidNotificationPermission } from './android'
 
 const WEB_NOTIFICATION_READY_TIMEOUT_MS = 750
@@ -71,8 +72,8 @@ export async function webNotify(payload: HermesNotification): Promise<boolean> {
   try {
     const notification = new Notification(title, options)
     notification.onclick = () => {
-      window.focus()
-      if (payload.focusSessionId) window.location.hash = target.hash
+      if (!payload.focusSessionId || routeBrowserNotification(target.href)) window.focus()
+      else window.open(target.href, '_blank', 'noopener,noreferrer')
       notification.close()
     }
 

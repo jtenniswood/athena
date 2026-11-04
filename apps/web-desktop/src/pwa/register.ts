@@ -1,5 +1,6 @@
 import { reloadReadiness, reloadReadinessAfterSaving, type DraftSnapshot } from '../platform/reload-safety'
 import { installUpdateNetworkBarrier } from './update-network'
+import { routeBrowserNotification } from '../platform/notification-navigation'
 
 export type PwaUpdateNotice = {
   readonly update: () => void
@@ -53,6 +54,10 @@ export function registerPwa(): void {
   }
   navigator.serviceWorker.addEventListener('message', async event => {
     const message = event.data
+    if (message?.type === 'ATHENA_NOTIFICATION_ROUTE') {
+      event.ports[0]?.postMessage({ ready: !transaction && typeof message.url === 'string' && routeBrowserNotification(message.url) })
+      return
+    }
     if (message?.type === 'HERMES_ABORT_UPDATE') {
       if (message.transaction === transaction) unlock()
       setStatus('Update postponed. Save pending changes in all Hermes tabs, or close older tabs, then try again.')
