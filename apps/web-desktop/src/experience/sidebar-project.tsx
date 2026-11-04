@@ -42,7 +42,7 @@ export function BrowserSidebarProject({ model, children, ...props }: ComponentPr
       model.dragHandleProps?.onPointerDown?.(event)
     }} model={{ label: model.label, title: model.autoLabel, open: model.open, toggle: model.toggle, enter: model.enter,
       toggleLabel: model.toggleLabel, active: model.active, project: true, icon: lead,
-      actions: <div data-row-actions="" className="flex shrink-0 items-center self-stretch">
+      actions: <div data-row-actions="" className="flex shrink-0 items-center self-stretch [&_.codicon-kebab-vertical]:rotate-90">
         {model.figures ? <div className="relative flex items-center"><span className="min-w-9 whitespace-nowrap text-right text-[0.625rem] leading-none text-(--ui-text-tertiary) transition-opacity group-hover/workspace:opacity-0">{model.figures}</span><div className="absolute right-0 flex items-center">{controls}</div></div> : controls}
       </div> }} />
   return <BrowserTreeStack {...props} data-sessions-project={model.id} className={cn('rounded-[6px] data-[session-drop-hover=true]:outline-2 data-[session-drop-hover=true]:-outline-offset-2 data-[session-drop-hover=true]:outline-sidebar-ring', model.dragging && 'relative z-10')}>
