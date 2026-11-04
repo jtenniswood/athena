@@ -65,7 +65,7 @@ export function BrowserSessionPreview({ session, title, disabled, children, onFo
       if (event.defaultPrevented) return
       if (event.pointerType === 'touch' || (event.target as Element).closest('[data-row-actions], [data-reorder-handle]')) event.preventDefault()
     }}>{children}</TooltipTrigger>
-    <TooltipContent className="browser-session-preview" side="right" align="start" alignOffset={-8} sideOffset={4} collisionPadding={24} boundary="viewport">
+    <TooltipContent className="browser-session-preview" side="right" align="start" alignOffset={-8} sideOffset={0} collisionPadding={24} boundary="viewport">
       <div className="browser-session-preview-title">{title}</div>
       <div className="browser-session-preview-meta">
         Updated {formatUpdatedAge(session.last_active || session.started_at)}
