@@ -114,10 +114,11 @@
 .browser-sessions-pane button[aria-label*="Mark all as read" i] { display:none !important; }
 .browser-sessions-pane :is(button[aria-label="New session"],[data-browser-section-header] button[data-size="icon-xs"]) { color:var(--web-text-muted); opacity:1 !important; }
 .browser-sessions-pane button[aria-label="New session"] { visibility:visible !important; pointer-events:auto !important; }
-/* All group headers share the profile controls and trailing inset.
-   Mark the header actions explicitly so disclosure and session rows keep their spacing. */
+/* Match the chat action columns, including nested profile/project controls. */
 .browser-sessions-pane [data-browser-group-header] { min-height:1.625rem; padding-block:0; padding-inline-end:.625rem; }
-.browser-sessions-pane [data-browser-group-actions] { gap:0; margin-inline-end:0; }
+.browser-sessions-pane [data-browser-group-actions] { margin-inline-end:0; }
+.browser-sessions-pane [data-browser-group-actions],
+.browser-sessions-pane [data-browser-group-actions] div:has(> button) { gap:var(--web-space-1); }
 .browser-sessions-pane [data-browser-group-actions] button { margin:0; color:var(--web-text-muted); opacity:1; }
 /* Inset chat ages and unread dots while aligning hover actions with the header controls. */
 .browser-sessions-pane [data-web-session-id] .session-row-tail:has(time, [data-session-unread]) { padding-inline-end:var(--web-space-2); }
