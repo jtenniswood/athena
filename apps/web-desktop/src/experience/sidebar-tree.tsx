@@ -97,7 +97,7 @@ export function BrowserProfileHeader({ model }: { model: BrowserProfileHeaderMod
       </button>
     </div>
     <div data-row-actions="" data-browser-group-actions="" className="flex shrink-0 items-center self-stretch">{model.figures ? <div className="relative flex items-center">
-      <span className="min-w-9 whitespace-nowrap text-right text-[0.625rem] leading-none text-(--ui-text-tertiary) transition-opacity group-hover/workspace:opacity-0">{model.figures}</span>
+      <span data-browser-group-figures="" className="min-w-9 whitespace-nowrap text-right text-[0.625rem] leading-none text-(--ui-text-tertiary) transition-opacity group-hover/workspace:opacity-0">{model.figures}</span>
       {model.actions && <div className="absolute right-0 flex items-center">{model.actions}</div>}
     </div> : model.actions}</div>
   </div>
