@@ -2564,7 +2564,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/settings/config-settings.tsx",
-    "reason": "Register explicit debounced save commands with browser readiness, flush immediately on transitions, and retain the renderer write queue and profile scope.",
+    "reason": "Register explicit debounced save commands with browser readiness, flush immediately on transitions, and retain the renderer write queue and profile scope. Empty states follow the browser-filtered native control flags.",
     "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
     "tests": [
       {
@@ -2588,7 +2588,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "3775372a975339dbf70959f52a001c2a2c3041f26e2f9967fbfcfcfe5b6b594c",
     "inputHash": "3775372a975339dbf70959f52a001c2a2c3041f26e2f9967fbfcfcfe5b6b594c",
-    "outputHash": "884c6c89b15787c6b0bc5f7061f211be6312d27e6afbc2b601ed3d45ad4ef5e8",
+    "outputHash": "9e6cd943d9a8bea3929a53cb8382ef7b01a3f40435d1d932737e6c9c4636a0c9",
     "handlers": [
       "trackBrowserSettingsSaves",
       "filterBrowserSettingsFields",
