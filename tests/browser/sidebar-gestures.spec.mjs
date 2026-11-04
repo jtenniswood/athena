@@ -198,7 +198,10 @@ for (const [layout, combined, grouped] of [
     const { moves, editor } = await openSidebar(page, { combined, grouped })
     const { source, target, after } = await aimOrder(page)
     await page.mouse.up()
-    const isAfter = async () => (await source.boundingBox()).y > (await target.boundingBox()).y
+    const isAfter = async () => {
+      const [sourceBounds, targetBounds] = await Promise.all([source.boundingBox(), target.boundingBox()])
+      return sourceBounds && targetBounds ? sourceBounds.y > targetBounds.y : undefined
+    }
     await expect.poll(isAfter).toBe(after)
     expect(moves).toEqual([])
     await expect(page).toHaveURL(/#\/preview-week$/)
