@@ -4,6 +4,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
 import ts from 'typescript'
+import vm from 'node:vm'
 import { createRendererAdapter, rendererAdapterPlugin } from './renderer-adapter.mjs'
 import { adapterCompilerHost } from './typecheck.mjs'
 
@@ -12,6 +13,28 @@ const adapter = createRendererAdapter(root)
 const options = { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler,
   jsx: ts.JsxEmit.ReactJSX, strict: true, skipLibCheck: true, noEmit: true }
 const hash = code => createHash('sha256').update(code.replaceAll(root, '<web-root>')).digest('hex')
+
+test('credential reconnect waits for prior recovery and starts a fresh dial', async () => {
+  for (const failed of [false, true]) {
+    const file = path.resolve(root, '../desktop/src/store/gateway-reconnect.ts')
+    const output = adapter.transform(readFileSync(file, 'utf8'), file)
+    const context = vm.createContext({ exports: {}, require: () => ({ translateNow: key => key }) })
+    vm.runInContext(ts.transpileModule(output, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText, context)
+    const owner = context.exports, pending = Promise.withResolvers()
+    let dials = 0
+    owner.registerGatewayReconnect(() => { dials++; return dials === 1 ? pending.promise : Promise.resolve() })
+    const previous = owner.reconnectGateway()
+    assert.equal(owner.reconnectGateway(), previous, 'ordinary manual requests still coalesce')
+    const handled = previous.catch(() => undefined)
+    const current = owner.reconnectGatewayAfterPending()
+    await new Promise(setImmediate)
+    assert.equal(dials, 1)
+    if (failed) pending.reject(new Error('Previous credential failed'))
+    else pending.resolve()
+    await Promise.all([handled, current])
+    assert.equal(dials, 2, 'the new credential is dialed even after older recovery fails')
+  }
+})
 
 test('the complete adapted graph retains every reviewed final renderer and browser fingerprint', () => {
   const terminal = new Map()
