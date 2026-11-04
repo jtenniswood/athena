@@ -2,7 +2,7 @@ import { arrayMove } from '@dnd-kit/sortable'
 import { compactNumber } from '@hermes/shared'
 import { useStore } from '@nanostores/react'
 import type { ReactNode } from 'react'
-import { startNewSessionDrag, type NewSessionSplitHandler } from '@/app/chat/new-session-drag'
+import { startNewProjectDrag, startNewSessionDrag, type NewSessionSplitHandler } from '@/app/chat/new-session-drag'
 import { renameGatewayGroup, reorderGatewayGroups, toggleGatewayGroup } from '@/app/chat/sidebar/gateway-group-preferences'
 import { ReorderableList, useSortableBindings } from '@/app/chat/sidebar/reorderable-list'
 import type { SidebarSessionGroup } from '@/app/chat/sidebar/projects/workspace-groups'
@@ -13,10 +13,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input'
 import { ProfileGlyph } from '@/components/ui/profile-glyph'
 import { useI18n } from '@/i18n'
-import { $sidebarRowMeta } from '@/store/layout'
+import { $sidebarGrouping, $sidebarRowMeta } from '@/store/layout'
+import { $newProjectDropPlacement } from '@/store/projects'
 import { BrowserProfileGroup, BrowserProfileNesting } from '../experience/sidebar-profile'
 import { BrowserHideProfileItem } from '../experience/profile-list-visibility'
 import { useBrowserProfileSection } from './profile-section'
+import { openBrowserProfileProjectCreate } from './project-create'
 
 export function useBrowserSidebarFigures(totals?: { tokens: number; costUsd: number }) {
   const meta = useStore($sidebarRowMeta)
@@ -71,13 +73,21 @@ interface ProfileGroupController {
 export function BrowserProfileGroupControllerSurface({ model }: { model: ProfileGroupController }) {
   const { t } = useI18n(), s = t.sidebar, copy = s.gatewayGroups
   const { group, sortable } = model
+  const grouping = useStore($sidebarGrouping)
   const renameLabel = group.profile ? 'Rename profile' : copy.rename
   const browserProfile = useBrowserProfileSection(group.profile)
   const label = model.alias || browserProfile?.label || model.label
   const figures = useBrowserSidebarFigures(model.usage ? { tokens: model.usage.tokens, costUsd: model.usage.cost_usd } : undefined)
   const toggle = () => toggleGatewayGroup(group.id)
   const actions = <div className="flex items-center">
-    {group.profile && !model.embedded && <Button aria-label={s.newSessionIn(label)} title={s.newSessionIn(label)} size="icon-xs" variant="ghost"
+    {browserProfile && group.profile && !model.embedded && grouping === 'project' && <Button
+      aria-label={`${s.projects.newButton} in ${label}`} title={`${s.projects.newButton} in ${label}`} size="icon-xs" variant="ghost"
+      onClick={() => void openBrowserProfileProjectCreate(group.profile!, model.route)}
+      onPointerDown={event => startNewProjectDrag(placement => $newProjectDropPlacement.set(placement), event,
+        { onTap: () => void openBrowserProfileProjectCreate(group.profile!, model.route) })}>
+      <Codicon name="new-folder" size="0.75rem" />
+    </Button>}
+    {group.profile && !model.embedded && grouping !== 'project' && <Button aria-label={s.newSessionIn(label)} title={s.newSessionIn(label)} size="icon-xs" variant="ghost"
       onClick={model.startSession} onPointerDown={model.onNewSessionSplit ? event => startNewSessionDrag(placement => {
         if (!model.open) toggle()
         model.onNewSessionSplit?.(placement.dir, { anchor: placement.anchor, before: placement.before, profile: group.profile, route: model.route })
