@@ -86,7 +86,7 @@ export function BrowserProfileHeader({ model }: { model: BrowserProfileHeaderMod
         <i aria-hidden="true" className={cn('codicon codicon-grabber absolute text-(--ui-text-quaternary) opacity-0 group-hover/handle:opacity-80 group-focus-within/handle:opacity-80', reorder.dragging && 'opacity-100')} style={{ fontSize: '0.75rem' }} />
       </span> : <span className="grid size-3.5 shrink-0 place-items-center">{model.icon}</span>}
       <button type="button" data-slot="row-button" aria-label={model.labelAria} aria-expanded={model.open} onClick={model.activate} className="min-w-0 shrink bg-transparent p-0 text-left">
-        <span className={cn('min-w-0 truncate text-[0.8125rem] leading-[1.35] text-(--ui-text-secondary)', model.labelClassName)}>{model.label}</span>
+        <span className={cn('min-w-0 truncate text-[0.8125rem] leading-[1.35] text-(--ui-text-primary)', model.labelClassName)}>{model.label}</span>
       </button>
       <button type="button" aria-label={model.toggleLabel} aria-expanded={model.open} title={model.toggleLabel} onClick={model.toggle} data-row-actions="" className="flex flex-1 items-center self-stretch bg-transparent p-0">
         <i aria-hidden="true" className={cn('codicon codicon-chevron-right shrink-0 text-(--ui-text-tertiary) opacity-0 transition group-hover/workspace:opacity-100', model.open && 'rotate-90')} style={{ fontSize: '0.75rem' }} />
