@@ -1,4 +1,6 @@
 import { useBrowserSelectedSessionOwner, useBrowserOwnedSessionRpc, keepBrowserRenameProfile, scopeBrowserSessionTitles, scopeBrowserProjectTitles } from './transforms/session-routing'
+import { useBrowserProjectCreateOwner, useBrowserProjectDialogOwner } from './transforms/project-create'
+export { useBrowserProjectCreateOwner, useBrowserProjectDialogOwner } from './transforms/project-create'
 export { useBrowserSelectedSessionOwner, useBrowserOwnedSessionRpc, keepBrowserRenameProfile, scopeBrowserSessionTitles, scopeBrowserProjectTitles } from './transforms/session-routing'
 import { useBrowserThreadSubmitScroll } from './transforms/transcript'
 import { useBrowserArchiveUndo } from './transforms/archive'
@@ -318,6 +320,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source),
     scopeBrowserStorage, filterBrowserNarrowNavigation: source => filterBrowserNarrowNavigation(source, root), closeBrowserWorkspacePanels,
     useBrowserProjectDeleteOwner: source => useBrowserProjectDeleteOwner(source, root),
+    useBrowserProjectCreateOwner, useBrowserProjectDialogOwner,
     exportBrowserStatusbarItem, filterBrowserActivityToasts,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
     removeBrowserGatewayGroupsRefresh: source => removeBrowserGatewayGroupsRefresh(source, root),
