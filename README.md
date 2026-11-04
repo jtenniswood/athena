@@ -119,6 +119,11 @@ receive an alert when a reply finishes in your current chat while Athena is in
 the background. Use **Send test notification** to check delivery. Clicking a
 response notification returns to its conversation.
 
+Plugin notifications can open their requested app page. Plugin callbacks run in
+the window that emitted the alert; after that window closes, the click can still
+open the saved destination. Action buttons appear where the browser supports
+them.
+
 Notifications require HTTPS or localhost. On iPhone and iPad, add Athena to the
 Home Screen and open the installed app. Keep Athena open: alerts pause if the
 browser suspends or closes it. If permission is blocked, allow notifications

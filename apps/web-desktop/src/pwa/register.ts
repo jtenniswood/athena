@@ -1,7 +1,7 @@
 import { reloadReadiness, reloadReadinessAfterSaving, type DraftSnapshot } from '../platform/reload-safety'
 import { installUpdateNetworkBarrier } from './update-network'
 import { beginBrowserTransition } from '../platform/browser-transition'
-import { routeBrowserNotification } from '../platform/notification-navigation'
+import { activateBrowserNotificationCallback, browserNotificationCallbackReady, routeBrowserNotification } from '../platform/notification-navigation'
 
 export type PwaUpdateNotice = {
   readonly update: () => void
@@ -56,6 +56,16 @@ export function registerPwa(): void {
   }
   navigator.serviceWorker.addEventListener('message', async event => {
     const message = event.data
+    if (message?.type === 'ATHENA_NOTIFICATION_ACTIVATE') {
+      const callback = { ...message, dismiss: Boolean(transaction) || message.dismiss === true }
+      const owned = activateBrowserNotificationCallback(callback)
+      event.ports[0]?.postMessage({ owned, ready: owned && browserNotificationCallbackReady(callback) })
+      return
+    }
+    if (message?.type === 'ATHENA_NOTIFICATION_FOCUS') {
+      event.ports[0]?.postMessage({ ready: !transaction && typeof message.url === 'string' && routeBrowserNotification(message.url, true) })
+      return
+    }
     if (message?.type === 'ATHENA_NOTIFICATION_ROUTE') {
       event.ports[0]?.postMessage({ ready: !transaction && typeof message.url === 'string' && routeBrowserNotification(message.url) })
       return

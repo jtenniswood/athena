@@ -75,9 +75,9 @@ function registration(network = { pause: async () => true, resume() {} }) {
     expire() { expire() },
     controllerChange() { return listeners.get('controllerchange')() },
     reloads: () => reloads,
-    async route(url) {
+    async route(url, type = 'ATHENA_NOTIFICATION_ROUTE') {
       let reply
-      await listeners.get('message')({ data: { type: 'ATHENA_NOTIFICATION_ROUTE', url }, ports: [{ postMessage: value => { reply = value } }] })
+      await listeners.get('message')({ data: { type, url }, ports: [{ postMessage: value => { reply = value } }] })
       return reply
     },
     async ask(type, transaction = 'update') {
@@ -290,4 +290,14 @@ test('an update cannot take over a root already frozen outside its transition ow
   assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, false)
   await app.controllerChange()
   assert.equal(app.root.inert, true)
+})
+
+test('notification focus admission preserves the live route and respects update locks', async () => {
+  const app = registration()
+  await app.route('http://localhost/#/live')
+  assert.equal((await app.route('http://localhost/#/old', 'ATHENA_NOTIFICATION_FOCUS')).ready, true)
+  assert.equal(app.location.hash, '#/live')
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true)
+  assert.equal((await app.route('http://localhost/#/old', 'ATHENA_NOTIFICATION_FOCUS')).ready, false)
+  assert.equal(app.location.hash, '#/live')
 })
