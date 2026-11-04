@@ -154,6 +154,10 @@ navigation frame, section disclosure and project overview presentation. Typed
 adapters in `upstream/sidebar.tsx` and `sidebar-project.tsx` project the existing
 renderer controller values into those views. Search, filtering, profile scope,
 pagination, lazy project hydration and saved ordering keep their original owners.
+`experience/sidebar-gestures.ts` owns the mounted navigation gesture lifetime.
+Escape, lost focus, hidden documents, scope changes and detached rows or targets
+cancel pending project drops. Its hit testing stays inside that navigation;
+project moves and saved row ordering still use the engine commands.
 The controller projection replaces a named function's return and removes only
 explicitly identified view bindings; nested callbacks and hooks remain intact.
 Source fingerprints and the compiler validate this boundary on renderer updates.

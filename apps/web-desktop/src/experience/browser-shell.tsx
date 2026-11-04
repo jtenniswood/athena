@@ -1,3 +1,4 @@
+import { useSidebarGestures } from './sidebar-gestures'
 import { useBrowserEngine } from './engine'
 import { useChatPanelSettings } from './settings/chat-panel-page'
 import { BrowserProfileNavigation } from './profile-navigation'
@@ -16,26 +17,6 @@ import { Codicon, SidebarProvider } from '../upstream/browser-api'
 import { BrowserChatActionsMenu } from './chat-actions-menu'
 import { currentPwaUpdate, subscribePwaUpdate, type PwaUpdateNotice } from '../pwa/register'
 
-interface SessionProjectDrag {
-  pointerId: number
-  sessionId: string
-  profile: string
-  startX: number
-  startY: number
-  active: boolean
-  target: HTMLElement | null
-  targetProjectId?: string
-}
-
-interface SessionReorderDrag {
-  pointerId: number
-  sourceId: string
-  startX: number
-  startY: number
-  active: boolean
-  target: HTMLElement | null
-}
-
 export function BrowserShell() {
   const { surfaces: { Host } } = useBrowserEngine()
   return <SidebarProvider className="browser-provider" style={{ '--sidebar-width': '100%' } as CSSProperties}>
@@ -47,123 +28,6 @@ function BrowserLayout() {
   const { Sessions: BrowserSessionsSurface, Bots: BrowserBotsSurface, Conversation: BrowserConversationSurface, Status: BrowserStatusSurface } = engine.surfaces
   const presentationMode = engine.profiles.useGrouping()
   useEffect(() => installTranscriptPreferences(), [])
-  const sessionProjectDrag = useRef<SessionProjectDrag | null>(null)
-  const sessionReorderDrag = useRef<SessionReorderDrag | null>(null)
-  useEffect(() => {
-    const clearTarget = (drag: SessionProjectDrag) => {
-      drag.target?.removeAttribute('data-session-drop-active')
-      drag.target = null
-    }
-    const clearReorderTarget = (drag: SessionReorderDrag) => {
-      drag.target?.removeAttribute('data-session-order-drop')
-      drag.target = null
-    }
-    const finish = (event: PointerEvent, commit: boolean) => {
-      const reorder = sessionReorderDrag.current
-      if (reorder?.pointerId === event.pointerId) {
-        clearReorderTarget(reorder)
-        sessionReorderDrag.current = null
-      }
-      const drag = sessionProjectDrag.current
-      if (!drag || drag.pointerId !== event.pointerId) return
-      sessionProjectDrag.current = null
-      clearTarget(drag)
-      if (!commit || !drag.active || !drag.targetProjectId) return
-      void engine.projects.move(drag.sessionId, drag.targetProjectId, drag.profile)
-        .catch(engine.projects.reportFailure)
-    }
-    const onPointerMove = (event: PointerEvent) => {
-      const reorder = sessionReorderDrag.current
-      if (reorder?.pointerId === event.pointerId) {
-        if (!reorder.active && Math.hypot(event.clientX - reorder.startX, event.clientY - reorder.startY) >= 6) {
-          reorder.active = true
-        }
-        if (reorder.active) {
-          const element = document.elementFromPoint(event.clientX, event.clientY)
-          const candidate = element instanceof Element ? element.closest<HTMLElement>('[data-web-session-id]') : null
-          if (!candidate || candidate.dataset.webSessionId === reorder.sourceId) {
-            clearReorderTarget(reorder)
-          } else if (candidate !== reorder.target) {
-            clearReorderTarget(reorder)
-            const rect = candidate.getBoundingClientRect()
-            candidate.dataset.sessionOrderDrop = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
-            reorder.target = candidate
-          } else {
-            const rect = candidate.getBoundingClientRect()
-            candidate.dataset.sessionOrderDrop = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
-          }
-        }
-      }
-
-      const drag = sessionProjectDrag.current
-      if (!drag || drag.pointerId !== event.pointerId) return
-      if (!drag.active && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return
-      drag.active = true
-      event.preventDefault()
-      const element = document.elementFromPoint(event.clientX, event.clientY)
-      const candidate = element instanceof Element ? element.closest<HTMLElement>('[data-sessions-project]') : null
-      const projectId = candidate?.dataset.sessionsProject
-      const nextTargetProjectId = engine.projects.eligibleDrop(projectId)
-      const nextTarget = nextTargetProjectId ? candidate : null
-      if (nextTarget === drag.target) return
-      clearTarget(drag)
-      drag.target = nextTarget
-      if (nextTarget) nextTarget.setAttribute('data-session-drop-active', '')
-      drag.targetProjectId = nextTarget ? nextTargetProjectId! : undefined
-    }
-    const onPointerUp = (event: PointerEvent) => finish(event, true)
-    const onPointerCancel = (event: PointerEvent) => finish(event, false)
-    window.addEventListener('pointermove', onPointerMove, { passive: false })
-    window.addEventListener('pointerup', onPointerUp)
-    window.addEventListener('pointercancel', onPointerCancel)
-    return () => {
-      const drag = sessionProjectDrag.current
-      if (drag) clearTarget(drag)
-      const reorder = sessionReorderDrag.current
-      if (reorder) clearReorderTarget(reorder)
-      sessionProjectDrag.current = null
-      sessionReorderDrag.current = null
-      window.removeEventListener('pointermove', onPointerMove)
-      window.removeEventListener('pointerup', onPointerUp)
-      window.removeEventListener('pointercancel', onPointerCancel)
-    }
-  }, [])
-  const preventSessionPaneDrag = (event: React.PointerEvent<HTMLElement>) => {
-    const target = event.target
-    if (!(target instanceof Element)) return
-    const reorderHandle = target.closest('[data-reorder-handle]')
-    if (reorderHandle && event.button === 0) {
-      const row = reorderHandle.closest<HTMLElement>('[data-web-session-id]')
-      if (row) {
-        sessionReorderDrag.current = {
-          pointerId: event.pointerId,
-          sourceId: row.dataset.webSessionId!,
-          startX: event.clientX,
-          startY: event.clientY,
-          active: false,
-          target: null
-        }
-      }
-      return
-    }
-    const row = target.closest<HTMLElement>('[data-web-session-id]')
-    if (!row || target.closest('[data-reorder-handle], [data-row-actions]')) return
-
-    // Sidebar session drags can reorder sessions or move them into a project.
-    // Let sortable rows receive the press; their adapter suppresses desktop pane dragging.
-    if (!row.querySelector('[data-reorder-handle]')) event.stopPropagation()
-    if (event.button !== 0) return
-    sessionProjectDrag.current = {
-      pointerId: event.pointerId,
-      sessionId: row.dataset.webSessionId!,
-      profile: row.dataset.webSessionProfile || 'default',
-      startX: event.clientX,
-      startY: event.clientY,
-      active: false,
-      target: null,
-      targetProjectId: undefined
-    }
-  }
   const navigate = useNavigate(), location = useLocation()
   const conversation = engine.conversations.useCurrent()
   const sessionActions = engine.conversations.useActions(conversation)
@@ -171,6 +35,9 @@ function BrowserLayout() {
   const panels = engine.navigation.usePanels()
   const main = useRef<HTMLElement>(null), menu = useRef<HTMLButtonElement>(null)
   const navigation = useBrowserNavigation({ selectionKey: conversation.selectionKey, path: location.pathname, main, trigger: menu })
+  const profiles = engine.profiles.useProfiles()
+  const preventSessionPaneDrag = useSidebarGestures(navigation.drawer, engine.projects,
+    JSON.stringify([profiles.active, profiles.all, presentationMode, navigation.tab, navigation.open, location.pathname]))
   useChatPanelSettings(navigation)
   engine.useEnvironment(conversation,
     !((navigation.mobile || navigation.compact) && navigation.drawerOpen) && !location.pathname.startsWith('/settings'))
