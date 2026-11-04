@@ -229,9 +229,13 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-sessions-pane [data-web-session-id] > :first-child { padding-block:0; }
  .browser-sessions-pane [data-row-actions] { gap:var(--web-space-1); }
  .browser-sessions-pane [data-row-actions] button { position:relative; box-sizing:border-box; min-width:var(--web-touch-min); width:var(--web-touch-min); min-height:var(--web-touch-min); height:var(--web-touch-min); flex-shrink:0; color:var(--web-text-subtle) !important; }
+ /* Keep row creation and overflow controls out of the mobile chat list. */
+ .browser-sessions-pane :is([data-browser-group-actions], [data-row-actions]) button:has(:is(.codicon-add, .codicon-ellipsis, .codicon-kebab-vertical)) { display:none; }
+ /* Match the profile header inset instead of adding a second row gutter. */
+ .browser-sessions-pane [data-gateway-group] [data-web-session-id] { padding-inline-start:0; }
  .browser-sessions-pane [data-browser-session-actions] { position:relative; opacity:1; pointer-events:auto; }
- /* Session ages can sit beside the row button. Hide their separator too and
-    keep the always-visible context button in flow so it has its own space. */
+ .browser-sessions-pane [data-web-session-id]:is(:hover,:focus-within,:has([data-state="open"])) [data-row-actions]:has(> [data-browser-session-actions]) { min-width:0; }
+ /* Session ages can sit beside the row button. Hide their separator too. */
  .browser-sessions-pane :is([data-row-actions], button[data-slot="row-button"]) :is(time, span:has(> time)) { display:none !important; }
  .browser-main :has(> button[aria-label="Branch in new chat"]) { opacity:1 !important; pointer-events:auto !important; }
  .browser-main :is(button[aria-label="Branch in new chat"],button[aria-label="Copy"],button[aria-label="Read aloud"],button[aria-label="Refresh"],button[aria-label="Restore checkpoint"],button[aria-label="Scroll to bottom"]) { box-sizing:border-box; min-width:var(--web-touch-target); min-height:var(--web-touch-target); }
