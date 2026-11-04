@@ -68,6 +68,13 @@ selection-copy helper, preserving editor focus and selection and keeping tempora
 copy controls inside the active dialog or menu scope. Copy refusal still rejects
 through Athena's bridge so the caller can report failure.
 
+Notification clicks ask a live page to admit hash-only navigation using its
+current origin, path and query. The worker's cached client URL does not decide
+profile ownership. A refused or unanswered request opens another window instead
+of reloading an existing document; page notifications use the same admission
+policy. An active UI-update transaction refuses notification routing until it
+finishes or aborts. Existing engine routes continue to own chat selection.
+
 `experience/settings/settings-route.tsx` assembles settings navigation from the
 catalog. The checked settings controller adapter extracts the existing Hermes
 page controls and commands without generating the browser frame. Schemas, values,
