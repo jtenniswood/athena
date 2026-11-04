@@ -49,6 +49,28 @@ test('API errors keep the shell in place and websocket tickets are minted per ca
   await assert.rejects(client.apiFetch({ path: '/api/session' }), /Expected JSON/)
 })
 
+test('Android OAuth verifies the cookie session even while an existing token remains saved', async () => {
+  let probes = 0
+  const client = load('connection', {
+    AbortSignal,
+    window: { location: { href: 'https://web.example.test/' }, setTimeout: callback => { queueMicrotask(callback) } },
+    fetch: async (_url, options) => {
+      assert.equal(options.credentials, 'same-origin')
+      assert.equal(options.headers?.['X-Hermes-Session-Token'], undefined)
+      probes++
+      return probes === 1 ? Response.json({}, { status: 401 }) : Response.json({ user_id: 'preview-user', provider: 'preview' })
+    },
+    require: () => ({
+      isAndroidApp: () => true, androidOpenSignIn: async () => true,
+      getActiveGateway: () => ({ url: '', authMode: 'token', token: 'synthetic-existing-token' }),
+      normalizeBase: () => 'https://web.example.test',
+      activeUpstreamOrigin: () => null, withGatewayRoute: url => url
+    })
+  })
+  assert.equal((await client.openOauthLoginPopup('https://web.example.test', null)).connected, true)
+  assert.equal(probes, 2, 'the first signed-out cookie probe cannot use the saved token')
+})
+
 test('plugin asset admission follows browser URL normalization for both roots', () => {
   const files = load('files', { require: () => ({ servingBase: () => 'https://web.example.test' }) })
   for (const root of ['plugins', 'desktop-plugins']) {
