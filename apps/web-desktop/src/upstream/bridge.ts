@@ -366,8 +366,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
     savePastedText: async text => registerWebFile(new Blob([text], { type: 'text/plain' }), 'pasted-text.txt'),
     getPathForFile: file => registerWebFile(file, file.name),
     normalizePreviewTarget: async () => null,
-    watchPreviewFile: async url => ({ id: '', path: url }),
-    watchDirectory: async dir => ({ id: '', path: dir }),
+    watchPreviewFile: async url => ({ ok: false, error: 'unsupported', message: 'File watching is unavailable in the browser', path: url }),
     stopPreviewFileWatch: async () => true,
     setTitleBarTheme: noop,
     setNativeTheme: noop,
@@ -408,15 +407,13 @@ export function createWebBridge(): Window['hermesDesktop'] {
 
       if (!res.ok) {return { entries: [], error: `${res.status}: ${res.statusText}` }}
 
-      // {name,type} objects: the dev middleware (vite.config.ts) and nginx's
-      // built-in autoindex (nginx.conf.template, production) both emit this
-      // shape; only directory entries are listed.
-      const raw = (await res.json()) as Array<{ name?: string; type?: string }>
-      const names = raw
-        .filter(e => e && e.type === 'directory' && e.name && e.name !== '.' && e.name !== '..')
-        .map(e => e.name as string)
-
-      return { entries: names.map(name => ({ name, path: `${dir}/${name}`, isDirectory: true })) }
+      const raw: unknown = await res.json()
+      if (!Array.isArray(raw)) return { entries: [], error: 'Invalid plugin directory listing' }
+      const entries = raw.filter((entry): entry is { name: string; type: 'file' | 'directory' } =>
+        entry && typeof entry.name === 'string' && entry.name !== '' && entry.name !== '.' && entry.name !== '..' &&
+        !/[\\/\0]/.test(entry.name) && (entry.type === 'file' || entry.type === 'directory'))
+      return { entries: entries.map(entry => ({ name: entry.name, path: `${dir.replace(/\/$/, '')}/${encodeURIComponent(entry.name)}`,
+        isDirectory: entry.type === 'directory' })) }
     },
     onClosePreviewRequested: unsubscribed,
     onOpenFolderRequested: unsubscribed,

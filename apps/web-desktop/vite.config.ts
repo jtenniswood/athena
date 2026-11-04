@@ -79,87 +79,6 @@ const emojibaseAssets = () => ({
   }
 })
 
-// The web bridge lists and loads installed desktop plugins at runtime from
-// the Hermes home dir; serve both plugin roots over HTTP (dev + preview).
-// HERMES_HOME overrides the default ~/.hermes location.
-let hermesHome = process.env.HERMES_HOME ?? path.join(os.homedir(), '.hermes')
-
-// Shared structural type for the dev AND preview middleware servers.
-interface PluginsServerLike {
-  middlewares: { use: (route: string, handler: (req: any, res: any, next: () => void) => void) => void }
-}
-
-const hermesPluginsAssets = () => {
-  const roots = [
-    { prefix: '/desktop-plugins', dir: path.join(hermesHome, 'desktop-plugins') },
-    { prefix: '/plugins', dir: path.join(hermesHome, 'plugins') }
-  ]
-
-  const attach = (server: PluginsServerLike): void => {
-    for (const { prefix, dir } of roots) {
-      server.middlewares.use(prefix, (req, res, next) => {
-        const rel = (req.url ?? '').split('?')[0].replace(/^\/+/, '')
-
-        if (rel === '.listing') {
-          // Shape matches production: nginx.conf.template serves this same
-          // endpoint via its built-in autoindex (JSON format), which emits
-          // {name,type} objects rather than bare name strings — see the
-          // `readDir` bridge code in web-bridge/bridge.ts.
-          fs.readdir(dir, { withFileTypes: true }, (err: unknown, entries) => {
-            if (err) {
-              res.setHeader('Content-Type', 'application/json')
-              res.end('[]')
-              return
-            }
-            res.setHeader('Content-Type', 'application/json')
-            res.end(
-              JSON.stringify(
-                entries.filter(e => e.isDirectory()).map(e => ({ name: e.name, type: 'directory' }))
-              )
-            )
-          })
-          return
-        }
-
-        const normalized = path.normalize(rel)
-
-        if (!rel || normalized.startsWith('..') || path.isAbsolute(normalized)) {
-          res.statusCode = 404
-          res.end('not found')
-          return
-        }
-        const file = path.join(dir, normalized)
-
-        if (!file.startsWith(`${dir}${path.sep}`)) {
-          res.statusCode = 403
-          res.end('forbidden')
-          return
-        }
-        fs.readFile(file, (err: unknown, buf: Buffer) => {
-          if (err) {
-            res.statusCode = 404
-            res.end('not found')
-            return
-          }
-          res.setHeader('Cache-Control', 'no-store')
-          res.setHeader('Content-Type', file.endsWith('.js') ? 'text/javascript' : 'application/octet-stream')
-          res.end(buf)
-        })
-      })
-    }
-  }
-
-  return {
-    name: 'hermes:plugins-assets',
-    configureServer(server: PluginsServerLike) {
-      attach(server)
-    },
-    configurePreviewServer(server: PluginsServerLike) {
-      attach(server)
-    }
-  }
-}
-
 // A single configured target is shared by development, preview, and nginx.
 let hosting: HostingConfiguration = runtimeConfiguration()
 
@@ -174,6 +93,7 @@ interface ProxyServerLike {
 function attachDynamicProxy(server: ProxyServerLike): void {
   const services = createAthenaServices({
     target: hosting.target,
+    home: hosting.home,
     directory: process.env.HERMES_PREFERENCES_DIR || path.resolve(__dirname, '../../.athena/preferences')
   })
   if (server.httpServer) {
@@ -243,7 +163,6 @@ export default defineConfig(({ command, mode }) => {
   // (WEB_ALLOWED_HOSTS, comma-separated) — e.g. Tailscale names, LAN hostnames.
   const env = loadEnv(mode, __dirname, '')
   hosting = runtimeConfiguration({ HERMES_HOME: path.join(os.homedir(), '.hermes'), ...env, ...process.env })
-  hermesHome = hosting.home
   const envAllowedHosts = (env.WEB_ALLOWED_HOSTS ?? '')
     .split(',')
     .map(s => s.trim())
@@ -311,8 +230,7 @@ export default defineConfig(({ command, mode }) => {
         enabled: false
       }
     }),
-    emojibaseAssets(),
-    hermesPluginsAssets()
+    emojibaseAssets()
   ],
   css: {
     postcss: { plugins: [] }

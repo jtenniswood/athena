@@ -261,13 +261,29 @@ admission. Abort, expiry and failure release only the lock their transition owns
 late cleanup cannot unlock a newer owner. The update protocol, pending-work flush
 and draft verification remain unchanged.
 
+Filesystem plugin discovery uses the renderer's existing disk loader. The bridge
+returns both files and directories, including package markers, with encoded URL
+path components. It omits unsupported directory watching so the loader's visible-tab
+poll discovers new folders and retires removed plugins. Existing-file edits use
+the renderer's explicit Rescan command. Registration, enablement, package opt-in
+and disposal remain engine-owned; Athena keeps no second plugin registry.
+
 ## Runtime service ownership
 
-`apps/web-desktop/server/` owns the running preference, Android authentication,
-and notification services. `createAthenaServices` assembles the same route owners
+`apps/web-desktop/server/` owns mounted plugin assets and the running preference,
+Android authentication and notification services. `createAthenaServices` assembles the same route owners
 for Vite development, Vite preview, and the container's Node server. Each host
 attaches it once and closes it with its HTTP server. The gateway proxy and static
 asset server remain hosting concerns.
+
+`server/plugin-assets.mjs` reads the operator's mounted web-server Hermes home
+for plugin files and root or nested `.listing` endpoints. The same reader supplies
+development, preview and nginx through `createAthenaServices`; it lists regular files and
+directories and follows operator-installed symlinks. Files stream from that same
+owner with their content type, HEAD and byte-range support. Responses are not
+cached. Vite and nginx forward plugin routes to this service, so metadata and
+source reads use the same access to private read-only mounts. The bridge retains
+its asset URL admission policy; the gateway filesystem is a separate source.
 
 The services share account identity derivation and non-redirecting Hermes session
 probes. Each endpoint explicitly chooses its accepted credentials; browser

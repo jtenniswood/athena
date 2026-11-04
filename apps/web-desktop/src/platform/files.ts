@@ -1,12 +1,7 @@
 import { beginOperation } from './reload-safety'
 import { servingBase } from '../web-bridge/gateways'
 
-/**
- * Plugin folders are served by the dev/preview middleware (and, in
- * production, nginx — see nginx.conf.template) at same-origin URLs
- * (/desktop-plugins and /plugins), each with a `.listing` endpoint returning
- * a JSON array of `{name, type}` entries for the directory's children.
- */
+/** The shared Node service serves both mounted plugin roots and their listings. */
 export const pluginRoots = () => [`${servingBase()}/desktop-plugins`, `${servingBase()}/plugins`]
 
 /** Admit the normalized asset URL, before either file or directory reads fetch it. */

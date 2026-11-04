@@ -54,6 +54,10 @@ Open <http://localhost:4174/>. The mounted Hermes directory lets Athena serve
 installed `plugins/` and `desktop-plugins/`; remove the Hermes directory mount
 if you do not use filesystem plugins.
 
+Desktop plugin folders are discovered while Athena is open. Use Settings →
+Plugins → Manage plugins to enable packaged desktop plugins, and Rescan after
+editing an existing plugin.
+
 To stop Athena:
 
 ```bash

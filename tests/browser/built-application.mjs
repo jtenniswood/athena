@@ -8,7 +8,7 @@ import { createPreviewGateway } from '../../scripts/preview/gateway.mjs'
 const root = fileURLToPath(new URL('../../', import.meta.url))
 
 /** One isolated gateway, preference directory and production preview per worker. */
-export async function createBuiltApplication() {
+export async function createBuiltApplication({ prepareHome } = {}) {
   const temporary = mkdtempSync(path.join(tmpdir(), 'athena-built-browser-'))
   const gateway = createPreviewGateway({ delay: 1 }), previous = new Map()
   let server
@@ -23,6 +23,7 @@ export async function createBuiltApplication() {
     }
   }
   try {
+    await prepareHome?.(temporary)
     await new Promise(resolve => gateway.server.listen(0, '127.0.0.1', resolve))
     const environment = {
       HERMES_GATEWAY_URL: `http://127.0.0.1:${gateway.server.address().port}`,
@@ -31,6 +32,6 @@ export async function createBuiltApplication() {
     }
     for (const [key, value] of Object.entries(environment)) { previous.set(key, process.env[key]); process.env[key] = value }
     server = await preview({ root: path.join(root, 'apps/web-desktop'), logLevel: 'error', preview: { host: '127.0.0.1', port: 0 } })
-    return { origin: `http://127.0.0.1:${server.httpServer.address().port}`, gateway, close }
+    return { origin: `http://127.0.0.1:${server.httpServer.address().port}`, home: temporary, gateway, close }
   } catch (error) { await close(); throw error }
 }

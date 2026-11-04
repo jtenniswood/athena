@@ -1,10 +1,12 @@
+import { createPluginAssets } from './plugin-assets.mjs'
 import { createPreferencesHandler } from './preferences-server.mjs'
 import { createAndroidAuthHandler } from './android-auth.mjs'
 import { createAndroidPush } from './android-push.mjs'
 import { createFirebaseSender } from './firebase-messaging.mjs'
 
 /** Identical route owners and lifecycle in Vite, preview and the container. */
-export function createAthenaServices({ target, directory, fetch, now, sender = createFirebaseSender() }) {
+export function createAthenaServices({ target, directory, home, fetch, now, sender = createFirebaseSender() }) {
+  const plugins = createPluginAssets({ home })
   const preferences = createPreferencesHandler({ target, directory, fetch })
   const androidAuth = createAndroidAuthHandler({ target, fetch, now })
   const push = createAndroidPush({ target, directory, fetch, now, sender })
@@ -19,7 +21,7 @@ export function createAthenaServices({ target, directory, fetch, now, sender = c
     async handle(req, res) {
       try {
         if (closed) throw new Error('Athena services have closed')
-        return await androidAuth(req, res) || await push.handle(req, res) || await preferences(req, res)
+        return await plugins(req, res) || await androidAuth(req, res) || await push.handle(req, res) || await preferences(req, res)
       } catch {
         // Never include upstream URLs, credentials or request bodies in errors.
         if (!res.headersSent) res.writeHead(503, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
