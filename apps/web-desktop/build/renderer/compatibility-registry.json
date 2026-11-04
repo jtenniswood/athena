@@ -419,6 +419,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "profile layout composes with content grouping and preserves the draft"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "dragging chats selects manual ordering and preserves the draft in"
       }
     ],
     "removal": "The browser owns the filter menu or upstream offers composition flags.",
@@ -429,7 +433,7 @@
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
     "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
-    "outputHash": "87a55fbcac31ab50de8080f70e5a481cfcf777f65ccdd17a7139a45e143f5f61"
+    "outputHash": "4ca4fc53bf133225e263424abaa3e50beefc286cc571fbaf054db57b9a52a54f"
   },
   {
     "name": "hidden-bot-roster",
