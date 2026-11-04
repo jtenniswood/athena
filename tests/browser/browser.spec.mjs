@@ -1360,8 +1360,8 @@ test('chat actions open from the title toolbar with panel controls', async ({ pa
   await expect(menu.getByText('Appearance', { exact: true })).toHaveCount(0)
   await expect(menu.getByText('Move to project', { exact: true })).toHaveCount(0)
   expect(await menu.locator('[role^="menuitem"]').evaluateAll(items => items.map(item =>
-    item.querySelector('.browser-action-label > span')?.textContent
-  ))).toEqual(['Rename', 'Pin', 'Mark as unread', 'Files', 'Review', 'Archive', 'Delete'])
+    item.querySelector('.browser-action-label > span')?.textContent ?? item.querySelector('.browser-action-label')?.textContent
+  ))).toEqual(['Rename', 'Update title', 'Pin', 'Mark as unread', 'Files', 'Review', 'Archive', 'Delete'])
   await page.keyboard.press('Escape')
   await page.locator('[data-web-session-id="preview-week"]').first().click({ button: 'right' })
   await expect(page.getByRole('menuitem', { name: 'Appearance', exact: true })).toBeVisible()
