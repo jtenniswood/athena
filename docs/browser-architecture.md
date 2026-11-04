@@ -43,6 +43,14 @@ The provider carries the host implementation; it does not cache or copy engine
 state. Specialized feature adapters and visual primitives retain their separate
 boundaries.
 
+The pinned renderer also supplies a complete browser-host installer, but it
+assumes injected Hermes bootstrap data, the `local` connection identity and its
+server's UI-preference store. Athena retains its own authentication, `web-single`
+identity and persisted preference owners. Reuse compatible public helpers through
+small adapters instead of replacing that startup contract wholesale. External-link
+and preview commands use the shared `externalUrlTarget` policy; only its web
+subset reaches the browser opener. The link menu uses the same command.
+
 `experience/settings/settings-route.tsx` assembles settings navigation from the
 catalog. The checked settings controller adapter extracts the existing Hermes
 page controls and commands without generating the browser frame. Schemas, values,

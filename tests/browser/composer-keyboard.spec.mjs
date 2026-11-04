@@ -1,33 +1,9 @@
 import { test, expect } from '@playwright/test'
-import { preview } from 'vite'
-import { mkdtempSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { createPreviewGateway } from '../../scripts/preview/gateway.mjs'
+import { createBuiltApplication } from './built-application.mjs'
 
-const root = fileURLToPath(new URL('../../', import.meta.url))
-let gateway, server, origin, temporary
-const previous = new Map()
-test.beforeAll(async () => {
-  temporary = mkdtempSync(path.join(tmpdir(), 'athena-composer-keyboard-'))
-  gateway = createPreviewGateway({ delay: 1 })
-  await new Promise(resolve => gateway.server.listen(0, '127.0.0.1', resolve))
-  const environment = {
-    HERMES_GATEWAY_URL: `http://127.0.0.1:${gateway.server.address().port}`,
-    HERMES_HOME: temporary,
-    HERMES_PREFERENCES_DIR: path.join(temporary, 'preferences')
-  }
-  for (const [key, value] of Object.entries(environment)) { previous.set(key, process.env[key]); process.env[key] = value }
-  server = await preview({ root: path.join(root, 'apps/web-desktop'), logLevel: 'error', preview: { host: '127.0.0.1', port: 0 } })
-  origin = `http://127.0.0.1:${server.httpServer.address().port}`
-})
-test.afterAll(async () => {
-  await server?.close()
-  await gateway?.close()
-  for (const [key, value] of previous) { if (value === undefined) delete process.env[key]; else process.env[key] = value }
-  if (temporary) rmSync(temporary, { recursive: true, force: true })
-})
+let application, origin
+test.beforeAll(async () => { application = await createBuiltApplication(); origin = application.origin })
+test.afterAll(async () => { await application?.close() })
 
 const composer = page => page.locator('[data-slot="composer-rich-input"]:visible').first()
 test.beforeEach(async ({ page }) => {

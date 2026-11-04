@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { writeClipboard } from '../platform/clipboard'
 import { Codicon } from '../upstream/browser-api'
+import { openBrowserExternalLink } from '../upstream/external-links'
 import { reportActionFailure } from './action-errors'
 import { BrowserActionSurface, type BrowserActionAnchor } from './ui/action-surface'
 import { useMobileBrowser } from './ui/use-compact-browser'
@@ -25,7 +26,7 @@ export function BrowserLinkContextMenu() {
   }, [])
   return <BrowserActionSurface title="Link" hideTitle compact={compact} anchor={link?.anchor ?? null} onClose={() => setLink(null)} actions={[
     { key: 'open-link', label: 'Open in browser tab', icon: <Codicon name="link-external" />, run: () => {
-      if (link) window.open(link.href, '_blank', 'noopener,noreferrer')
+      if (link) void openBrowserExternalLink(link.href)
     } },
     { key: 'copy-link', label: 'Copy URL', icon: <Codicon name="copy" />, run: () => {
       if (link) void writeClipboard(link.href).catch(() => reportActionFailure('Could not copy URL.'))
