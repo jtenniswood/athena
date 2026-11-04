@@ -59,9 +59,10 @@ export function BrowserChatActionsMenu({ actions, title, panels, main }: {
   return <>
     {actions.sessionId && <BrowserToolbarButton tooltip="Chat actions" ref={trigger} className="browser-chat-actions" aria-label="Chat actions" aria-haspopup={compact ? 'dialog' : 'menu'} aria-expanded={Boolean(anchor)} onClick={event => {
       const bounds = event.currentTarget.getBoundingClientRect()
-      setAnchor({ x: bounds.right, y: bounds.bottom, returnFocus: event.currentTarget })
+      const returnFocus = event.currentTarget
+      setAnchor(current => current ? null : { x: bounds.right, y: bounds.bottom, returnFocus })
     }}><Codicon name="ellipsis" /></BrowserToolbarButton>}
-    <BrowserActionSurface title="Chat actions" groups={groups} anchor={anchor} compact={compact} onClose={() => setAnchor(null)} fallbackFocus={trigger} />
+    <BrowserActionSurface title="Chat actions" groups={groups} anchor={anchor} compact={compact} onClose={() => setAnchor(null)} fallbackFocus={trigger} toggleTrigger={trigger} />
     {dialog?.kind === 'rename' && <BrowserRenameSessionDialog actions={dialog.actions} title={dialog.title} onClose={() => setDialog(null)} />}
     <ConfirmDialog open={dialog?.kind === 'delete'} title={r.deleteTitle} description={r.deleteDesc(dialog?.title || '')} destructive confirmLabel={t.common.delete} busyLabel={r.deleting} doneLabel={r.deleted} onClose={() => setDialog(null)} onConfirm={() => dialog?.actions.delete()} />
   </>

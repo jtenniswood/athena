@@ -18,6 +18,19 @@ Only the selected HTTPS origin's main frame may call the bridge.
 capabilities before using optional methods. Old APKs may respond `false`; keep
 legacy behaviour available without assuming a new capability.
 
+The retained presentation capabilities are dispatched by `LegacyNativePresentation`:
+
+| Capability | Existing methods | Current web client |
+| --- | --- | --- |
+| `action-menu`, `action-menu-live`, `action-menu-search` | `actionMenu`, `updateActionMenu`, `dismissActionMenu` | Uses shared web menus and model picker |
+| `settings-page` | `settingsPage`, `updateSettingsPage`, `dismissSettingsPage` | Uses shared web Settings |
+
+Older web clients retain these methods and their original command owners.
+`settingsFiles` stays with the Activity's native file picker. Presentation
+capabilities do not replace the active `settings-menu` handover or native App
+settings and recovery controls. APK and server versions can be updated separately;
+no retirement cutoff is introduced by this ownership boundary.
+
 `appSettingsMenu({ mounted, rendered })` hides the native toolbar only after a
 successful handshake and the web menu has rendered its App settings entry.
 Discovery alone must never hide native controls. Unmounting, page navigation,
@@ -127,9 +140,16 @@ clients. Current web clients do not call it.
 
 ## Native Settings presentation
 
+Current web clients retain the shared web Settings layout on Android and do not
+start the native presenter. The APK keeps this capability for older clients. The
+retained adapter and its integration fixtures consume the explicit Settings
+presentation contract without changing that default.
+
 The optional `settings-page` capability enables `settingsPage`,
-`updateSettingsPage`, and `dismissSettingsPage`. The web adapter projects mounted
-Settings controls into bounded rows with opaque command IDs. The host presents
+`updateSettingsPage`, and `dismissSettingsPage`. Mounted Settings owners publish
+bounded rows and their original commands through the shared presentation model.
+The native adapter converts field identities into opaque command IDs; its
+compatibility path still handles upstream controls without descriptors. The host presents
 Material views and sends `changed` events with the current command ID and an
 optional string value. `ready` acknowledges presentation; `back` and `close`
 request navigation from the original settings owner. A final `dismissed` event
@@ -143,6 +163,13 @@ controls in the current page or dialog; removed controls and stale page IDs cann
 change another setting. Dialogs and listboxes become native snapshots too. Masked
 password values are omitted, and native password editors accept a replacement or
 an explicit clear operation. Native editors do not save input state or use autofill.
+
+Frame scope includes the selected configuration profile. A scope change
+invalidates old command IDs before the next native snapshot; a document picker
+returning to another profile is discarded. Explicit property updates notify the
+presenter directly and do not require HTML attributes or a polling interval to
+carry the new value. Callback functions, unknown properties and masked secret
+values are excluded from the serialized rows.
 
 Only settings snapshots may exceed the normal 16,000-character request limit;
 the transport rejects all envelopes over 262,144 characters. The adapter retains

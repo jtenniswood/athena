@@ -1,10 +1,21 @@
 import { useEffect, useState, type ComponentProps } from 'react'
-import { Tooltip, TooltipContent, TooltipTrigger, getSessionMessages, type SessionInfo, chatMessageText, toChatMessages, displayModelName } from '../upstream/session-preview-api'
+import { Tooltip, TooltipContent, TooltipTrigger, getSessionMessages, type SessionInfo, chatMessageText, toChatMessages } from '../upstream/session-preview-api'
+
+function formatUpdatedAge(timestamp: number) {
+  const elapsedHours = Math.max(0, Math.floor((Date.now() - timestamp * 1000) / 3_600_000))
+  if (elapsedHours === 0) return 'less than an hour ago'
+  const days = Math.floor(elapsedHours / 24)
+  const hours = elapsedHours % 24
+  return [
+    days ? `${days} day${days === 1 ? '' : 's'}` : '',
+    hours ? `${hours} hour${hours === 1 ? '' : 's'}` : ''
+  ].filter(Boolean).join(' ') + ' ago'
+}
 
 // Mounted by the tooltip portal only after an intentional hover or keyboard focus.
 // A passive, owner-scoped read never selects a chat or changes its read watermark.
 function LatestGeneration({ session }: { session: SessionInfo }) {
-  const [result, setResult] = useState<{ text: string; timestamp?: number } | null>(null)
+  const [result, setResult] = useState<string | null>(null)
   const [unavailable, setUnavailable] = useState(false)
   useEffect(() => {
     let active = true
@@ -23,18 +34,14 @@ function LatestGeneration({ session }: { session: SessionInfo }) {
       const message = toChatMessages(page.messages).findLast(message =>
         message.role === 'assistant' && !message.hidden && !message.interim && chatMessageText(message).trim()
       )
-      if (message) setResult({ text: chatMessageText(message), timestamp: message.timestamp })
+      if (message) setResult(chatMessageText(message))
       else setUnavailable(true)
     }).catch(() => { if (active) setUnavailable(true) })
     return () => { active = false }
   }, [session.id, session.profile, session.connection_id, session.last_active, session.message_count])
 
   return <div className="browser-session-generation">
-    <div className="browser-session-preview-caption">Latest reply</div>
-    {result?.timestamp ? <time dateTime={new Date(result.timestamp * 1000).toISOString()}>
-      {new Date(result.timestamp * 1000).toLocaleString()}
-    </time> : null}
-    <p>{result?.text || (unavailable ? 'No recent reply available.' : 'Loading latest reply…')}</p>
+    <p>{result || (unavailable ? 'No recent reply available.' : 'Loading latest reply…')}</p>
   </div>
 }
 
@@ -58,12 +65,10 @@ export function BrowserSessionPreview({ session, title, disabled, children, onFo
       if (event.defaultPrevented) return
       if (event.pointerType === 'touch' || (event.target as Element).closest('[data-row-actions], [data-reorder-handle]')) event.preventDefault()
     }}>{children}</TooltipTrigger>
-    <TooltipContent className="browser-session-preview" side="right" align="start" sideOffset={12} boundary="viewport">
+    <TooltipContent className="browser-session-preview" side="right" align="start" alignOffset={-8} sideOffset={4} collisionPadding={24} boundary="viewport">
       <div className="browser-session-preview-title">{title}</div>
       <div className="browser-session-preview-meta">
-        {session.model ? <span>{displayModelName(session.model)}</span> : null}
-        <span>{session.message_count} messages</span>
-        <span>Updated {new Date((session.last_active || session.started_at) * 1000).toLocaleString()}</span>
+        Updated {formatUpdatedAge(session.last_active || session.started_at)}
       </div>
       <LatestGeneration session={session} />
     </TooltipContent>

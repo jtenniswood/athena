@@ -13,9 +13,11 @@
     "check:renderer-dependencies": "node scripts/renderer-dependencies.mjs",
     "report:renderer-dependencies": "node scripts/renderer-dependencies.mjs --report",
     "check:upstream": "node scripts/renderer-compatibility-report.mjs",
+    "inspect:renderer": "node scripts/inspect-renderer.mjs",
     "check:update-setup": "node scripts/check-update-setup.mjs",
     "test:foundation": "node --test scripts/*.test.mjs",
     "check:compatibility-registry": "node scripts/compatibility-registry.mjs",
+    "verify:behavior": "node scripts/verify-behavior.mjs",
     "docs:compatibility": "node scripts/compatibility-registry.mjs --write"
   },
   "packageManager": "pnpm@12.16.1",

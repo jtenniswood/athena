@@ -1,6 +1,6 @@
+import { createBuildModuleLoader } from './renderer-adapter.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
 import path from 'node:path'
 import vm from 'node:vm'
 import { test } from 'node:test'
@@ -12,8 +12,8 @@ function evaluate(source, dependencies, extra = {}) {
   vm.runInContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, context)
   return context.exports
 }
-const pluginFile = path.join(root, 'src/upstream/browser-plugin.ts')
-const { useBrowserPinWrites } = evaluate(readFileSync(pluginFile, 'utf8'), createRequire(pluginFile))
+const pluginFile = path.join(root, 'build/renderer/browser-plugin.ts')
+const { useBrowserPinWrites } = createBuildModuleLoader().load(pluginFile)
 const transformed = useBrowserPinWrites(readFileSync('apps/desktop/src/store/session-pin-sync.ts', 'utf8'), root)
 function harness({ rows = [{ id: 'chat', profile: 'research', pinned: false }], saved = [], active = 'research', removing = false } = {}) {
   const atom = initial => {

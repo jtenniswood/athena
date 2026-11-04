@@ -1,18 +1,17 @@
+import { createBuildModuleLoader } from './renderer-adapter.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
 import path from 'node:path'
 import vm from 'node:vm'
 import { test } from 'node:test'
 import ts from 'typescript'
 
 const root = path.resolve('apps/web-desktop')
-const pluginFile = path.join(root, 'src/upstream/browser-plugin.ts')
+const pluginFile = path.join(root, 'build/renderer/browser-plugin.ts')
 const compile = source => ts.transpileModule(source, { compilerOptions: {
   module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true
 } }).outputText
-const plugin = vm.createContext({ exports: {}, require: createRequire(pluginFile) })
-vm.runInContext(compile(readFileSync(pluginFile, 'utf8')), plugin)
+const plugin = { exports: createBuildModuleLoader().load(pluginFile) }
 const original = readFileSync('apps/desktop/src/plugins/hermes-bots/canonical-group-registry.tsx', 'utf8')
 const source = plugin.exports.removeBrowserGatewayGroupsRefresh(original, root)
 

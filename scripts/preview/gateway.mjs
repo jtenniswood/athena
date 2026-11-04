@@ -2,6 +2,7 @@ import { createServer } from 'node:http'
 import { WebSocketServer } from 'ws'
 import { fileURLToPath } from 'node:url'
 import { createFaultControls } from './faults.mjs'
+import { createPreviewConfig } from './config.mjs'
 
 /** Deterministic review backend. No model provider, external API or real user data. */
 export function createPreviewGateway({ log = () => {}, delay = 95, strict = false } = {}) {
@@ -19,7 +20,8 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
   const skills = [{ name: 'preview-planning', category: 'Productivity', description: 'A synthetic planning skill for interface review.', enabled: true, provenance: 'bundled' }]
   const toolsets = [{ name: 'preview', label: 'Preview tools', description: 'Synthetic tools; no external services are called.', enabled: true, configured: true, tools: ['preview_note'] }]
   const platforms = [{ id: 'discord', name: 'Discord', description: 'Synthetic preview only. No external messages are sent.', docs_url: '', enabled: false, configured: true, env_vars: [], gateway_running: true, state: 'disabled' }]
-  const sessions = new Map(), messages = new Map(), timers = new Map(), clients = new Set(), approvalModes = new Map()
+  const config = createPreviewConfig(profiles, info.model)
+  const sessions = new Map(), messages = new Map(), timers = new Map(), inflight = new Map(), clients = new Set()
   let count = 0
   function addSession(id, title, profile = 'default', text = '') {
     const rows = text ? [{ id: `${id}-u`, role: 'user', content: 'Help me make a thoughtful plan.', timestamp: now() - 60 }, { id: `${id}-a`, role: 'assistant', content: text, timestamp: now() - 40 }] : []
@@ -41,10 +43,11 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
   }
   function snapshot(id) {
     const session = sessions.get(id) || addSession(id, 'New conversation')
-    return { session_id: id, resumed: id, stored_session_id: id, messages: messages.get(id), message_count: messages.get(id).length, info: { ...info, profile: session.profile }, running: timers.has(id), pending_approval: null, open_requests: [], inflight: null }
+    return { session_id: id, resumed: id, stored_session_id: id, messages: messages.get(id), message_count: messages.get(id).length, info: { ...info, profile: session.profile }, running: timers.has(id), pending_approval: null, open_requests: [], inflight: inflight.get(id) || null }
   }
   function complete(id, status = 'complete', text = '') {
     clearInterval(timers.get(id)); timers.delete(id)
+    inflight.delete(id)
     if (text) messages.get(id)?.push({ id: `${id}-${Date.now()}`, role: 'assistant', content: text, timestamp: now() })
     const session = sessions.get(id)
     if (session) { session.is_active = false; session.message_count = messages.get(id).length }
@@ -71,7 +74,10 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'shared_metrics.slash_command' && typeof params.command === 'string' && /^[a-z][a-z0-9_-]*$/.test(params.command) && (params.session_id == null || sessions.has(params.session_id))) return { ok: true }
     if (method === 'bot_relay.roster.sync' && Array.isArray(params.agents)) return { ok: true }
     if (method === 'billing.state' || method === 'subscription.state') throw new Error('Billing is unavailable in the synthetic gateway')
-    if (method === 'config.set' && ['display.in_app_tips', 'display.in_app_tours', 'display.message_reactions'].includes(params.key)) return { value: params.value }
+    const configProfile = params.profile || profile
+    if (method === 'config.set' && ['approvals.mode', 'approval_mode', 'display.in_app_tips', 'display.in_app_tours', 'display.message_reactions'].includes(params.key)) return config.set(configProfile, params.key, params.value)
+    if (method === 'config.get' && ['approvals.mode', 'approval_mode'].includes(params.key)) return { value: config.read(configProfile).approvals.mode }
+    if (method === 'config.get' && params.key === 'full') return { config: config.read(configProfile) }
     // Explicit optional startup probes from the pinned renderer. These have no
     // provider, running process, local pet, or speech service in the fixture.
     if (method === 'free_tier.status') return { has_guest: false, enabled: false, available: false }
@@ -85,12 +91,6 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'complete.slash' && typeof params.text === 'string' && params.text.startsWith('/')) return { items: [], replace_from: 1 }
     if (method === 'profiles.set_asset' && params.asset === 'avatar') return { ok: true }
     if (method === 'image.generate') throw new Error('Image generation is unavailable in the synthetic gateway')
-    if (method === 'config.get' && params.key === 'approvals.mode') return { value: approvalModes.get(profile) || 'smart' }
-    if (method === 'config.set' && params.key === 'approvals.mode') {
-      if (!['manual', 'smart', 'off'].includes(params.value)) throw new Error('Invalid approval mode')
-      approvalModes.set(profile, params.value)
-      return { value: params.value }
-    }
     if (method === 'profiles.list') return { profiles: roster(), bot_mode_protocol: true }
     if (method === 'profiles.configure' && params.name === 'default' && Object.keys(params.ui_meta || {}).length === 1 && params.ui_meta['hermes-bots-groups']) {
       const snapshot = params.ui_meta['hermes-bots-groups']
@@ -119,8 +119,8 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       event('sessions.changed', null, {})
       return { session_id: session.id, stored_session_id: session.id, info, ...session, messages: [] }
     }
-    if (method === 'config.get' || method === 'model.info') return { ...info, model: info.model, provider: 'custom', config: { model: { default: info.model, provider: 'custom' }, display: {} } }
-    if (method === 'profiles.get') return { ...profiles.find(p => p.name === params.name), config: { model: { default: info.model } } }
+    if (method === 'model.info') return { ...info, model: info.model, provider: 'custom' }
+    if (method === 'profiles.get') return { ...profiles.find(p => p.name === params.name), config: config.read(params.name) }
     if (method === 'pet.gallery') return { enabled: false, active: '', pets: [] }
     if (method === 'prompt.submit') {
       if (!sessions.has(id)) addSession(id, 'New conversation')
@@ -129,11 +129,13 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       if (session.title === 'New conversation') session.title = (params.text || 'New conversation').slice(0, 48)
       const text = 'This is a synthetic response for the interface preview. Your message reached the shared Hermes chat engine and its normal streaming flow.\n\nTry reopening this conversation, switching between Sessions and Bots, or changing the Experience after this response finishes. No external model was called.'
       const parts = text.match(/.{1,9}|\n/g) || [text]
+      const turn = { user: params.text || '', assistant: '', streaming: true }
+      inflight.set(id, turn)
       let index = 0, sent = ''
       setTimeout(() => event('message.start', id, { role: 'assistant' }), 20)
       const timer = setInterval(() => {
         if (index >= parts.length) { complete(id, 'complete', sent); return }
-        const piece = parts[index++]; sent += piece; event('message.delta', id, { text: piece })
+        const piece = parts[index++]; sent += piece; turn.assistant = sent; event('message.delta', id, { text: piece })
       }, delay)
       timers.set(id, timer)
       return { status: 'started', session_id: id, submission_id: params.submission_id }
@@ -149,7 +151,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       return { attached: true, ref_text: `@file:/workspace/${params.name}`, path: `/workspace/${params.name}` }
     }
     if (method === 'session.attach') return { ok: true, path: `/workspace/${params.filename || 'attachment'}` }
-    if (method === 'session.rename' && sessions.has(id)) { sessions.get(id).title = params.title; return { ok: true, title: params.title } }
+    if (['session.title', 'session.rename'].includes(method) && sessions.has(id)) { sessions.get(id).title = params.title; return { ok: true, title: params.title } }
     if (method === 'session.close') return { ok: true }
     if (method === 'events.replay') return { events: [], cursor: 0 }
     if (strict) return controls.unknown({ transport: 'rpc', method, params, profile })
@@ -166,8 +168,10 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       await controls.before({ transport: 'http', method: req.method, path: pathname, query: Object.fromEntries(url.searchParams), body: parsed })
       if (pathname === '/api/status') return send({ status: 'ok', auth_required: false, version: info.version, profile: 'default', desktop_contract: info.desktop_contract })
       if (pathname === '/api/hermes/update/check') return send({ install_method: 'synthetic', current_version: info.version, behind: 0, update_available: false, can_apply: false, update_command: null, message: null, commits: [] })
-      if (pathname === '/api/config/defaults') return send({ model: { default: info.model, provider: 'custom' }, display: {} })
-      if (req.method === 'GET' && pathname === '/api/config/schema') return send({ fields: {} })
+      if (req.method === 'GET' && pathname === '/api/config/defaults') return send(config.defaults())
+      if (req.method === 'GET' && pathname === '/api/config/schema') return send(config.schema())
+      if (req.method === 'GET' && pathname === '/api/config') return send(config.read(url.searchParams.get('profile') || 'default', url.searchParams.get('include_defaults') !== 'false'))
+      if (req.method === 'PUT' && pathname === '/api/config') return send(config.write(parsed.profile || url.searchParams.get('profile') || 'default', parsed.config))
       if (req.method === 'GET' && pathname === '/api/env') return send({})
       if (pathname === '/api/audio/voice-live/status') return send({ mode: 'chained', available: false, reason: 'Synthetic fixture has no voice service', model: '', voice: '' })
       if (pathname === '/api/audio/elevenlabs/voices') return send({ voices: [] })
@@ -196,7 +200,6 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       }
       if (pathname === '/api/profiles') return send({ profiles: profiles.map(p => ({ ...p, is_active: p.name === 'default', path: `/workspace/${p.name}`, has_config: true, has_soul: true })) })
       if (pathname === '/api/profile' || pathname === '/api/profiles/active') return send({ profile: 'default', current: 'default' })
-      if (pathname === '/api/config') return send({ config: { model: { default: info.model, provider: 'custom' }, display: {}, terminal: {} }, raw: '', path: '/workspace/config.yaml' })
       if (pathname === '/api/model/info') return send({ ...info, context_length: 128000, provider_configured: true })
       if (pathname === '/api/model/options') return send(modelOptions)
       if (req.method === 'GET' && pathname === '/api/model/auxiliary') return send({ main: { model: info.model, provider: 'custom' }, tasks: [] })
@@ -250,7 +253,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     })
   })
   const disconnect = () => { for (const client of clients) client.terminate() }
-  return { server, sessions, messages, profiles, controls, disconnect, close: async () => { controls.releaseAll(); for (const timer of timers.values()) clearInterval(timer); disconnect(); sockets.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)) } }
+  return { server, sessions, messages, profiles, controls, disconnect, completeResponse: (id, text) => complete(id, 'complete', text), close: async () => { controls.releaseAll(); for (const timer of timers.values()) clearInterval(timer); disconnect(); sockets.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)) } }
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const gateway = createPreviewGateway({ log: (method, route) => console.log(method, route) })

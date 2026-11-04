@@ -11,11 +11,13 @@ compatibility boundary needs joint review and testing.
 | `ConnectionCoordinator` | Setup, authentication, loading, ready and recovery state |
 | `NativeAuthentication` | Orchestrate separate Access and Athena browser handoffs |
 | `NativeBridge` | Validate versioned message envelopes and produce structured errors |
+| `LegacyNativePresentation` | Retained native menu/settings capabilities, dispatch and presenter lifetime for older web clients |
 | `NativeAppSettings` | Material 3 settings and connection-details presentation |
 | `AppDiagnostics` | Explicitly limited, credential-free status projection |
 | `NativePushRegistration` | Rotate the current binding's FCM token using a scoped credential |
 | `WebVisibility` | Expiring acknowledgement of the connected, visible conversation |
 | Shared web shell | Authoritative chat selection, drafts, recordings and navigation safeguards |
+| Shared Settings presentation | Committed rows and commands from existing web/renderer owners; current Android clients retain the web layout |
 | Server adapters | Protected authentication exchanges, account/device bindings and durable delivery attempts |
 
 Page navigation invalidates the document's bridge/menu handshake. A transient
@@ -29,28 +31,52 @@ guard. An approval carries its request ID so a late response cannot authorize a
 new action. Connection details exposes only selected status fields; copying it
 must not copy cookies, FCM tokens, refresh credentials or chat content.
 
+The retained `NativeSettingsPage` presenter supports older web clients and isolated
+contract tests. The current web entry point does not install it. Explicit Settings
+descriptors can feed that presenter without scraping wrapper controls, while a
+guarded compatibility adapter remains for complex upstream controls. Both paths
+keep validation and pending saves with the original web owners.
+
+`LegacyNativePresentation` owns both retained presenters and their six bridge
+methods. Its capability list remains part of protocol 1. The Activity delegates
+presentation dispatch and lifecycle events to that owner; origin validation,
+native file selection, authentication, OS permissions, recovery and App settings
+remain host responsibilities. New presentation features use the shared web UI.
+
+These capabilities remain supported for older web clients. No version cutoff is
+assumed: APK and server updates are independent. Future retirement can remove
+individual presenter capabilities after the supported client combinations have
+an equivalent web path, while retaining native connection and recovery controls.
+
 ## Completion-event source assessment
 
 This assessment inspected Hermes revision
-`bf0203a794a07aac3ff764972ab9087baa4e4f4e`, pinned in Athena's `flake.lock`.
+`f0d94882e89ab8d4098b5bb2f166adfb9ee0a0ab`, pinned in Athena's `flake.lock`.
 The supported interfaces found do not provide a durable, account-scoped global
 completion feed that can replace Athena's retained authenticated transport.
 
-- The [OpenRPC contract](https://github.com/NousResearch/hermes-agent/blob/bf0203a794a07aac3ff764972ab9087baa4e4f4e/apps/shared/src/gateway-contract.openrpc.json)
+- The [OpenRPC contract](https://github.com/NousResearch/hermes-agent/blob/f0d94882e89ab8d4098b5bb2f166adfb9ee0a0ab/apps/shared/src/gateway-contract.openrpc.json)
   exposes `session.events.since` and `session.events.stats`. The
-  [implementation](https://github.com/NousResearch/hermes-agent/blob/bf0203a794a07aac3ff764972ab9087baa4e4f4e/tui_gateway/methods_session.py)
+  [implementation](https://github.com/NousResearch/hermes-agent/blob/f0d94882e89ab8d4098b5bb2f166adfb9ee0a0ab/tui_gateway/methods_session.py)
   reads an in-process replay ring, with sequence/epoch and truncation semantics.
-- [Replay storage](https://github.com/NousResearch/hermes-agent/blob/bf0203a794a07aac3ff764972ab9087baa4e4f4e/tui_gateway/event_replay.py)
+- [Replay storage](https://github.com/NousResearch/hermes-agent/blob/f0d94882e89ab8d4098b5bb2f166adfb9ee0a0ab/tui_gateway/event_replay.py)
   is bounded in memory and freed when a session is torn down. It helps reconnecting
   viewers; it cannot promise completion recovery after a gateway restart.
-- [SessionEvents observers](https://github.com/NousResearch/hermes-agent/blob/bf0203a794a07aac3ff764972ab9087baa4e4f4e/gateway/session_events.py)
+- [SessionEvents observers](https://github.com/NousResearch/hermes-agent/blob/f0d94882e89ab8d4098b5bb2f166adfb9ee0a0ab/gateway/session_events.py)
   are authority-local Python recipients, rather than an externally authenticated,
   durable service subscription.
-- The [agent:end hook](https://github.com/NousResearch/hermes-agent/blob/bf0203a794a07aac3ff764972ab9087baa4e4f4e/gateway/hooks.py)
-  and its [post-turn invocation](https://github.com/NousResearch/hermes-agent/blob/bf0203a794a07aac3ff764972ab9087baa4e4f4e/gateway/run_turn_persistence.py)
+- The [agent:end hook](https://github.com/NousResearch/hermes-agent/blob/f0d94882e89ab8d4098b5bb2f166adfb9ee0a0ab/gateway/hooks.py)
+  and its [post-turn invocation](https://github.com/NousResearch/hermes-agent/blob/f0d94882e89ab8d4098b5bb2f166adfb9ee0a0ab/gateway/run_turn_persistence.py)
   are useful extension points. Their documented context includes response content,
   but does not establish an account-scoped delivery cursor, replay/acknowledgement
   contract or universal correlation with every desktop completion event.
+
+Revalidated against the pinned source on 2026-11-03. The current
+`SessionEvents` implementation adds authority-private replay keys, lifecycle
+epochs and explicit replay-gap handling, but still stores replay in the same
+bounded process memory. Its Python observers remain synchronous, local recipients.
+Neither the replay API nor the post-turn hook supplies a durable external
+account subscription that survives a gateway restart.
 
 The implemented decision is to retain the authenticated relay and persist events
 once observed. Do not read private Hermes database tables, retain broad account

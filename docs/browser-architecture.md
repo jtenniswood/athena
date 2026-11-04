@@ -12,7 +12,9 @@ renderer remains responsible for conversation state and upstream features.
   connection state, and safe lifecycle transitions such as update and sign-out.
 - `apps/web-desktop/src/upstream/` owns the adapter boundary to the fetched
   renderer: its browser root, desktop-shaped bridge, route and workspace
-  adapters, and reviewed transforms.
+  adapters.
+- `apps/web-desktop/build/renderer/` owns build-only transforms, replacements,
+  branding and the compatibility registry. Runtime modules do not import it.
 - `apps/web-desktop/src/overrides/` replaces a narrow renderer surface when the
   browser needs a different interaction, such as gateway settings.
 - `apps/web-desktop/src/pwa/` owns service-worker registration and the
@@ -31,6 +33,116 @@ selection, profile and action adapters project the authoritative stores; they do
 not create a second conversation store. `upstream/browser-api.tsx` remains the
 explicit visual primitive boundary.
 
+The core product shell consumes `experience/contracts/engine.ts` through
+`BrowserEngineProvider`. `upstream/engine-host.tsx` implements that interface
+with the pinned renderer's existing owners. Conversation actions, profiles,
+navigation, project drops, approval mode and reusable engine surfaces cross this
+boundary as plain projections, commands or React surfaces. Settings controllers
+remain lazy so opening chat does not eagerly load the settings implementation.
+The provider carries the host implementation; it does not cache or copy engine
+state. Specialized feature adapters and visual primitives retain their separate
+boundaries. The composer and status-bar approval controls share one menu view
+and catalog of labels, descriptions and icons. Both use the engine's approval
+state and commands.
+
+The pinned renderer also supplies a complete browser-host installer, but it
+assumes injected Hermes bootstrap data, the `local` connection identity and its
+server's UI-preference store. Athena retains its own authentication, `web-single`
+identity and persisted preference owners. Reuse compatible public helpers through
+small adapters instead of replacing that startup contract wholesale. External-link
+and preview commands use the shared `externalUrlTarget` policy; only its web
+subset reaches the browser opener. The link menu uses the same command.
+
+Browser app-window commands are installed after engine registration, allowing
+reuse of the renderer's store-dependent opener and readiness handshake. A detached
+window acknowledges that it loaded; a null `window.open` result under `noopener`
+does not imply it was blocked. The existing notification owner handles timeout
+and late readiness. Session/profile/watch routes retain their engine semantics,
+while Athena validates the configured gateway and seeds its existing tab profile
+before stores load. Explicit session references and window commands also bind the
+profile to the hash chat route. `upstream/browser-session-routes.ts` admits that
+owner through the engine's existing resume command before initial rendering and
+native history changes. The outer window-profile query can still change with
+the sidebar filter while the chat route retains its own owner.
+
+The captured engine selection distinguishes copied session IDs when projecting
+conversation metadata and toolbar commands. It also precedes historical rows in
+the shared session-owner resolver. Owned session RPCs always name their profile
+on Athena's multiplexed socket, including a tab's startup profile. Background
+row renames cannot borrow another profile's selected runtime. The existing title
+publishers accept the captured profile for session slices and project previews,
+so renaming one copy preserves the other copy's metadata. Drafts, prepared
+submissions, retries and session state retain their existing engine owners.
+
+Profile changes update that routed tab's reload seed without
+changing router history state. Android retains one app window. Hosts without the
+readiness channel also omit app-window commands. Ordinary external browser links
+keep their existing owner.
+
+The clipboard bridge captures the native writer before the renderer installs its
+shim. Missing or denied native access falls back to the renderer's existing
+selection-copy helper, preserving editor focus and selection and keeping temporary
+copy controls inside the active dialog or menu scope. Copy refusal still rejects
+through Athena's bridge so the caller can report failure.
+
+`upstream/browser-notifications.ts` captures the emitting session's owner from
+the engine before delivery waits. The captured profile and durable session ID
+produce one destination using the same URL policy as session references. Worker
+delivery, page fallback and later clicks retain that destination even if the
+window filter or current selection changes. This adapter loads after engine
+registration; platform notification delivery does not import engine stores.
+
+The same adapter validates plugin activation and action paths through the engine's
+resolver for app paths. An opaque document identity accompanies each engine
+notification handle; the engine retains the callback registry. Before routing a
+persistent click, the worker asks the emitting document to consume its callback
+and prefers that document for admitted navigation. Alerts with only a callback
+focus the source and preserve navigation performed by plugin code. Only serialized
+destinations survive a closed source. Frozen or expired activation requests discard
+callbacks without executing plugin code, while the normal navigation admission
+can select another window. No function is serialized into notification data.
+
+Delivery that includes callbacks checks worker protocol support, so a new page with
+an older worker uses page fallback. Failed delivery, dismissal and consumption
+release engine handlers. Same-tag publication uses Web Locks when available to
+serialize enumeration, replacement and cleanup across windows; an unsuccessful
+replacement retains the previous alert's callback. Persistent notifications can
+carry action buttons; page fallback retains the body click. This follows the
+[Notifications API's action and close-event semantics](https://notifications.spec.whatwg.org/).
+
+Notification clicks ask a live page to admit hash-only navigation using its
+current origin, path and query. The worker's cached client URL does not decide
+profile ownership. A refused or unanswered request opens another window instead
+of reloading an existing document; page notifications use the same admission
+policy. An active UI-update transaction refuses notification routing until it
+finishes or aborts. Existing engine routes continue to own chat selection.
+
+Ambient sound and speech claims use one module SharedWorker across app windows.
+It delegates expiry and duplicate handling to the renderer's pure ambient claim
+arbiter. Gateway-scoped keys preserve the speech discriminator and its longer
+claim lifetime. The browser bridge keeps only bounded, temporary request callbacks;
+no conversation state or storage is added. Missing, refused or failed workers and
+unanswered claims retain the existing emit behavior. Page departure releases the
+port and pending callbacks; a restored page reconnects on its next claim.
+
+File selection owns one temporary input per request. Opening a newer picker
+cancels the previous request, so a late change cannot attach its files to both
+callers. Selection, cancellation, opening errors and the existing missing-cancel
+deadline share one cleanup path for listeners and the reload-safety operation.
+The bridge still registers the selected blobs under its existing file handles.
+
+Plugin file and directory reads share an asset URL admission check. It compares
+same-origin plugin roots after browser URL normalization, so dot segments cannot
+redirect a file read into an API route. Credentials, query/fragment suffixes and
+encoded path separators are refused before fetching; ordinary nested asset URLs
+and returned directory paths keep their existing shape.
+
+The mounted composer projects its existing voice-capture state into reload safety.
+The media guard spans recording and transcription, including live WebSocket or
+direct-provider transcripts after the microphone stream ends. Settling or
+unmounting that owner releases its guard; the engine retains the voice state,
+transcript insertion and cancellation lifecycle.
+
 `experience/settings/settings-route.tsx` assembles settings navigation from the
 catalog. The checked settings controller adapter extracts the existing Hermes
 page controls and commands without generating the browser frame. Schemas, values,
@@ -39,6 +151,80 @@ Unknown renderer pages remain available in Other Settings. The fullscreen and
 embedded frame variants share compact navigation and focus behavior; each keeps
 its appropriate overlay host and breakpoint. Legacy bookmarks and field links
 are normalized by the browser route policy without dropping other query values.
+
+`experience/contracts/settings-presentation.ts` defines the shared Settings row
+model. Mounted owners publish committed labels, values, availability and commands
+through `experience/settings/presentation.tsx`. Chat panel preferences, themes,
+configuration actions and choices, sync status, notification permission, profile
+tabs, plugin navigation and update controls use their original callbacks for both
+web controls and explicit presentation descriptors. The frame publishes its own
+navigation, search, close/back commands and active configuration scope.
+
+The config-field adapter also projects the renderer's resolved schema metadata
+and original commit callbacks for booleans, numbers, text, lists, JSON and closed
+or searchable choices. Two checked transforms publish the metadata and attach a
+ref to existing row elements; they add no wrapper elements or alternate config
+store. Structured editors, open-ended suggestion fields and extension actions
+retain their existing renderer presentation.
+
+Android continues to use web Settings. The retained optional native presenter
+consumes the same descriptors when explicitly installed by a compatible client
+or test fixture. Its DOM compatibility path remains for renderer controls that
+do not publish descriptors. Explicit commands have opaque owner identities,
+reject removed/disabled fields and stale profile scopes, and preserve the
+original file-import and pending-save owners. Unsupported or oversized snapshots
+leave the complete web editor available. This interface does not reactivate
+native Settings or native menus in the current application entry point.
+
+WebView instrumentation embeds the shipped Android adapter, native settings
+adapter and presentation registry through `scripts/android-test-adapter.mjs`.
+The APK workflow covers native app, bridge/protocol and hosting integration paths.
+The rest of the web Settings UI is verified by the always-running browser
+compatibility workflow; changing only its styles or catalog does not rebuild
+the APK.
+
+`experience/session-row.tsx` owns session-row geometry, density, primary actions,
+keyboard access and drag handles. `upstream/session-row.tsx` projects live engine
+metadata, status and extension decorations and retains the engine's mutation and
+menu commands. A guarded module replacement connects every list surface to this
+row; source rewrites for row gestures, title previews and reorder handling are
+removed. Row actions and their portalled dialogs cannot resume the conversation.
+`experience/sidebar.tsx`, `sidebar-section.tsx` and `sidebar-project.tsx` own the
+navigation frame, section disclosure and project overview presentation. Typed
+adapters in `upstream/sidebar.tsx` and `sidebar-project.tsx` project the existing
+renderer controller values into those views. Search, filtering, profile scope,
+pagination, lazy project hydration and saved ordering keep their original owners.
+`experience/sidebar-gestures.ts` owns the mounted navigation gesture lifetime.
+Escape, lost focus, hidden documents, scope changes and detached rows or targets
+cancel pending project drops. Its hit testing stays inside that navigation;
+project moves and saved row ordering still use the engine commands.
+`experience/browser-pane-composition.ts` classifies tool panes for toolbar
+actions, the workspace tree and narrow overlays. The conversation remains in
+the workspace; Sessions, Bots and terminal never become browser tool panels.
+Navigation visibility belongs to Athena's mounted navigation controls, with no
+application-wide interception of desktop minimize buttons.
+The controller projection replaces a named function's return and removes only
+explicitly identified view bindings; nested callbacks and hooks remain intact.
+Source fingerprints and the compiler validate this boundary on renderer updates.
+
+`experience/sidebar-profile.tsx`, `sidebar-tree.tsx` and `sidebar-cron.tsx` own
+profile headers, tree nesting, repository/worktree lanes, paging affordances and
+scheduled-job rows. The profile and workspace adapters project live owners and
+captured commands. Hermes retains group aliases/order, branch switching, lazy
+lanes, removal confirmations, cron trigger concurrency and live-run polling.
+Profile lists preserve configured pictures, hidden-group preferences and complete
+histories; no parallel profile or project cache is introduced.
+Project and workspace chat creation commands publish navigation intent directly.
+Compact navigation does not infer those commands from document clicks or CSS classes.
+Browser startup deliberately keeps project navigation at the overview. The
+reusable worktree views preserve the renderer's controller boundary without
+enabling drill-in or changing that navigation policy.
+
+The old search-layout, section-markup, profile-avatar, project-disclosure and
+desktop-navigation rewrites are removed. Generic engine primitives such as
+virtualization, sortable lists, context menus and extension contributions remain
+reusable surfaces. Product-specific sidebar views no longer depend on rewriting
+their upstream HTML layout.
 
 The chat action menu and its keyboard shortcuts use the same browser commands.
 Rename and delete dialogs retain the conversation they were opened for even if
@@ -57,17 +243,48 @@ the alternate action while busy. Queue editing, IME handling, disabled controls,
 attachment fallback and rejected-submit restoration remain engine-owned. No
 document listener finds or clicks composer buttons to apply this preference.
 
+Shift+Enter is handled by that mounted composer's keyboard command after its IME
+guards. The native line-break command uses the existing undo checkpoint and
+immediate draft flush, rather than running ahead of the owner in a global listener.
+
+Timeline scrubbing is mounted on the renderer's virtual rail through a checked
+adapter. The browser hook maps pointer coordinates, UI scale and scroll offset
+to the rail's existing entries, then calls its original jump command. Pointer
+capture belongs to the mounted rail; gestures cannot cross into another rail or
+continue after its conversation owner changes. The owner is the existing timeline
+index key, including its connection/profile/session scope; refreshing entries
+within that owner does not interrupt a drag. Keyboard and ordinary click navigation,
+virtualization, history loading and jump cancellation remain renderer-owned.
+
+Submit scrolling is mounted inside the renderer's transcript list. It consumes
+the existing scroll/content refs, composer surface ID and session/profile/visibility
+lifetime. Accepted sends address only that mounted surface, after checking the
+original draft owner or the send's explicit fresh-session assignment. Hidden sends
+and late acceptance for another draft do not reposition the visible transcript.
+The transient command registry stores callbacks, not conversation data. Reservations
+and pending animation frames are released on selection, profile, visibility or
+mount changes; content reconciliation remains observed inside that transcript.
+No document search or window event chooses a transcript by display identity.
+
 ## Capability and lifecycle boundaries
 
-Browser, hosting, and connected-server support facts are described in
-`platform/capabilities.ts`. API availability does not imply permission; the
-owning browser operation still handles permission and failure at use time.
+`platform/capabilities.ts` owns direct browser API and native-support facts. API
+availability does not imply permission; the owning operation handles permission
+and failure at use time. The settings catalog owns the support metadata it
+presents, including unknown server capabilities. Runtime hosting configuration
+retains its validated wire format. There is no separate observation registry or
+multi-source capability resolver without a live consumer.
 
 `scripts/browser-preference-contract.mjs` records wrapper preference keys, owners,
 scope, defaults, parsers, serialization, and legacy migrations. The browser's
 typed access and subscription helper and the account-sync allowlist consume this
 same contract. Existing keys and wire formats remain compatible. Same-tab writes
 and relevant storage events share a subscription path with stable snapshots.
+The zoom bridge projects the active desktop/mobile scale preference into CSS and
+renderer change events. Same-tab and cross-tab writes use the shared preference
+subscription, while pointer/viewport changes select the existing mode's value.
+Bridge commands suppress their own storage notification to preserve shortcut
+precision and one change event per action, including when optional saves fail.
 Sidebar and session-profile migrations are repeatable and preserve migration
 inputs until the replacement is verified. Optional preferences tolerate blocked
 storage; connection credentials, drafts, and account-bound sync outboxes retain
@@ -87,6 +304,47 @@ unsent edits and drain requests already in flight; a completed request from the
 old profile cannot seed the new profile's configuration cache. Failed writes
 continue to block readiness instead of being treated as durable.
 
+PWA preparation, applying synced preferences, and sign-out share one exclusive
+page-transition lock. A competing transition is refused before changing interaction or network
+admission. Abort, expiry and failure release only the lock their transition owns;
+late cleanup cannot unlock a newer owner. The update protocol, pending-work flush
+and draft verification remain unchanged. Sign-out holds its reservation through
+logout, verified credential removal, and reload, and releases it on failure.
+
+Filesystem plugin discovery uses the renderer's existing disk loader. The bridge
+returns both files and directories, including package markers, with encoded URL
+path components. It omits unsupported directory watching so the loader's visible-tab
+poll discovers new folders and retires removed plugins. Existing-file edits use
+the renderer's explicit Rescan command. Registration, enablement, package opt-in
+and disposal remain engine-owned; Athena keeps no second plugin registry.
+
+## Runtime service ownership
+
+`apps/web-desktop/server/` owns mounted plugin assets and the running preference,
+Android authentication and notification services. `createAthenaServices` assembles the same route owners
+for Vite development, Vite preview, and the container's Node server. Each host
+attaches it once and closes it with its HTTP server. The gateway proxy and static
+asset server remain hosting concerns.
+
+`server/plugin-assets.mjs` reads the operator's mounted web-server Hermes home
+for plugin files and root or nested `.listing` endpoints. The same reader supplies
+development, preview and nginx through `createAthenaServices`; it lists regular files and
+directories and follows operator-installed symlinks. Files stream from that same
+owner with their content type, HEAD and byte-range support. Responses are not
+cached. Vite and nginx forward plugin routes to this service, so metadata and
+source reads use the same access to private read-only mounts. The bridge retains
+its asset URL admission policy; the gateway filesystem is a separate source.
+
+The services share account identity derivation and non-redirecting Hermes session
+probes. Each endpoint explicitly chooses its accepted credentials; browser
+handoffs continue to transfer only approved Hermes cookies, and native token
+refresh remains restricted to its installation binding. Existing account hashes,
+preference files, push bindings, API routes, and the data volume stay compatible.
+
+`apps/web-desktop/server/main.mjs` starts the production host. It uses the shared
+runtime configuration generator from `scripts/`; development and preview continue
+to assemble the same services without starting nginx.
+
 ## Compatibility ownership
 
 `scripts/renderer-adapter.mjs` owns the ordered build adapters, module replacements,
@@ -97,10 +355,54 @@ fingerprints stay reviewed and fetched sources remain untouched. Adapter tests
 check final output fingerprints, replacement resolution, and whether introduced
 type errors and missing imports fail compilation.
 
+`pnpm inspect:renderer` exports the same transform output for review, alongside
+original modules, wrapper replacement sources and their importer policies. Its
+manifest identifies the revisions, lockfile, registry, adapter inputs and emitted
+bytes. These ignored snapshots make the integration inspectable without creating
+another build graph or accepting changed fingerprints; see the tooling index.
+
+Browser transforms are grouped by settings, composer, roster, navigation and
+hosting in `build/renderer/transforms/`. `build/renderer/browser-plugin.ts` assembles their ordered
+pipeline. The registry names the feature owner for each single-feature transform;
+mixed pipelines retain their assembly owner. Build and adapter tests use the
+same wrapper-only module loader. Moving a handler does not accept new renderer
+input or output fingerprints.
+
 `upstream/entry.ts` installs the bridge and restores its profile before loading
 `upstream/engine-registration.ts`. That module contains the pinned renderer's
 controller registration dependency. Browser initialization follows registration;
 the desktop controller itself remains absent from the rendered shell.
+
+### Renderer embedding boundary
+
+The browser-facing `BrowserEngine` interface is an Athena contract. Its current
+implementation still obtains core initialization by importing the renderer's
+desktop controller. The plugin SDK's `host.state` projections provide access to
+existing engine state; they do not replace the controller's registration work.
+
+| Initialization responsibility | Current renderer owner | Behavior to preserve |
+| --- | --- | --- |
+| Core panes, status items and commands | `app/contrib/controller.tsx` | Contributions exist before the browser shell consumes them; mount `ContribWiring` once |
+| Default layouts and contributed panes | `app/contrib/layout-presets.ts` and the controller | Retain saved layout compatibility while browser policy suppresses desktop session tile mirrors |
+| Bundled and runtime plugins | `contrib/plugins.ts` and `contrib/runtime-loader.ts` | Core registers before bundled plugins; install discovery watchers once and retain existing enable/disable owners |
+| Pin synchronization, unread acknowledgements and dead-session pruning | `store/session-pin-sync.ts`, `store/session-unread-remote.ts`, `store/dead-session-prune.ts` | Preserve connection scope and authoritative stores; avoid duplicate subscriptions or pruning passes |
+
+An upstream embedding entry point could replace this dependency when it owns
+those registrations explicitly, supports the browser's single-conversation
+capabilities, and keeps settings controllers available without extracting them
+from view implementations. Bridge installation, authentication, preference
+loading and profile restoration must still precede stores that read them.
+
+Lifecycle ownership also needs an explicit contract. Pin and unread watcher
+setup currently returns no disposer, while dead-session pruning returns an
+unsubscribe callback. Wrapping the controller import in a differently named
+function would not make those lifetimes independent or safely repeatable.
+
+Retain the checked registration adapter until such an upstream contract is
+available. Migrate one responsibility at a time through the existing renderer
+update process, preserving plugin ordering, draft durability and selection
+behavior before removing the corresponding compatibility seam. This map does
+not change the existing development or release process.
 
 Renderer-sensitive dependency versions are checked by
 `pnpm check:renderer-dependencies`. They inherit the fetched renderer's manifest;
@@ -116,7 +418,7 @@ explicit override and the same checks.
 `package.json` owns the pnpm version used by Docker and GitHub Actions.
 
 Every renderer replacement or transform is recorded in
-`upstream/compatibility-registry.json` with its owner, reviewed source and output
+`build/renderer/compatibility-registry.json` with its owner, reviewed source and output
 fingerprints, behavioral verification references, and removal condition. The
 generated [browser transform inventory](browser-transform-inventory.md) is the
 human-readable index. Add or change an adapter only in wrapper-owned code, and

@@ -1,9 +1,13 @@
 import { Codicon } from '../../upstream/browser-api'
 import { useBrowserBackendUpdates } from '../../upstream/backend-updates'
 import { Button, CopyButton, SettingsContent } from '../../upstream/ui'
+import { useState } from 'react'
+import { writeClipboard } from '../../platform/clipboard'
+import { useSettingsPresentation } from './presentation'
 
 export function BrowserSystemUpdatesPage() {
   const { status, checking, apply, version, check, install } = useBrowserBackendUpdates()
+  const [showLog, setShowLog] = useState(false)
   const updating = apply.applying || apply.stage === 'restart'
   const failed = apply.stage === 'error'
   const manual = apply.stage === 'manual'
@@ -23,9 +27,25 @@ export function BrowserSystemUpdatesPage() {
     : status && !status.supported ? status.message || 'Contact your server operator to update Hermes Agent.'
     : available ? 'Install the latest changes on your connected server.'
     : 'Check for updates to keep your connected server current.'
+  const checkLabel = checking ? 'Checking…' : 'Check for updates'
+  const installLabel = failed ? 'Retry update' : 'Update Hermes Agent'
+  const presentation = useSettingsPresentation([
+    { kind: 'text', label: `Installed version: ${version || 'Unavailable'}` },
+    { kind: 'heading', label: title },
+    ...(description ? [{ kind: 'text' as const, label: description }] : []),
+    ...(manual && apply.command ? [{ kind: 'text' as const, label: apply.command },
+      { id: 'copy', kind: 'action' as const, label: 'Copy update command', run: async () => { await writeClipboard(apply.command!) } }] : []),
+    ...(updating && apply.percent !== null ? [{ kind: 'text' as const, label: `Update progress: ${apply.percent}%` }] : []),
+    { id: 'check', kind: 'action', label: checkLabel, disabled: busy, run: check },
+    ...(canInstall ? [{ id: 'install', kind: 'action' as const, presentation: 'primary' as const, label: installLabel, disabled: busy, run: install }] : []),
+    ...(apply.log.length ? [{ id: 'log', kind: 'action' as const, label: 'Update activity', run: () => setShowLog(!showLog) },
+      ...((showLog || failed) ? apply.log.map(entry => ({ kind: 'text' as const, label: entry.message })) : [])] : []),
+    ...(!updating && available && status?.commits?.length ? [{ kind: 'heading' as const, label: 'Available changes' },
+      ...status.commits.map(commit => ({ kind: 'text' as const, label: commit.summary }))] : [])
+  ])
 
   return <SettingsContent>
-    <section className="browser-settings-page browser-updates-page" aria-label="System updates">
+    <section ref={presentation} className="browser-settings-page browser-updates-page" aria-label="System updates">
       <header className="browser-settings-page-header">
         <h2 className="browser-settings-page-title">System updates</h2>
         <p className="browser-settings-page-description">Check for Hermes Agent updates.</p>
@@ -44,10 +64,10 @@ export function BrowserSystemUpdatesPage() {
       </div>}
       {updating && apply.percent !== null && <progress aria-label="Update progress" max={100} value={apply.percent} />}
       <div className="browser-updates-actions">
-        <Button variant="outline" disabled={busy} onClick={() => void check()}>{checking ? 'Checking…' : 'Check for updates'}</Button>
-        {canInstall && <Button disabled={busy} onClick={() => void install()}>{failed ? 'Retry update' : 'Update Hermes Agent'}</Button>}
+        <Button variant="outline" disabled={busy} onClick={() => void check()}>{checkLabel}</Button>
+        {canInstall && <Button disabled={busy} onClick={() => void install()}>{installLabel}</Button>}
       </div>
-      {apply.log.length > 0 && <details className="browser-updates-log" open={failed}>
+      {apply.log.length > 0 && <details className="browser-updates-log" open={showLog || failed} onToggle={event => setShowLog(event.currentTarget.open)}>
         <summary>Update activity</summary>
         <pre>{apply.log.map(entry => entry.message).join('\n')}</pre>
       </details>}

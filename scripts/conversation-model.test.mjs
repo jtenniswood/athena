@@ -13,6 +13,7 @@ vm.runInNewContext(source('../apps/web-desktop/src/experience/contracts/conversa
 function model() {
   const stores = {
     $selectedStoredSessionId: { value: 'session-a' },
+    $sessionResumeRequest: { value: null },
     $selectedBot: { value: 'web-single::default' },
     $groupChatWorkspace: { value: null },
     $sessions: { value: [{ id: 'session-a', title: 'First chat', profile: 'default' }, { id: 'session-b', title: 'Second chat' }] },
@@ -90,4 +91,42 @@ test('hidden canonical Bot identity uses the exact engine workspace owner', () =
   stores.$workspaceMode.value = 'bots'
   stores.$selectedStoredSessionId.value = 'another-chat'
   assert.equal(read().status, 'loading')
+})
+
+test('the selected engine owner distinguishes copied session ids without borrowing another profile title', () => {
+  const { stores, read } = model()
+  stores.$sessionResumeRequest.value = { sessionId: 'session-a', ownerRoute: { connectionId: 'web-single', profile: 'research' } }
+  const waiting = read()
+  assert.equal(waiting.profile, 'research')
+  assert.equal(waiting.status, 'loading')
+  assert.equal(waiting.displayName, null)
+  stores.$sessions.value.push({ id: 'session-a', title: 'Research copy', profile: 'research' })
+  const loaded = read()
+  assert.equal(loaded.profile, 'research')
+  assert.equal(loaded.displayName, 'Research copy')
+  assert.equal(loaded.selectionKey, waiting.selectionKey)
+  stores.$sessionResumeRequest.value = { sessionId: 'session-a', ownerRoute: { connectionId: 'web-single', profile: 'default' } }
+  assert.equal(read().displayName, 'First chat')
+  assert.notEqual(read().selectionKey, loaded.selectionKey)
+})
+
+test('an owned canonical Bot alias retains its backend profile while the row hydrates', () => {
+  const identity = contract.exports.resolveConversationIdentity({
+    selectedSessionId: 'copied-id', selectedSessionOwner: { connectionId: 'web-single', profile: 'research' },
+    selectedBotKey: null, groupName: null, sessions: [{ id: 'copied-id', profile: 'default' }], bots: [],
+    selectedBotOwner: { name: 'helper', targetProfile: 'research', display_name: 'Research helper', canonical_session: { id: 'copied-id' } }
+  })
+  assert.equal(identity.kind, 'bot')
+  assert.equal(identity.profile, 'research')
+  assert.equal(identity.connectionId, 'web-single')
+})
+
+test('a canonical Bot alias can retain its logical profile as well as its backend target', () => {
+  const identity = contract.exports.resolveConversationIdentity({
+    selectedSessionId: 'alias-chat', selectedSessionOwner: { connectionId: 'web-single', profile: 'helper' },
+    selectedBotKey: null, groupName: null, sessions: [], bots: [],
+    selectedBotOwner: { name: 'helper', targetProfile: 'research', canonical_session: { id: 'alias-chat' } }
+  })
+  assert.equal(identity.kind, 'bot')
+  assert.equal(identity.profile, 'helper')
 })

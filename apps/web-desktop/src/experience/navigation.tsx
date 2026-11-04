@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode, type PointerEvent, type RefObject, type MouseEvent } from 'react'
 import { useBrowserSidebarSections } from './sidebar-sections'
-import { browserRouteCoversWorkspace } from '../upstream/browser-routes'
+import { useBrowserEngine } from './engine'
 import { Codicon } from '../upstream/browser-api'
-import { AppSettingsLink, ScheduledTasksLink, SettingsLink } from './settings-menu'
+import { AppSettingsLink, SettingsLink } from './settings-menu'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { useCompactBrowser, useMobileBrowser } from './ui/use-compact-browser'
 import { useMobileChatHistory } from './mobile-chat-history'
-import { $conversationOpenRequest, $preserveNavigationRequest, preserveNavigationForNextSelection } from './conversation-navigation'
+import { $conversationOpenRequest, $preserveNavigationRequest } from './conversation-navigation'
 import { clampNavigationWidth, DEFAULT_NAVIGATION_WIDTH, MAX_NAVIGATION_WIDTH, MIN_NAVIGATION_WIDTH, NAVIGATION_TAB_LABELS, NAVIGATION_TABS, readNavigationTab, readNavigationWidth, readVisibleNavigationTabs, type NavigationTab, writeBrowserPreference } from './browser-preferences'
 
 /** Browser navigation preferences and focus never own the conversation state. */
@@ -20,6 +20,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
   const actionsTrigger = useRef<HTMLButtonElement>(null)
   const drawer = useRef<HTMLElement>(null)
   const compact = useCompactBrowser()
+  const { navigation: { coversWorkspace } } = useBrowserEngine()
   const mobile = useMobileBrowser()
   const [drawerOpen, setDrawerOpen] = useState(mobile)
   const [collapsed, setCollapsed] = useState(false)
@@ -30,22 +31,16 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
   const focusDrawerOnOpen = useRef(false)
   const preserveNextSelection = useRef(false)
   const preserveTimeout = useRef(0)
-  useEffect(() => $preserveNavigationRequest.listen(() => {
-    preserveNextSelection.current = true
-    window.clearTimeout(preserveTimeout.current)
-    // Expire the intent if opening a side chat does not change the selection.
-    preserveTimeout.current = window.setTimeout(() => { preserveNextSelection.current = false }, 2000)
-  }), [])
-  useEffect(() => () => window.clearTimeout(preserveTimeout.current), [])
   useEffect(() => {
     if (!compact) return
-    const preserveProjectChat = (event: globalThis.MouseEvent) => {
-      const button = event.target instanceof Element ? event.target.closest('button') : null
-      if (button?.classList.contains('group-hover/workspace:opacity-100')) preserveNavigationForNextSelection()
-    }
-    document.addEventListener('click', preserveProjectChat, true)
-    return () => document.removeEventListener('click', preserveProjectChat, true)
+    return $preserveNavigationRequest.listen(() => {
+      preserveNextSelection.current = true
+      window.clearTimeout(preserveTimeout.current)
+      // Expire the intent if opening a side chat does not change the selection.
+      preserveTimeout.current = window.setTimeout(() => { preserveNextSelection.current = false }, 2000)
+    })
   }, [compact])
+  useEffect(() => () => window.clearTimeout(preserveTimeout.current), [])
   useEffect(() => { setDrawerOpen(mobile) }, [compact, mobile])
   useEffect(() => $conversationOpenRequest.listen(() => {
     if (!drawerOpen) return
@@ -57,7 +52,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
       if (preserveNextSelection.current) {
         preserveNextSelection.current = false
         window.clearTimeout(preserveTimeout.current)
-      } else if (!mobile || (previous.current.path !== path && browserRouteCoversWorkspace(path))) {
+      } else if (!mobile || (previous.current.path !== path && coversWorkspace(path))) {
         // Startup can restore both a session selection and its route. Keep the
         // mobile chat list visible until an explicit conversation-open request.
         setDrawerOpen(false)
@@ -92,7 +87,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
     return () => document.removeEventListener('keydown', keydown)
   }, [drawerOpen])
   const backToHistory = useMobileChatHistory({
-    mobile, drawerOpen, covered: browserRouteCoversWorkspace(path),
+    mobile, drawerOpen, covered: coversWorkspace(path),
     showHistory: () => {
       setVisibleTabs(current => current.includes('sessions') ? current : ['sessions', ...current])
       setTab('sessions')
@@ -206,6 +201,6 @@ export function BrowserNavigationResizer({ navigation }: { navigation: Navigatio
 export function BrowserNavigationSettings({ navigation, onOpenRoute, row = false }: { navigation: Navigation; onOpenRoute: ComponentProps<typeof SettingsLink>['onOpenRoute']; row?: boolean }) {
   return <>
     <SettingsLink onOpenRoute={onOpenRoute} triggerRef={navigation.actionsTrigger} triggerClassName={row ? "browser-navigation-settings-link browser-navigation-actions-trigger" : "browser-navigation-actions-trigger"} triggerLabel={row ? "Settings" : undefined} />
-    {row && <><ScheduledTasksLink onOpenRoute={onOpenRoute} /><AppSettingsLink /></>}
+    {row && <AppSettingsLink />}
   </>
 }

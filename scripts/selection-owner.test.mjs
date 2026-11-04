@@ -1,6 +1,6 @@
+import { createBuildModuleLoader } from './renderer-adapter.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
 import path from 'node:path'
 import vm from 'node:vm'
 import { test } from 'node:test'
@@ -12,8 +12,8 @@ function evaluate(source, require) {
   vm.runInContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, context)
   return context.exports
 }
-const file = path.join(root, 'src/upstream/browser-plugin.ts')
-const { useBrowserOpenSessionOwner } = evaluate(readFileSync(file, 'utf8'), createRequire(file))
+const file = path.join(root, 'build/renderer/browser-plugin.ts')
+const { useBrowserOpenSessionOwner } = createBuildModuleLoader().load(file)
 const source = useBrowserOpenSessionOwner(readFileSync('apps/desktop/src/app/open-session.ts', 'utf8'), root)
 function harness() {
   const calls = [], errors = []

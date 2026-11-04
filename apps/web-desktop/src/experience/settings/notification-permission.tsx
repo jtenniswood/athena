@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '../../upstream/ui'
 import { browserNotificationPermission, requestBrowserNotificationPermission } from '../../platform/notifications'
 import { androidPushActive, isAndroidApp, refreshAndroidNotificationPermission } from '../../platform/android'
+import { useSettingsPresentation } from './presentation'
 
 export function BrowserNotificationPermissionSetting() {
   const native = isAndroidApp()
@@ -44,17 +45,23 @@ export function BrowserNotificationPermissionSetting() {
       setRequesting(false)
     }
   }
+  const title = native ? 'Android notifications' : 'Browser notifications'
+  const hint = native && pushEnabled ? 'Response alerts can arrive while the app is closed.' : 'Alerts pause when Athena is closed or suspended.'
+  const presentation = useSettingsPresentation([
+    { kind: 'heading', label: title }, { kind: 'text', label: description },
+    ...(permission === 'default' ? [{ id: 'permission', kind: 'action' as const,
+      label: requesting ? 'Waiting for permission…' : 'Allow notifications', disabled: requesting, run: requestPermission }] : []),
+    ...(['default', 'granted'].includes(permission) ? [{ kind: 'text' as const, label: hint }] : [])
+  ])
 
-  return <section className="browser-notification-permission" aria-label="Notification permission">
+  return <section ref={presentation} className="browser-notification-permission" aria-label="Notification permission">
     <div className="browser-notification-permission-copy">
-      <h3 className="browser-settings-page-title">{native ? 'Android notifications' : 'Browser notifications'}</h3>
+      <h3 className="browser-settings-page-title">{title}</h3>
       <p className="browser-settings-page-description" role="status">{description}</p>
     </div>
     {permission === 'default' && <Button disabled={requesting} aria-busy={requesting} onClick={() => void requestPermission()} type="button">
       {requesting ? 'Waiting for permission…' : 'Allow notifications'}
     </Button>}
-    {(permission === 'default' || permission === 'granted') && <p className="browser-settings-page-description browser-notification-permission-hint">{native && pushEnabled
-      ? 'Response alerts can arrive while the app is closed.'
-      : 'Alerts pause when Athena is closed or suspended.'}</p>}
+    {(permission === 'default' || permission === 'granted') && <p className="browser-settings-page-description browser-notification-permission-hint">{hint}</p>}
   </section>
 }

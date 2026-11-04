@@ -9,6 +9,31 @@
 @source "./";
 @import "../../desktop/src/styles.css";
 
+/* Extend row backgrounds through the sidebar gutters while preserving text insets. */
+.browser-sessions-pane [data-sessions-mode] [data-browser-section-header] {
+  padding-inline: .625rem;
+}
+.browser-sessions-pane [data-web-session-id] {
+  width: 100%;
+  min-width: 0;
+  padding-inline-start: .625rem;
+  padding-inline-end: .625rem;
+  border-radius: 0;
+}
+.browser-sessions-pane [data-web-session-selected] {
+  background-color: var(--ui-row-active-background);
+}
+.browser-sessions-pane [data-web-session-selected]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: 0;
+  background: var(--theme-primary);
+  pointer-events: none;
+}
+
 .browser-sessions-pane button[data-slot="row-button"] .browser-session-title {
   overflow: hidden;
   white-space: nowrap;
@@ -21,22 +46,36 @@ body > [data-radix-popper-content-wrapper] > .tooltip-bubble.browser-session-pre
   width: 22rem;
   max-height: min(32rem, var(--radix-tooltip-content-available-height));
   overflow: hidden;
-  padding: 1rem;
+  padding: 0.75rem;
   border: 1px solid var(--dt-border);
   border-radius: 0.75rem;
   background: var(--ui-bg-elevated);
   color: var(--ui-text-primary);
   box-shadow: 0 10px 32px #0003;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 400;
 }
-.browser-session-preview [data-slot='tooltip-arrow'] { fill: var(--ui-bg-elevated); }
-.browser-session-preview-title { font-size: 0.9375rem; font-weight: 600; white-space: normal; overflow-wrap: anywhere; }
-.browser-session-preview-meta { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; margin-top: 0.625rem; color: var(--ui-text-tertiary); font-size: 0.6875rem; }
-.browser-session-generation { margin-top: 0.875rem; border-top: 1px solid var(--dt-border); padding-top: 0.75rem; }
-.browser-session-preview-caption { font-weight: 600; }
-.browser-session-generation time { color: var(--ui-text-tertiary); font-size: 0.6875rem; }
-.browser-session-generation p { margin-top: 0.375rem; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden; }
+.tooltip-bubble.browser-session-preview [data-slot='tooltip-arrow'] {
+  visibility: hidden;
+}
+/* Keep Radix's arrow measurement and rotation, but overlap the card border
+   with a filled corner so the pointer and card share one continuous outline. */
+.tooltip-bubble.browser-session-preview > span:has(> [data-slot='tooltip-arrow'])::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: calc(7px * var(--web-ui-scale, 1));
+  height: calc(7px * var(--web-ui-scale, 1));
+  background: var(--ui-bg-elevated);
+  border-right: 1px solid var(--dt-border);
+  border-bottom: 1px solid var(--dt-border);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.browser-session-preview-title { font-size: 0.8125rem; font-weight: 600; white-space: normal; overflow-wrap: anywhere; }
+.browser-session-preview-meta { margin-top: 0.125rem; color: var(--ui-text-tertiary); font-size: 0.625rem; }
+.browser-session-generation { margin-top: 0.5rem; border-top: 1px solid var(--dt-border); padding-top: 0.5rem; }
+.browser-session-generation p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden; }
 .hermes-startup-recovery {
   box-sizing: border-box;
   min-height: 100vh;

@@ -14,7 +14,9 @@ Historical plans do not add acceptance gates to ordinary changes.
 | Typecheck and build | `pnpm typecheck`, `pnpm build`; Docker and compatibility workflow | Validate the wrapper and its renderer integration and build the browser app. |
 | Development server | `pnpm dev`; manual local invocation | Serve the app with the same-origin gateway proxy. |
 | Compatibility registry | `pnpm check:compatibility-registry`, `pnpm docs:compatibility`; Vite plugins and compatibility workflow | Check reviewed source/output fingerprints and generate the inventory and TypeScript aliases. Generation does not accept new fingerprints. |
+| Behavioral verification | `pnpm verify:behavior`; compatibility workflow and focused local checks | Plan declared scenarios for selected entries or changed wrapper dependencies, then verify actual Node/Chromium execution results. |
 | Hosting configuration | `scripts/runtime-config.mjs`; Docker entrypoint and Vite | Validate hosting settings and generate runtime scripts and nginx configuration. |
+| Runtime services | `apps/web-desktop/server/services.mjs`; Vite, preview and `apps/web-desktop/server/main.mjs` | Assemble shared preferences, Android sign-in and push services with one HTTP/WebSocket lifecycle. |
 | Build identity | `scripts/build-info.mjs`; Vite | Record wrapper revision, renderer revision and dependency lock identity. |
 | Versioned and manual image builds | `.github/workflows/release.yml`; version tag or manual dispatch | Publish the image; only a dispatch on `main` requests Komodo deployment. |
 | Development images | `.github/workflows/dev-image.yml`; manual branch dispatch | Publish `dev-latest` and `dev-sha-<revision>` for testing, without deployment. |
@@ -33,6 +35,76 @@ existing focused tests for draft durability, selection races, authentication or
 update activation when relevant. `pnpm test:foundation` is an optional collection
 of Node checks, not a requirement to run every suite for every edit.
 
+## Focused compatibility verification
+
+The registry records which behaviors protect each adapter. List its checks before
+running them:
+
+```sh
+pnpm verify:behavior --entry bot-session-cancellation --list
+pnpm verify:behavior --changed origin/main --runner node --list
+```
+
+`--changed` compares the current tracked tree with a commit, including individual
+registry edits and removed entries. It follows wrapper imports, injected wrapper
+paths, and replacement-module dependencies conservatively. An owner containing
+several handlers can select extra scenarios. Renderer, dependency-lock and shared
+build-adapter changes select all entries. This is a verification plan, not proof
+that tests ran or a measured coverage report.
+
+Add `--run` to execute the selected scenarios. The runner matches literal declared
+scenario text and verifies test names, files and successful execution results.
+Skipped, missing or unmatched scenarios fail verification. An explicit
+`--runner node` or `--runner browser` reports other references as deferred; it does
+not claim to verify them. Upstream Vitest references remain supporting source
+references and cannot satisfy this runner's execution check.
+
+```sh
+pnpm verify:behavior --entry browser-settings-pending-saves --runner node --run
+HERMES_TEST_IMAGE=athena:local pnpm verify:behavior --entry bot-session-cancellation --runner browser --run
+```
+
+Browser scenarios retain their existing fixture requirements: interruption tests
+need a built nginx image and Docker; previous-image upgrade tests also need their
+immutable baseline. `--output test-results/behavior.json` saves the plan or actual
+execution results for inspection.
+Browser screenshots and traces use an isolated temporary directory recorded in
+the execution report, so another Playwright invocation cannot delete them.
+
+Settings presentation changes have focused Node checks in
+`scripts/settings-presentation.test.mjs` and
+`scripts/config-field-presentation.test.mjs`. The browser fixtures
+`tests/browser/native-settings.spec.mjs` and
+`tests/browser/settings-presentation.spec.mjs` verify explicit commands, stale
+profile/owner rejection, imports, secret omission, payload limits, React Strict
+Mode and pending-save failures. They do not require a Docker image. The built
+application's Android web-layout and configuration tests additionally exercise
+the real renderer, wrapper pages, profile-scoped saves and draft preservation.
+
+Sidebar controller changes use `scripts/sidebar-controller.test.mjs` alongside
+the registry and compiler checks. The built-image scenarios in
+`tests/browser/browser.spec.mjs` exercise search, section disclosure, inline
+project expansion, owner-scoped deletion, profile visibility, cron peeks, drag
+ordering and draft preservation. The isolated
+`tests/browser/sidebar-tree.spec.mjs` fixture checks repository/worktree disclosure,
+paging and owner callbacks because browser startup deliberately keeps project
+drill-in parked at the overview. The controller tests protect hook ordering,
+captured command owners and creation
+after branch-switch failures; they do not replace the rendered workflow checks.
+
+Composer keyboard changes have a built-application check in
+`tests/browser/composer-keyboard.spec.mjs`. After `pnpm build`, run it with
+`pnpm exec playwright test tests/browser/composer-keyboard.spec.mjs --project=chromium`;
+WebKit is also supported. The fixture serves the production bundle through Vite
+preview with a temporary synthetic gateway. It checks line-break undo, draft
+restoration, normal submission, composition flags and selection replacement.
+
+The compatibility workflow runs affected declared Node scenarios and uses the
+selection-race entry for a focused built-image check when relevant engine or
+selection boundaries change. It preserves the plans and execution results as
+optional diagnostic artifacts. It does not run the entire browser suite or
+change the deployment process.
+
 ## Optional diagnostics and parked automation
 
 | Tool | Caller / invocation | Status |
@@ -40,6 +112,7 @@ of Node checks, not a requirement to run every suite for every edit.
 | Synthetic gateway and browser fixtures | `scripts/preview/`, `tests/browser/`, `compose.browser-preview.yml` | Optional isolated workflow checks; see [browser preview](browser-preview.md). |
 | Previous-image upgrade baseline | `scripts/prepare-upgrade-baseline.mjs`, `tests/fixtures/upgrade-baseline.json` | Optional real-composer upgrade/rollback diagnosis. |
 | Compatibility report | `pnpm check:upstream`, `scripts/renderer-compatibility-report.mjs` | Useful when reviewing a renderer pin change. |
+| Adapted renderer inspection | `pnpm inspect:renderer`, `scripts/inspect-renderer.mjs` | Export original and adapted modules, replacement policies and input hashes for local inspection. |
 | Renderer proposal tooling | `renderer-update.yml`, `scripts/propose-renderer-update.mjs`, update-state and policy helpers | Retained automation; keep activation parked unless explicitly requested. |
 | Automation setup audit | `pnpm check:update-setup` | Read-only check of the optional updater setup; missing parked setup does not block development. |
 | Repository rules configurator | `scripts/configure-repository.mjs` | Retained for the old automation design. Its apply mode changes repository settings; it is not routine setup. |
@@ -47,6 +120,35 @@ of Node checks, not a requirement to run every suite for every edit.
 The retained updater is described in [upstream updates](upstream-updates.md).
 It does not replace the active image publisher or the externally maintained
 Komodo deployment configuration.
+
+### Inspect the source used by the renderer adapter
+
+After preparing the pinned renderer and installing dependencies, export a focused
+snapshot with a compatibility entry name:
+
+```sh
+pnpm inspect:renderer --entry browser-settings-controller
+pnpm inspect:renderer --entry browser-timeline-scrubbing --entry browser-dialog-boundary
+```
+
+Without `--entry`, the command exports every registered renderer/shared module.
+It prints a new snapshot directory under ignored `test-results/renderer-inspection/`.
+Use `--output /tmp/athena-renderer-review` to choose a new directory whose parent
+already exists. Existing destinations and fetched renderer directories are refused.
+
+Each snapshot contains `original/`, `adapted/`, `replacements/` and a manifest.
+The adapted files come directly from the shared Vite/TypeScript transform adapter.
+Replacement sources are separate because importer restrictions and bypasses decide
+which source a caller receives; the manifest records those policies. Selecting
+one entry includes the other registered interventions on that same module.
+The manifest records wrapper/renderer revisions, dependency-lock and registry
+hashes, build-adapter input hashes and exact artifact hashes. Normalized adapted
+hashes replace the local web root with `<web-root>` for comparison across checkouts.
+Snapshots retain the actual injected local import paths and should stay local.
+
+This is a diagnostic export, not a standalone build, a complete dependency graph
+or evidence that behavior was tested. The command preserves the normal reviewed
+input/output checks, never accepts fingerprints, and never edits fetched sources.
 
 ## Historical executables and plans
 

@@ -1,5 +1,4 @@
 import { prepareBrowserBridge } from './browser-bootstrap'
-import { installSidebarCollapse } from '../web-sidebar-collapse'
 
 /** Install the host before evaluating stores that read its desktop compatibility bridge. */
 export async function startBrowserHost(): Promise<void> {
@@ -8,9 +7,17 @@ export async function startBrowserHost(): Promise<void> {
   const { observeRendererPreferences } = await import('./preference-sync')
   observeRendererPreferences()
   prepareBrowserBridge()
-  installSidebarCollapse()
   await import('./engine-registration')
-  const { initializeBrowserShell } = await import('./browser-initialize')
-  initializeBrowserShell()
-  await import('../../../desktop/src/main')
+  const { installBrowserSessionRoutes } = await import('./browser-session-routes')
+  const stopSessionRoutes = installBrowserSessionRoutes()
+  let stopNotifications = () => {}
+  try {
+    const { installBrowserNotificationCommands } = await import('./browser-notifications')
+    stopNotifications = installBrowserNotificationCommands()
+    const { installBrowserWindowCommands } = await import('./browser-windows')
+    installBrowserWindowCommands()
+    const { initializeBrowserShell } = await import('./browser-initialize')
+    initializeBrowserShell()
+    await import('../../../desktop/src/main')
+  } catch (error) { stopNotifications(); stopSessionRoutes(); throw error }
 }

@@ -1,22 +1,17 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { createRequire } from 'node:module'
 import vm from 'node:vm'
 import { test } from 'node:test'
 import ts from 'typescript'
 import { loadRegistry, validateRegistry, registryContracts, checkGeneratedRegistryFiles, generatedRegistryFiles, coverageReport } from './compatibility-registry.mjs'
 import { inspectContracts } from './renderer-compatibility-report.mjs'
-import { rendererAdapterPlugin } from './renderer-adapter.mjs'
+import { createBuildModuleLoader, rendererAdapterPlugin } from './renderer-adapter.mjs'
 
 const root = path.resolve('apps/web-desktop')
 const registry = loadRegistry()
-function load(name) {
-  const filename = path.join(root, 'src/upstream', name)
-  const context = vm.createContext({ exports: {}, require: createRequire(filename) })
-  vm.runInContext(ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText, context)
-  return context.exports
-}
+function load(name) { return createBuildModuleLoader().load(path.join(root, 'build/renderer', name)) }
+
 const { browserPlugin, browserActivityNotificationsPlugin } = load('browser-plugin.ts')
 const { transformRenderer } = load('transforms.ts')
 const { rendererOverrides } = load('overrides.ts')

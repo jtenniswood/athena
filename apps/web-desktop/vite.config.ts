@@ -2,10 +2,7 @@ import { rendererAdapterPlugin, adapterAliases } from '../../scripts/renderer-ad
 import { runtimeConfiguration, runtimeScripts, matchesGatewayRoute, navigationFallbackDenylist, type HostingConfiguration } from '../../scripts/runtime-config.mjs'
 import { compatibilitySingletons } from '../../scripts/aliases.mjs'
 import { buildInfoPlugin } from '../../scripts/build-info.mjs'
-import { createPreferencesHandler, preferencesPath } from '../../scripts/preferences-server.mjs'
-import { createAndroidAuthHandler } from '../../scripts/android-auth.mjs'
-import { createAndroidPush } from '../../scripts/android-push.mjs'
-import { createFirebaseSender } from '../../scripts/firebase-messaging.mjs'
+import { createAthenaServices } from './server/services.mjs'
 import { defineConfig, loadEnv, type Plugin, type PreviewServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -82,87 +79,6 @@ const emojibaseAssets = () => ({
   }
 })
 
-// The web bridge lists and loads installed desktop plugins at runtime from
-// the Hermes home dir; serve both plugin roots over HTTP (dev + preview).
-// HERMES_HOME overrides the default ~/.hermes location.
-let hermesHome = process.env.HERMES_HOME ?? path.join(os.homedir(), '.hermes')
-
-// Shared structural type for the dev AND preview middleware servers.
-interface PluginsServerLike {
-  middlewares: { use: (route: string, handler: (req: any, res: any, next: () => void) => void) => void }
-}
-
-const hermesPluginsAssets = () => {
-  const roots = [
-    { prefix: '/desktop-plugins', dir: path.join(hermesHome, 'desktop-plugins') },
-    { prefix: '/plugins', dir: path.join(hermesHome, 'plugins') }
-  ]
-
-  const attach = (server: PluginsServerLike): void => {
-    for (const { prefix, dir } of roots) {
-      server.middlewares.use(prefix, (req, res, next) => {
-        const rel = (req.url ?? '').split('?')[0].replace(/^\/+/, '')
-
-        if (rel === '.listing') {
-          // Shape matches production: nginx.conf.template serves this same
-          // endpoint via its built-in autoindex (JSON format), which emits
-          // {name,type} objects rather than bare name strings — see the
-          // `readDir` bridge code in web-bridge/bridge.ts.
-          fs.readdir(dir, { withFileTypes: true }, (err: unknown, entries) => {
-            if (err) {
-              res.setHeader('Content-Type', 'application/json')
-              res.end('[]')
-              return
-            }
-            res.setHeader('Content-Type', 'application/json')
-            res.end(
-              JSON.stringify(
-                entries.filter(e => e.isDirectory()).map(e => ({ name: e.name, type: 'directory' }))
-              )
-            )
-          })
-          return
-        }
-
-        const normalized = path.normalize(rel)
-
-        if (!rel || normalized.startsWith('..') || path.isAbsolute(normalized)) {
-          res.statusCode = 404
-          res.end('not found')
-          return
-        }
-        const file = path.join(dir, normalized)
-
-        if (!file.startsWith(`${dir}${path.sep}`)) {
-          res.statusCode = 403
-          res.end('forbidden')
-          return
-        }
-        fs.readFile(file, (err: unknown, buf: Buffer) => {
-          if (err) {
-            res.statusCode = 404
-            res.end('not found')
-            return
-          }
-          res.setHeader('Cache-Control', 'no-store')
-          res.setHeader('Content-Type', file.endsWith('.js') ? 'text/javascript' : 'application/octet-stream')
-          res.end(buf)
-        })
-      })
-    }
-  }
-
-  return {
-    name: 'hermes:plugins-assets',
-    configureServer(server: PluginsServerLike) {
-      attach(server)
-    },
-    configurePreviewServer(server: PluginsServerLike) {
-      attach(server)
-    }
-  }
-}
-
 // A single configured target is shared by development, preview, and nginx.
 let hosting: HostingConfiguration = runtimeConfiguration()
 
@@ -175,16 +91,14 @@ interface ProxyServerLike {
 }
 
 function attachDynamicProxy(server: ProxyServerLike): void {
-  const androidAuth = createAndroidAuthHandler({ target: hosting.target })
-  const androidPush = createAndroidPush({ target: hosting.target, sender: createFirebaseSender(), directory: process.env.HERMES_PREFERENCES_DIR })
-  if (server.httpServer) {
-    androidPush.attach(server.httpServer)
-    server.httpServer.once('close', () => androidPush.close())
-  }
-  const preferences = createPreferencesHandler({
+  const services = createAthenaServices({
     target: hosting.target,
+    home: hosting.home,
     directory: process.env.HERMES_PREFERENCES_DIR || path.resolve(__dirname, '../../.athena/preferences')
   })
+  if (server.httpServer) {
+    services.attach(server.httpServer)
+  }
   // Route HTTPS hostname-based gateways correctly (including Cloudflare
   // Tunnel) while retaining the app origin in forwarded metadata.
   const proxy: ProxyServer = createProxyServer({ changeOrigin: true, secure: true, ws: true })
@@ -211,16 +125,9 @@ function attachDynamicProxy(server: ProxyServerLike): void {
     }
   })
 
-  server.middlewares.use((req, res, next) => {
+  server.middlewares.use((req, res, next) => { void (async () => {
     const pathname = req.url?.split('?')[0]
-    if (pathname === '/android/sign-in' || pathname?.startsWith('/api/athena/android/')) {
-      void androidAuth(req, res).then(handled => handled || androidPush.handle(req, res)).then(handled => { if (!handled) next() })
-      return
-    }
-    if (pathname === preferencesPath) {
-      void preferences(req, res)
-      return
-    }
+    if (await services.handle(req, res)) return
     const scripts = runtimeScripts(hosting)
     if (pathname && Object.hasOwn(scripts, pathname.slice(1))) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
@@ -230,7 +137,7 @@ function attachDynamicProxy(server: ProxyServerLike): void {
     }
     if (!matchesGatewayRoute(req.url)) return next()
     proxy.web(req, res, { target: hosting.target })
-  })
+  })().catch(next) })
 
   server.httpServer?.on('upgrade', (req, socket, head) => {
     if (req.url?.split('?')[0] === '/api/athena/android/ws') return
@@ -256,7 +163,6 @@ export default defineConfig(({ command, mode }) => {
   // (WEB_ALLOWED_HOSTS, comma-separated) — e.g. Tailscale names, LAN hostnames.
   const env = loadEnv(mode, __dirname, '')
   hosting = runtimeConfiguration({ HERMES_HOME: path.join(os.homedir(), '.hermes'), ...env, ...process.env })
-  hermesHome = hosting.home
   const envAllowedHosts = (env.WEB_ALLOWED_HOSTS ?? '')
     .split(',')
     .map(s => s.trim())
@@ -324,8 +230,7 @@ export default defineConfig(({ command, mode }) => {
         enabled: false
       }
     }),
-    emojibaseAssets(),
-    hermesPluginsAssets()
+    emojibaseAssets()
   ],
   css: {
     postcss: { plugins: [] }

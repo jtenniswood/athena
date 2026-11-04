@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><meta charset="UTF-8"><title>Display scale preference fixture</title>
+<body><button type="button">Focus outside editor</button><label>Draft<textarea>Keep this draft</textarea></label><output aria-label="Scale"></output>
+<script type="module">
+  import { createWebZoomBridge } from '../../../apps/web-desktop/src/platform/display.ts'
+  import { browserPreference } from '../../../apps/web-desktop/src/platform/preferences.ts'
+  window.zoom = createWebZoomBridge()
+  window.preference = browserPreference
+  window.changes = []
+  const display = change => { document.querySelector('output').textContent = String(change.percent) }
+  window.zoom.onChanged(change => { window.changes.push(change.percent); display(change) })
+  window.zoom.get().then(display)
+</script></body></html>

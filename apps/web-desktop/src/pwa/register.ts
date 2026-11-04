@@ -1,5 +1,7 @@
 import { reloadReadiness, reloadReadinessAfterSaving, type DraftSnapshot } from '../platform/reload-safety'
 import { installUpdateNetworkBarrier } from './update-network'
+import { beginBrowserTransition } from '../platform/browser-transition'
+import { activateBrowserNotificationCallback, browserNotificationCallbackReady, routeBrowserNotification } from '../platform/notification-navigation'
 
 export type PwaUpdateNotice = {
   readonly update: () => void
@@ -36,6 +38,7 @@ export function registerPwa(): void {
   const local = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost')
   if (protocol !== 'https:' && !local) return
   const network = installUpdateNetworkBarrier()
+  let releaseInteraction: (() => void) | undefined
   let transaction: string | undefined
   let snapshot: DraftSnapshot | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -46,34 +49,48 @@ export function registerPwa(): void {
     publishPwaUpdate(notice)
   }
   const unlock = () => {
-    const root = document.getElementById('root')
-    if (root) root.inert = false
+    releaseInteraction?.()
+    releaseInteraction = undefined
     clearTimeout(timer); transaction = undefined; snapshot = undefined
     network.resume()
   }
   navigator.serviceWorker.addEventListener('message', async event => {
     const message = event.data
+    if (message?.type === 'ATHENA_NOTIFICATION_ACTIVATE') {
+      const callback = { ...message, dismiss: Boolean(transaction) || message.dismiss === true }
+      const owned = activateBrowserNotificationCallback(callback)
+      event.ports[0]?.postMessage({ owned, ready: owned && browserNotificationCallbackReady(callback) })
+      return
+    }
+    if (message?.type === 'ATHENA_NOTIFICATION_FOCUS') {
+      event.ports[0]?.postMessage({ ready: !transaction && typeof message.url === 'string' && routeBrowserNotification(message.url, true) })
+      return
+    }
+    if (message?.type === 'ATHENA_NOTIFICATION_ROUTE') {
+      event.ports[0]?.postMessage({ ready: !transaction && typeof message.url === 'string' && routeBrowserNotification(message.url) })
+      return
+    }
     if (message?.type === 'HERMES_ABORT_UPDATE') {
       if (message.transaction === transaction) unlock()
-      setStatus('Update postponed. Finish work in all Hermes tabs, or close older tabs, then try again.')
+      setStatus('Update postponed. Save pending changes in all Hermes tabs, or close older tabs, then try again.')
       return
     }
     if (!['HERMES_FLUSH_UPDATE', 'HERMES_VERIFY_UPDATE'].includes(message?.type)) return
     if (message.type === 'HERMES_FLUSH_UPDATE') {
       if (transaction && transaction !== message.transaction) { event.ports[0]?.postMessage({ ready: false }); return }
+      releaseInteraction ??= beginBrowserTransition()
+      if (!releaseInteraction) { event.ports[0]?.postMessage({ ready: false }); return }
       transaction = message.transaction
       snapshot = undefined
-      const root = document.getElementById('root')
-      if (root) root.inert = true
       clearTimeout(timer); timer = setTimeout(unlock, 15000)
-      const state = await reloadReadinessAfterSaving()
+      const state = await reloadReadinessAfterSaving('ui-update')
       // A worker timeout/abort must not leave a late save holding the UI locked.
       if (transaction !== message.transaction) { event.ports[0]?.postMessage({ ready: false }); return }
       // Settings owners may need to finish an ordinary gateway save. Keep the
       // network open until those owners and composer drafts have been flushed.
       const drained = state.ready && await network.pause()
       if (transaction !== message.transaction) { event.ports[0]?.postMessage({ ready: false }); return }
-      const verified = drained ? reloadReadiness() : state
+      const verified = drained ? reloadReadiness(true, 'ui-update') : state
       if (verified.ready && drained) {
         snapshot = verified.drafts
       } else {
@@ -89,7 +106,7 @@ export function registerPwa(): void {
       } catch { ready = false }
       // Recheck activity and every prepared entry. Other tabs may have added
       // independently saved drafts while their flushes completed.
-      const state = await reloadReadinessAfterSaving()
+      const state = await reloadReadinessAfterSaving('ui-update')
       const current = state.drafts
       // The upstream stash uses insertion order for recency. A storage sync
       // can reorder unchanged entries without changing any conversation draft.
@@ -101,18 +118,18 @@ export function registerPwa(): void {
   })
   navigator.serviceWorker.addEventListener('controllerchange', async () => {
     const prepared = transaction
-    if (prepared && (await reloadReadinessAfterSaving()).ready && transaction === prepared) window.location.reload()
+    if (prepared && (await reloadReadinessAfterSaving('ui-update')).ready && transaction === prepared) window.location.reload()
     else unlock()
   })
   const showUpdate = (registration: ServiceWorkerRegistration) => {
     if (!registration.waiting || !navigator.serviceWorker.controller || notice) return
     const update = async () => {
-      const state = await reloadReadinessAfterSaving()
+      const state = await reloadReadinessAfterSaving('ui-update')
       if (!state.ready) { setStatus(state.reason || 'Update postponed.'); return }
       setStatus('Checking open Hermes tabs…')
       registration.waiting?.postMessage({ type: 'HERMES_PREPARE_UPDATE' })
     }
-    notice = { update, message: 'A Hermes update is ready.' }
+    notice = { update, message: 'A UI update is ready. Running tasks will continue while the app reconnects.' }
     publishPwaUpdate(notice)
   }
   const register = async () => {

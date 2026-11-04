@@ -1,5 +1,6 @@
 import { assertSafeConnectionChange, setActiveWork } from '../platform/reload-safety'
 import { browserCapabilities } from '../platform/capabilities'
+import { claimBrowserAmbientCue } from '../platform/ambient-claims'
 import { browserSignInTarget } from '../platform/sign-in-target'
 import type { DesktopBootProgress, DesktopCloudAgentSignInResult, DesktopCloudDiscoverResult, DesktopCloudStatus, QuickEntryStatus, QuickEntrySubmitPayload } from '../upstream/types'
 import {
@@ -15,10 +16,11 @@ import {
 } from '../web-bridge/gateways'
 
 import { buildInfo } from '../build-info'
+import { openBrowserExternalLink } from './external-links'
 import { browserDefaultProfile as defaultProfileRoute } from '../platform/browser-default-profile'
 import { createWebZoomBridge } from '../platform/display'
 import { clipboardImageAsFile, readClipboard, writeClipboard } from '../platform/clipboard'
-import { isUnderPluginRoot, isWebFileHandle, registerWebFile, webFileAsDataUrl, ensureFileInput, pickWithInput, acceptsFor } from '../platform/files'
+import { isUnderPluginRoot, isWebFileHandle, registerWebFile, webFileAsDataUrl, pickBrowserFiles } from '../platform/files'
 import { webNotify } from '../platform/notifications'
 import { androidPushGatewayUrl, resumeAndroidPush, stopAndroidPush } from '../platform/android-push'
 import { WEB_CONNECTION_ID, wsBaseUrl, connection, connectionForProfile, resolveToken, buildTokenWsUrl, mintWsTicket, apiFetch, waitForRemoteRestart, loadStoredConnection, persistConnection, toConnectionConfig, fetchStatus, baseUrl, isSameOrigin, openOauthLoginPopup } from '../platform/connection'
@@ -43,7 +45,7 @@ function readyBootProgress(): DesktopBootProgress {
  * self-disable (terminal), or never reach the native path in remote mode
  * (git). The browser provides its own zoom implementation below.
  */
-type WebBridge = Omit<Window['hermesDesktop'], 'terminal' | 'git'> & { agentPluginsRoot: () => Promise<string> }
+type WebBridge = Omit<Window['hermesDesktop'], 'terminal' | 'git' | 'openWindow' | 'openSessionWindow'> & { agentPluginsRoot: () => Promise<string> }
 
 export function createWebBridge(): Window['hermesDesktop'] {
   window.__HERMES_WEB_BRIDGE__ = true
@@ -73,8 +75,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
     getSecretStorageEncryption: async () => ({ on: capabilities.secureTokenStorage }),
     setSecretStorageEncryption: async () => ({ on: capabilities.secureTokenStorage }),
     revalidateConnection: async () => ({ ok: true, rebuilt: false }),
-    // Single window in the browser: always the first to claim a cue.
-    claimAmbientCue: async () => true,
+    claimAmbientCue: claimBrowserAmbientCue,
     getGatewayWsUrl: async () => {
       // One origin for both the ticket mint and the socket connect, so the dev
       // proxy routes them to the same gateway (a mismatch would 4403).
@@ -96,16 +97,6 @@ export function createWebBridge(): Window['hermesDesktop'] {
       }
 
       return bridge.getGatewayWsUrl()
-    },
-    openSessionWindow: async sessionId => {
-      const opened = window.open(`${window.location.pathname}#/${sessionId}`, '_blank', 'noopener')
-
-      return opened ? { ok: true } : { ok: false, error: 'popup-blocked' }
-    },
-    openWindow: async () => {
-      const opened = window.open(window.location.pathname, '_blank', 'noopener')
-
-      return opened ? { ok: true } : { ok: false, error: 'popup-blocked' }
     },
     // No external terminal in a browser — resume-in-terminal is unavailable.
     openSessionInTerminal: async () => ({ ok: false, error: 'terminal is unavailable in the web app' }),
@@ -324,19 +315,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
       return { path: filePath, text }
     },
     selectPaths: async options => {
-      if (options?.directories) {
-        // Folders have no single byte payload a remote gateway can stage
-        // (`@folder:` refs point at a server-side path); keep the picker
-        // file-only rather than emitting a ref to an unreadable handle.
-        return []
-      }
-
-      const input = ensureFileInput()
-      input.multiple = options?.multiple !== false
-      input.webkitdirectory = false
-      input.accept = acceptsFor(options?.filters)
-
-      const files = await pickWithInput(input)
+      const files = await pickBrowserFiles(options)
 
       return files.map(file => registerWebFile(file, file.name))
     },
@@ -387,8 +366,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
     savePastedText: async text => registerWebFile(new Blob([text], { type: 'text/plain' }), 'pasted-text.txt'),
     getPathForFile: file => registerWebFile(file, file.name),
     normalizePreviewTarget: async () => null,
-    watchPreviewFile: async url => ({ id: '', path: url }),
-    watchDirectory: async dir => ({ id: '', path: dir }),
+    watchPreviewFile: async url => ({ ok: false, error: 'unsupported', message: 'File watching is unavailable in the browser', path: url }),
     stopPreviewFileWatch: async () => true,
     setTitleBarTheme: noop,
     setNativeTheme: noop,
@@ -396,12 +374,8 @@ export function createWebBridge(): Window['hermesDesktop'] {
     setPreviewShortcutActive: noop,
     setActiveWork,
     setKeepAwake: noop,
-    openExternal: async url => {
-      window.open(url, '_blank', 'noopener')
-    },
-    openPreviewInBrowser: async url => {
-      window.open(url, '_blank', 'noopener')
-    },
+    openExternal: openBrowserExternalLink,
+    openPreviewInBrowser: openBrowserExternalLink,
     fetchLinkTitle: async url => url,
     sanitizeWorkspaceCwd: async cwd => ({ cwd: cwd ?? '', sanitized: false }),
     settings: {
@@ -433,15 +407,13 @@ export function createWebBridge(): Window['hermesDesktop'] {
 
       if (!res.ok) {return { entries: [], error: `${res.status}: ${res.statusText}` }}
 
-      // {name,type} objects: the dev middleware (vite.config.ts) and nginx's
-      // built-in autoindex (nginx.conf.template, production) both emit this
-      // shape; only directory entries are listed.
-      const raw = (await res.json()) as Array<{ name?: string; type?: string }>
-      const names = raw
-        .filter(e => e && e.type === 'directory' && e.name && e.name !== '.' && e.name !== '..')
-        .map(e => e.name as string)
-
-      return { entries: names.map(name => ({ name, path: `${dir}/${name}`, isDirectory: true })) }
+      const raw: unknown = await res.json()
+      if (!Array.isArray(raw)) return { entries: [], error: 'Invalid plugin directory listing' }
+      const entries = raw.filter((entry): entry is { name: string; type: 'file' | 'directory' } =>
+        entry && typeof entry.name === 'string' && entry.name !== '' && entry.name !== '.' && entry.name !== '..' &&
+        !/[\\/\0]/.test(entry.name) && (entry.type === 'file' || entry.type === 'directory'))
+      return { entries: entries.map(entry => ({ name: entry.name, path: `${dir.replace(/\/$/, '')}/${encodeURIComponent(entry.name)}`,
+        isDirectory: entry.type === 'directory' })) }
     },
     onClosePreviewRequested: unsubscribed,
     onOpenFolderRequested: unsubscribed,
@@ -547,6 +519,8 @@ export function createWebBridge(): Window['hermesDesktop'] {
   }
 
   // Desktop declares terminal as required, but browser consumers probe for it.
-  // Keep native APIs absent; the checked WebBridge type covers every supported member.
+  // Keep native APIs absent. The host installs browser window commands after
+  // engine registration; Android retains a single app window. Consumers probe
+  // these capabilities when used. The checked type covers the remaining members.
   return bridge as unknown as Window['hermesDesktop']
 }

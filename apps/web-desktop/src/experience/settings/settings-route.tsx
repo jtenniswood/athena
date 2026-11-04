@@ -1,12 +1,20 @@
+import { useNavigate } from 'react-router'
 import { Codicon, type OverlayNavGroup } from '../../upstream/browser-api'
-import { useBrowserSettingsController } from '../../upstream/settings-controller-api'
-import type { BrowserSettingsPageProps } from '../contracts/settings'
+import { useBrowserEngine } from '../engine'
+import type { BrowserSettingsController, BrowserSettingsPageProps } from '../contracts/settings'
 import { settingsCatalog, settingsPageIsVisible, settingsPageLabel } from './catalog'
 import { BrowserSettingsPresentation } from './frame'
 
 /** Athena assembles the settings route; the adapter supplies the existing engine pages. */
 export function SettingsView(props: BrowserSettingsPageProps) {
-  const controller = useBrowserSettingsController(props)
+  const engine = useBrowserEngine()
+  const Controller = engine.settings.Controller
+  return <Controller {...props}>{controller => <BrowserSettingsRoute controller={controller} onClose={props.onClose} />}</Controller>
+}
+
+function BrowserSettingsRoute({ controller, onClose }: { controller: BrowserSettingsController; onClose(): void }) {
+  const navigate = useNavigate()
+  const engine = useBrowserEngine()
   const known = new Set(settingsCatalog.flatMap(group => group.pages.map(page => page.id)))
   const native = new Map(controller.nativePages.map(page => [page.id, page]))
   const pages: OverlayNavGroup[] = settingsCatalog.flatMap(group => group.pages).filter(page => settingsPageIsVisible(page.id)).map(page => {
@@ -23,7 +31,9 @@ export function SettingsView(props: BrowserSettingsPageProps) {
   pages.push(...controller.nativePages.filter(page => !known.has(page.id) && settingsPageIsVisible(page.id)))
   return <BrowserSettingsPresentation
     activeView={controller.view} backLabel={controller.labels.back} closeLabel={controller.labels.close}
-    groups={pages} onClose={props.onClose} title={controller.labels.title}
+    scopeProfile={controller.scope} searchCommand={{ label: controller.search.label, run: controller.search.open }}
+    groups={pages} onClose={onClose} title={controller.labels.title}
+    onOpenPanel={path => engine.navigation.openPage(navigate, path)}
     search={<button
       type="button" aria-label={controller.search.label} tabIndex={controller.search.active ? -1 : undefined}
       className={`browser-settings-search-button${controller.search.active ? ' is-active' : ''}`}

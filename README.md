@@ -54,6 +54,10 @@ Open <http://localhost:4174/>. The mounted Hermes directory lets Athena serve
 installed `plugins/` and `desktop-plugins/`; remove the Hermes directory mount
 if you do not use filesystem plugins.
 
+Desktop plugin folders are discovered while Athena is open. Use Settings →
+Plugins → Manage plugins to enable packaged desktop plugins, and Rescan after
+editing an existing plugin.
+
 To stop Athena:
 
 ```bash
@@ -62,6 +66,12 @@ docker stop athena
 
 For microphone access from another device, open Athena over HTTPS (for example,
 through Tailscale Serve).
+
+When **Update when safe** appears, you can refresh the UI during a running task.
+Hermes keeps the task running, and Athena reconnects to the conversation after
+the refresh. Text drafts are saved first; recordings, pending saves, and unsent
+attachments still postpone the update. This applies to UI updates, not gateway
+restarts or server changes.
 
 ### Container logs
 
@@ -109,6 +119,11 @@ receive an alert when a reply finishes in your current chat while Athena is in
 the background. Use **Send test notification** to check delivery. Clicking a
 response notification returns to its conversation.
 
+Plugin notifications can open their requested app page. Plugin callbacks run in
+the window that emitted the alert; after that window closes, the click can still
+open the saved destination. Action buttons appear where the browser supports
+them.
+
 Notifications require HTTPS or localhost. On iPhone and iPad, add Athena to the
 Home Screen and open the installed app. Keep Athena open: alerts pause if the
 browser suspends or closes it. If permission is blocked, allow notifications
@@ -127,17 +142,12 @@ controls. The separate Android header is hidden once that menu is ready and
 returns during page loading or sign-in. Older APKs and older server versions
 retain their native App settings button.
 
-On APKs supporting native Settings, the main Settings page also uses Android
-controls for categories, fields, switches, choices, and actions. The hosted
-settings code still validates and saves changes. Browsers and older APKs retain
-the web Settings page; both the APK and server need this feature.
+Settings, action menus, and the searchable model picker use the shared web
+interface in both browsers and Android. The same Hermes code validates and saves
+configuration changes. Older web clients can still use the APK's retained native
+menu and Settings capabilities.
 
-On supported APKs, the chat model menu uses a native searchable sheet. Tap a
-model to select it; tap its arrow or long-press for favorites and model options.
-Search retains Hermes model matching and large catalogs remain available across
-pages. Browsers and older APKs retain the web menu.
-
-The native setup, settings pages, and confirmation dialogs use Material 3, follow
+The native setup, App settings, and sign-in confirmation dialogs use Material 3, follow
 the system light/dark theme, and use wallpaper colours on Android 12 and later.
 Server setup includes inline address validation and a keyboard Connect action.
 

@@ -17,14 +17,14 @@ function registration(network = { pause: async () => true, resume() {} }) {
   let expire
   let reloads = 0
   const context = vm.createContext({
-    exports: {},
+    exports: {}, URL,
     navigator: { serviceWorker: {
       controller: {},
       addEventListener: (name, listener) => listeners.set(name, listener),
       register: async () => worker
     } },
     window: {
-      location: { hostname: 'localhost', protocol: 'http:', reload: () => { reloads++ } },
+      location: { href: 'http://localhost/#/chat', hostname: 'localhost', protocol: 'http:', reload: () => { reloads++ } },
       addEventListener: (name, listener) => windowListeners.set(name, listener),
       dispatchEvent() {},
       setInterval: (callback, delay) => { poll = callback; pollInterval = delay },
@@ -48,13 +48,16 @@ function registration(network = { pause: async () => true, resume() {} }) {
     return context.exports
   }
   const safety = load('platform/reload-safety.ts')
+  const routing = load('platform/notification-navigation.ts')
+  const transitions = load('platform/browser-transition.ts')
   context.require = name => name === './update-network'
-    ? { installUpdateNetworkBarrier: () => network } : safety
+    ? { installUpdateNetworkBarrier: () => network } : name === '../platform/notification-navigation' ? routing
+      : name === '../platform/browser-transition' ? transitions : safety
   safety.setActiveWork({ count: 0 })
   const pwa = load('pwa/register.ts')
   pwa.registerPwa()
   return {
-    safety, root,
+    safety, transitions, root, location: context.window.location,
     worker,
     updates: () => updates,
     notice: () => pwa.currentPwaUpdate(),
@@ -72,6 +75,11 @@ function registration(network = { pause: async () => true, resume() {} }) {
     expire() { expire() },
     controllerChange() { return listeners.get('controllerchange')() },
     reloads: () => reloads,
+    async route(url, type = 'ATHENA_NOTIFICATION_ROUTE') {
+      let reply
+      await listeners.get('message')({ data: { type, url }, ports: [{ postMessage: value => { reply = value } }] })
+      return reply
+    },
     async ask(type, transaction = 'update') {
       let reply
       await listeners.get('message')({ data: { type, transaction }, ports: [{ postMessage: value => { reply = value } }] })
@@ -92,7 +100,7 @@ test('visible apps discover waiting updates on return, reconnect, and a timer wi
     app.updateWith(async () => { app.worker.waiting = { postMessage() { messages++ } } })
     await trigger(app)
     assert.equal(app.updates(), 1)
-    assert.equal(app.notice().message, 'A Hermes update is ready.')
+    assert.equal(typeof app.notice()?.update, 'function')
     assert.equal(messages, 0)
     assert.equal(app.reloads(), 0)
     assert.equal(app.root.inert, false)
@@ -152,9 +160,8 @@ test('update verification rejects changed, removed, or unpersisted drafts', asyn
   assert.equal((await app.ask('HERMES_VERIFY_UPDATE')).ready, false)
 })
 
-test('verification still requires the prepared transaction and idle composers', async () => {
+test('verification requires the prepared transaction and reload-safe composers', async () => {
   for (const change of [
-    app => app.safety.setActiveWork({ count: 1 }),
     app => app.change({ first: 'one', second: 'two' }, { attachments: 1 }),
     app => app.change({ first: 'one', second: 'two' }, { blocked: true }),
     app => app.change({ first: 'one', second: 'two' }, { storageKey: 'other-drafts' })
@@ -169,8 +176,10 @@ test('verification still requires the prepared transaction and idle composers', 
   }
   const app = registration()
   assert.equal((await app.ask('HERMES_VERIFY_UPDATE')).ready, false)
+  app.safety.setActiveWork({ count: 1 })
   assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true)
   assert.equal((await app.ask('HERMES_VERIFY_UPDATE', 'other-update')).ready, false)
+  assert.equal((await app.ask('HERMES_VERIFY_UPDATE')).ready, true)
 })
 
 test('verification accepts an independently persisted draft added by another tab', async () => {
@@ -230,4 +239,65 @@ test('an abort while requests drain prevents a late readiness reply from freezin
   assert.equal((await flushing).ready, false)
   assert.equal(app.root.inert, false)
   assert.equal(resumed, 1)
+})
+
+test('notification routing uses this document and refuses cross-profile or frozen-update navigation', async () => {
+  const app = registration()
+  assert.equal((await app.route('http://localhost/#/next')).ready, true)
+  assert.equal(app.location.hash, '#/next')
+  for (const target of ['http://localhost/?profile=writer#/other', 'http://localhost/other-app/#/other', 'https://elsewhere.example.test/#/other', null]) {
+    assert.equal((await app.route(target)).ready, false)
+    assert.equal(app.location.hash, '#/next')
+  }
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true)
+  assert.equal((await app.route('http://localhost/#/other')).ready, false)
+  assert.equal(app.location.hash, '#/next')
+  await app.ask('HERMES_ABORT_UPDATE')
+  assert.equal((await app.route('http://localhost/#/other')).ready, true)
+  assert.equal(app.location.hash, '#/other')
+})
+
+test('a competing page transition keeps its interaction lock through update refusal and cleanup', async () => {
+  let paused = 0
+  const app = registration({ pause: async () => { paused++; return true }, resume() {} })
+  const release = app.transitions.beginBrowserTransition()
+  assert.equal(typeof release, 'function')
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, false)
+  assert.equal(paused, 0, 'refusal must not pause another transition’s requests')
+  await app.controllerChange()
+  await app.ask('HERMES_ABORT_UPDATE')
+  assert.equal(app.root.inert, true)
+  assert.equal(app.reloads(), 0)
+  release()
+  assert.equal(app.root.inert, false)
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true)
+  assert.equal(app.transitions.beginBrowserTransition(), undefined)
+  release()
+  assert.equal(app.root.inert, true, 'a stale release cannot unlock the update owner')
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true, 'the same update reuses its lock')
+  await app.ask('HERMES_ABORT_UPDATE')
+  assert.equal(app.root.inert, false)
+  const next = app.transitions.beginBrowserTransition()
+  await app.ask('HERMES_ABORT_UPDATE', 'update')
+  assert.equal(app.root.inert, true)
+  next(); next()
+  assert.equal(app.root.inert, false)
+})
+
+test('an update cannot take over a root already frozen outside its transition owner', async () => {
+  const app = registration()
+  app.root.inert = true
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, false)
+  await app.controllerChange()
+  assert.equal(app.root.inert, true)
+})
+
+test('notification focus admission preserves the live route and respects update locks', async () => {
+  const app = registration()
+  await app.route('http://localhost/#/live')
+  assert.equal((await app.route('http://localhost/#/old', 'ATHENA_NOTIFICATION_FOCUS')).ready, true)
+  assert.equal(app.location.hash, '#/live')
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true)
+  assert.equal((await app.route('http://localhost/#/old', 'ATHENA_NOTIFICATION_FOCUS')).ready, false)
+  assert.equal(app.location.hash, '#/live')
 })

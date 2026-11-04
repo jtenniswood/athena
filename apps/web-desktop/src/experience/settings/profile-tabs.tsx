@@ -1,6 +1,7 @@
 import { useId, type KeyboardEvent, type ReactNode } from 'react'
 import { ActionsContextMenu, Codicon, PanelRowMenu, profileLabel, renderActionItem, useI18n, type PanelMenuItem, type ProfileInfo } from '../../upstream/browser-api'
 import { Button } from '../../upstream/ui'
+import { useSettingsPresentation } from './presentation'
 
 export function BrowserProfileSettings({ profiles, selectedName, onSelect, onCreate, onRename, onDelete, children }: {
   profiles: ProfileInfo[]
@@ -15,6 +16,17 @@ export function BrowserProfileSettings({ profiles, selectedName, onSelect, onCre
   const id = useId()
   const tabId = (name: string) => `${id}-${encodeURIComponent(name)}`
   const panelId = `${id}-detail`
+  const presentation = useSettingsPresentation<HTMLDivElement>([
+    { kind: 'heading', label: t.profiles.title },
+    ...profiles.flatMap(profile => [
+      { id: `select:${profile.name}`, kind: 'action' as const, presentation: 'choice' as const, group: 'profiles',
+        label: profileLabel(profile), checked: profile.name === selectedName, run: () => onSelect(profile.name) },
+      { id: `rename:${profile.name}`, kind: 'action' as const, label: `${t.profiles.renameMenu}: ${profileLabel(profile)}`, run: () => onRename(profile) },
+      ...(!profile.is_default ? [{ id: `delete:${profile.name}`, kind: 'action' as const, presentation: 'destructive' as const,
+        label: `${t.common.delete}: ${profileLabel(profile)}`, run: () => onDelete(profile) }] : [])
+    ]),
+    { id: 'create', kind: 'action', label: t.profiles.newProfile, run: onCreate }
+  ])
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
     const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'))
@@ -29,7 +41,7 @@ export function BrowserProfileSettings({ profiles, selectedName, onSelect, onCre
   }
 
   return <div className="browser-profile-settings" data-browser-profile-settings="">
-    <div className="browser-profile-settings-toolbar">
+    <div ref={presentation} className="browser-profile-settings-toolbar">
       <div aria-label={t.profiles.title} data-browser-profile-tabs="" className="browser-profile-settings-tabs" onKeyDown={onKeyDown} role="tablist">
         {profiles.map(profile => {
           const label = profileLabel(profile)

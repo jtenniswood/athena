@@ -1,11 +1,10 @@
+import { useSidebarGestures } from './sidebar-gestures'
+import { useBrowserEngine } from './engine'
 import { useChatPanelSettings } from './settings/chat-panel-page'
 import { BrowserProfileNavigation } from './profile-navigation'
-import { useBrowserProfileGrouping } from '../upstream/profile-section'
-import { useAndroidVisibleConversation } from '../upstream/android-host'
 import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
 import { BrowserToolbarButton } from './ui/toolbar-button'
-import { useRendererMenuCompatibility } from '../upstream/use-renderer-menu-compatibility'
 import { BrowserNavigationTabs, BrowserNavigationSettings, BrowserNavigationResizer, useBrowserNavigation } from './navigation'
 import { BrowserActionError } from './action-errors'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
@@ -15,170 +14,32 @@ import { BrowserSessionsPane } from './sidebar-sections'
 import { BrowserBotsFallback } from './browser-bots-fallback'
 import { installTranscriptPreferences } from './transcript-preferences'
 import { Codicon, SidebarProvider } from '../upstream/browser-api'
-import { BrowserEngineHost, BrowserSessionsSurface, BrowserBotsSurface, BrowserConversationSurface, BrowserStatusSurface, useBrowserHostPanels, openBrowserPage } from '../upstream/browser-host'
 import { BrowserChatActionsMenu } from './chat-actions-menu'
-import { useBrowserConversation } from '../upstream/conversation'
-import { useBrowserSessionActions } from '../upstream/conversation-actions'
-import { browserDropProjectId, moveBrowserSessionToProject, reportBrowserProjectMoveFailure } from '../upstream/project-actions'
 import { currentPwaUpdate, subscribePwaUpdate, type PwaUpdateNotice } from '../pwa/register'
-import { installConversationSubmitScroll } from './ui/submit-scroll'
-
-interface SessionProjectDrag {
-  pointerId: number
-  sessionId: string
-  profile: string
-  startX: number
-  startY: number
-  active: boolean
-  target: HTMLElement | null
-  targetProjectId?: string
-}
-
-interface SessionReorderDrag {
-  pointerId: number
-  sourceId: string
-  startX: number
-  startY: number
-  active: boolean
-  target: HTMLElement | null
-}
 
 export function BrowserShell() {
+  const { surfaces: { Host } } = useBrowserEngine()
   return <SidebarProvider className="browser-provider" style={{ '--sidebar-width': '100%' } as CSSProperties}>
-    <BrowserEngineHost><BrowserLayout /></BrowserEngineHost>
+    <Host><BrowserLayout /></Host>
   </SidebarProvider>
 }
 function BrowserLayout() {
-  const presentationMode = useBrowserProfileGrouping()
-  useRendererMenuCompatibility()
-  useEffect(() => installConversationSubmitScroll(), [])
+  const engine = useBrowserEngine()
+  const { Sessions: BrowserSessionsSurface, Bots: BrowserBotsSurface, Conversation: BrowserConversationSurface, Status: BrowserStatusSurface } = engine.surfaces
+  const presentationMode = engine.profiles.useGrouping()
   useEffect(() => installTranscriptPreferences(), [])
-  const sessionProjectDrag = useRef<SessionProjectDrag | null>(null)
-  const sessionReorderDrag = useRef<SessionReorderDrag | null>(null)
-  useEffect(() => {
-    const clearTarget = (drag: SessionProjectDrag) => {
-      drag.target?.removeAttribute('data-session-drop-active')
-      drag.target = null
-    }
-    const clearReorderTarget = (drag: SessionReorderDrag) => {
-      drag.target?.removeAttribute('data-session-order-drop')
-      drag.target = null
-    }
-    const finish = (event: PointerEvent, commit: boolean) => {
-      const reorder = sessionReorderDrag.current
-      if (reorder?.pointerId === event.pointerId) {
-        clearReorderTarget(reorder)
-        sessionReorderDrag.current = null
-      }
-      const drag = sessionProjectDrag.current
-      if (!drag || drag.pointerId !== event.pointerId) return
-      sessionProjectDrag.current = null
-      clearTarget(drag)
-      if (!commit || !drag.active || !drag.targetProjectId) return
-      void moveBrowserSessionToProject(drag.sessionId, drag.targetProjectId, drag.profile)
-        .catch(reportBrowserProjectMoveFailure)
-    }
-    const onPointerMove = (event: PointerEvent) => {
-      const reorder = sessionReorderDrag.current
-      if (reorder?.pointerId === event.pointerId) {
-        if (!reorder.active && Math.hypot(event.clientX - reorder.startX, event.clientY - reorder.startY) >= 6) {
-          reorder.active = true
-        }
-        if (reorder.active) {
-          const element = document.elementFromPoint(event.clientX, event.clientY)
-          const candidate = element instanceof Element ? element.closest<HTMLElement>('[data-web-session-id]') : null
-          if (!candidate || candidate.dataset.webSessionId === reorder.sourceId) {
-            clearReorderTarget(reorder)
-          } else if (candidate !== reorder.target) {
-            clearReorderTarget(reorder)
-            const rect = candidate.getBoundingClientRect()
-            candidate.dataset.sessionOrderDrop = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
-            reorder.target = candidate
-          } else {
-            const rect = candidate.getBoundingClientRect()
-            candidate.dataset.sessionOrderDrop = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
-          }
-        }
-      }
-
-      const drag = sessionProjectDrag.current
-      if (!drag || drag.pointerId !== event.pointerId) return
-      if (!drag.active && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return
-      drag.active = true
-      event.preventDefault()
-      const element = document.elementFromPoint(event.clientX, event.clientY)
-      const candidate = element instanceof Element ? element.closest<HTMLElement>('[data-sessions-project]') : null
-      const projectId = candidate?.dataset.sessionsProject
-      const nextTargetProjectId = browserDropProjectId(projectId)
-      const nextTarget = nextTargetProjectId ? candidate : null
-      if (nextTarget === drag.target) return
-      clearTarget(drag)
-      drag.target = nextTarget
-      if (nextTarget) nextTarget.setAttribute('data-session-drop-active', '')
-      drag.targetProjectId = nextTarget ? nextTargetProjectId! : undefined
-    }
-    const onPointerUp = (event: PointerEvent) => finish(event, true)
-    const onPointerCancel = (event: PointerEvent) => finish(event, false)
-    window.addEventListener('pointermove', onPointerMove, { passive: false })
-    window.addEventListener('pointerup', onPointerUp)
-    window.addEventListener('pointercancel', onPointerCancel)
-    return () => {
-      const drag = sessionProjectDrag.current
-      if (drag) clearTarget(drag)
-      const reorder = sessionReorderDrag.current
-      if (reorder) clearReorderTarget(reorder)
-      sessionProjectDrag.current = null
-      sessionReorderDrag.current = null
-      window.removeEventListener('pointermove', onPointerMove)
-      window.removeEventListener('pointerup', onPointerUp)
-      window.removeEventListener('pointercancel', onPointerCancel)
-    }
-  }, [])
-  const preventSessionPaneDrag = (event: React.PointerEvent<HTMLElement>) => {
-    const target = event.target
-    if (!(target instanceof Element)) return
-    const reorderHandle = target.closest('[data-reorder-handle]')
-    if (reorderHandle && event.button === 0) {
-      const row = reorderHandle.closest<HTMLElement>('[data-web-session-id]')
-      if (row) {
-        sessionReorderDrag.current = {
-          pointerId: event.pointerId,
-          sourceId: row.dataset.webSessionId!,
-          startX: event.clientX,
-          startY: event.clientY,
-          active: false,
-          target: null
-        }
-      }
-      return
-    }
-    const row = target.closest<HTMLElement>('[data-web-session-id]')
-    if (!row || target.closest('[data-reorder-handle], [data-row-actions]')) return
-
-    // Sidebar session drags can reorder sessions or move them into a project.
-    // Let sortable rows receive the press; their adapter suppresses desktop pane dragging.
-    if (!row.querySelector('[data-reorder-handle]')) event.stopPropagation()
-    if (event.button !== 0) return
-    sessionProjectDrag.current = {
-      pointerId: event.pointerId,
-      sessionId: row.dataset.webSessionId!,
-      profile: row.dataset.webSessionProfile || 'default',
-      startX: event.clientX,
-      startY: event.clientY,
-      active: false,
-      target: null,
-      targetProjectId: undefined
-    }
-  }
   const navigate = useNavigate(), location = useLocation()
-  const conversation = useBrowserConversation()
-  const sessionActions = useBrowserSessionActions(conversation)
+  const conversation = engine.conversations.useCurrent()
+  const sessionActions = engine.conversations.useActions(conversation)
   const chatTitle = conversation.displayName || ''
-  const panels = useBrowserHostPanels()
+  const panels = engine.navigation.usePanels()
   const main = useRef<HTMLElement>(null), menu = useRef<HTMLButtonElement>(null)
   const navigation = useBrowserNavigation({ selectionKey: conversation.selectionKey, path: location.pathname, main, trigger: menu })
+  const profiles = engine.profiles.useProfiles()
+  const preventSessionPaneDrag = useSidebarGestures(navigation.drawer, engine.projects,
+    JSON.stringify([profiles.active, profiles.all, presentationMode, navigation.tab, navigation.open, location.pathname]))
   useChatPanelSettings(navigation)
-  useAndroidVisibleConversation(conversation.status === 'ready' ? conversation.sessionId : null,
+  engine.useEnvironment(conversation,
     !((navigation.mobile || navigation.compact) && navigation.drawerOpen) && !location.pathname.startsWith('/settings'))
   const { tab } = navigation
   const [updateNotice, setUpdateNotice] = useState<PwaUpdateNotice | null>(() => currentPwaUpdate())
@@ -188,7 +49,7 @@ function BrowserLayout() {
     if (notice) setUpdateDismissed(false)
   }), [])
   const openRoute = (path: string) => {
-    openBrowserPage(navigate, path)
+    engine.navigation.openPage(navigate, path)
     navigation.closeDrawer()
   }
   return <div className="browser-shell" data-browser-shell="" data-android-app={isAndroidApp() || undefined} data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined}>
@@ -198,7 +59,7 @@ function BrowserLayout() {
       <aside id="browser-navigation" ref={navigation.drawer} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={navigation.compact && navigation.drawerOpen ? 'dialog' : undefined} aria-modal={navigation.compact && navigation.drawerOpen ? true : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
         <BrowserNavigationTabs navigation={navigation} actions={tab !== 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} /> : undefined} />
         <div className="browser-navigation-body" role="tabpanel" aria-label={tab}>
-          <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}><BrowserSidebarNavigation onNavigate={openRoute} settings={tab === 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} row /> : null}><BrowserSessionsSurface /></BrowserSidebarNavigation></BrowserSessionsPane>
+          <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}><BrowserSidebarNavigation settings={tab === 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} row /> : null}><BrowserSessionsSurface /></BrowserSidebarNavigation></BrowserSessionsPane>
           <div hidden={tab !== 'bots'} className="browser-pane"><BrowserBotsSurface fallback={<BrowserBotsFallback />} /></div>
         </div>
         {updateNotice && !updateDismissed && <div className="browser-update-panel" role="status" aria-label="Application update">

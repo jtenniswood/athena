@@ -1,23 +1,23 @@
 import { beginOperation } from './reload-safety'
 import { servingBase } from '../web-bridge/gateways'
 
-/**
- * Plugin folders are served by the dev/preview middleware (and, in
- * production, nginx — see nginx.conf.template) at same-origin URLs
- * (/desktop-plugins and /plugins), each with a `.listing` endpoint returning
- * a JSON array of `{name, type}` entries for the directory's children.
- */
+/** The shared Node service serves both mounted plugin roots and their listings. */
 export const pluginRoots = () => [`${servingBase()}/desktop-plugins`, `${servingBase()}/plugins`]
 
-/**
- * True when `path` is one of the plugin roots itself, or something under it.
- * A plain `path.startsWith(root)` (the previous check) is a string-prefix
- * bug: a sibling path like `${root}Secret` also starts with `root`, since
- * `root` carries no trailing slash. Require an exact match or a `/`
- * boundary so a sibling directory can't pass as "under" a plugin root.
- */
+/** Admit the normalized asset URL, before either file or directory reads fetch it. */
 export function isUnderPluginRoot(path: string): boolean {
-  return pluginRoots().some(root => path === root || path.startsWith(`${root}/`))
+  try {
+    const target = new URL(path)
+    if (target.username || target.password || target.search || target.hash) return false
+    // Hosts decode these separators after URL parsing; they must not create a
+    // different path from the one whose root boundary was checked here.
+    if (/%2f|%5c/i.test(target.pathname)) return false
+    return pluginRoots().some(root => {
+      const allowed = new URL(root)
+      return target.origin === allowed.origin &&
+        (target.pathname === allowed.pathname || target.pathname.startsWith(`${allowed.pathname}/`))
+    })
+  } catch { return false }
 }
 
 /**
@@ -87,62 +87,52 @@ export function webFileAsDataUrl(handle: string): Promise<string> {
   })
 }
 
-// Persistent hidden <input type=file> backing selectPaths. We reuse one
-// element (retargeting `accept`/`multiple` per call) so the picker always
-// opens inside a plain user gesture without rebuilding DOM nodes.
-let fileInputEl: null | HTMLInputElement = null
+let cancelPicker: (() => void) | undefined
 
-export function ensureFileInput(): HTMLInputElement {
-  if (!fileInputEl) {
-    fileInputEl = document.createElement('input')
-    fileInputEl.type = 'file'
-    fileInputEl.style.display = 'none'
-    document.body.appendChild(fileInputEl)
-  }
-
-  return fileInputEl
+/** Each request owns its input; removing it cannot affect another draft's picker. */
+export async function pickBrowserFiles(options?: { directories?: boolean; multiple?: boolean; filters?: Array<{ extensions: string[] }> }): Promise<File[]> {
+  // Folders have no single byte payload a remote gateway can stage.
+  if (options?.directories) return []
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.style.display = 'none'
+  input.multiple = options?.multiple !== false
+  input.webkitdirectory = false
+  input.accept = acceptsFor(options?.filters)
+  document.body.appendChild(input)
+  try { return await pickWithInput(input) }
+  finally { input.remove() }
 }
 
-/** Open the native picker and resolve to the chosen files ([] on cancel).
- *  input.click() must stay inside the triggering click's user-gesture window;
- *  the Promise executor runs synchronously, so it does. */
+/** Open synchronously in the user gesture; a newer request cancels the old owner. */
 export function pickWithInput(input: HTMLInputElement): Promise<File[]> {
+  cancelPicker?.()
   const finish = beginOperation()
-  input.value = '' // allow re-selecting the same file
-
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     let settled = false
-
-    input.addEventListener('change', onChange)
-    input.addEventListener('cancel', onCancel)
-    try { input.click() } catch (error) { finish(); throw error }
-
-    // Some mobile / webview pickers never fire `cancel`, which would leave this
-    // pending forever. Fall back to [] if nothing settles in time — far longer
-    // than any real selection, so it only guards against the missed-cancel leak.
-    const pendingTimer = setTimeout(fallback, 120_000)
-
-    function settle(files: File[]): void {
-      if (settled) return
+    let pendingTimer: ReturnType<typeof setTimeout> | undefined
+    const cleanup = (): boolean => {
+      if (settled) return false
       settled = true
       clearTimeout(pendingTimer)
       input.removeEventListener('change', onChange)
       input.removeEventListener('cancel', onCancel)
+      if (cancelPicker === onCancel) cancelPicker = undefined
       finish()
-      resolve(files)
+      return true
     }
-
-    function onChange(): void {
-      settle(Array.from(input.files ?? []))
-    }
-
-    function onCancel(): void {
-      settle([])
-    }
-
-    function fallback(): void {
-      settle([])
-    }
+    function settle(files: File[]): void { if (cleanup()) resolve(files) }
+    function onChange(): void { settle(Array.from(input.files ?? [])) }
+    function onCancel(): void { settle([]) }
+    cancelPicker = onCancel
+    try {
+      input.value = ''
+      input.addEventListener('change', onChange)
+      input.addEventListener('cancel', onCancel)
+      // Retain the existing deadline for clients that omit the cancel event.
+      pendingTimer = setTimeout(onCancel, 120_000)
+      input.click()
+    } catch (error) { if (cleanup()) reject(error) }
   })
 }
 

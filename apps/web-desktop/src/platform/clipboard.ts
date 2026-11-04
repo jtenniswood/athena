@@ -1,3 +1,4 @@
+import { copyTextThroughSelection } from '@/lib/clipboard'
 import { browserCapabilities } from './capabilities'
 
 // Capture the browser method before the renderer installs its Electron shim,
@@ -50,21 +51,8 @@ export async function writeClipboard(text: string): Promise<boolean> {
     // browsers that deny the asynchronous Clipboard API.
   }
 
-  const textarea = document.createElement('textarea')
-  textarea.value = text
-  textarea.setAttribute('readonly', '')
-  textarea.style.position = 'fixed'
-  textarea.style.opacity = '0'
-  textarea.style.pointerEvents = 'none'
-  document.body.append(textarea)
-  textarea.select()
-
-  try {
-    if (!document.execCommand('copy')) {
-      throw new Error('Could not copy text to the clipboard')
-    }
-    return true
-  } finally {
-    textarea.remove()
+  if (!copyTextThroughSelection(text)) {
+    throw new Error('Could not copy text to the clipboard')
   }
+  return true
 }

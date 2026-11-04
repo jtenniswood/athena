@@ -3,6 +3,8 @@ import { browserDraftSnapshot, flushBrowserDrafts, type DraftSnapshot } from './
 
 export type { DraftSnapshot } from './draft-safety'
 
+type ReloadPurpose = 'navigation' | 'ui-update'
+
 let activeWork: number | undefined
 let operations = 0
 let pendingMedia = 0
@@ -14,27 +16,36 @@ export function beginOperation(): () => void {
   return () => { if (!complete) { complete = true; operations-- } }
 }
 
+/** Hold reloads while a media owner is recording or still producing its transcript. */
+export function beginMediaOperation(): () => void {
+  pendingMedia++
+  let complete = false
+  return () => { if (!complete) { complete = true; pendingMedia-- } }
+}
+
 /** Track the actual browser media lifetime, including permission prompts. */
 export function trackMediaRequests(): void {
   const devices = navigator.mediaDevices
   if (!devices?.getUserMedia) return
   const original = devices.getUserMedia.bind(devices)
   devices.getUserMedia = async constraints => {
-    pendingMedia++
+    const finish = beginMediaOperation()
     try {
       const stream = await original(constraints)
       for (const track of stream.getTracks()) tracks.add(track)
       return stream
-    } finally { pendingMedia-- }
+    } finally { finish() }
   }
 }
 
-export function reloadReadiness(requirePersisted = true): { ready: boolean; reason?: string; drafts?: DraftSnapshot } {
+export function reloadReadiness(requirePersisted = true, purpose: ReloadPurpose = 'navigation'): { ready: boolean; reason?: string; drafts?: DraftSnapshot } {
   if (activeWork === undefined) return { ready: false, reason: 'Wait for the app to finish connecting.' }
-  if (activeWork > 0) return { ready: false, reason: 'Wait for the active response to finish, or cancel it.' }
+  // A UI update reconnects to the same gateway and resumes its running turns.
+  // Navigation may change credentials or servers, so it still waits for work.
+  if (activeWork > 0 && purpose !== 'ui-update') return { ready: false, reason: 'Wait for the active response to finish, or cancel it.' }
   if (operations > 0) return { ready: false, reason: 'Finish selecting or uploading files first.' }
   for (const track of tracks) if (track.readyState === 'ended') tracks.delete(track)
-  if (pendingMedia || tracks.size) return { ready: false, reason: 'Finish recording first.' }
+  if (pendingMedia || tracks.size) return { ready: false, reason: 'Finish recording or transcribing first.' }
   try {
     const drafts = browserDraftSnapshot()
     if (!drafts) return { ready: false, reason: 'Wait for the app to finish connecting.' }
@@ -55,15 +66,15 @@ export function assertSafeReload(): void {
 }
 
 /** Flush pending cross-tab saves before promising that activation is safe. */
-export async function reloadReadinessAfterSaving(): Promise<ReturnType<typeof reloadReadiness>> {
-  const state = reloadReadiness(false)
+export async function reloadReadinessAfterSaving(purpose: ReloadPurpose = 'navigation'): Promise<ReturnType<typeof reloadReadiness>> {
+  const state = reloadReadiness(false, purpose)
   if (!state.ready) return state
   const pendingWork = await flushPendingBrowserWork()
   if (!pendingWork.ready) return { ready: false, reason: pendingWork.reason }
   try { await flushBrowserDrafts() }
   catch { return { ready: false, reason: 'Your text draft could not be saved. Copy it before reloading.' } }
   // Capture again after the await: activity or composer content may have changed.
-  return reloadReadiness()
+  return reloadReadiness(true, purpose)
 }
 
 /** Flush cross-tab draft writes before changing the active gateway or credentials. */

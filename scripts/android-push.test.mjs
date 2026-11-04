@@ -6,7 +6,7 @@ import { createServer } from 'node:http'
 import { once } from 'node:events'
 import { test } from 'node:test'
 import { WebSocket, WebSocketServer } from 'ws'
-import { createAndroidPush } from './android-push.mjs'
+import { createAthenaServices } from '../apps/web-desktop/server/services.mjs'
 
 const deviceId = '11111111-1111-4111-8111-111111111111'
 const bindingId = '22222222-2222-4222-8222-222222222222'
@@ -28,7 +28,7 @@ async function fixture(t, options = {}) {
     socket.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: { type: 'gateway.ready' } }))
   })
   await new Promise(resolve => gateway.listen(0, '127.0.0.1', resolve))
-  const createRelay = () => createAndroidPush({ directory, now: () => clock, target: `http://127.0.0.1:${gateway.address().port}`,
+  const createRelay = () => createAthenaServices({ directory, now: () => clock, target: `http://127.0.0.1:${gateway.address().port}`,
     sender: { enabled: true, send: async (...args) => { attempts.push(args); if (failures-- > 0) throw new Error("Temporary sender outage"); sent.push(args); waiters.shift()?.() } },
     fetch: async (_url, { headers }) => headers.cookie === 'session=A' || headers.cookie === 'session=B'
       ? Response.json({ user_id: headers.cookie, provider: 'test' }) : Response.json({}, { status: 401 })

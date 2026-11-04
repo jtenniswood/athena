@@ -64,6 +64,10 @@ const settingsTrigger = async page => {
   if (!await trigger.isVisible()) await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
   return trigger
 }
+const openSettingsPanel = async (page, label) => {
+  await (await settingsTrigger(page)).click()
+  await page.getByRole('region', { name: 'Panels', exact: true }).getByRole('button', { name: label, exact: true }).click()
+}
 const open = async (page, session = 'preview-week', { defaultGrouping = false } = {}) => {
   // Rail workflows select their supported layout explicitly. The default
   // Profile grouping has its own fresh-context coverage below.
@@ -88,6 +92,53 @@ const open = async (page, session = 'preview-week', { defaultGrouping = false } 
 }
 
 for (const width of [1440, 390]) {
+  test.extend({ hasTouch: width === 390 })(`project Show all expands sessions inline at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 960 })
+    await page.route('**/api/athena/preferences', route => route.abort())
+    await page.addInitScript(() => {
+      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarAgentsGrouped.allProfiles', 'true')
+    })
+    const sessions = Array.from({ length: 5 }, (_, index) => ({
+      id: index === 0 ? 'preview-week' : `project-extra-${index}`,
+      title: index === 0 ? 'Plan a calmer working week' : `Extra project session ${index}`,
+      profile: index === 4 ? 'research' : 'default', source: 'desktop',
+      started_at: 1900000000 - index, last_active: 1900000000 - index,
+      message_count: 2, cwd: null
+    }))
+    const home = { id: '__no_project__', label: 'Home', path: null, isNoProject: true, sessionCount: 5,
+      sessionIds: sessions.map(session => session.id), repos: [] }
+    let failExpansion = true
+    await page.route('**/api/profiles/projects/tree?**', async route => {
+      const limit = Number(new URL(route.request().url()).searchParams.get('preview_limit'))
+      if (limit > 3 && failExpansion) return route.fulfill({ status: 503, json: { error: 'Temporarily unavailable' } })
+      await route.fulfill({ json: { projects: [
+        { ...home, previewSessions: sessions.slice(0, limit) },
+        { id: 'p_other', label: 'Another project', path: '/workspace/another', sessionCount: 0, repos: [] }
+      ], active_id: null, scoped_session_ids: sessions.map(session => session.id) } })
+    })
+    await open(page)
+    await editor(page).fill('Keep this draft while expanding Home')
+    if (width === 390) await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+    const project = page.locator('[data-sessions-project="__no_project__"]')
+    const showAll = project.getByRole('button', { name: 'Show all 5 sessions', exact: true })
+    await expect(showAll).toBeVisible()
+    await expect(project.getByRole('button', { name: 'Extra project session 4', exact: true })).toHaveCount(0)
+    await showAll.click()
+    await expect(page.getByText('Could not load project sessions', { exact: true })).toBeVisible()
+    await expect(showAll).toBeEnabled()
+    failExpansion = false
+    await showAll.click()
+    await expect(showAll).toHaveCount(0)
+    for (const session of sessions) await expect(project.getByRole('button', { name: session.title, exact: true })).toHaveCount(1)
+    await expect(project.getByRole('button', { name: 'Extra project session 4', exact: true })).toBeVisible()
+    await expect(page.locator('[data-sessions-project="p_other"]')).toBeVisible()
+    await expect(page).toHaveURL(/#\/preview-week$/)
+    if (width === 390) await project.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
+    await expect(editor(page)).toHaveText('Keep this draft while expanding Home')
+  })
+}
+
+for (const width of [1440, 390]) {
   test.extend({ hasTouch: width === 390 })(`scheduled tasks show every profile and preserve the chat at ${width}px`, async ({ page }, testInfo) => {
     const errors = []
     page.on('pageerror', error => errors.push(error.message))
@@ -105,11 +156,8 @@ for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 })
     await open(page)
     await editor(page).fill('Keep this draft while reviewing all scheduled tasks')
-    const settings = await settingsTrigger(page)
-    const link = page.getByRole('button', { name: 'Scheduled tasks', exact: true })
-    expect((await link.boundingBox()).y).toBeGreaterThan((await settings.boundingBox()).y)
     const profileSelection = await page.locator('.browser-profile-choice[aria-pressed="true"]').getAttribute('aria-label')
-    await link.click()
+    await openSettingsPanel(page, 'Scheduled')
     const surface = page.getByRole('region', { name: 'Scheduled tasks', exact: true })
     await expect(surface.getByRole('heading', { name: 'Scheduled tasks', exact: true })).toBeVisible()
     await expect(surface.locator('details')).toHaveCount(2)
@@ -133,13 +181,48 @@ for (const width of [1440, 390]) {
     await expect(surface.getByRole('heading', { name: 'Scheduled tasks', exact: true })).toBeInViewport()
     expect((await surface.locator('.browser-scheduled-task-title').first().boundingBox()).width).toBeGreaterThan(120)
     await testInfo.attach(`scheduled-tasks-${width}`, { body: await page.screenshot(), contentType: 'image/png' })
-    await page.getByRole('button', { name: 'Close Scheduled tasks', exact: true }).click()
+    await page.getByRole('button', { name: 'Close Scheduled', exact: true }).click()
     await expect(page).toHaveURL(/#\/preview-week$/)
     await expect(editor(page)).toHaveText('Keep this draft while reviewing all scheduled tasks')
     expect(await page.locator('.browser-profile-choice[aria-pressed="true"]').getAttribute('aria-label')).toBe(profileSelection)
     expect(errors).toEqual([])
   })
 }
+
+test('sidebar cron peek and trigger retain the selected conversation and prevent duplicate runs', async ({ page }) => {
+  await page.route('**/api/athena/preferences', route => route.abort())
+  const job = { id: 'tree-cron-job', name: 'Sidebar cron check', prompt: 'Check rows', enabled: true, state: 'scheduled' }
+  let triggerRequests = 0, finishTrigger
+  await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => route.fulfill({ json: [job] }))
+  await page.route(/\/api\/cron\/jobs\/tree-cron-job\/runs(?:\?|$)/, route => route.fulfill({ json: { runs: [
+    { id: 'cron-fixture-run', source: 'cron', profile: 'default', started_at: 1900000000, last_active: 1900000000 },
+    { id: 'cron-fixture-output', source: 'cron_output', profile: 'default', started_at: 1900000001, last_active: 1900000001 }
+  ] } }))
+  await page.route(/\/api\/cron\/jobs\/tree-cron-job\/trigger(?:\?|$)/, async route => {
+    triggerRequests++
+    await new Promise(resolve => { finishTrigger = resolve })
+    await route.fulfill({ json: job })
+  })
+  await open(page)
+  await editor(page).fill('Keep my cron sidebar draft')
+  const section = page.locator('[data-browser-section-id="cron-jobs"]')
+  await section.getByRole('button', { name: 'Cron jobs', exact: true }).click()
+  await section.getByRole('button', { name: 'Show runs', exact: true }).click()
+  const runs = section.locator('div.mb-1')
+  await expect(runs.getByRole('button')).toHaveCount(1)
+  await expect(runs.locator(':scope > div')).toHaveCount(1)
+  await section.locator('.group\\/cron').hover()
+  const trigger = section.getByRole('button', { name: 'Trigger now', exact: true })
+  await trigger.evaluate(button => { button.click(); button.click() })
+  await expect.poll(() => triggerRequests).toBe(1)
+  await expect(trigger).toBeDisabled()
+  finishTrigger()
+  await expect(trigger).toBeEnabled()
+  await section.getByRole('button', { name: 'Hide runs', exact: true }).click()
+  await expect(runs).toHaveCount(0)
+  await expect(page).toHaveURL(/#\/preview-week$/)
+  await expect(editor(page)).toHaveText('Keep my cron sidebar draft')
+})
 
 test('chat hover previews show the latest reply without selecting the chat or changing its draft', async ({ page }) => {
   const fullTitle = 'Explore a product idea with a deliberately long title that should fade at the edge and remain fully readable in the preview card'
@@ -862,19 +945,50 @@ for (const startPath of ['', 'preview-week']) {
   })
 }
 
+test('hovered chat archive preserves the selected conversation and draft', async ({ page }) => {
+  await page.route(/\/api\/sessions\/preview-idea(?:\?.*)?$/, route => route.request().method() === 'PATCH'
+    ? route.fulfill({ json: { ok: true } }) : route.fallback())
+  await open(page)
+  await editor(page).fill('Keep this draft while archiving another chat')
+  const row = page.locator('[data-web-session-id="preview-idea"]').first()
+  const menu = row.getByRole('button', { name: 'Session actions', exact: true })
+  const archive = row.getByRole('button', { name: 'Archive', exact: true })
+  await editor(page).hover()
+  await expect(row.locator('[data-browser-session-actions]')).toHaveCSS('opacity', '0')
+  await row.hover()
+  await expect(row.locator('[data-browser-session-actions]')).toHaveCSS('opacity', '1')
+  const menuBounds = await menu.boundingBox(), archiveBounds = await archive.boundingBox()
+  expect(menuBounds.x + menuBounds.width).toBeLessThanOrEqual(archiveBounds.x)
+  const archived = page.waitForRequest(request => request.method() === 'PATCH' &&
+    new URL(request.url()).pathname === '/api/sessions/preview-idea' && request.postDataJSON()?.archived === true)
+  await archive.click()
+  await archived
+  await expect(row).toHaveCount(0)
+  await expect(page).toHaveURL(/#\/preview-week$/)
+  await expect(editor(page)).toHaveText('Keep this draft while archiving another chat')
+  const selected = page.locator('[data-web-session-id="preview-week"]').first()
+  await selected.hover()
+  await selected.getByRole('button', { name: 'Session actions', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: /^Rename/ })).toBeVisible()
+})
+
 test('phone session-row actions stay open without resuming the row', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   const page = await context.newPage()
   await open(page)
+  await editor(page).fill('Keep the phone draft while opening row actions')
   await page.getByRole('button', { name: 'Chat actions', exact: true }).tap()
   let addedPin = false
-  if (await page.getByRole('menuitem', { name: 'Pin', exact: true }).count()) {
-    await page.getByRole('menuitem', { name: 'Pin', exact: true }).tap()
+  const chatActions = page.getByRole('dialog', { name: 'Chat actions', exact: true })
+  if (await chatActions.getByRole('button', { name: 'Pin', exact: true }).count()) {
+    await chatActions.getByRole('button', { name: 'Pin', exact: true }).tap()
     addedPin = true
   } else {
     await page.keyboard.press('Escape')
   }
-  await openNavigation(page)
+  await page.getByRole('button', { name: 'Back to chat history', exact: true }).tap()
+  await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Sessions', exact: true })).toBeFocused()
   const section = page.locator('.browser-pinned-section')
   await expect(section).toBeVisible()
   if (!await section.locator('[data-row-actions]').count()) await section.getByRole('button', { name: /Pinned/ }).first().click()
@@ -884,18 +998,20 @@ test('phone session-row actions stay open without resuming the row', async ({ br
   const sheet = page.locator('[data-slot="dropdown-menu-content"]:visible').last()
   await expect(sheet).toBeVisible()
   await expect(sheet.getByRole('menuitem', { name: /Rename/ })).toBeVisible()
-  const bounds = await sheet.boundingBox()
-  expect(bounds.x).toBe(0)
-  expect(bounds.width).toBe(390)
-  expect(bounds.y + bounds.height).toBe(844)
+  await expect.poll(async () => {
+    const bounds = await sheet.boundingBox()
+    return Boolean(bounds && Math.abs(bounds.x) < 0.5 && Math.abs(bounds.width - 390) < 0.5 && Math.abs(bounds.y + bounds.height - 844) < 0.5)
+  }).toBe(true)
   await page.keyboard.press('Escape')
   await expect(row).toBeVisible()
   await expect(page.locator('.browser-navigation.is-open')).toBeVisible()
   await expect(row.getByRole('button', { name: 'Session actions', exact: true })).toBeFocused()
+  await expect(page).toHaveURL(/#\/preview-week$/)
+  await section.getByRole('button', { name: 'Plan a calmer working week', exact: true }).tap()
+  await expect(editor(page)).toHaveText('Keep the phone draft while opening row actions')
   if (addedPin) {
-    await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
     await page.getByRole('button', { name: 'Chat actions', exact: true }).tap()
-    await page.getByRole('menuitem', { name: 'Unpin', exact: true }).tap()
+    await chatActions.getByRole('button', { name: 'Unpin', exact: true }).tap()
   }
   await context.close()
 })
@@ -1152,26 +1268,30 @@ for (const width of [390, 1440]) {
 }
 
 test('chat action dialogs retain their conversation owner when navigation changes', async ({ page }) => {
-  const renamed = []
   const nextTitle = `Captured conversation ${Date.now()}`
-  page.on('request', request => {
-    if (request.method() === 'PATCH' && new URL(request.url()).pathname === '/api/sessions/preview-week') renamed.push(request.postDataJSON())
-  })
   await open(page)
-  await editor(page).fill('Keep the original chat draft')
-  await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
-  await page.getByRole('menuitem', { name: 'Rename', exact: true }).click()
-  const rename = page.getByRole('dialog', { name: 'Rename session', exact: true })
-  await expect(rename.getByRole('textbox')).toBeFocused()
-  await rename.getByRole('textbox').fill(nextTitle)
-  await page.evaluate(() => { window.location.hash = '/preview-idea' })
-  await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
-  await rename.getByRole('button', { name: 'Save', exact: true }).click()
-  await expect(rename).toBeHidden()
-  await expect.poll(() => renamed.some(body => body.title === nextTitle)).toBe(true)
-  await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
-  await page.goto(`${origin}/#/preview-week`)
-  await expect(editor(page)).toHaveText('Keep the original chat draft')
+  const readTitle = async id => (await (await page.request.get(`${origin}/api/sessions/${id}`)).json()).title
+  const originalTitle = await readTitle('preview-week')
+  const otherTitle = await readTitle('preview-idea')
+  try {
+    await editor(page).fill('Keep the original chat draft')
+    await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Rename', exact: true }).click()
+    const rename = page.getByRole('dialog', { name: 'Rename session', exact: true })
+    await expect(rename.getByRole('textbox')).toBeFocused()
+    await rename.getByRole('textbox').fill(nextTitle)
+    await page.evaluate(() => { window.location.hash = '/preview-idea' })
+    await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
+    await rename.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(rename).toBeHidden()
+    await expect.poll(() => readTitle('preview-week')).toBe(nextTitle)
+    expect(await readTitle('preview-idea')).toBe(otherTitle)
+    await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
+    await page.goto(`${origin}/#/preview-week`)
+    await expect(editor(page)).toHaveText('Keep the original chat draft')
+  } finally {
+    await page.request.patch(`${origin}/api/sessions/preview-week`, { data: { title: originalTitle } })
+  }
 })
 
 test('chat delete confirmation retains its conversation owner when navigation changes', async ({ page }) => {
@@ -1196,6 +1316,32 @@ test('chat delete confirmation retains its conversation owner when navigation ch
   await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'preview-idea')
   await page.goto(`${origin}/#/preview-week`)
   await expect(editor(page)).toHaveText('Keep the original delete draft')
+})
+
+test('chat actions toggle closed from the title toolbar', async ({ page }) => {
+  await open(page)
+  const trigger = page.getByRole('button', { name: 'Chat actions', exact: true })
+  const menu = page.getByRole('menu', { name: 'Chat actions', exact: true })
+  for (const key of [null, 'Enter', 'Space']) {
+    const activate = () => key ? page.keyboard.press(key) : trigger.click()
+    await trigger.focus()
+    await activate()
+    await expect(menu).toBeVisible()
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    if (key) await trigger.focus()
+    await activate()
+    await expect(menu).toBeHidden()
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    await expect(trigger).toBeFocused()
+  }
+  await trigger.click()
+  await page.keyboard.press('Escape')
+  await expect(menu).toBeHidden()
+  await expect(trigger).toBeFocused()
+  await trigger.click()
+  await editor(page).click()
+  await expect(menu).toBeHidden()
+  await expect(editor(page)).toBeFocused()
 })
 
 test('chat actions open from the title toolbar with panel controls', async ({ page }) => {
@@ -1491,7 +1637,7 @@ touchTest('browser workspace panels open and close without losing a draft', asyn
   await expect(page.getByRole('button', { name: 'Open panels', exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
   await page.getByRole('dialog', { name: 'Chat actions', exact: true }).getByRole('button', { name: 'Files', exact: true }).click()
-  const close = page.getByRole('button', { name: 'Close files panel', exact: true })
+  const close = page.getByRole('button', { name: /^Close files panel$/i })
   await expect(close).toBeVisible()
   const closeBounds = await close.boundingBox()
   expect(closeBounds.width).toBeGreaterThanOrEqual(44)
@@ -1545,45 +1691,25 @@ for (const width of [390, 1440]) {
     }
   })
 
-  test(`search and disclosure form one navigation list at ${width}px`, async ({ page }, testInfo) => {
+  test(`settings lists panel links after all categories at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 960 })
     await page.emulateMedia({ colorScheme: 'dark' })
     await open(page)
-    if (width === 390) await openNavigation(page)
-    const search = page.locator('.browser-sessions-pane .browser-session-search')
-    const scheduled = page.getByRole('button', { name: 'Scheduled jobs', exact: true })
-    const toggle = page.locator('.browser-navigation-section-trigger')
-    const extras = page.getByRole('group', { name: 'More controls', exact: true })
+    await expect(page.getByRole('group', { name: 'More controls', exact: true })).toHaveCount(0)
+    await (await settingsTrigger(page)).click()
+    const navigation = page.getByRole('navigation', { name: 'Settings categories' })
+    const panels = navigation.getByRole('region', { name: 'Panels', exact: true })
     for (const scale of [100, 125, 150]) {
       await page.evaluate(percent => window.hermesDesktop.zoom.setPercent(percent), scale)
-      await page.mouse.move(width - 1, 0)
-      const searchBox = await search.boundingBox(), scheduledBox = await scheduled.boundingBox()
-      expect(Math.abs(searchBox.x - scheduledBox.x)).toBeLessThan(2)
-      expect(Math.abs(searchBox.width - scheduledBox.width)).toBeLessThan(2)
-      expect(searchBox.y - scheduledBox.y - scheduledBox.height).toBeGreaterThanOrEqual(-1)
-      expect(searchBox.y - scheduledBox.y - scheduledBox.height).toBeLessThan(4)
-      const scheduledColor = await scheduled.evaluate(el => getComputedStyle(el).color)
-      await expect(search.locator('input')).toHaveCSS('color', scheduledColor)
-      expect(await search.locator('input').evaluate(el => getComputedStyle(el, '::placeholder').color)).toBe(scheduledColor)
-      const iconColor = await scheduled.locator('.codicon').evaluate(el => getComputedStyle(el).color)
-      await expect(search.locator('svg')).toHaveCSS('color', iconColor)
-      expect(await toggle.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeLessThan(await scheduled.evaluate(el => parseFloat(getComputedStyle(el).fontSize)))
-      await toggle.click()
-      await expect(toggle).toHaveAccessibleName('Less')
-      await expect(extras.getByRole('button', { name: 'Capabilities', exact: true })).toBeVisible()
-      const listBox = await extras.boundingBox(), lessBox = await toggle.boundingBox()
-      expect(listBox.y).toBeGreaterThanOrEqual(searchBox.y + searchBox.height - 1)
-      expect(Math.abs((listBox.y - searchBox.y - searchBox.height) - (searchBox.y - scheduledBox.y - scheduledBox.height))).toBeLessThan(1)
-      expect(lessBox.y).toBeGreaterThanOrEqual(listBox.y + listBox.height - 1)
-      if (scale === 125) await page.screenshot({ path: testInfo.outputPath('expanded-navigation.png') })
-      // Focusing search must leave the disclosure expanded, unlike a popup menu.
-      await search.locator('input').click()
-      await expect(toggle).toHaveAccessibleName('Less')
-      await toggle.click()
-      await expect(toggle).toHaveAccessibleName('More')
-      await expect(extras).toBeHidden()
-      const moreBox = await toggle.boundingBox()
-      expect(moreBox.y - searchBox.y - searchBox.height).toBeLessThan(10)
+      for (const label of ['Capabilities', 'Messaging', 'Artifacts', 'Scheduled']) {
+        const link = panels.getByRole('button', { name: label, exact: true })
+        await link.scrollIntoViewIfNeeded()
+        await expect(link).toBeInViewport()
+        await expect(link).toHaveAccessibleDescription('Opens another panel')
+        await expect(link.locator('.codicon-link-external')).toBeVisible()
+      }
+      expect(await navigation.locator('.browser-settings-nav-group').last().getAttribute('aria-labelledby')).toBe('settings-group-panels')
+      if (scale === 125) await page.screenshot({ path: testInfo.outputPath('settings-panel-links.png') })
     }
   })
 }
@@ -1615,9 +1741,15 @@ for (const width of [390, 1440]) {
         else await expect(content).toBeHidden()
         const header = section.locator(':scope > [data-browser-section-header]')
         heights.push((await header.boundingBox()).height)
-        const box = await header.boundingBox()
-        expect(box.x).toBeGreaterThanOrEqual(0)
-        expect(box.x + box.width).toBeLessThanOrEqual(width)
+        // Row backgrounds extend into the scrollbar gutter. Check that the
+        // actual focus targets fit the visible navigation, not that backdrop.
+        const navigation = await page.locator('.browser-navigation').boundingBox()
+        for (const control of await header.getByRole('button').all()) {
+          if (!await control.isVisible()) continue
+          const box = await control.boundingBox()
+          expect(box.x).toBeGreaterThanOrEqual(Math.max(0, navigation.x) - 0.5)
+          expect(box.x + box.width).toBeLessThanOrEqual(Math.min(width, navigation.x + navigation.width) + 0.5)
+        }
       }
       expect(Math.abs(heights[0] - heights[1])).toBeLessThan(1)
       if (scale === 150) await page.screenshot({ path: testInfo.outputPath('section-headers-150.png') })
@@ -2701,8 +2833,7 @@ test('Capabilities opens its page and returns to the same chat draft', async ({ 
   await open(page)
   await editor(page).fill('Keep this capabilities draft')
   await editor(page).evaluate(node => { window.capabilitiesComposer = node })
-  await page.getByRole('button', { name: 'More', exact: true }).click()
-  await page.getByRole('group', { name: 'More controls', exact: true }).getByRole('button', { name: 'Capabilities', exact: true }).click()
+  await openSettingsPanel(page, 'Capabilities')
   await expect(page).toHaveURL(/#\/capabilities$/)
   await expect(page.locator('[data-overlay-surface]:visible').filter({ hasText: 'Skills' })).toBeVisible()
   await page.keyboard.press('Escape')
@@ -2714,9 +2845,7 @@ test('Capabilities opens its page and returns to the same chat draft', async ({ 
 touchTest('phone tool surfaces fit a short 320px viewport and close back to chat', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 480 })
   await open(page)
-  await openNavigation(page)
-  await page.getByRole('button', { name: 'More', exact: true }).click()
-  await page.getByRole('group', { name: 'More controls', exact: true }).getByRole('button', { name: 'Capabilities', exact: true }).click()
+  await openSettingsPanel(page, 'Capabilities')
   const surface = page.locator('[data-overlay-surface]:visible').filter({ hasText: 'Skills' })
   await expect(surface).toBeVisible()
   const bounds = await surface.boundingBox()
@@ -2743,10 +2872,7 @@ for (const [width, scale] of [[390, 100], [390, 150], [1440, 100], [1440, 150]])
     const attachment = page.getByRole('button', { name: 'Remove modal-draft.txt', exact: true })
     await expect(attachment).toBeVisible()
     for (const [label, path] of [['Capabilities', 'capabilities'], ['Messaging', 'messaging'], ['Artifacts', 'artifacts']]) {
-      if (width === 390) await openNavigation(page)
-      const extras = page.getByRole('group', { name: 'More controls', exact: true })
-      if (!await extras.isVisible()) await page.getByRole('button', { name: 'More', exact: true }).click()
-      await extras.getByRole('button', { name: label, exact: true }).click()
+      await openSettingsPanel(page, label)
       await expect(page).toHaveURL(new RegExp('#/' + path + '$'))
       await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)
       expect(await page.evaluate(() => window.modalComposer.isConnected)).toBe(true)
@@ -2759,14 +2885,14 @@ for (const [width, scale] of [[390, 100], [390, 150], [1440, 100], [1440, 150]])
       expect(await editor(page).evaluate(node => node === window.modalComposer)).toBe(true)
       await expect(attachment).toBeVisible()
     }
-    await page.getByRole('button', { name: 'Settings', exact: true }).click()
+    await (await settingsTrigger(page)).click()
     await expect(page.getByText('Appearance', { exact: true }).first()).toBeVisible()
     expect(await page.evaluate(() => window.modalComposer.isConnected)).toBe(true)
     await page.keyboard.press('Escape')
     await expect(attachment).toBeVisible()
     expect(await editor(page).evaluate(node => node === window.modalComposer)).toBe(true)
     await editor(page).focus()
-    await page.keyboard.press('Control+k')
+    await page.keyboard.press('ControlOrMeta+k')
     await expect(page.getByRole('combobox')).toBeFocused()
     expect(await page.evaluate(() => window.modalComposer.isConnected)).toBe(true)
     await page.keyboard.press('Escape')
@@ -2797,8 +2923,7 @@ test('tool modals preserve an active microphone recording until explicit stop', 
   await editor(page).evaluate(node => { window.modalComposer = node })
   await page.getByRole('button', { name: 'Voice dictation', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Stop dictation', exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'More', exact: true }).click()
-  await page.getByRole('group', { name: 'More controls', exact: true }).getByRole('button', { name: 'Capabilities', exact: true }).click()
+  await openSettingsPanel(page, 'Capabilities')
   await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)
   expect(await page.evaluate(() => window.modalComposer.isConnected)).toBe(true)
   expect(await page.evaluate(() => window.modalStreams.length === 1 && window.modalStreams[0].getAudioTracks()[0].readyState === 'live')).toBe(true)
@@ -2868,12 +2993,15 @@ test('tool modal history preserves query state and cold entry closes to a usable
   await expect(editor(page)).toBeVisible()
   await editor(page).fill('Keep this history draft')
   await editor(page).evaluate(node => { window.modalComposer = node })
-  await page.getByRole('button', { name: 'More', exact: true }).click()
-  await page.getByRole('group', { name: 'More controls', exact: true }).getByRole('button', { name: 'Capabilities', exact: true }).click()
+  await openSettingsPanel(page, 'Capabilities')
   await expect(page).toHaveURL(/#\/capabilities$/)
+  await page.goBack()
+  await expect(page).toHaveURL(/#\/settings/)
   await page.goBack()
   await expect(page).toHaveURL(/#\/preview-week\?keep=query#anchor$/)
   expect(await editor(page).evaluate(node => node === window.modalComposer)).toBe(true)
+  await page.goForward()
+  await expect(page).toHaveURL(/#\/settings/)
   await page.goForward()
   await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)
   await page.keyboard.press('Escape')
@@ -3249,6 +3377,7 @@ for (const width of [390, 1440]) {
     test.use({ hasTouch: width === 390 })
     test(`sidebar visibility uses stable identity through markup changes and reload at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 960 })
+      await page.route('**/api/athena/preferences', route => route.abort())
       await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => route.fulfill({ json: [{ id: 'stable-section-job', name: 'Test job', prompt: 'Check sections', enabled: true }] }))
       await open(page)
       if (width === 390) {
@@ -3264,25 +3393,33 @@ for (const width of [390, 1440]) {
       // A presentation-only change must not create another persisted identity or
       // remove a collapsed section from the available actions.
       await header.evaluate(node => { node.textContent = 'Renamed schedule' })
-      await page.getByRole('button', { name: 'Settings', exact: true }).click()
-      const action = page.getByRole(width === 390 ? 'checkbox' : 'menuitemcheckbox', { name: 'Cron jobs', exact: true })
+      const settings = page.getByRole('dialog', { name: 'Settings', exact: true })
+      const action = settings.getByRole('group', { name: 'Sections', exact: true }).getByRole('checkbox', { name: 'Cron jobs', exact: true })
+      const openSectionSettings = async () => {
+        await page.getByRole('button', { name: 'Settings', exact: true }).click()
+        await settings.getByRole('button', { name: 'Chat panel', exact: true }).click()
+      }
+      await openSectionSettings()
       await expect(action).toBeChecked()
       await action.click()
       await expect(action).not.toBeChecked()
-      await expect(section).toBeHidden()
+      await expect(section).toHaveAttribute('data-browser-section-hidden', '')
       expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes-web.browser.hidden-sections')))).toEqual({ version: 2, hidden: ['cron-jobs'] })
+      await page.getByRole('button', { name: 'Close settings', exact: true }).click()
       await page.reload()
+      if (width === 390) await page.locator('#browser-navigation').getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
       await expect(editor(page)).toBeVisible({ timeout: 30000 })
       if (width === 390) {
         await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
         await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
       }
       await expect(section).toBeHidden()
-      await page.getByRole('button', { name: 'Settings', exact: true }).click()
+      await openSectionSettings()
       await expect(action).not.toBeChecked()
       await action.click()
-      await expect(section).toBeVisible()
-      await page.keyboard.press('Escape')
+      await expect(section).not.toHaveAttribute('data-browser-section-hidden', '')
+      await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+      if (width === 390 && !await header.isVisible()) await openSectionNavigation(page)
       await expect(header).toHaveText('Cron jobs')
       await header.click()
       await expect(content).toBeVisible()
@@ -3482,7 +3619,11 @@ for (const width of [1440, 390]) {
       const template = body.recents.sessions.find(session => session.id === 'preview-week')
       body.recents.sessions.push(
         { ...template, id: 'research-history', profile: 'research', title: 'Research session history' },
-        { ...template, id: 'writer-history', profile: 'writer', title: 'Writer session history' }
+        { ...template, id: 'writer-history', profile: 'writer', title: 'Writer session history' },
+        ...Array.from({ length: 8 }, (_, index) => ({
+          ...template, id: `older-research-${index}`, profile: 'research',
+          title: `Older research chat ${index}`, started_at: 1_600_000_000 - index
+        }))
       )
       await route.fulfill({ response, json: body })
     })
@@ -3494,6 +3635,9 @@ for (const width of [1440, 390]) {
       await expect(group).toBeVisible()
       await expect(group.getByRole('button', { name: title, exact: true })).toBeVisible()
     }
+    const research = page.locator('[data-gateway-group]').filter({ has: page.locator('[data-browser-profile-picture="research"]') })
+    await expect(research.getByRole('button', { name: /^Older research chat/ })).toHaveCount(8)
+    await expect(research.getByRole('button', { name: /Show \d+ more/ })).toHaveCount(0)
     await expect(page.locator('#browser-navigation').getByText('Screen', { exact: true })).toHaveCount(0)
     await expect(page.locator('#browser-navigation').getByText('Not installed on host', { exact: true })).toHaveCount(0)
     await expect(page.locator('[data-gateway-section]')).toHaveCount(0)
@@ -3724,3 +3868,119 @@ for (const layout of ['flat', 'profiles']) {
     await expect.poll(async () => (await first.boundingBox()).y < (await second.boundingBox()).y).toBe(true)
   })
 }
+
+for (const width of [1440, 390]) {
+  test.extend({ hasTouch: width === 390 })(`project deletion follows the owning profile and preserves failed confirmations at ${width}px`, async ({ page }) => {
+    const errors = []
+    page.on('pageerror', error => errors.push(error.message))
+    const project = { id: 'p_delete_test', slug: 'test', name: 'test', primary_path: null, folders: [], archived: false, created_at: 1 }
+    const node = { id: project.id, label: project.name, path: null, repos: [], sessionCount: 0, previewSessions: [], sessionIds: [] }
+    let deleted = false, rejectDelete = true, releaseDelete
+    const deletes = []
+    await page.route('**/api/athena/preferences', route => route.abort())
+    await page.route(/\/api\/profiles\/projects\/tree/, route => route.fulfill({ json: { projects: deleted ? [] : [node], active_id: null, scoped_session_ids: [] } }))
+    await page.routeWebSocket(/\/api\/ws/, socket => {
+      const server = socket.connectToServer()
+      socket.onMessage(async data => {
+        const frame = JSON.parse(String(data))
+        if (!['projects.list', 'projects.delete'].includes(frame.method)) return server.send(data)
+        const { profile, id } = frame.params
+        if (frame.method === 'projects.delete') {
+          deletes.push({ profile, id })
+          await new Promise(resolve => { releaseDelete = resolve })
+          if (rejectDelete || profile !== 'writer' || id !== project.id) {
+            socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, error: { code: 5062, message: rejectDelete ? 'Synthetic project deletion failed' : 'no such project' } }))
+            return
+          }
+          deleted = true
+        }
+        socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, result: { projects: !deleted && profile === 'writer' ? [project] : [], active_id: null } }))
+      })
+      server.onMessage(data => socket.send(data))
+    })
+    await page.setViewportSize({ width, height: 960 })
+    await open(page)
+    const draft = 'Keep my draft while deleting an empty project'
+    await editor(page).fill(draft)
+    if (width === 390) await openSectionNavigation(page)
+    await page.getByRole('button', { name: 'Filters', exact: true }).click()
+    const grouping = page.getByRole('menuitem', { name: 'Grouping', exact: true })
+    if (width === 390) await grouping.click()
+    else await grouping.hover()
+    await page.getByRole('menuitemradio', { name: 'Project', exact: true }).click()
+    while (await page.getByRole('menu').count()) {
+      const id = await page.getByRole('menu').last().getAttribute('id')
+      await page.keyboard.press('Escape')
+      await expect(page.locator(`[role="menu"][id="${id}"]`)).toBeHidden()
+    }
+    const actions = page.getByRole('button', { name: 'Actions', exact: true })
+    await actions.click()
+    await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: 'Delete "test"?', exact: true })
+    await expect(dialog).toBeVisible()
+    // Cancel must not issue a destructive request.
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+    expect(deletes).toEqual([])
+    await actions.click()
+    await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click()
+    const confirm = dialog.getByRole('button', { name: 'Delete', exact: true })
+    await confirm.click()
+    await expect.poll(() => deletes.length).toBe(1)
+    expect(deletes[0]).toEqual({ profile: 'writer', id: project.id })
+    await expect(dialog).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Actions', exact: true, includeHidden: true })).toHaveCount(1)
+    releaseDelete()
+    await expect(dialog).toContainText('Synthetic project deletion failed')
+    await expect(confirm).toBeEnabled()
+    rejectDelete = false
+    await confirm.click()
+    await expect.poll(() => deletes.length).toBe(2)
+    releaseDelete()
+    await expect(dialog).toBeHidden()
+    await expect(actions).toHaveCount(0)
+    await page.reload()
+    if (width === 390) await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().click()
+    await expect(editor(page)).toHaveText(draft, { timeout: 30000 })
+    await expect(actions).toHaveCount(0)
+    expect(errors).toEqual([])
+  })
+}
+
+test.extend({ hasTouch: true })('Android retains web Settings and the original schema save owner', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    window.androidCalls = []
+    window.AthenaAndroid = { onmessage: null, postMessage(raw) {
+      const message = JSON.parse(raw)
+      window.androidCalls.push(message.method)
+      const value = message.method === 'hello' ? { protocol: 1, capabilities: ['settings-page'], appVersion: 'fixture', insets: 'native', typography: 'platform' }
+        : message.method === 'permission' ? 'default' : message.method === 'pushRegistration' ? null : false
+      queueMicrotask(() => window.AthenaAndroid.onmessage?.({ data: JSON.stringify({ id: message.id, value }) }))
+    } }
+  })
+  let config = { security: { redact_secrets: true } }
+  const writes = []
+  await page.route(/\/api\/config(?:\?|$)/, async route => {
+    if (route.request().method() !== 'PUT') return route.fulfill({ json: config })
+    config = route.request().postDataJSON().config
+    writes.push(config)
+    await route.fulfill({ json: { ok: true } })
+  })
+  await page.route(/\/api\/config\/schema(?:\?|$)/, route => route.fulfill({ json: {
+    fields: { 'security.redact_secrets': { type: 'boolean', description: 'Redact saved secrets' } }
+  } }))
+  await open(page)
+  await editor(page).fill('Keep the Android draft')
+  await page.goto(`${origin}/#/settings?tab=config%3Asafety`)
+  const setting = page.locator('[id="setting-field-security.redact_secrets"]').getByRole('switch')
+  await expect(setting).toBeVisible()
+  await expect(setting).toBeChecked()
+  await setting.click()
+  await expect(setting).not.toBeChecked()
+  await expect.poll(() => writes.length).toBe(1)
+  expect(writes[0]).toEqual({ security: { redact_secrets: false } })
+  await expect(page.locator('[data-browser-settings-frame]')).not.toHaveAttribute('data-native-settings')
+  expect(await page.evaluate(() => window.androidCalls.filter(method => ['settingsPage','updateSettingsPage'].includes(method)))).toEqual([])
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+  await expect(editor(page)).toHaveText('Keep the Android draft')
+})

@@ -1,3 +1,4 @@
+import { isBrowserToolPane } from '../experience/browser-pane-composition'
 import type { LayoutNode } from '@/components/pane-shell/tree/model'
 
 // Browser chrome owns navigation; the upstream workspace still owns session
@@ -5,7 +6,7 @@ import type { LayoutNode } from '@/components/pane-shell/tree/model'
 // Project the shared tree without rewriting it or mounting a second sidebar.
 export function browserWorkspaceTree(node: LayoutNode, panelIds: ReadonlySet<string> = new Set()): LayoutNode | null {
   if (node.type === 'group') {
-    const panes = node.panes.filter(id => !['sessions', 'hermes-bots:pane', 'terminal'].includes(id))
+    const panes = node.panes.filter(id => id === 'workspace' || isBrowserToolPane(id))
     // Standing desktop sidebars rely on titlebar toggles. Browser panels need
     // their own close handle even when they are the only tab in a zone.
     const browserTitlebar = panes.includes('workspace')

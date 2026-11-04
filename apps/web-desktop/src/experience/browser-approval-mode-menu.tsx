@@ -1,43 +1,25 @@
-import { useMemo } from 'react'
-
-import { Brain, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, Power, ShieldLock, useI18n } from '../upstream/browser-api'
-import { useBrowserApproval } from '../upstream/approval'
-import type { BrowserApprovalMode as ApprovalMode, BrowserApprovalRequester as ApprovalModeRequester } from './contracts/actions'
+import { ShieldLock, useI18n } from '../upstream/browser-api'
+import { useBrowserEngine } from './engine'
+import type { BrowserApprovalRequester as ApprovalModeRequester } from './contracts/actions'
 import type { StatusbarItem } from '../upstream/browser-api'
-
-function ApprovalModeIcon({ mode }: { mode: ApprovalMode }) {
-  if (mode === 'manual') return <ShieldLock className="size-3.5" />
-  if (mode === 'smart') return <Brain className="size-3.5" />
-  return <Power className="size-3.5" />
-}
+import { BrowserApprovalModeMenu, browserApprovalChoices } from './approval-mode-menu'
 
 export function useApprovalModeStatusbarItem(profile: string, requestGateway: ApprovalModeRequester, _gatewayState?: string, _routeIdentity?: unknown): StatusbarItem {
+  const engine = useBrowserEngine()
   const { t } = useI18n()
   const copy = t.shell.approvalMode
-  const { mode, setMode } = useBrowserApproval(profile, requestGateway)
-  const labels = useMemo<Record<ApprovalMode, string>>(() => ({ manual: copy.manual, smart: copy.smart, off: copy.off }), [copy.manual, copy.off, copy.smart])
-  const descriptions = useMemo<Record<ApprovalMode, string>>(() => ({ manual: copy.manualDescription, smart: 'Ask when needed', off: 'All request will be automatically approved' }), [copy.manualDescription])
+  const { mode, setMode } = engine.approval.useMode(profile, requestGateway)
+  const label = browserApprovalChoices(copy)[mode].label
 
   return {
     className: mode === 'off' ? 'bg-(--chrome-action-hover) text-foreground' : undefined,
     icon: <ShieldLock className="size-3.5" />,
     id: 'approval-mode',
-    label: labels[mode],
+    label,
     menuAlign: 'end',
     menuClassName: 'w-72 p-1',
-    menuContent: <>
-      <DropdownMenuLabel>{copy.title}</DropdownMenuLabel>
-      <DropdownMenuRadioGroup onValueChange={value => { void setMode(value as ApprovalMode) }} value={mode}>
-        {(['manual', 'smart', 'off'] as const).map(value => <DropdownMenuRadioItem className="items-start gap-2" key={value} value={value}>
-          <ApprovalModeIcon mode={value} />
-          <span className="flex min-w-0 flex-col gap-0.5">
-            <span className="text-xs text-foreground">{labels[value]}</span>
-            <span className="text-[0.6875rem] leading-snug text-(--ui-text-tertiary)">{descriptions[value]}</span>
-          </span>
-        </DropdownMenuRadioItem>)}
-      </DropdownMenuRadioGroup>
-    </>,
-    title: copy.ariaLabel(labels[mode]),
+    menuContent: <BrowserApprovalModeMenu mode={mode} setMode={setMode} />,
+    title: copy.ariaLabel(label),
     variant: 'menu'
   }
 }

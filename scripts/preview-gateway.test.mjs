@@ -50,6 +50,16 @@ test('RPC holds allow later selections to complete first without timing guesses'
   gateway.controls.assertExpected()
 })
 
+test('the renderer title command persists only the addressed conversation', async t => {
+  const gateway = await fixture(t)
+  const original = gateway.sessions.get('preview-idea').title
+  const reply = await gateway.request('session.title', { session_id: 'preview-week', title: 'A renamed conversation' })
+  assert.equal(reply.result.title, 'A renamed conversation')
+  assert.equal((await (await fetch(gateway.origin + '/api/sessions/preview-week')).json()).title, 'A renamed conversation')
+  assert.equal(gateway.sessions.get('preview-idea').title, original)
+  gateway.controls.assertExpected()
+})
+
 test('rejected REST mutations leave sessions intact and consume the fault once', async t => {
   const gateway = await fixture(t)
   const path = '/api/sessions/preview-week'
@@ -82,6 +92,67 @@ test('approval RPC has authoritative state and errors retain the confirmed value
   gateway.controls.reject({ transport: 'rpc', method: 'config.set' }, 'Approval rejected')
   assert.equal((await gateway.request('config.set', { ...params, value: 'off' })).error.message, 'Approval rejected')
   assert.equal((await gateway.request('config.get', params)).result.value, 'manual')
+})
+
+test('config REST saves merge nested edits, preserve profiles, and distinguish saved values from defaults', async t => {
+  const gateway = await fixture(t)
+  const read = async (profile, suffix = '') => (await fetch(`${gateway.origin}/api/config?profile=${profile}${suffix}`)).json()
+  const write = async (profile, config, bodyProfile) => fetch(`${gateway.origin}/api/config?profile=${profile}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config, profile: bodyProfile })
+  })
+  assert.deepEqual(await read('research', '&include_defaults=false'), {})
+  const defaults = await (await fetch(gateway.origin + '/api/config/defaults')).json()
+  assert.deepEqual(await read('research'), defaults)
+  assert.equal((await write('research', { display: { show_reasoning: false, sections: { tools: false } }, custom: { tags: ['first'] } })).status, 200)
+  assert.deepEqual(await (await write('research', { display: { sections: { messages: true } }, custom: { tags: [], note: null } })).json(), { ok: true })
+  const config = await read('research')
+  assert.deepEqual(config.display, { show_reasoning: false, sections: { tools: false, messages: true } })
+  assert.deepEqual(config.custom, { tags: [], note: null })
+  assert.deepEqual(config.model, defaults.model)
+  assert.equal(config.config, undefined)
+  assert.deepEqual(await read('writer'), defaults)
+  // The pinned REST API gives an explicit body profile precedence over its query.
+  await write('research', { display: { show_reasoning: false } }, 'writer')
+  assert.equal((await read('writer')).display.show_reasoning, false)
+  assert.deepEqual(await (await fetch(gateway.origin + '/api/config/defaults')).json(), defaults)
+  gateway.controls.assertExpected()
+})
+
+test('config RPC and REST share profile state and normalize display toggles', async t => {
+  const gateway = await fixture(t)
+  const write = config => fetch(gateway.origin + '/api/config?profile=research', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config })
+  })
+  await write({ approvals: { mode: 'manual' } })
+  assert.equal((await gateway.request('config.get', { key: 'approvals.mode' })).result.value, 'manual')
+  assert.deepEqual((await gateway.request('config.set', { key: 'display.in_app_tips', value: 'false' })).result, { key: 'display.in_app_tips', value: false })
+  const rest = await (await fetch(gateway.origin + '/api/config?profile=research')).json()
+  assert.equal(rest.display.in_app_tips, false)
+  assert.deepEqual((await gateway.request('config.get', { key: 'full' })).result, { config: rest })
+  assert.equal((await gateway.request('config.set', { key: 'approval_mode', value: 'OFF', profile: 'writer' })).result.value, 'off')
+  assert.equal((await gateway.request('config.get', { key: 'approvals.mode', profile: 'writer' })).result.value, 'off')
+  assert.equal((await gateway.request('config.get', { key: 'approvals.mode' })).result.value, 'manual')
+  gateway.controls.assertExpected()
+})
+
+test('rejected and invalid config saves retain the last confirmed record', async t => {
+  const gateway = await fixture(t)
+  const read = async () => (await fetch(gateway.origin + '/api/config?profile=research')).json()
+  const write = config => fetch(gateway.origin + '/api/config?profile=research', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config })
+  })
+  await write({ display: { show_reasoning: false } })
+  const confirmed = await read()
+  gateway.controls.reject({ transport: 'http', method: 'PUT', path: '/api/config' }, 'Save rejected')
+  assert.equal((await write({ display: { show_reasoning: true } })).status, 503)
+  for (const invalid of [null, [], { approvals: { mode: 'unknown' }, display: { show_reasoning: true } }]) assert.equal((await write(invalid)).status, 422)
+  assert.match((await gateway.request('config.set', { key: 'display.in_app_tips', value: 'invalid' })).error.message, /takes true or false/)
+  assert.deepEqual(await read(), confirmed)
+  assert.equal((await fetch(gateway.origin + '/api/config?profile=missing')).status, 404)
+  gateway.controls.assertExpected()
+  assert.equal((await gateway.request('config.get', { key: 'unimplemented' })).error.code, -32601)
+  assert.equal((await fetch(gateway.origin + '/api/config', { method: 'DELETE' })).status, 501)
+  assert.equal(gateway.controls.unexpected.length, 2)
 })
 
 test('group projection writes are validated and returned by roster reads', async t => {
@@ -154,7 +225,8 @@ test('command center catalogs are explicit reads and archived sessions stay sepa
   assert.deepEqual((await gateway.request('groups.list', { limit: 100, offset: 0 })).result, { rooms: [], next_offset: null })
   assert.deepEqual((await gateway.request('gateway.ping')).result, { pong: true })
   assert.deepEqual(await (await fetch(gateway.origin + '/api/git/review/rev-parse?path=%2Fworkspace&ref=HEAD')).json(), { sha: null })
-  assert.deepEqual(await (await fetch(gateway.origin + '/api/config/schema')).json(), { fields: {} })
+  const schema = await (await fetch(gateway.origin + '/api/config/schema')).json()
+  assert.equal(schema.fields['display.show_reasoning'].type, 'boolean')
   assert.deepEqual(await (await fetch(gateway.origin + '/api/env')).json(), {})
   const auxiliary = await (await fetch(gateway.origin + '/api/model/auxiliary')).json()
   assert.deepEqual(auxiliary.tasks, [])

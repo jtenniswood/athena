@@ -16,6 +16,7 @@ const pending = compile('src/platform/pending-work.ts')
 const drafts = compile('src/platform/draft-safety.ts')
 const state = compile('src/platform/connection-state.ts')
 const network = compile('src/pwa/update-network.ts')
+const notificationRouting = compile('src/platform/notification-navigation.ts')
 const registration = compile('src/pwa/register.ts')
 const coordinator = read('public/update-coordinator-sw.js')
 
@@ -37,10 +38,12 @@ test.beforeAll(async () => {
 };${guard};window.safety=exports;</script>
 <script>window.exports={};window.require=()=>({});${state};window.stateFactory=exports.createConnectionState;</script>
 <script>window.exports={};${network};window.updateNetwork=exports;</script>
+<script>window.exports={};${notificationRouting};window.notificationRouting=exports;</script>
 <script>
 window.exports={};window.require=name=>{
  if (name==='../platform/reload-safety') return window.safety;
  if (name==='./update-network') return window.updateNetwork;
+ if (name==='../platform/notification-navigation') return window.notificationRouting;
  throw new Error('Unexpected safety fixture import: '+name);
 };
 const register=navigator.serviceWorker.register.bind(navigator.serviceWorker);
@@ -159,22 +162,19 @@ test('storage migration binds only the matching connection and survives a reload
   expect(await page.evaluate(() => window.stateFactory(localStorage, 'different', () => false).load().token)).toBe('')
 })
 
-test('a busy second tab and unsent files defer an update; safe text survives activation', async ({ page, context }) => {
+test('unsent files defer an update while active responses in both tabs allow safe activation', async ({ page, context }) => {
   await openFixture(page)
   const other = await context.newPage(); await openFixture(other)
   await other.evaluate(() => window.safety.setActiveWork({ count: 1 }))
+  await page.evaluate(() => { window.safety.setActiveWork({ count: 1 }); window.unsentFiles = 1 })
   await page.getByRole('textbox', { name: 'Draft' }).fill('keep this draft')
   await newCandidate(page)
   await page.getByRole('button', { name: 'Update when safe' }).click()
-  await expect(page.getByRole('status')).toContainText('postponed')
-  expect(await page.evaluate(async () => Boolean((await navigator.serviceWorker.getRegistration()).waiting))).toBe(true)
-  await other.evaluate(() => window.safety.setActiveWork({ count: 0 }))
-  await page.evaluate(() => { window.unsentFiles = 1 })
-  await page.getByRole('button', { name: 'Update when safe' }).click()
   await expect(page.getByRole('status')).toContainText('attachments')
+  expect(await page.evaluate(async () => Boolean((await navigator.serviceWorker.getRegistration()).waiting))).toBe(true)
   await page.evaluate(() => { window.unsentFiles = 0 })
   // Same draft in both tabs avoids an intentional concurrent-edit conflict.
   await other.getByRole('textbox', { name: 'Draft' }).fill('keep this draft')
-  await Promise.all([page.waitForEvent('load'), page.getByRole('button', { name: 'Update when safe' }).click()])
+  await Promise.all([page.waitForEvent('load'), other.waitForEvent('load'), page.getByRole('button', { name: 'Update when safe' }).click()])
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('fixture-drafts')).session)).toBe('keep this draft')
 })

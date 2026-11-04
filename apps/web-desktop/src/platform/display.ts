@@ -2,6 +2,8 @@ import type {} from '../upstream/types'
 import { browserPreference } from './preferences'
 
 const ZOOM_FACTOR_BASE = 1.2
+const TOUCH_QUERY = '(pointer: coarse)'
+const MOBILE_WIDTH_QUERY = '(max-width: 64rem)'
 const DESKTOP_DEFAULT_ZOOM_LEVEL = Math.log(1.25) / Math.log(ZOOM_FACTOR_BASE)
 const MOBILE_DEFAULT_ZOOM_LEVEL = Math.log(1.25) / Math.log(ZOOM_FACTOR_BASE)
 const MIN_ZOOM_LEVEL = -9
@@ -20,8 +22,8 @@ function clampZoomLevel(level: number): number {
 
 function isMobileDevice(): boolean {
   return typeof window !== 'undefined' &&
-    window.matchMedia('(pointer: coarse)').matches &&
-    window.matchMedia('(max-width: 64rem)').matches
+    window.matchMedia(TOUCH_QUERY).matches &&
+    window.matchMedia(MOBILE_WIDTH_QUERY).matches
 }
 
 function defaultZoomLevel(): number {
@@ -52,6 +54,7 @@ function isEditableZoomTarget(target: EventTarget | null): boolean {
 /** Browser equivalent of Electron's global window zoom bridge. */
 export function createWebZoomBridge(): NonNullable<Window['hermesDesktop']['zoom']> {
   let level = percentToZoomLevel(readStoredZoomPercent())
+  let persisting = false
   const listeners = new Set<(change: WebZoomChange) => void>()
 
   const current = (): WebZoomChange => ({ level, percent: zoomLevelToPercent(level) })
@@ -69,12 +72,23 @@ export function createWebZoomBridge(): NonNullable<Window['hermesDesktop']['zoom
     document.documentElement.style.setProperty('zoom', scale)
 
     if (persist) {
-      zoomPreference().write(change.percent)
+      persisting = true
+      try { zoomPreference().write(change.percent) }
+      finally { persisting = false }
     }
 
     for (const listener of listeners) {
       listener(change)
     }
+  }
+
+  // Preference writes from another control/tab and responsive mode changes
+  // must update the same bridge and CSS projection. Ignore our own write's echo
+  // so shortcut levels retain their precision and emit one change per action.
+  const refresh = () => {
+    if (persisting) return
+    const next = percentToZoomLevel(readStoredZoomPercent())
+    if (zoomLevelToPercent(next) !== current().percent) apply(next, false)
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -103,6 +117,11 @@ export function createWebZoomBridge(): NonNullable<Window['hermesDesktop']['zoom
   // browser-page command. Inputs and text editors are intentionally excluded.
   window.addEventListener('keydown', onKeyDown, true)
   apply(level, false)
+  // The installed bridge and these subscriptions share the window lifetime.
+  browserPreference('desktopScale').subscribe(refresh)
+  browserPreference('mobileScale').subscribe(refresh)
+  window.matchMedia(TOUCH_QUERY).addEventListener('change', refresh)
+  window.matchMedia(MOBILE_WIDTH_QUERY).addEventListener('change', refresh)
 
   return {
     get: async () => current(),

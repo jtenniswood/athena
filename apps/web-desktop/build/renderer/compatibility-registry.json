@@ -1,0 +1,3792 @@
+[
+  {
+    "name": "bot-session-cancellation",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "sdk/index.ts",
+    "reason": "Keep superseded Bot opens on the shared browser connection",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "an explicit profile choice survives delayed Bot activation"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a session selection supersedes delayed Bot activation without losing its draft"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "returning to a Bot while its previous activation is pending honors the latest choice"
+      }
+    ],
+    "removal": "Remove when routed Bot opens use public browser navigation contracts with equivalent interruption tests.",
+    "sourceHash": "42c2ffd6bc62d30e8e0804a6b35e61be3993b5b3cdac73b722ce17c3f45b2d22",
+    "outputHash": "caa5ec54ececf1046640860d2b80c180c2501e4de36b3b70afb29be3d6be94bf",
+    "handler": "bot-session-cancellation",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "shared-gateway-activation",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "store/gateway.ts",
+    "reason": "Use the existing shared gateway for browser profiles",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "phone session-row actions stay open without resuming the row"
+      }
+    ],
+    "removal": "Remove when the upstream gateway registry supports shared browser connections without backend activation.",
+    "sourceHash": "dcfef9ed6327cb5474a6452ec01d67553865741f2d58ed3dad563a780262f410",
+    "outputHash": "e7885a99e7d72e134c0ae7e3dcd7c3199b74f27508dfd4e357c94214e7c2007c",
+    "handler": "shared-gateway-activation",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-profile-selection",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "store/profile.ts",
+    "reason": "Keep browser profile selection and the native all-profile grouping scope independent of background gateway activation.",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "an explicit profile choice survives delayed Bot activation"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "profile commands preserve the conversation draft across scope changes and reload"
+      },
+      {
+        "file": "scripts/unified-session-list.test.mjs",
+        "scenario": "profile grouping uses the native all-profile scope"
+      }
+    ],
+    "removal": "Remove when upstream profile selection supports a browser-owned scope without starting desktop backends.",
+    "sourceHash": "022c46fcff36c741d31a8096a1e0b2504ee5ded90357969e33cf0b71e47a4a8f",
+    "outputHash": "f18c19636891e62c45f94b3121bb6e91b975cfa88ed281133595f1e2a81ffec9",
+    "handler": "browser-profile-selection",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "bot-roster-opening",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "plugins/hermes-bots/roster-actions.ts",
+    "reason": "Avoid focusing a stale Bot tab after selection",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
+      }
+    ],
+    "removal": "Remove when upstream canonical Bot navigation never reopens stale desktop tabs in the browser.",
+    "sourceHash": "945f0a1ca0a2c53bb773bb239c975dc583a1de7ba5c3fe2ce9da8aba8a34c08a",
+    "outputHash": "e96ac5c27f5443a507abb24caf3d97e15f577192e9f58b24213109ba59bd2960",
+    "handler": "bot-roster-opening",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "profile-session-refresh",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "app/session/hooks/use-session-list-actions.ts",
+    "reason": "Refresh and paginate the selected native session scope independently of background gateway activation.",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "an explicit profile choice survives delayed Bot activation"
+      },
+      {
+        "file": "scripts/unified-session-list.test.mjs",
+        "scenario": "profile grouping uses the native all-profile scope"
+      }
+    ],
+    "removal": "Remove when shared-gateway sidebar refresh accepts the browser profile scope as a public input.",
+    "sourceHash": "4c412cde33ac5a121fb8ef9f0c7b0eafae54221bb68d51c1cd9cd80682cdc70e",
+    "outputHash": "4c89451fd9e45ec9b76b1acbf687dd078345072c1add5862919e5e46da911fc8",
+    "handler": "profile-session-refresh",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "canonical-bot-chat",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "plugins/hermes-bots/canonical-chat.ts",
+    "reason": "Deduplicate concurrent canonical chat opens on the shared gateway",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a session selection supersedes delayed Bot activation without losing its draft"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "returning to a Bot while its previous activation is pending honors the latest choice"
+      },
+      {
+        "file": "scripts/renderer-update.test.mjs",
+        "scenario": "background Bot refresh preserves refreshInPlace and cannot swallow a foreground open"
+      },
+      {
+        "file": "scripts/renderer-update.test.mjs",
+        "scenario": "a cancelled canonical lookup never navigates and a newer Bot choice can reopen"
+      },
+      {
+        "file": "scripts/renderer-update.test.mjs",
+        "scenario": "background Bot lookup never creates a chat and failed lookups fail closed"
+      }
+    ],
+    "removal": "Remove when upstream canonical lookup and deduplicated opens support the single-gateway browser route.",
+    "sourceHash": "7aed460924f6cb461bd97f368dcfd6d07a5b57038bb977595a3b6ff46a1b42df",
+    "outputHash": "a0b864b5dd0d23ab85af51f4d22d4ec9a1d53a2ca94d7d7c26bc712c855e1900",
+    "handler": "canonical-bot-chat",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-draft-snapshot",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "store/composer.ts",
+    "reason": "Preserve synchronous ordinary saves while serializing update-handshake draft writes across tabs.",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/upgrades.spec.mjs",
+        "scenario": "real drafts survive a previous-image upgrade after active work and unsent files are resolved"
+      },
+      {
+        "file": "tests/browser/upgrades.spec.mjs",
+        "scenario": "UI rollback reconnects a running response and retains real drafts in both tabs"
+      },
+      {
+        "file": "scripts/draft-persistence.test.mjs",
+        "scenario": "actual composer flushes preserve stale-tab drafts and ordinary saves remain synchronous"
+      },
+      {
+        "file": "tests/browser/upgrades.spec.mjs",
+        "scenario": "candidate composers block conflicting rollback drafts and allow retry after the other tab closes"
+      },
+      {
+        "file": "tests/browser/upgrades.spec.mjs",
+        "scenario": "a candidate update cannot resurrect an unchanged draft sent by another tab"
+      }
+    ],
+    "removal": "Remove when upstream exposes a public complete draft and attachment snapshot for safe browser updates.",
+    "sourceHash": "a20e4b9ae604b5804477d8994f02925fda1efec8c93946c1bdca95027fc0a0f6",
+    "outputHash": "31f7b93475d6b2fb864466d13be6ada9e4a5d5620c97138f642a9cd3a730d78a",
+    "handler": "browser-draft-snapshot",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-flush-all-composers",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "app/chat/composer/hooks/use-composer-draft.ts",
+    "reason": "Flush main and tile text drafts, refusing queue edits and history browsing",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/upgrades.spec.mjs",
+        "scenario": "real drafts survive a previous-image upgrade after active work and unsent files are resolved"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "message editing follows the current runtime after conversation switches without losing drafts"
+      },
+      {
+        "file": "tests/browser/upgrades.spec.mjs",
+        "scenario": "candidate composers block conflicting rollback drafts and allow retry after the other tab closes"
+      },
+      {
+        "file": "tests/browser/upgrades.spec.mjs",
+        "scenario": "a candidate update cannot resurrect an unchanged draft sent by another tab"
+      }
+    ],
+    "removal": "Remove when upstream exposes a public flush-all-composers operation with queue/history refusal.",
+    "sourceHash": "4c1e62ae0eaa782d103740366a4baab2de779409489832e1d308914c1e8c1845",
+    "outputHash": "c314cfb77f58969e00940f07ce7200c4c4e1c16cb54878f664c12d33cec5ca9d",
+    "handler": "browser-flush-all-composers",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-gateway-recovery",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "components/boot-failure-overlay.tsx",
+    "reason": "Offer configured-gateway settings and soft retry without native backend or log actions",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/safety.spec.mjs",
+        "scenario": "nginx serves the built app and uncached identity; API stays available for recovery"
+      }
+    ],
+    "removal": "Remove when upstream recovery offers configured-gateway actions without native backend/log assumptions.",
+    "sourceHash": "9243fef1e02f2552d61a8a7c9f6984275ed0221b8e48de83e7f3b783eef6d0b0",
+    "outputHash": "7d0b670584f40ca53cb18b85587baa34cb0031f7a18e0024defde61aa2030616",
+    "handler": "browser-gateway-recovery",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-profile-commit",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "app/gateway/hooks/use-gateway-boot.ts",
+    "reason": "Keep background Bot route readiness from replacing an explicit browser profile choice",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "an explicit profile choice survives delayed Bot activation"
+      }
+    ],
+    "removal": "Remove when public profile activation contracts prevent background readiness overwriting browser selection.",
+    "sourceHash": "0c350dd0c22a17791998c2326e7a4e5142524dfca86951d7919aa29d36f2c060",
+    "outputHash": "ff063799f868d81531bd11439302d054fc2a76a4d336a2b241f5a18a39faf913",
+    "handler": "browser-profile-commit",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-external-links",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "lib/external-link.tsx",
+    "reason": "Open response links in a browser tab because Athena has no desktop browser pane",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "response links open a browser tab without losing the conversation or draft"
+      }
+    ],
+    "removal": "Remove when upstream external links support browser-tab routing without a desktop preview pane.",
+    "sourceHash": "20d2d4381b0baa346dac790cd53675d6e672ac2fd30a36560991d0374f7519f2",
+    "outputHash": "9e8fb0bed8aadd70d9a5f59515776b7255fd4b6d09d97f4668560f165e85c188",
+    "handler": "browser-external-links",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-html-link-attributes",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "lib/markdown-preprocess.ts",
+    "reason": "Preserve HTML href/src attributes while autolinking bare response URLs",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "response links open a browser tab without losing the conversation or draft"
+      }
+    ],
+    "removal": "Remove when upstream bare-URL preprocessing preserves HTML tag attributes.",
+    "sourceHash": "72a206d1dc8fe8d437dde78da42f00e70e758ef4f145bae1a9930f6164a25321",
+    "outputHash": "9ba99e3fde77dfd7defcb9147d6efafea616dfb61374152c310b8396263b92ee",
+    "handler": "browser-html-link-attributes",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "ungrouped-session-state",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/layout.ts",
+    "reason": "Expose None grouping and default the browser all-profiles session list to Profile while preserving saved choices.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "None grouping shows all sessions without subheaders and survives reload"
+      },
+      {
+        "file": "scripts/unified-session-list.test.mjs",
+        "scenario": "profile grouping uses the native all-profile scope"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Profile grouping replaces presentation controls and switches live without gateway nesting"
+      }
+    ],
+    "removal": "Upstream supports None grouping as a persisted option.",
+    "handlers": [
+      "ungroupedStore"
+    ],
+    "sourceHash": "b036ba9cbf09093271bcbfaf825ab5fea1e41f674750e9f1c26f0c6efbd1674f",
+    "sourceRoot": "renderer",
+    "inputHash": "b036ba9cbf09093271bcbfaf825ab5fea1e41f674750e9f1c26f0c6efbd1674f",
+    "outputHash": "f294d2c80fd25c5893224835c478410967d757a4fbc41abf130a86dd949c1b50"
+  },
+  {
+    "name": "browser-session-filters",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/filter-menu.tsx",
+    "reason": "Adapt Gateway & profile grouping to Profile, hide desktop profile/card controls and the grouping summary, expose None grouping, add sidebar action shortcuts, and restore hidden profile groups from the filter control.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "None grouping shows all sessions without subheaders and survives reload"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "sidebar action shortcuts preserve the selected chat and draft on"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Profile grouping replaces presentation controls and switches live without gateway nesting"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "profile menus hide groups and filters restore every profile without losing the draft"
+      }
+    ],
+    "removal": "The browser owns the filter menu or upstream offers composition flags.",
+    "handlers": [
+      "filterBrowserSessionMenu",
+      "ungroupedMenu"
+    ],
+    "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
+    "sourceRoot": "renderer",
+    "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
+    "outputHash": "b2baf873a6b29cebe35919bc3ad246d5e483a261610f88d67f7f087da96d125a"
+  },
+  {
+    "name": "hidden-bot-roster",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "plugins/hermes-bots/roster-pane-derivation.ts",
+    "reason": "Show hidden Bots in the normal roster when requested.",
+    "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Bots keeps filters beside the rightmost add button"
+      }
+    ],
+    "removal": "Upstream exposes hidden-roster presentation as a public option.",
+    "handlers": [
+      "showHiddenBotsInBrowserRoster"
+    ],
+    "sourceHash": "d3f362d6587fa3bd9ba64620321fa5e27939e6abb9f019df31550a023c2d1573",
+    "sourceRoot": "renderer",
+    "inputHash": "d3f362d6587fa3bd9ba64620321fa5e27939e6abb9f019df31550a023c2d1573",
+    "outputHash": "35b5f5f7b38d279dc6ef81ae297ba7c34323c2066f5504bdc45e4f0e5dc75393"
+  },
+  {
+    "name": "browser-microphone",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/hooks/use-mic-recorder.ts",
+    "reason": "Request one recording stream and explain browser permission failures.",
+    "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "records once permission is granted and releases the mic after transcription"
+      }
+    ],
+    "removal": "Upstream has browser permission and secure-origin handling.",
+    "handlers": [
+      "useBrowserMicrophoneCapture"
+    ],
+    "sourceHash": "1a5e88f95dd96daa5d10e8713883511bfbbcaca14f326bd374b91c3b195405bb",
+    "sourceRoot": "renderer",
+    "inputHash": "1a5e88f95dd96daa5d10e8713883511bfbbcaca14f326bd374b91c3b195405bb",
+    "outputHash": "eb4b75db99c25a5341bfd23f81066640be4fd2d26a7436546cbdc2df71f135c8"
+  },
+  {
+    "name": "browser-voice-lifetime",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/hooks/use-composer-voice.ts",
+    "reason": "Protect recording and pending transcription through the mounted composer capture owner.",
+    "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
+    "tests": [
+      {
+        "file": "tests/browser/voice-readiness.spec.mjs",
+        "scenario": "an update waits for the dictation transcript after its microphone closes"
+      },
+      {
+        "file": "tests/browser/voice-readiness.spec.mjs",
+        "scenario": "a failed dictation releases update safety without changing the draft"
+      }
+    ],
+    "removal": "Upstream exposes mounted voice capture activity to browser reload safety.",
+    "handlers": [
+      "guardBrowserVoiceLifetime"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "b45727db67819a91f2a92cec55edf1a06166fc807a36a78e1104b6e2938980e8",
+    "inputHash": "b45727db67819a91f2a92cec55edf1a06166fc807a36a78e1104b6e2938980e8",
+    "outputHash": "8910de130fe7e3442a56314c82fde2bb8612b7587a68004017783fa11b9a8024"
+  },
+  {
+    "name": "composer-layout-width",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/hooks/use-composer-metrics.ts",
+    "reason": "Use layout pixels for composer breakpoints under UI scaling.",
+    "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "composer stays at the bottom while idle, running, and reconnecting"
+      }
+    ],
+    "removal": "Upstream measures composer breakpoints in unscaled layout pixels.",
+    "handlers": [
+      "useBrowserComposerLayoutWidth"
+    ],
+    "sourceHash": "9dbe74abda47803c1beef91016832a332a1092d39d150789733965af92da6d54",
+    "sourceRoot": "renderer",
+    "inputHash": "9dbe74abda47803c1beef91016832a332a1092d39d150789733965af92da6d54",
+    "outputHash": "a8753fa80a43ca80fd2bbf190ed391589b23e60ff72c6d5afbb843eabed1c687"
+  },
+  {
+    "name": "browser-sidebar-composition",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/index.tsx",
+    "reason": "Project live navigation, search, scoped session lists and pagination into Athena-owned sidebar composition without a second session store.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings lists panel links after all categories"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "empty configured channels stay hidden and channel controls exclude unset platforms"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "saved Telegram conversations remain visible without detected configuration"
+      },
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "scripts/unified-session-list.test.mjs",
+        "scenario": "profile grouping uses the native all-profile scope"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "dragging chats selects manual ordering and preserves the draft"
+      },
+      {
+        "file": "scripts/unified-session-list.test.mjs",
+        "scenario": "profile grouping keeps empty configured profiles as new conversation entry points"
+      }
+    ],
+    "removal": "Remove when Hermes exposes the same sidebar controller through a public host contract.",
+    "handlers": [
+      "useBrowserSidebarController"
+    ],
+    "sourceHash": "851f2833257195fcf6a4020d5f6f606dbe565de213062de22e5ebcd981f6c0dc",
+    "sourceRoot": "renderer",
+    "inputHash": "851f2833257195fcf6a4020d5f6f606dbe565de213062de22e5ebcd981f6c0dc",
+    "outputHash": "07c43eafd5a2634f5ea0fcf7038b9fe488f4aad1f07c6ef65ca6706e03af0946"
+  },
+  {
+    "name": "single-conversation-wiring",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/contrib/wiring.tsx",
+    "reason": "Keep browser session selection owner-preserving, route New session into the visible draft, disable chat tab creation, and skip desktop first-run onboarding and tips in the web app.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a session selection supersedes delayed Bot activation without losing its draft"
+      },
+      {
+        "file": "scripts/selection.test.mjs",
+        "scenario": "session commands preserve the clicked owner for identical IDs in different profiles"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a direct resume command supersedes delayed Bot activation"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace controls live inside settings and preserve the conversation"
+      },
+      {
+        "file": "scripts/default-session-profile.test.mjs",
+        "scenario": "new sessions in All profiles capture the first enabled owner before activating its gateway"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "the first enabled profile routes All profiles drafts without changing scope"
+      },
+      {
+        "file": "scripts/renderer-update.test.mjs",
+        "scenario": "browser startup marks desktop onboarding decided without requesting or registering a setup chat"
+      }
+    ],
+    "removal": "Upstream wiring accepts a single-conversation capability.",
+    "handlers": [
+      "disableBrowserSessionTabs",
+      "disableBrowserOnboardingTips",
+      "useBrowserSessionSelection",
+      "useBrowserDirectResumeOwner",
+      "useBrowserSettingsToolActions",
+      "useBrowserDefaultSessionProfile"
+    ],
+    "sourceHash": "6b43e4dfd72ff4e12572ec5479bd695df8ac223dfe5a3c33e246a016867b707d",
+    "sourceRoot": "renderer",
+    "inputHash": "6b43e4dfd72ff4e12572ec5479bd695df8ac223dfe5a3c33e246a016867b707d",
+    "outputHash": "bbdf816a34ef087d1b01481e246bca17e78d7cc029e31ea1d0bd1da60c0f4915"
+  },
+  {
+    "name": "single-conversation-controller",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/contrib/controller.tsx",
+    "reason": "Retain registrations while disabling desktop session-tile mirrors and the unsupported tab-strip palette action.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      },
+      {
+        "file": "tests/browser/link-navigation.spec.mjs",
+        "scenario": "link context menus open browser tabs and copy URLs without desktop tab controls"
+      }
+    ],
+    "removal": "Upstream registration is separable from desktop tile-mirroring side effects.",
+    "handlers": [
+      "disableBrowserSessionTileMirrors",
+      "removeBrowserTabPaletteControl"
+    ],
+    "sourceHash": "7f7b2fb007e72f5c79e39d498a8438d62172b02c3844f6fe35bce74408c93b64",
+    "sourceRoot": "renderer",
+    "inputHash": "7f7b2fb007e72f5c79e39d498a8438d62172b02c3844f6fe35bce74408c93b64",
+    "outputHash": "5d374be8354e17a595ede9a428c31bde1ded486219d23714e43572c90ed8582d"
+  },
+  {
+    "name": "single-conversation-rows",
+    "kind": "replacement",
+    "order": 10,
+    "module": "app/chat/sidebar/session-row.tsx",
+    "reason": "Project engine-owned session metadata and commands into Athena-owned row presentation, browser gestures, sortable handles and owner-scoped previews. Preserve the direct archive command beside the menu.",
+    "owner": "apps/web-desktop/src/upstream/session-row.tsx",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "dragging chats selects manual ordering and preserves the draft"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "chat hover previews show the latest reply without selecting the chat or changing its draft"
+      },
+      {
+        "file": "tests/browser/session-row.spec.mjs",
+        "scenario": "row commands preserve owner identity and exclude action and portal gestures"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "hovered chat archive preserves the selected conversation and draft"
+      }
+    ],
+    "removal": "Remove when Hermes provides an equivalent public row projection and command contract.",
+    "sourceHash": "bc91540c2f89b27f39c363d92997488d40bae1a9e3bb39650d747bc5337d4c0b",
+    "sourceRoot": "renderer",
+    "replacement": "src/upstream/session-row.tsx"
+  },
+  {
+    "name": "single-conversation-menus",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/session-actions-menu.tsx",
+    "reason": "Keep single-view browser menus, shared shortcut labels and profile-correct runtime selection for row renames.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "chat actions open from the title toolbar with panel controls"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "conversation action shortcuts"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "a background copied row cannot rename the selected profile runtime"
+      }
+    ],
+    "removal": "The browser also owns sidebar session menus or upstream accepts browser capabilities.",
+    "handlers": [
+      "disableBrowserSessionOpenActions",
+      "keepBrowserRenameProfile"
+    ],
+    "sourceHash": "42f9e8057e0b92521d9f636c85c043ce34cdb25c91a49cb1f09fb131e06210c0",
+    "sourceRoot": "renderer",
+    "inputHash": "42f9e8057e0b92521d9f636c85c043ce34cdb25c91a49cb1f09fb131e06210c0",
+    "outputHash": "b90cfafd8c67a58e611a2480c658f8d568a783c56eba3890cc9e132debe774c7"
+  },
+  {
+    "name": "canonical-bot-row-actions",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "plugins/hermes-bots/bot-row.tsx",
+    "reason": "Keep Bot row menus consistent with one canonical browser conversation.",
+    "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Bots keeps filters beside the rightmost add button"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a rejected Bot activation reports a visible failure and preserves the session draft"
+      }
+    ],
+    "removal": "Browser Bot actions use public canonical conversation commands.",
+    "handlers": [
+      "removeBrowserOpenBotChatAction",
+      "removeBrowserNewBotChatAction",
+      "useBrowserBotSelection"
+    ],
+    "sourceHash": "afd10547e9e235181545cc59248968f43bbe647affadc02f487f56cf4ff518ce",
+    "sourceRoot": "renderer",
+    "inputHash": "afd10547e9e235181545cc59248968f43bbe647affadc02f487f56cf4ff518ce",
+    "outputHash": "39c418fedf176a925bc25e0459231fa16bcf72104ff787879ba906d0a4180310"
+  },
+  {
+    "name": "browser-keybinds",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/keybind-settings.tsx",
+    "reason": "Hide shortcuts for unavailable desktop tabs, windows, terminals, HUD, and the desktop search bar.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser settings omit desktop-only keybinds"
+      }
+    ],
+    "removal": "Upstream keybind settings filter actions by browser capabilities.",
+    "handlers": [
+      "filterBrowserKeybinds"
+    ],
+    "sourceHash": "b239650c00df04787873413afacc87d4c004f82b428889d8aa68f302764ccf4b",
+    "sourceRoot": "renderer",
+    "inputHash": "b239650c00df04787873413afacc87d4c004f82b428889d8aa68f302764ccf4b",
+    "outputHash": "08603e8622bf8f7599d1bb79ddf78eb2af3b05263e97ea559c830f8f7f42e367"
+  },
+  {
+    "name": "statusbar-item-export",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/shell/statusbar-controls.tsx",
+    "reason": "Expose the shared item renderer to browser toolbar composition.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "approval mode keeps the selected profile mode and composer icon synchronized"
+      }
+    ],
+    "removal": "Upstream exports the statusbar item renderer publicly.",
+    "handlers": [
+      "exportBrowserStatusbarItem"
+    ],
+    "sourceHash": "67e0dbb288eb88458d790f76d88b50d0a384b57b8e39bf5c5bf2b7c08fbea9fa",
+    "sourceRoot": "renderer",
+    "inputHash": "67e0dbb288eb88458d790f76d88b50d0a384b57b8e39bf5c5bf2b7c08fbea9fa",
+    "outputHash": "5a30809c3a4c1c392a25a06e68ccec7993315e981e7056d9fb183114f525e0d2"
+  },
+  {
+    "name": "empty-panel-close",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/pane-shell/tree/store.ts",
+    "reason": "Close an empty files/review panel even when its owner state was already false.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser workspace panels open and close without losing a draft"
+      }
+    ],
+    "removal": "Upstream closeTreePane closes manually revealed empty panels.",
+    "handlers": [
+      "closeBrowserWorkspacePanels"
+    ],
+    "sourceHash": "7d66ea947776367a1ccece20496c2fc503b0f38f9226e9fc7f1e5e0dd7d0a24c",
+    "sourceRoot": "renderer",
+    "inputHash": "7d66ea947776367a1ccece20496c2fc503b0f38f9226e9fc7f1e5e0dd7d0a24c",
+    "outputHash": "599702f66b1af200dc7f70e5736ba7116471da2d886d2a65309776c90bcbc049"
+  },
+  {
+    "name": "browser-narrow-panels",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/pane-shell/tree/renderer/narrow-overlays.tsx",
+    "reason": "Use the browser tool-pane policy for narrow overlays while retaining engine close actions.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser workspace panels open and close without losing a draft"
+      }
+    ],
+    "removal": "Upstream narrow overlays accept browser pane composition and close controls.",
+    "handlers": [
+      "filterBrowserNarrowNavigation"
+    ],
+    "sourceHash": "2d60cf8722b2f011c29cb97424e444ebaff2a6420fd8fe760e55ede30ca96c16",
+    "sourceRoot": "renderer",
+    "inputHash": "2d60cf8722b2f011c29cb97424e444ebaff2a6420fd8fe760e55ede30ca96c16",
+    "outputHash": "b3e65cf6e231f8abb8eadb877c17fb564b09f71d6226f6d4a39765ea358b62e1"
+  },
+  {
+    "name": "browser-layout-storage",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "lib/storage.ts",
+    "reason": "Namespace browser layout preferences while retaining shared drafts and credentials.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/upgrades.spec.mjs",
+        "scenario": "real drafts survive a previous-image upgrade after active work and unsent files are resolved"
+      }
+    ],
+    "removal": "Upstream provides an explicit browser preference namespace and migration contract.",
+    "handlers": [
+      "scopeBrowserStorage"
+    ],
+    "sourceHash": "3b498e74ce22f3231888a61040cf5c4e7c25984bb151c483f111fdb2a2ed6b2e",
+    "sourceRoot": "renderer",
+    "inputHash": "3b498e74ce22f3231888a61040cf5c4e7c25984bb151c483f111fdb2a2ed6b2e",
+    "outputHash": "3ddb30f5449c3e106259ec571a0a81de5986e0331d404e5561979d0449036ff2"
+  },
+  {
+    "name": "browser-activity-notifications",
+    "kind": "browser-transform",
+    "order": 40,
+    "module": "plugins/hermes-bots/roster-actions.ts",
+    "reason": "Keep unread and incoming-message notifications while suppressing generic activity toasts.",
+    "owner": "apps/web-desktop/build/renderer/transforms/host.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser omits generic activity toasts while preserving unread tracking and incoming messages"
+      }
+    ],
+    "removal": "Upstream exposes notification categories as browser capabilities.",
+    "handlers": [
+      "filterBrowserActivityToasts"
+    ],
+    "after": [
+      "bot-roster-opening"
+    ],
+    "sourceHash": "945f0a1ca0a2c53bb773bb239c975dc583a1de7ba5c3fe2ce9da8aba8a34c08a",
+    "sourceRoot": "renderer",
+    "inputHash": "0edd8140754c8c61b12a74d5611ec53874e9de4085df0edef8283529cbd30750",
+    "outputHash": "b6548340a9203df5eac5bb135e839a1f72fa0646657a47521aadc4edb7c89408"
+  },
+  {
+    "name": "configured-gateway-settings",
+    "kind": "replacement",
+    "order": 10,
+    "module": "app/settings/gateway-settings.tsx",
+    "reason": "Replace native backend settings with the server-configured gateway surface.",
+    "owner": "apps/web-desktop/build/renderer/overrides.ts",
+    "tests": [
+      {
+        "file": "tests/browser/safety.spec.mjs",
+        "scenario": "nginx serves the built app and uncached identity; API stays available for recovery"
+      },
+      {
+        "file": "tests/browser/gateway-setup.spec.mjs",
+        "scenario": "remote gateway sign-in stays reachable with the keyboard"
+      }
+    ],
+    "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",
+    "replacement": "src/overrides/gateway-settings.tsx",
+    "sourceHash": "fb153868ecde6e9c9f6804a452cf44844cc20d378451d219884404b5eb42d5d5",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-bots-toolbar",
+    "kind": "replacement",
+    "order": 10,
+    "module": "plugins/hermes-bots/roster-pane-toolbar.tsx",
+    "reason": "Own browser Bot filters, activity settings, and add controls.",
+    "owner": "apps/web-desktop/build/renderer/overrides.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Bots keeps filters beside the rightmost add button"
+      }
+    ],
+    "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",
+    "replacement": "src/experience/browser-bots-toolbar.tsx",
+    "sourceHash": "2a386ad18290adfe3281a1ed80bccc70d1242f06a0e5fb7c835525813fc2d864",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-approval-menu",
+    "kind": "replacement",
+    "order": 10,
+    "module": "app/shell/approval-mode-menu.tsx",
+    "reason": "Own approval presentation and surface confirmed-state failures.",
+    "owner": "apps/web-desktop/build/renderer/overrides.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "rejected approval change restores the confirmed mode and explains the failure"
+      }
+    ],
+    "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",
+    "replacement": "src/experience/browser-approval-mode-menu.tsx",
+    "sourceHash": "03a705f2f21cc0c44ebe0dcc544e3ac4717a83b9afdec3b6d1045eb734349234",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-root",
+    "kind": "replacement",
+    "order": 20,
+    "module": "app/index.tsx",
+    "reason": "Select the browser shell while retaining shared upstream registrations.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",
+    "replacement": "src/upstream/browser-root.tsx",
+    "sourceHash": "d438c9268d0bf5664261d2b0a8be9bdab296f8db92d548256099625bd7e20b5f",
+    "sourceRoot": "renderer",
+    "bypassImporters": [
+      "/upstream/browser-titlebar.tsx",
+      "/upstream/browser-statusbar.tsx"
+    ]
+  },
+  {
+    "name": "browser-titlebar",
+    "kind": "replacement",
+    "order": 20,
+    "module": "app/shell/titlebar-controls.tsx",
+    "reason": "Adapt contributed titlebar controls for the browser shell.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "chat actions open from the title toolbar"
+      }
+    ],
+    "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",
+    "replacement": "src/upstream/browser-titlebar.tsx",
+    "sourceHash": "516791454f58cdb277be208f487f773caeda1cd7c0f3c9d93b85c0fd63c7672f",
+    "sourceRoot": "renderer",
+    "bypassImporters": [
+      "/upstream/browser-titlebar.tsx",
+      "/upstream/browser-statusbar.tsx"
+    ]
+  },
+  {
+    "name": "browser-statusbar",
+    "kind": "replacement",
+    "order": 20,
+    "module": "app/shell/statusbar-controls.tsx",
+    "reason": "Hide desktop statusbar chrome while browser controls live in navigation, the composer, and Settings.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "approval mode keeps the selected profile mode and composer icon synchronized"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "system updates use the native settings page"
+      }
+    ],
+    "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",
+    "replacement": "src/upstream/browser-statusbar.tsx",
+    "sourceHash": "67e0dbb288eb88458d790f76d88b50d0a384b57b8e39bf5c5bf2b7c08fbea9fa",
+    "sourceRoot": "renderer",
+    "bypassImporters": [
+      "/upstream/browser-titlebar.tsx",
+      "/upstream/browser-statusbar.tsx"
+    ]
+  },
+  {
+    "name": "contract-app-contrib-context",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "app/contrib/context.tsx",
+    "reason": "Preserve the upstream composition contract used by browser panels, routing, and contribution wiring.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the browser adapter no longer imports this composition contract.",
+    "sourceHash": "24d279c9da77a4f5ad689c08008bc868e8672f50b1a6b1f54988882f87ad8462",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "contract-components-pane-shell-tree-renderer-index",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "components/pane-shell/tree/renderer/index.tsx",
+    "reason": "Preserve the upstream composition contract used by browser panels, routing, and contribution wiring.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser workspace panels open and close without losing a draft"
+      }
+    ],
+    "removal": "Remove when the browser adapter no longer imports this composition contract.",
+    "sourceHash": "172b4a628d690ad04f73865f199090b54e93848de570323c8580e08b44703912",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "contract-components-pane-shell-tree-renderer-tree-node",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "components/pane-shell/tree/renderer/tree-node.tsx",
+    "reason": "Preserve the upstream composition contract used by browser panels, routing, and contribution wiring.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser workspace panels open and close without losing a draft"
+      }
+    ],
+    "removal": "Remove when the browser adapter no longer imports this composition contract.",
+    "sourceHash": "cea242aa8747467a6cbea0e42b19d881ebd6eee9b79c5d003ef3af812e969b36",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "contract-components-pane-shell-tree-renderer-tree-group",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "components/pane-shell/tree/renderer/tree-group.tsx",
+    "reason": "Preserve the upstream composition contract used by browser panels, routing, and contribution wiring.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser workspace panels open and close without losing a draft"
+      }
+    ],
+    "removal": "Remove when the browser adapter no longer imports this composition contract.",
+    "sourceHash": "af1ece179ff672f9ddfbce8201991d055b7faf4b00201d2f35be23f84ccb2fce",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "contract-components-pane-shell-tree-renderer-floating-panes",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "components/pane-shell/tree/renderer/floating-panes.tsx",
+    "reason": "Preserve the upstream composition contract used by browser panels, routing, and contribution wiring.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser workspace panels open and close without losing a draft"
+      }
+    ],
+    "removal": "Remove when the browser adapter no longer imports this composition contract.",
+    "sourceHash": "2cd27d92ab22f1800633780dedc0d5e2769053220cd03ecdce2333b255df7034",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "contract-components-pane-shell-tree-model",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "components/pane-shell/tree/model.ts",
+    "reason": "Preserve the upstream composition contract used by browser panels, routing, and contribution wiring.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser workspace panels open and close without losing a draft"
+      }
+    ],
+    "removal": "Remove when the browser adapter no longer imports this composition contract.",
+    "sourceHash": "0a7bbfff9abc89dba6784a6452f3cd3f05f2c45aa9c42fe0cea752fc2b57e668",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "contract-components-ui-pane-tab",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "components/ui/pane-tab.tsx",
+    "reason": "Preserve the upstream composition contract used by browser panels, routing, and contribution wiring.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser workspace panels open and close without losing a draft"
+      }
+    ],
+    "removal": "Remove when the browser adapter no longer imports this composition contract.",
+    "sourceHash": "10f4c841ad667bfbd56574802435e9d81097f830324c634c22f366539ce33cb0",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "contract-app-shell-hooks-use-statusbar-items",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "app/shell/hooks/use-statusbar-items.tsx",
+    "reason": "Preserve the upstream composition contract used by browser panels, routing, and contribution wiring.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the browser adapter no longer imports this composition contract.",
+    "sourceHash": "7764308732fcb229002fdd9d1043a6700e11b3f7485536fdd49f8db25373b8dd",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "contract-app-routes",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "app/routes.ts",
+    "reason": "Preserve the upstream composition contract used by browser panels, routing, and contribution wiring.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the browser adapter no longer imports this composition contract.",
+    "sourceHash": "037f10823e2567ec9c5bb84ca395607a14b7b9dd515e09d7df9ac421b57afc28",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "renderer-alias-1",
+    "kind": "alias",
+    "order": 0,
+    "module": null,
+    "reason": "Resolve @/* consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "renderer",
+    "specifier": "@/*",
+    "replacement": "../desktop/src/*",
+    "aliasGroup": "renderer",
+    "fingerprintPolicy": "The exact renderer/dependency locks and the declared alias target are checked; wildcard and wrapper-owned targets have no single upstream source fingerprint."
+  },
+  {
+    "name": "renderer-alias-2",
+    "kind": "alias",
+    "order": 0,
+    "module": null,
+    "reason": "Resolve @/store/titlebar-app-actions consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "renderer",
+    "specifier": "@/store/titlebar-app-actions",
+    "replacement": "./src/overrides/titlebar-app-actions.ts",
+    "aliasGroup": "renderer",
+    "fingerprintPolicy": "The exact renderer/dependency locks and the declared alias target are checked; wildcard and wrapper-owned targets have no single upstream source fingerprint."
+  },
+  {
+    "name": "renderer-alias-3",
+    "kind": "alias",
+    "order": 0,
+    "module": null,
+    "reason": "Resolve @/debug/dev-only consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "renderer",
+    "specifier": "@/debug/dev-only",
+    "replacement": "./src/debug-dev-only.ts",
+    "aliasGroup": "renderer",
+    "fingerprintPolicy": "The exact renderer/dependency locks and the declared alias target are checked; wildcard and wrapper-owned targets have no single upstream source fingerprint."
+  },
+  {
+    "name": "renderer-alias-4",
+    "kind": "alias",
+    "order": 0,
+    "module": null,
+    "reason": "Resolve @/debug/* consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "renderer",
+    "specifier": "@/debug/*",
+    "replacement": "./src/debug-dev-only.ts",
+    "aliasGroup": "renderer",
+    "fingerprintPolicy": "The exact renderer/dependency locks and the declared alias target are checked; wildcard and wrapper-owned targets have no single upstream source fingerprint."
+  },
+  {
+    "name": "renderer-alias-5",
+    "kind": "alias",
+    "order": 0,
+    "module": "sdk/index.ts",
+    "reason": "Resolve @hermes/plugin-sdk consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "renderer",
+    "specifier": "@hermes/plugin-sdk",
+    "replacement": "../desktop/src/sdk/index.ts",
+    "aliasGroup": "renderer",
+    "sourceHash": "42c2ffd6bc62d30e8e0804a6b35e61be3993b5b3cdac73b722ce17c3f45b2d22"
+  },
+  {
+    "name": "renderer-alias-6",
+    "kind": "alias",
+    "order": 0,
+    "module": "billing-types.ts",
+    "reason": "Resolve @hermes/shared/billing consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "shared",
+    "specifier": "@hermes/shared/billing",
+    "replacement": "../shared/src/billing-types.ts",
+    "aliasGroup": "renderer",
+    "sourceHash": "69d529855196cf2736895bfee788e53f1bd1debbcdb30c21912b1ac1c8c5433b"
+  },
+  {
+    "name": "renderer-alias-7",
+    "kind": "alias",
+    "order": 0,
+    "module": "billing-policy.ts",
+    "reason": "Resolve @hermes/shared/billing-policy consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "shared",
+    "specifier": "@hermes/shared/billing-policy",
+    "replacement": "../shared/src/billing-policy.ts",
+    "aliasGroup": "renderer",
+    "sourceHash": "491a27b345caf18ae403831d5c43b897f94270b67069e1aa0375df90d447d757"
+  },
+  {
+    "name": "renderer-alias-8",
+    "kind": "alias",
+    "order": 0,
+    "module": "charge-settlement.ts",
+    "reason": "Resolve @hermes/shared/charge-settlement consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "shared",
+    "specifier": "@hermes/shared/charge-settlement",
+    "replacement": "../shared/src/charge-settlement.ts",
+    "aliasGroup": "renderer",
+    "sourceHash": "851ce021ccd139b02696319b9ad977662463fad7a91f91998f6b515f73fcb062"
+  },
+  {
+    "name": "renderer-alias-9",
+    "kind": "alias",
+    "order": 0,
+    "module": "skin.ts",
+    "reason": "Resolve @hermes/shared/skin consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "shared",
+    "specifier": "@hermes/shared/skin",
+    "replacement": "../shared/src/skin.ts",
+    "aliasGroup": "renderer",
+    "sourceHash": "59b74561b98c14510dd2eb346e1357273d0cdd2e901eeb687b997571d04e4760"
+  },
+  {
+    "name": "renderer-alias-10",
+    "kind": "alias",
+    "order": 0,
+    "module": "index.ts",
+    "reason": "Resolve @hermes/shared consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "shared",
+    "specifier": "@hermes/shared",
+    "replacement": "../shared/src/index.ts",
+    "aliasGroup": "renderer",
+    "sourceHash": "62b09dfd8c89917ef20791ee90d3a18a7f668aa10be97f8c594b7c85c5a5d19f"
+  },
+  {
+    "name": "renderer-alias-11",
+    "kind": "alias",
+    "order": 0,
+    "module": null,
+    "reason": "Resolve @hermes/shared/* consistently in TypeScript and the browser bundle.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
+    "sourceRoot": "renderer",
+    "specifier": "@hermes/shared/*",
+    "replacement": "../shared/src/*",
+    "aliasGroup": "renderer",
+    "fingerprintPolicy": "The exact renderer/dependency locks and the declared alias target are checked; wildcard and wrapper-owned targets have no single upstream source fingerprint."
+  },
+  {
+    "name": "react-jsx-dev-singleton",
+    "kind": "alias",
+    "order": 1,
+    "module": "react/package.json",
+    "reason": "Keep JSX development runtime on the same React instance.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "Vite resolves compatibility aliases to one React runtime and the raw tour asset"
+      }
+    ],
+    "removal": "Remove when upstream/workspace module resolution guarantees a single React runtime without aliases.",
+    "sourceRoot": "dependency",
+    "specifier": "react/jsx-dev-runtime",
+    "replacement": "../../node_modules/react/jsx-dev-runtime.js",
+    "aliasGroup": "vite",
+    "sourceHash": "9cc9c3de5441a2eea7f41f52f3f2a15a4fc51f90c0b72741f0d7638643a85e67"
+  },
+  {
+    "name": "react-jsx-singleton",
+    "kind": "alias",
+    "order": 1,
+    "module": "react/package.json",
+    "reason": "Keep JSX runtime on the same React instance.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "Vite resolves compatibility aliases to one React runtime and the raw tour asset"
+      }
+    ],
+    "removal": "Remove when upstream/workspace module resolution guarantees a single React runtime without aliases.",
+    "sourceRoot": "dependency",
+    "specifier": "react/jsx-runtime",
+    "replacement": "../../node_modules/react/jsx-runtime.js",
+    "aliasGroup": "vite",
+    "sourceHash": "9cc9c3de5441a2eea7f41f52f3f2a15a4fc51f90c0b72741f0d7638643a85e67"
+  },
+  {
+    "name": "react-dom-singleton",
+    "kind": "alias",
+    "order": 1,
+    "module": "react-dom/package.json",
+    "reason": "Share one React DOM instance across fetched renderer and wrapper.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "Vite resolves compatibility aliases to one React runtime and the raw tour asset"
+      }
+    ],
+    "removal": "Remove when upstream/workspace module resolution guarantees a single React runtime without aliases.",
+    "sourceRoot": "dependency",
+    "specifier": "react-dom",
+    "replacement": "../../node_modules/react-dom",
+    "aliasGroup": "vite",
+    "sourceHash": "89d54f11575c9b0f7819962d9d72a31970dfb4d103f07e8b1d1b37e6d1fc3258"
+  },
+  {
+    "name": "react-singleton",
+    "kind": "alias",
+    "order": 1,
+    "module": "react/package.json",
+    "reason": "Share one React instance across fetched renderer and wrapper.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "Vite resolves compatibility aliases to one React runtime and the raw tour asset"
+      }
+    ],
+    "removal": "Remove when upstream/workspace module resolution guarantees a single React runtime without aliases.",
+    "sourceRoot": "dependency",
+    "specifier": "react",
+    "replacement": "../../node_modules/react",
+    "aliasGroup": "vite",
+    "sourceHash": "9cc9c3de5441a2eea7f41f52f3f2a15a4fc51f90c0b72741f0d7638643a85e67"
+  },
+  {
+    "name": "driver-raw-iife",
+    "kind": "alias",
+    "order": 1,
+    "module": "driver.js/dist/driver.js.iife.js",
+    "reason": "Resolve the unexported driver.js IIFE requested as raw text by the upstream preview tour.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "Vite resolves compatibility aliases to one React runtime and the raw tour asset"
+      }
+    ],
+    "removal": "Remove when driver.js exports its IIFE or upstream no longer imports that private subpath.",
+    "sourceRoot": "dependency",
+    "pattern": "^driver\\.js/dist/driver\\.js\\.iife\\.js(\\?raw)?$",
+    "replacement": "../../node_modules/driver.js/dist/driver.js.iife.js$1",
+    "aliasGroup": "vite",
+    "sourceHash": "541520f33f84cc5cf6696b421f705cc9efe2d72656b3b5cd7f72c22e6d7e17c0"
+  },
+  {
+    "name": "browser-debug-entry",
+    "kind": "alias",
+    "order": -1,
+    "module": "debug/dev-only.noop.ts",
+    "reason": "Disable native development diagnostics by default while retaining the explicit performance-probe switch.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "Vite resolves compatibility aliases to one React runtime and the raw tour asset"
+      }
+    ],
+    "removal": "Remove when upstream development diagnostics support this browser runtime without native dependencies.",
+    "specifier": "@/debug/dev-only",
+    "replacement": "../desktop/src/debug/dev-only.noop.ts",
+    "enabledReplacement": "../desktop/src/debug/dev-only.ts",
+    "environmentFlag": "VITE_PERF_PROBE",
+    "aliasGroup": "vite",
+    "sourceHash": "20ca7ad318b711bdafa390c874c4084df8fad6db868953dcde1092901ac06cde",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "react-router-deduplication",
+    "kind": "dedupe",
+    "order": 1,
+    "module": null,
+    "reason": "Deduplicate React, React DOM, and React Router across the wrapper and fetched renderer.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "Vite resolves compatibility aliases to one React runtime and the raw tour asset"
+      }
+    ],
+    "removal": "Remove when renderer packaging guarantees singleton UI runtimes.",
+    "packages": [
+      "react",
+      "react-dom",
+      "react-router"
+    ],
+    "fingerprintPolicy": "The package lock fixes versions; this resolution policy has no rewritten source."
+  },
+  {
+    "name": "statusbar-item-virtual-module",
+    "kind": "virtual-module",
+    "order": 20,
+    "module": "app/shell/statusbar-controls.tsx",
+    "reason": "Expose the original shared statusbar item renderer without re-entering the wrapper replacement.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "approval mode keeps the selected profile mode and composer icon synchronized"
+      }
+    ],
+    "removal": "Remove when upstream publishes a standalone statusbar item module.",
+    "specifier": "hermes:statusbar-item",
+    "sourceHash": "67e0dbb288eb88458d790f76d88b50d0a384b57b8e39bf5c5bf2b7c08fbea9fa",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "emoji-runtime-assets",
+    "kind": "asset-adapter",
+    "order": 1,
+    "module": "emojibase-data/package.json",
+    "sourceRoot": "dependency",
+    "sourceHash": "049c893b51aff1cfc77e91a09a0b41806ab244357573a030bce99026e420988e",
+    "reason": "Serve and bundle the emoji picker JSON at the paths expected by the renderer.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "handler": "emojibaseAssets",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "bundled emoji data is available to browser pickers"
+      }
+    ],
+    "removal": "Remove when the renderer packages emoji resources through browser module imports."
+  },
+  {
+    "name": "plugin-runtime-assets",
+    "kind": "asset-adapter",
+    "order": 1,
+    "module": null,
+    "fingerprintPolicy": "User-installed plugin payloads vary at runtime; the listing and file transport contract is exercised instead of fingerprinting user data.",
+    "reason": "Adapt desktop plugin discovery and file loading to browser HTTP paths in development and preview.",
+    "owner": "apps/web-desktop/vite.config.ts",
+    "handler": "hermesPluginsAssets",
+    "tests": [
+      {
+        "file": "apps/web-desktop/scripts/test-gateway-proxy.mjs",
+        "scenario": "configured remote gateways survive page startup in dev and preview"
+      }
+    ],
+    "removal": "Remove when upstream plugins expose a public browser transport independent of local filesystem paths."
+  },
+  {
+    "name": "browser-group-selection",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "plugins/hermes-bots/roster-pane.tsx",
+    "reason": "Route group selection through the browser command while retaining engine room ownership.",
+    "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "group selection survives delayed Bot activation and preserves both composers"
+      },
+      {
+        "file": "tests/browser/pull-to-refresh.spec.mjs",
+        "scenario": "downward pull at the top refreshes once"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "pulling Bots refreshes roster and groups while preserving the chat draft"
+      }
+    ],
+    "removal": "Remove when upstream roster surfaces accept browser-owned selection callbacks.",
+    "handlers": [
+      "useBrowserGroupSelection",
+      "useBrowserBotsPullRefresh"
+    ],
+    "sourceHash": "d9f864d1034b326a0b386d85d39d024a7fa05f08c075cefb09c564559e670176",
+    "sourceRoot": "renderer",
+    "inputHash": "d9f864d1034b326a0b386d85d39d024a7fa05f08c075cefb09c564559e670176",
+    "outputHash": "01c6ca8cb3c19efa76a3b160e375e12c13343ca49d9fab1a6d90184e7d4d2881"
+  },
+  {
+    "name": "browser-created-group-selection",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "plugins/hermes-bots/roster-pane-dialogs.tsx",
+    "reason": "Route group selection through the browser command while retaining engine room ownership.",
+    "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "creating a group selects the new room through the browser command"
+      }
+    ],
+    "removal": "Remove when upstream roster surfaces accept browser-owned selection callbacks.",
+    "handlers": [
+      "useBrowserCreatedGroupSelection"
+    ],
+    "sourceHash": "51f973c68e91858839c62c8c345f3ae11a4bf0baccb809a79c66f2ddf8a7f65b",
+    "sourceRoot": "renderer",
+    "inputHash": "51f973c68e91858839c62c8c345f3ae11a4bf0baccb809a79c66f2ddf8a7f65b",
+    "outputHash": "94a978a44b6c765a67c72ac866dd1fac959b59c4c5b38ee1fecf246185242165"
+  },
+  {
+    "name": "ordered-browser-unread-writes",
+    "kind": "replacement",
+    "order": 10,
+    "module": "store/session-unread-remote.ts",
+    "reason": "Serialize persisted unread writes and prevent obsolete failures from rolling back newer browser intent.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "an older unread failure cannot undo newer toggles"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "delayed unread writes preserve the final choice on the gateway"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "unconfirmed unread writes restore the confirmed choice and explain the failure"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "opening a session queues its automatic read behind a pending unread write"
+      }
+    ],
+    "removal": "Remove when upstream unread writes serialize per owner, preserve newer intent, and reject unconfirmed acknowledgments.",
+    "replacement": "src/upstream/browser-unread.ts",
+    "sourceHash": "6bde1275a47ec93d6fe68885536bbfa774bdc3f18883d3a1100dc04fc034d0f6",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "ordered-browser-pin-writes",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/session-pin-sync.ts",
+    "handlers": [
+      "useBrowserPinWrites"
+    ],
+    "reason": "Order pin writes and restore confirmed state with visible failures while preserving engine reconciliation and profile ownership.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a rejected pin restores confirmed state and preserves the draft"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "delayed pin writes preserve the latest choice on the gateway"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "an unconfirmed pin rolls back and explains the failure"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a rejected unpin restores the confirmed pin and can be retried"
+      }
+    ],
+    "removal": "Remove when upstream pin persistence serializes writes, fences pending intent, invalidates old connection work, and reports current failures.",
+    "sourceRoot": "renderer",
+    "sourceHash": "b9eb9924e9407031119d5ae8a0e669f36556678d94747a48a84fabe6f02dc7e3",
+    "inputHash": "b9eb9924e9407031119d5ae8a0e669f36556678d94747a48a84fabe6f02dc7e3",
+    "outputHash": "8e90e083b861c29c9c72ea3adb1dc76a3047090001aef1e4a70adffff7160c96"
+  },
+  {
+    "name": "browser-session-open-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/open-session.ts",
+    "handlers": [
+      "useBrowserOpenSessionOwner"
+    ],
+    "reason": "Apply browser selection ownership at shared session entry points so older Bot activations cannot replace a newer choice.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "the session picker supersedes a delayed Bot selection"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "the command center opens a session in the browser conversation view"
+      }
+    ],
+    "removal": "Remove when upstream shared session entry points supersede older Bot selections and release group identity.",
+    "sourceRoot": "renderer",
+    "sourceHash": "e81e4deda37701b9b8a110d45849e11768365296612223a6a8fdf63e67510877",
+    "inputHash": "e81e4deda37701b9b8a110d45849e11768365296612223a6a8fdf63e67510877",
+    "outputHash": "a7c87e29bf009f07ecf1f28e93b9351c79af0a62b98672e5fde9dcc3e1ff9882"
+  },
+  {
+    "name": "browser-fresh-session-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/session/hooks/use-session-actions/index.ts",
+    "handlers": [
+      "useBrowserFreshSessionOwner"
+    ],
+    "reason": "Apply browser selection ownership at shared session entry points so older Bot activations cannot replace a newer choice.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a fresh chat supersedes delayed Bot activation and keeps its draft"
+      }
+    ],
+    "removal": "Remove when upstream shared session entry points supersede older Bot selections and release group identity.",
+    "sourceRoot": "renderer",
+    "sourceHash": "8dd027b61969ce6d0e7fcbe532d9013a8b7e93019a5904dbd93fdd8ba16d8355",
+    "inputHash": "8dd027b61969ce6d0e7fcbe532d9013a8b7e93019a5904dbd93fdd8ba16d8355",
+    "outputHash": "e00e42f6832cae893aa2390d719e91635db384143af03eb845ba81f6bb228705"
+  },
+  {
+    "name": "browser-overlay-focus-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/overlays/overlay-view.tsx",
+    "handlers": [
+      "useBrowserOverlayFocusOwner"
+    ],
+    "reason": "Own focus entry, tab containment, and focus return at each mounted browser workspace overlay.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings actions retain drafts and transfer modal focus"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace controls live inside settings and preserve the conversation"
+      }
+    ],
+    "removal": "Remove when upstream workspace overlays own focus entry, nested-surface-aware tab containment, and focus restoration in the browser.",
+    "sourceRoot": "renderer",
+    "sourceHash": "8c00d982af8f3ca4d99245695d08d3d9020eea6298072cd925886fb997444afb",
+    "inputHash": "8c00d982af8f3ca4d99245695d08d3d9020eea6298072cd925886fb997444afb",
+    "outputHash": "4f4ea3ffd87fbe71b992e2853d49994dc148ba1b01f5a908030fa6a06517fc76"
+  },
+  {
+    "name": "browser-overlay-return-focus",
+    "kind": "browser-transform",
+    "order": 40,
+    "module": "app/chat/composer/hooks/use-composer-draft.ts",
+    "handlers": [
+      "respectBrowserOverlayFocusReturn"
+    ],
+    "after": [
+      "browser-flush-all-composers"
+    ],
+    "reason": "Keep mobile chat selection from opening the on-screen keyboard and prevent automatic focus from stealing an overlay return target.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings actions retain drafts and transfer modal focus"
+      }
+    ],
+    "removal": "Remove when upstream avoids automatic composer focus on mobile and respects focus restored by closing browser overlays.",
+    "sourceRoot": "renderer",
+    "sourceHash": "4c1e62ae0eaa782d103740366a4baab2de779409489832e1d308914c1e8c1845",
+    "inputHash": "345485a119d6f1f2a10999e1ae47050f133d791fb3f77a7ad4c8bed3ffea201e",
+    "outputHash": "9983dc284364750c4e9833065c4cf0d6ad0bcc65fa8619f83d2503313749919c"
+  },
+  {
+    "name": "browser-workspace-route-lifetime",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/contrib/surfaces.tsx",
+    "handlers": [
+      "keepBrowserWorkspaceRoute"
+    ],
+    "reason": "Keep the conversation route mounted behind browser tool pages and upstream overlays so unsent attachments and composer state survive.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "tool modals retain the mounted composer and unsent attachments"
+      }
+    ],
+    "removal": "Remove when upstream workspace routes preserve the mounted conversation and attachments while browser tools or overlays are open.",
+    "sourceRoot": "renderer",
+    "sourceHash": "ce2453dcad587657a156eec51e8f59da5da5387e5b766741a57c5a803515a0c6",
+    "inputHash": "ce2453dcad587657a156eec51e8f59da5da5387e5b766741a57c5a803515a0c6",
+    "outputHash": "fa39bb994521c122f4a403a41b471cd16c14a38b8a7a3165bc460d8a77e094ee"
+  },
+  {
+    "name": "browser-bot-dialog-return-focus",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "plugins/hermes-bots/create-dialog.tsx",
+    "handlers": [
+      "useBrowserBotDialogFocus"
+    ],
+    "reason": "Restore the opening browser control and provide owned viewport bounds for Bot creation and section dialogs.",
+    "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Bots shared actions preserve filters, focus, and drafts"
+      }
+    ],
+    "removal": "Remove when upstream controlled Bot creation and section dialogs restore their opening control and fit browser viewport scaling.",
+    "sourceRoot": "renderer",
+    "sourceHash": "54b7c9f2da3f7251fb64e33345356725a84dd87fce5e13f6228a7b0486b28800",
+    "inputHash": "54b7c9f2da3f7251fb64e33345356725a84dd87fce5e13f6228a7b0486b28800",
+    "outputHash": "bf33798aa471e6dd235ddf0a722b05374f2cffb32e12257a17f3e0d13c1d1725"
+  },
+  {
+    "name": "browser-section-dialog-return-focus",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "plugins/hermes-bots/user-sections-ui.tsx",
+    "handlers": [
+      "useBrowserSectionDialogFocus"
+    ],
+    "reason": "Restore the opening browser control and provide owned viewport bounds for Bot creation and section dialogs.",
+    "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Bots shared actions preserve filters, focus, and drafts"
+      }
+    ],
+    "removal": "Remove when upstream controlled Bot creation and section dialogs restore their opening control and fit browser viewport scaling.",
+    "sourceRoot": "renderer",
+    "sourceHash": "5309ea659da31ba545bc3d5c60ead52acef528866da81f082791f485e5627acf",
+    "inputHash": "5309ea659da31ba545bc3d5c60ead52acef528866da81f082791f485e5627acf",
+    "outputHash": "f07330cdd311d5a675a31bfecb2ac51a517bd1a950d3b07f0b2e13256112095a"
+  },
+  {
+    "name": "browser-roster-action-surfaces",
+    "kind": "browser-transform",
+    "order": 40,
+    "module": "plugins/hermes-bots/bot-row.tsx",
+    "handlers": [
+      "useBrowserRosterActionSurfaces"
+    ],
+    "after": [
+      "canonical-bot-row-actions"
+    ],
+    "reason": "Replace Bot and group context menus with one browser action model used by desktop menus and explicit touch controls.",
+    "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "Bot row writes report an unconfirmed gateway save while retaining local metadata and drafts"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "group and Bot row actions work with taps and preserve draft and dialog focus"
+      }
+    ],
+    "removal": "Remove when upstream exposes shared browser row action surfaces and authoritative commands for all roster operations.",
+    "sourceRoot": "renderer",
+    "sourceHash": "afd10547e9e235181545cc59248968f43bbe647affadc02f487f56cf4ff518ce",
+    "inputHash": "39c418fedf176a925bc25e0459231fa16bcf72104ff787879ba906d0a4180310",
+    "outputHash": "189ee7054126d36e136d762d6e5805e7ecbd1436b5c7f406c14ebef4f5eb9288"
+  },
+  {
+    "name": "browser-section-action-surface",
+    "kind": "browser-transform",
+    "order": 40,
+    "module": "plugins/hermes-bots/user-sections-ui.tsx",
+    "handlers": [
+      "useBrowserSectionActionSurface"
+    ],
+    "reason": "Use owned section headings and the same rename, reorder, and delete actions on desktop and touch.",
+    "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
+      }
+    ],
+    "removal": "Remove when upstream section headings expose accessible browser action surfaces with stable focus targets.",
+    "sourceRoot": "renderer",
+    "sourceHash": "5309ea659da31ba545bc3d5c60ead52acef528866da81f082791f485e5627acf",
+    "inputHash": "f07330cdd311d5a675a31bfecb2ac51a517bd1a950d3b07f0b2e13256112095a",
+    "outputHash": "8d4f4fa7e664baba5ef575180b32e138ecdf01becb4fc4dc0098e8623a311587"
+  },
+  {
+    "name": "browser-group-dialog-focus",
+    "kind": "browser-transform",
+    "order": 40,
+    "module": "plugins/hermes-bots/create-dialog.tsx",
+    "handlers": [
+      "useBrowserRosterDialogFocus"
+    ],
+    "after": [
+      "browser-bot-dialog-return-focus"
+    ],
+    "reason": "Return focus to the Bot row after managing group memberships and constrain the dialog to the scaled viewport.",
+    "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
+      }
+    ],
+    "removal": "Remove when upstream group membership dialogs restore their opening control and respect browser scale.",
+    "sourceRoot": "renderer",
+    "sourceHash": "54b7c9f2da3f7251fb64e33345356725a84dd87fce5e13f6228a7b0486b28800",
+    "inputHash": "bf33798aa471e6dd235ddf0a722b05374f2cffb32e12257a17f3e0d13c1d1725",
+    "outputHash": "df899394139cf17c2ec6b07c82b0bc0e37e4f0790c6c48144193e59b417b633d"
+  },
+  {
+    "name": "browser-edit-dialog-focus",
+    "kind": "browser-transform",
+    "order": 40,
+    "module": "plugins/hermes-bots/edit-profile-dialog.tsx",
+    "handlers": [
+      "useBrowserRosterDialogFocus"
+    ],
+    "reason": "Return focus after editing Bot profiles and keep normal and advanced edit dialogs within scaled browser bounds.",
+    "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
+      }
+    ],
+    "removal": "Remove when upstream profile edit dialogs restore their opening control and respect browser scale.",
+    "sourceRoot": "renderer",
+    "sourceHash": "49404a68480ac46570fec85130628d147b7d61c5325ab7369045455f448ab0bb",
+    "inputHash": "49404a68480ac46570fec85130628d147b7d61c5325ab7369045455f448ab0bb",
+    "outputHash": "1ae6a6c92d8ec4c418b382f9b1460091e428c5d3debc7015530aabc1ad45b54a"
+  },
+  {
+    "name": "browser-confirm-dialog-focus",
+    "kind": "browser-transform",
+    "order": 40,
+    "module": "components/ui/confirm-dialog.tsx",
+    "handlers": [
+      "useBrowserRosterDialogFocus"
+    ],
+    "reason": "Restore browser focus after controlled confirmations and keep their bounds within scaled viewports; confirmation commands and inline failures stay upstream-owned.",
+    "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "rejected Bot duplication and deletion leave the roster and draft intact"
+      }
+    ],
+    "removal": "Remove when upstream controlled confirmation dialogs restore a valid opening control and respect browser scale.",
+    "sourceRoot": "renderer",
+    "sourceHash": "25fb0355827e4e289de19423ff46ab40cff3c74f1013cbe7e0903b2678ec0b36",
+    "inputHash": "25fb0355827e4e289de19423ff46ab40cff3c74f1013cbe7e0903b2678ec0b36",
+    "outputHash": "1310c3d582fd8580472a8a9cb6a9dcdd64244a3915d65a27734093bd87f8cdaa"
+  },
+  {
+    "name": "browser-sessions-section-styling",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/sessions-section.tsx",
+    "reason": "Project renderer-owned list state, grouping and pagination into Athena-owned section geometry, stable identity, disclosure and accessibility.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "section headers preserve disclosure and browser styling"
+      },
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "sidebar visibility uses stable identity through markup changes and reload"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "dragging chats selects manual ordering and preserves the draft"
+      },
+      {
+        "file": "scripts/unified-session-list.test.mjs",
+        "scenario": "profile grouping keeps empty configured profiles as new conversation entry points"
+      }
+    ],
+    "removal": "Remove when the renderer exposes the same section controller through a public host contract.",
+    "handlers": [
+      "useBrowserSessionSection",
+      "sessionReorderingSection"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "2ebde4eff5928b33dddbb4fd00255441c1b9f21180db651389df64fb82fbdc7e",
+    "inputHash": "2ebde4eff5928b33dddbb4fd00255441c1b9f21180db651389df64fb82fbdc7e",
+    "outputHash": "7bd04a0b4300425b0e3885ae9e2359930f2098d35011835d9968956f5f60715b"
+  },
+  {
+    "name": "browser-cron-jobs-section-styling",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/cron-jobs-section.tsx",
+    "reason": "Project the Hermes cron clock, trigger concurrency, live runs and captured job actions into Athena-owned section and job-row presentation.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "section headers preserve disclosure and browser styling"
+      },
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "sidebar visibility uses stable identity through markup changes and reload"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "sidebar cron peek and trigger retain the selected conversation and prevent duplicate runs"
+      }
+    ],
+    "removal": "Remove when a public renderer controller contract supplies the same job and live-run projections.",
+    "handlers": [
+      "useBrowserCronController"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "821785056a2a31bbae394cf642c212e1621be9e7c99dabfe9cb624be9923a308",
+    "inputHash": "821785056a2a31bbae394cf642c212e1621be9e7c99dabfe9cb624be9923a308",
+    "outputHash": "47c3607a6da58abdf0a4056ba98f57cae369c808e7d1b560893f3674bf3256eb"
+  },
+  {
+    "name": "browser-draft-persistence-alias",
+    "kind": "alias",
+    "order": 0,
+    "module": null,
+    "reason": "Resolve the shared browser draft persistence adapter from the reviewed composer transform.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "tests/browser/upgrades.spec.mjs",
+        "scenario": "UI rollback reconnects a running response and retains real drafts in both tabs"
+      }
+    ],
+    "removal": "Remove when upstream saves independent browser drafts under a shared lock.",
+    "sourceRoot": "renderer",
+    "specifier": "hermes:web-draft-persistence",
+    "replacement": "./src/platform/draft-persistence.ts",
+    "aliasGroup": "renderer",
+    "fingerprintPolicy": "The wrapper-owned adapter is verified through the locked renderer transform and real-image draft journeys."
+  },
+  {
+    "name": "browser-semantic-updates",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/updates.ts",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "owner": "apps/web-desktop/build/renderer/transforms/host.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "omitBrowserDesktopUpdateNotice"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "6e74351ff0e5889e00e587ea33ec1e27a04d9b7e846dc8cf6ccab62de348466c",
+    "inputHash": "6e74351ff0e5889e00e587ea33ec1e27a04d9b7e846dc8cf6ccab62de348466c",
+    "outputHash": "5898c3a2a0dea2638271a0eaa6a7856a3d9d2c35491dbe53e96a7cafd8fbdf14"
+  },
+  {
+    "name": "browser-semantic-desktop-install-overlay",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/desktop-install-overlay.tsx",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "owner": "apps/web-desktop/build/renderer/transforms/host.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "useBrowserSetupHooks"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "e24e3338600f12201cc7446bbce2135f1e8dda5168bb34c618f92c326b96e4b8",
+    "inputHash": "e24e3338600f12201cc7446bbce2135f1e8dda5168bb34c618f92c326b96e4b8",
+    "outputHash": "31a2937d3c1476a5f3ed258b7362f29cd9485d870e84b5cafeee96a9e05f31e3"
+  },
+  {
+    "name": "browser-semantic-first-run-remote-setup",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/remote-setup/first-run.tsx",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "owner": "apps/web-desktop/build/renderer/transforms/host.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "useBrowserSetupHooks"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "3dc7dc8e0ca29a5329c4a7b1e7a564750830dc9e42493c99fb48ba56e3ddc4e6",
+    "inputHash": "3dc7dc8e0ca29a5329c4a7b1e7a564750830dc9e42493c99fb48ba56e3ddc4e6",
+    "outputHash": "9f0cf946957f2c7394d03c2379d3cf286e3a60963de8b46c8c81abe79fbba25b"
+  },
+  {
+    "name": "browser-semantic-controls",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/controls.tsx",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout. Show Queue only while busy so the default follow-up preference cannot intercept idle sends.",
+    "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser touch hooks survive control label and icon changes"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "idle messages send and running follow-ups queue"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "useBrowserTouchHooks"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "b8a7a28284bcdac3f7ef0122c0e04d50b8ed364cae6a1425c1f1f32940a154e1",
+    "inputHash": "b8a7a28284bcdac3f7ef0122c0e04d50b8ed364cae6a1425c1f1f32940a154e1",
+    "outputHash": "85fbcc05c2351f39f370b14e95169deb096878133942454d6f28cbfcd9d01fbd"
+  },
+  {
+    "name": "browser-semantic-context-menu",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/context-menu.tsx",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser touch hooks survive control label and icon changes"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "useBrowserTouchHooks"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "40b48dccb1bc2d9580cfaa949fdf65790b01ee8f05c7f7b1ab349c05b2efd4b5",
+    "inputHash": "40b48dccb1bc2d9580cfaa949fdf65790b01ee8f05c7f7b1ab349c05b2efd4b5",
+    "outputHash": "225b04dec35f3f9bfe341f4f9e7bed6e4e66a840e96881309e037a4f5c1ce99c"
+  },
+  {
+    "name": "browser-semantic-model-pill",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/model-pill.tsx",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser touch hooks survive control label and icon changes"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "useBrowserTouchHooks"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "a74193a0801c098705285d1bd125e6e324cec393bf6a5d5b27c533561aaf7d71",
+    "inputHash": "a74193a0801c098705285d1bd125e6e324cec393bf6a5d5b27c533561aaf7d71",
+    "outputHash": "b3a88a0e7b241f80df9ce2310b0f41a189620060b3c8dd3d27536cfca98518bb"
+  },
+  {
+    "name": "browser-semantic-voice-menu",
+    "kind": "replacement",
+    "order": 10,
+    "module": "app/chat/composer/voice-menu.tsx",
+    "reason": "Use a direct dictation button without a voice popup or extra voice controls.",
+    "owner": "apps/web-desktop/src/overrides/voice-input.tsx",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "records once permission is granted and releases the mic after transcription"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "sourceRoot": "renderer",
+    "sourceHash": "392cff54e8ea488091c1ec952742b1119e8bcafbd6276756682085312853ef45",
+    "replacement": "src/overrides/voice-input.tsx"
+  },
+  {
+    "name": "browser-semantic-voice-fan",
+    "kind": "replacement",
+    "order": 10,
+    "module": "app/chat/composer/voice-fan.tsx",
+    "reason": "Use a direct dictation button without a voice popup or extra voice controls.",
+    "owner": "apps/web-desktop/src/overrides/voice-input.tsx",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "records once permission is granted and releases the mic after transcription"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "sourceRoot": "renderer",
+    "sourceHash": "6d84693c920e2058bebdc53160d8f4f64ec5206c8ab3f14085e6a46bb4cdea9d",
+    "replacement": "src/overrides/voice-input.tsx"
+  },
+  {
+    "name": "browser-semantic-start-voice-button",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/start-voice-button.tsx",
+    "reason": "Remove the standalone full voice-conversation entry from the browser composer.",
+    "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser touch hooks survive control label and icon changes"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "removeBrowserConversationalVoiceEntry"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "e2f1d6362ee956678089b75a624479e743a74e45a5464891e79aefb87689a89f",
+    "inputHash": "e2f1d6362ee956678089b75a624479e743a74e45a5464891e79aefb87689a89f",
+    "outputHash": "d522a97a6a96c6771a03b82918d3fde5d7861076e41fb45f6c4b1f6667f17846"
+  },
+  {
+    "name": "browser-semantic-coding-row",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/status-stack/coding-row.tsx",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout.",
+    "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
+    "tests": [
+      {
+        "file": "scripts/sidebar-contracts.test.mjs",
+        "scenario": "semantic adapters preserve identity and reject upstream drift"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "browser touch hooks survive control label and icon changes"
+      }
+    ],
+    "removal": "Remove when upstream exposes equivalent stable browser hooks.",
+    "handlers": [
+      "useBrowserCodingActionHooks"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "3c94bb8ba4c359a0dc249ec4b13169b34b535503f15a1b27d71d5e1a0b74100a",
+    "inputHash": "3c94bb8ba4c359a0dc249ec4b13169b34b535503f15a1b27d71d5e1a0b74100a",
+    "outputHash": "28d95460846d6a0701ea82e7271e6b7995827e0ab035ecb91854cd58cd299665"
+  },
+  {
+    "name": "browser-dialog-boundary",
+    "kind": "replacement",
+    "order": 20,
+    "module": "components/ui/dialog.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "1b39f8ff9ba7c31199cc6572256c5c666ce8cdf6699f1db2b6fbbd26a2e069f3",
+    "replacement": "src/upstream/browser-dialog.tsx",
+    "importers": [
+      "plugins/hermes-bots/create-dialog.tsx",
+      "plugins/hermes-bots/edit-profile-dialog.tsx",
+      "plugins/hermes-bots/user-sections-ui.tsx",
+      "components/ui/confirm-dialog.tsx"
+    ],
+    "reason": "Adapt dialog open state and content props for browser focus restoration and scaled viewport bounds, retaining upstream forms, commands, and primitives.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/compatibility-registry.test.mjs",
+        "scenario": "browser resolver maps SDK and direct dialog imports through the scoped adapters"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Bots shared actions preserve filters, focus, and drafts"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "rejected Bot duplication and deletion leave the roster and draft intact"
+      }
+    ],
+    "removal": "Remove when upstream controlled dialogs restore their opening control and constrain resizable content to the scaled browser viewport."
+  },
+  {
+    "name": "browser-dialog-sdk-boundary",
+    "kind": "replacement",
+    "order": 20,
+    "module": "sdk/index.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "42c2ffd6bc62d30e8e0804a6b35e61be3993b5b3cdac73b722ce17c3f45b2d22",
+    "replacement": "src/upstream/browser-dialog-sdk.ts",
+    "importers": [
+      "plugins/hermes-bots/create-dialog.tsx",
+      "plugins/hermes-bots/edit-profile-dialog.tsx",
+      "plugins/hermes-bots/user-sections-ui.tsx"
+    ],
+    "reason": "Expose the browser dialog adapter through the SDK for registered Bot and section forms while retaining upstream SDK commands and controls.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "scripts/compatibility-registry.test.mjs",
+        "scenario": "browser resolver maps SDK and direct dialog imports through the scoped adapters"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Bots shared actions preserve filters, focus, and drafts"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "rejected Bot duplication and deletion leave the roster and draft intact"
+      }
+    ],
+    "removal": "Remove when upstream controlled dialogs restore their opening control and constrain resizable content to the scaled browser viewport.",
+    "specifier": "@hermes/plugin-sdk"
+  },
+  {
+    "name": "browser-settings-controller",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/index.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "5aff6806c1bfb2d98770afcf1b86e3a43f5f4c3aa0c306054e1da431d9e96120",
+    "inputHash": "5aff6806c1bfb2d98770afcf1b86e3a43f5f4c3aa0c306054e1da431d9e96120",
+    "outputHash": "ed2ebad0ee7a6da1e16f44cea03bc10592b0a70fcd56c47d90287d11df669a36",
+    "handlers": [
+      "useBrowserSettingsController"
+    ],
+    "reason": "Expose renderer-owned page controls, configuration commands, and save lifecycle while Athena composes the settings route.",
+    "owner": "apps/web-desktop/build/renderer/settings-controller.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings full-screen modal scales across compact and wide viewports"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "configuration page retains import export and reset behavior"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Permissions combines all controls and preserves legacy field links"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace controls live inside settings and preserve the conversation"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings groups and renamed search preserve destinations"
+      }
+    ],
+    "removal": "Remove when upstream SettingsView provides an equivalent responsive browser presentation seam while retaining upstream settings pages and actions."
+  },
+  {
+    "name": "browser-settings-search-policy",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/use-settings-search.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "f3ec3f7424088ab68e1e51ce8cd2cdf0f9ad5e9bf88a310d2a3d826813539707",
+    "inputHash": "f3ec3f7424088ab68e1e51ce8cd2cdf0f9ad5e9bf88a310d2a3d826813539707",
+    "outputHash": "dc1b81c9641510e21cf8ba4a2a94bf8a32bc90927933b1d0aa164026f163ee93",
+    "handlers": [
+      "filterBrowserSettingsSearch"
+    ],
+    "reason": "Keep grouped settings labels, legacy search aliases, and visibility policy in the wrapper while upstream owns forms and persistence.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "settings policy stays aligned across page fields, deep search, and palette links"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings groups and renamed search preserve destinations"
+      }
+    ],
+    "removal": "Remove when upstream settings search applies wrapper visibility policy to section and field results."
+  },
+  {
+    "name": "browser-settings-palette-policy",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/command-palette/index.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "6e73d767dfe8c1a499862de96d64b8003ed3d8eb05faa76c479c8ddc69643356",
+    "inputHash": "6e73d767dfe8c1a499862de96d64b8003ed3d8eb05faa76c479c8ddc69643356",
+    "outputHash": "869314150a5ac9aebbefc000a5d5fec5ad7a7286a42844ee10e15f7993b0a1ab",
+    "handlers": [
+      "filterBrowserSettingsPalette"
+    ],
+    "reason": "Keep settings search policy and remove the unavailable Marketplace theme installer from the browser palette.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "settings policy stays aligned across page fields, deep search, and palette links"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings groups and renamed search preserve destinations"
+      }
+    ],
+    "removal": "Remove when upstream settings navigation entries in the command palette support wrapper visibility policy."
+  },
+  {
+    "name": "browser-settings-profile-scope-tabs",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/profile-scope.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "a4e3cffa5216b823f5c583919bc5fe3c719201d3362ba457c25e1e0240fee222",
+    "inputHash": "a4e3cffa5216b823f5c583919bc5fe3c719201d3362ba457c25e1e0240fee222",
+    "outputHash": "8d194358a934e69f9ff82e66a90f2011cd72636fd5ef589ba49ba0a9ac37e51c",
+    "handlers": [
+      "useBrowserProfileScopeTabs"
+    ],
+    "reason": "Present the shared settings profile selector as a browser tab strip while preserving its scope selection behavior. Omit the visible Applies to label and profile scope notes across browser pages.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "apps/desktop/src/app/settings/profile-scope.test.tsx",
+        "scenario": "selecting another profile sets the shared override"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "configuration page retains import export and reset behavior"
+      }
+    ],
+    "removal": "Remove when upstream exposes a browser-specific settings scope control."
+  },
+  {
+    "name": "browser-appearance-capabilities",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/appearance-settings.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "b969ac025807798d14cf1a99ef853db22bcc24a282292cdd2e649585d585164a",
+    "inputHash": "b969ac025807798d14cf1a99ef853db22bcc24a282292cdd2e649585d585164a",
+    "outputHash": "3ad30277649164166df609dda62175f314a78440ab6e86d0852aa56ce38f9aaa",
+    "handlers": [
+      "hideBrowserAppearanceOnlySettings"
+    ],
+    "reason": "Combine General, Typography, Window & layout, and Chat display into one Appearance page; hide browser-unsupported appearance settings, desktop-only layout preferences, terminal font, and marketplace controls. Theme selection lives on the separate browser Theme page. Message Bubble transparency is fixed at 0% and its control is hidden. The shared browser settings layout owns the Appearance title and description.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings groups and renamed search preserve destinations"
+      },
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser message bubbles stay solid despite saved transparency and later writes"
+      }
+    ],
+    "removal": "Remove once upstream exposes browser capability flags for terminal surfaces and theme marketplace support."
+  },
+  {
+    "name": "browser-archived-directory-capability",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/sessions-settings.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "5ede3eec64e4f3e5d2bc01a957d8e788a114a3674ca413c852d6e4bac41061c9",
+    "inputHash": "5ede3eec64e4f3e5d2bc01a957d8e788a114a3674ca413c852d6e4bac41061c9",
+    "outputHash": "41b01a39ec8a74b96a488afcc4b9a062387989193dff61b694d6151fb2da4070",
+    "handlers": [
+      "hideBrowserLocalProjectDirectory",
+      "useBrowserArchivedSessionsTable"
+    ],
+    "reason": "Hide the desktop-local project directory picker while keeping remote working-directory settings. Present archived sessions in a compact semantic table with previews, message counts, workspace labels, and the existing unarchive/delete actions.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+      }
+    ],
+    "removal": "Remove once upstream offers a browser-compatible project directory picker and compact archived sessions table."
+  },
+  {
+    "name": "browser-project-group-disclosure",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/projects/overview-row.tsx",
+    "reason": "Keep project ownership, lazy hydration, paging and saved disclosure in the renderer controller while Athena owns tree presentation and accessible actions.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "section headers preserve disclosure and browser styling"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "project Show all expands sessions inline"
+      }
+    ],
+    "removal": "Remove when the renderer exports a public project controller with owner-scoped commands.",
+    "sourceRoot": "renderer",
+    "sourceHash": "e2cba07ac9067e609b355d6c850597e7e06432210d6d583a7fa9ad97579ac268",
+    "inputHash": "e2cba07ac9067e609b355d6c850597e7e06432210d6d583a7fa9ad97579ac268",
+    "outputHash": "f122bc7df77c350fdb75eb16e979368066597c72538ab84a1ee63ee424dd71bf",
+    "handlers": [
+      "useBrowserProjectController"
+    ]
+  },
+  {
+    "name": "browser-settings-pending-saves",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/config-settings.tsx",
+    "reason": "Register explicit debounced save commands with browser readiness, flush immediately on transitions, and retain the renderer write queue and profile scope. Empty states follow the browser-filtered native control flags.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "scripts/pending-work.test.mjs",
+        "scenario": "pending work waits for each owner before reporting readiness"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings actions retain drafts and transfer modal focus"
+      },
+      {
+        "file": "scripts/settings-save.test.mjs",
+        "scenario": "settings preparation starts the latest save without waiting for a debounce timer"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "connection preparation flushes a settings edit with timers paused"
+      }
+    ],
+    "removal": "Remove when upstream settings provides equivalent browser save lifecycle and browser-aware field visibility defaults.",
+    "sourceRoot": "renderer",
+    "sourceHash": "3775372a975339dbf70959f52a001c2a2c3041f26e2f9967fbfcfcfe5b6b594c",
+    "inputHash": "3775372a975339dbf70959f52a001c2a2c3041f26e2f9967fbfcfcfe5b6b594c",
+    "outputHash": "9e6cd943d9a8bea3929a53cb8382ef7b01a3f40435d1d932737e6c9c4636a0c9",
+    "handlers": [
+      "trackBrowserSettingsSaves",
+      "filterBrowserSettingsFields",
+      "useBrowserConfigurationSettings"
+    ]
+  },
+  {
+    "name": "browser-remove-pet-avatar-tab",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "plugins/hermes-bots/avatar-picker.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "60f9e73658afce3496dd86ae9073ea942f7836fb0f5c8d95fd1e62f9a9c0f39e",
+    "inputHash": "60f9e73658afce3496dd86ae9073ea942f7836fb0f5c8d95fd1e62f9a9c0f39e",
+    "outputHash": "427d446e56a4fa5750c76774277837b2811b31d3ffc7fa31b5007206cff44774",
+    "handlers": [
+      "removeBrowserPetAvatarTab"
+    ],
+    "reason": "Remove the pet avatar option from browser bot profile editing.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+      }
+    ],
+    "removal": "Remove when Hermes no longer includes the desktop pet avatar tab or exposes browser capability flags for avatar choices."
+  },
+  {
+    "name": "browser-remove-pet-slash-commands",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "lib/desktop-slash-commands.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "6aad656575f5c5a51e9823cd619e571fb1bd190b5893d1575fb976d0fbce63fc",
+    "inputHash": "6aad656575f5c5a51e9823cd619e571fb1bd190b5893d1575fb976d0fbce63fc",
+    "outputHash": "6e798ac01f472698d5be0aedf178a5836588381ceb68f594af566bbff10eee5c",
+    "handlers": [
+      "removeBrowserPetSlashCommands"
+    ],
+    "reason": "Remove pet management and generation slash-command suggestions from the browser app.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings and command center use one upstream overlay and preserve the chat"
+      }
+    ],
+    "removal": "Remove when Hermes no longer exposes desktop-only pet slash commands or provides browser capability filtering."
+  },
+  {
+    "name": "browser-accepted-composer-submit",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/hooks/use-composer-submit.ts",
+    "reason": "Apply browser Queue/Steer policy through the engine command and announce accepted visible messages only to their unchanged mounted composer surface.",
+    "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "accepted composer submissions report only successful sends"
+      },
+      {
+        "file": "scripts/composer-policy.test.mjs",
+        "scenario": "composer policy chooses queue or steer"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "idle messages send and running follow-ups queue"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "busy composer uses the selected follow-up intent"
+      },
+      {
+        "file": "scripts/composer-policy.test.mjs",
+        "scenario": "a waiting card consumes typed answers before either browser follow-up preference"
+      },
+      {
+        "file": "scripts/composer-policy.test.mjs",
+        "scenario": "accepted sends cannot scroll a different stored or fresh draft owner"
+      },
+      {
+        "file": "scripts/composer-policy.test.mjs",
+        "scenario": "accepted scrolling follows its own fresh-session assignment"
+      },
+      {
+        "file": "scripts/composer-policy.test.mjs",
+        "scenario": "hidden sends and late steering cannot scroll the visible transcript"
+      },
+      {
+        "file": "scripts/composer-policy.test.mjs",
+        "scenario": "a positioning failure cannot restore or retry an accepted message"
+      }
+    ],
+    "removal": "Remove when the renderer exposes an accepted-submit event for browser integrations.",
+    "handlers": [
+      "useBrowserAcceptedSubmit",
+      "useBrowserFollowupSubmit"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "54e6152cda82507a5e3882886a40ab9542fc4b4dfaf10b35f3242f33bac5cc6c",
+    "inputHash": "54e6152cda82507a5e3882886a40ab9542fc4b4dfaf10b35f3242f33bac5cc6c",
+    "outputHash": "36f503c1f53dc42df7e45ed6fe83dd24e8ec02ba9ecc38750025576aef1bd90c"
+  },
+  {
+    "name": "browser-draft-safety-alias",
+    "kind": "alias",
+    "order": 0,
+    "module": null,
+    "reason": "Route the renderer draft boundary through a typed browser adapter instead of ambient window globals.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "scripts/adapter.test.mjs",
+        "scenario": "renderer aliases preserve explicit mappings before wildcards"
+      }
+    ],
+    "removal": "Remove when upstream provides a typed browser draft-safety integration point.",
+    "sourceRoot": "renderer",
+    "specifier": "hermes:web-draft-safety",
+    "replacement": "./src/platform/draft-safety.ts",
+    "aliasGroup": "renderer",
+    "fingerprintPolicy": "The wrapper adapter is covered by update-safety and renderer transform tests."
+  },
+  {
+    "name": "browser-connecting-visual",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/gateway-connecting-overlay.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "c2ca3c2ced991f66aa367fda46621a575003b79125abbb5e87f6e74f7714383d",
+    "inputHash": "c2ca3c2ced991f66aa367fda46621a575003b79125abbb5e87f6e74f7714383d",
+    "outputHash": "056afede6572c344d372ad4a53a0b072d9a33ebd46c7a3157dd6ff40c6ce2faf",
+    "handlers": [
+      "useBrowserConnectingVisual"
+    ],
+    "reason": "Keep the centered browser logo and spinner through gateway boot without desktop blue text or exit movement.",
+    "owner": "apps/web-desktop/build/renderer/transforms/host.ts",
+    "tests": [
+      {
+        "file": "tests/browser/sign-in.spec.mjs",
+        "scenario": "existing session keeps the startup loader while checking authentication"
+      },
+      {
+        "file": "scripts/renderer-update.test.mjs",
+        "scenario": "browser connecting visual retains the boot owner and stays absent after cold boot"
+      }
+    ],
+    "removal": "Remove when upstream offers a browser loading presentation matching the cached HTML shell."
+  },
+  {
+    "name": "browser-solid-message-bubbles",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/user-bubble-transparency.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "f49a166d199d784a7c586ef085eaa2fa34ec2840b8fc98e930636446f327327e",
+    "inputHash": "f49a166d199d784a7c586ef085eaa2fa34ec2840b8fc98e930636446f327327e",
+    "outputHash": "bd70643741ae5e64c5e308bc9dc4a6494ca1a1cfa16da92ca3e00855cf2098e1",
+    "handlers": [
+      "keepBrowserMessageBubblesSolid"
+    ],
+    "reason": "Keep message bubble transparency at 0% in the browser, clearing saved transparency through the upstream persistence owner.",
+    "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser message bubbles stay solid despite saved transparency and later writes"
+      }
+    ],
+    "removal": "Remove when upstream supports a browser policy that fixes message bubble transparency at 0%."
+  },
+  {
+    "name": "browser-profile-settings-tabs",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/profiles/index.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "170bf2a7703dfec5bfed97a908592ade0afdc7dbb37c556ad9a956af21ab0787",
+    "inputHash": "170bf2a7703dfec5bfed97a908592ade0afdc7dbb37c556ad9a956af21ab0787",
+    "outputHash": "fde9f210aa2a3ff591e327d92d8574239e0878456c741a054080a1be4cacdc42",
+    "handlers": [
+      "useBrowserProfileSettingsTabs"
+    ],
+    "reason": "Present Profiles settings with horizontal tabs instead of the heading, search, and vertical list, while retaining upstream selection, details, and profile management actions.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace controls live inside settings and preserve the conversation"
+      }
+    ],
+    "removal": "Remove when upstream Profiles provides a tab presentation that can be used by the browser settings wrapper."
+  },
+  {
+    "name": "browser-profile-editor-focus",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/chat/code-editor.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "bb11e52f0bf02c11a64ee698b7c45d144a02a3ccbbb41450c2031d5b2e3e4c57",
+    "inputHash": "bb11e52f0bf02c11a64ee698b7c45d144a02a3ccbbb41450c2031d5b2e3e4c57",
+    "outputHash": "d60fa2e5006f316514395c3cf9f4e19e79c90c042fbcbe58e1f45f9ad07c4b70",
+    "handlers": [
+      "keepBrowserProfileTabFocus"
+    ],
+    "reason": "Keep keyboard focus on profile tabs when the selected SOUL editor loads; other editor surfaces retain mount autofocus.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace controls live inside settings and preserve the conversation"
+      }
+    ],
+    "removal": "Remove when upstream CodeEditor exposes an autofocus option that Profiles settings can disable."
+  },
+  {
+    "name": "browser-default-session-profile",
+    "kind": "replacement",
+    "order": 20,
+    "module": "app/session/new-session-route.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "89b0fc40d4ab94f61c68a7bbeb0afb47179facfda43ab0574f1947af7e6dca46",
+    "replacement": "src/upstream/default-session-profile.ts",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "reason": "Use the first enabled profile in saved order for generic new sessions while preserving explicit profile targets.",
+    "tests": [
+      {
+        "file": "scripts/default-session-profile.test.mjs",
+        "scenario": "new sessions in All profiles capture the first enabled owner before activating its gateway"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "the first enabled profile routes All profiles drafts without changing scope"
+      }
+    ],
+    "removal": "Remove when upstream default session routing supports the enabled profile rail order in All profiles."
+  },
+  {
+    "name": "browser-alternate-composer-submit",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/index.tsx",
+    "reason": "Request the alternate follow-up intent through the same submit command for Cmd/Ctrl+Enter.",
+    "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
+    "tests": [
+      {
+        "file": "scripts/composer-policy.test.mjs",
+        "scenario": "composer policy chooses queue or steer"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "idle messages send and running follow-ups queue"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "busy composer uses the selected follow-up intent"
+      }
+    ],
+    "removal": "Remove when the renderer exposes a host-controlled follow-up intent.",
+    "handlers": [
+      "useBrowserAlternateSubmit"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "ca94b09fe9d9aeb2e63bce9ac639d74fb60663638490456d70963f65382efcf0",
+    "inputHash": "ca94b09fe9d9aeb2e63bce9ac639d74fb60663638490456d70963f65382efcf0",
+    "outputHash": "8911f57ee1d2eb506ac8be817571be9508f39e8a9dceeec361fea98b2e3ec681"
+  },
+  {
+    "name": "browser-workspace-owner-identity",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "components/pane-shell/workspace-scope.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "8518f1463e2395d87a0a95fa26067754f2ee1fd1f5312b8e2b19c62694b22807",
+    "reason": "Project the exact current engine workspace owner for canonical Bot chats missing from sidebar rows.",
+    "owner": "apps/web-desktop/src/upstream/conversation.ts",
+    "tests": [
+      {
+        "file": "scripts/conversation-model.test.mjs",
+        "scenario": "hidden canonical Bot identity uses the exact engine workspace owner"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Replace when the renderer exposes a public current-conversation identity contract."
+  },
+  {
+    "name": "browser-bot-owner-identity",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "plugins/hermes-bots/routing.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "b2b8732319cee7cf1f4802f82468fab6e473c8205e73cc37019a2e1987ffe94c",
+    "reason": "Project the exact current engine workspace owner for canonical Bot chats missing from sidebar rows.",
+    "owner": "apps/web-desktop/src/upstream/conversation.ts",
+    "tests": [
+      {
+        "file": "scripts/conversation-model.test.mjs",
+        "scenario": "hidden canonical Bot identity uses the exact engine workspace owner"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+      }
+    ],
+    "removal": "Replace when the renderer exposes a public current-conversation identity contract."
+  },
+  {
+    "name": "browser-plugin-management-in-settings",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/plugin-settings.tsx",
+    "reason": "Open plugin management inside the browser Settings surface and clear its page state when changing settings categories.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "plugin management stays in settings and preserves the draft"
+      }
+    ],
+    "removal": "Remove when upstream plugin settings can embed plugin management without navigating away from Settings.",
+    "sourceHash": "2df9462bf6e00004920c701852b911bfa81c891d1244d5bcd12b48550cbb8972",
+    "inputHash": "2df9462bf6e00004920c701852b911bfa81c891d1244d5bcd12b48550cbb8972",
+    "outputHash": "8ec1062abce216eab66340ae946611fbec9e31400878c5eda2442c828fbb9a37",
+    "handlers": [
+      "keepBrowserPluginManagementInSettings"
+    ],
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-plugin-install-settings-return",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/plugin-install-modal.tsx",
+    "reason": "Return successful plugin installs started in Settings to its embedded plugin manager.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "plugin installs return to the settings manager only when launched from settings"
+      }
+    ],
+    "removal": "Remove when upstream plugin installation preserves an embedded Settings manager destination.",
+    "sourceHash": "c2a50639efd65aecb2b55fa40101adfe9a3ba6f305b30b6d2938a20aab740be2",
+    "inputHash": "c2a50639efd65aecb2b55fa40101adfe9a3ba6f305b30b6d2938a20aab740be2",
+    "outputHash": "bea614ebd6ef9a22e389cc943824047643cd3b51f8f1b542b6bcc4e283935589",
+    "handlers": [
+      "keepBrowserPluginInstallInSettings"
+    ],
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-remote-folder-picker",
+    "kind": "replacement",
+    "order": 10,
+    "module": "app/right-sidebar/files/remote-picker.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "e4d61c2948091e4a4fef228752de10658d888ef785aac228b779416440d6e4b3",
+    "replacement": "src/overrides/remote-folder-picker.tsx",
+    "owner": "scripts/renderer-adapter.mjs",
+    "reason": "Resolve server-backed browser directory selection through the same adapter for compiler and bundler callers.",
+    "tests": [
+      {
+        "file": "scripts/renderer-adapter.test.mjs",
+        "scenario": "replacement resolution is identical for relative and aliased remote folder picker callers"
+      }
+    ],
+    "removal": "Remove when upstream exposes an equivalent browser-owned remote picker boundary."
+  },
+  {
+    "name": "athena-empty-chat-branding",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "components/chat/intro.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "d2f3fb2115357c4c724b7bed5741c5def854ac346c9f4c570a68825ec65900d7",
+    "owner": "apps/web-desktop/build/renderer/athena-branding.ts",
+    "reason": "Review the pinned empty-chat source that receives Athena name and tagline presentation.",
+    "tests": [
+      {
+        "file": "scripts/renderer-adapter.test.mjs",
+        "scenario": "the shared source graph applies Athena branding without evaluating renderer modules"
+      }
+    ],
+    "removal": "Remove when the renderer accepts branding and empty-chat copy through a public host contract."
+  },
+  {
+    "name": "browser-settings-route",
+    "kind": "replacement",
+    "order": 20,
+    "module": "app/settings/index.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "5aff6806c1bfb2d98770afcf1b86e3a43f5f4c3aa0c306054e1da431d9e96120",
+    "replacement": "src/experience/settings/settings-route.tsx",
+    "bypassImporters": [
+      "/upstream/settings-controller-api.tsx"
+    ],
+    "owner": "scripts/renderer-adapter.mjs",
+    "reason": "Assemble browser settings navigation and page surfaces from the Athena catalog.",
+    "tests": [
+      {
+        "file": "scripts/renderer-adapter.test.mjs",
+        "scenario": "compiler and Vite resolve scoped replacements, virtual modules, aliases, and bypass imports identically"
+      }
+    ],
+    "removal": "Keep browser product composition until upstream offers an equivalent public host contract."
+  },
+  {
+    "name": "settings-controller-virtual-module",
+    "kind": "virtual-module",
+    "order": 20,
+    "module": "app/settings/index.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "5aff6806c1bfb2d98770afcf1b86e3a43f5f4c3aa0c306054e1da431d9e96120",
+    "specifier": "hermes:settings-controller",
+    "owner": "scripts/renderer-adapter.mjs",
+    "reason": "Read renderer-owned page controls and commands without re-entering the browser settings route replacement.",
+    "tests": [
+      {
+        "file": "scripts/renderer-adapter.test.mjs",
+        "scenario": "compiler and Vite resolve scoped replacements, virtual modules, aliases, and bypass imports identically"
+      }
+    ],
+    "removal": "Remove when upstream publishes settings page and command contracts."
+  },
+  {
+    "name": "assistant-ui-message-runtime",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "components/assistant-ui/thread/assistant-message.tsx",
+    "reason": "Bind removed runtime hooks to the current assistant-ui scope without introducing another runtime or state store.",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace snapshots remain stable through draft edits, session changes, and reload"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "message editing follows the current runtime after conversation switches without losing drafts"
+      }
+    ],
+    "removal": "Remove when the pinned renderer uses the assistant-ui client API instead of removed runtime hooks.",
+    "sourceRoot": "renderer",
+    "sourceHash": "6a25dd8b276b9f15f547afc97ca949db6fa35c2c4cf696e43e6a697074b3d074",
+    "outputHash": "ce875c36cbe5afd50efdbe296ff59fdd9462c9e50e91cfc16549c6649d981a07"
+  },
+  {
+    "name": "assistant-ui-reaction-runtime",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "components/assistant-ui/thread/use-message-reactions.ts",
+    "reason": "Bind removed runtime hooks to the current assistant-ui scope without introducing another runtime or state store.",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace snapshots remain stable through draft edits, session changes, and reload"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "message editing follows the current runtime after conversation switches without losing drafts"
+      }
+    ],
+    "removal": "Remove when the pinned renderer uses the assistant-ui client API instead of removed runtime hooks.",
+    "sourceRoot": "renderer",
+    "sourceHash": "7dc01919b70064fc4b973c3ac02cb7e35e9a8dbaf5491b7f0e81b74f113b09f0",
+    "outputHash": "c55a36f23623fbc672b936c524fa6bc9d7204603ba6c8e43d641ceff151f39b0"
+  },
+  {
+    "name": "nanostores-readonly-plugin-view",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "sdk/bridge.ts",
+    "reason": "Supply the Nanostores equality contract without exposing a plugin-store mutation method.",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "scripts/dependency-compatibility.test.mjs",
+        "scenario": "readonly plugin decisions support equality and computed subscriptions without exposing writes"
+      }
+    ],
+    "removal": "Remove when the pinned renderer includes the read-only store equality method.",
+    "sourceRoot": "renderer",
+    "sourceHash": "5220aeeef13355bc7685ad5dca85ab5c68cdbeefd4b957e78ad18b9885ebcb43",
+    "outputHash": "7daa4b20ad94e3e0594deecb236d091461a163b4d0c9234705b817135162ddb5"
+  },
+  {
+    "name": "assistant-ui-runtime-hook-adapter",
+    "kind": "alias",
+    "order": 0,
+    "module": null,
+    "reason": "Keep the pinned renderer bound to its existing composer, message and thread runtimes with assistant-ui React 0.15.",
+    "owner": "scripts/aliases.mjs",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "workspace snapshots remain stable through draft edits, session changes, and reload"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "message editing follows the current runtime after conversation switches without losing drafts"
+      }
+    ],
+    "removal": "Remove when the pinned renderer no longer imports the removed runtime hooks.",
+    "sourceRoot": "renderer",
+    "specifier": "hermes:web-assistant-ui-runtime",
+    "replacement": "./src/upstream/assistant-ui-runtime.ts",
+    "aliasGroup": "renderer",
+    "fingerprintPolicy": "The wrapper hook adapter is exercised by draft, message-action and conversation-switch browser checks."
+  },
+  {
+    "name": "browser-bots-gateway-groups-refresh",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "plugins/hermes-bots/canonical-group-registry.tsx",
+    "reason": "Keep gateway groups loading and reconnect retries behind socket readiness while supporting Bots pull-to-refresh.",
+    "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Bots keeps filters beside the rightmost add button"
+      },
+      {
+        "file": "tests/browser/pull-to-refresh.spec.mjs",
+        "scenario": "downward pull at the top refreshes once"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "pulling Bots refreshes roster and groups while preserving the chat draft"
+      },
+      {
+        "file": "scripts/bots-gateway-readiness.test.mjs",
+        "scenario": "groups wait for a live socket and recover after reconnect without stale errors or replies"
+      }
+    ],
+    "removal": "Remove when upstream exposes a presentation option for the gateway groups refresh control.",
+    "handlers": [
+      "removeBrowserGatewayGroupsRefresh"
+    ],
+    "sourceHash": "4efe09d59fb623f9224f342334ef86d3f66d672216a60266348db4952c5c6c51",
+    "sourceRoot": "renderer",
+    "inputHash": "4efe09d59fb623f9224f342334ef86d3f66d672216a60266348db4952c5c6c51",
+    "outputHash": "2665a27438fb5eb5fb7465b35416e00b1256b13bfe7df06f2e382d49acc7aec7"
+  },
+  {
+    "name": "browser-profile-section-pictures",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/gateway-groups.tsx",
+    "reason": "Project live profile groups, owner routes, aliases and ordering into Athena-owned group headers, avatars, nesting and disclosure. Keep hidden groups and full profile session lists browser-owned.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
+    "tests": [
+      {
+        "file": "scripts/unified-session-list.test.mjs",
+        "scenario": "profile sections reuse configured pictures and keep exact owner routes"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Profile grouping replaces presentation controls and switches live without gateway nesting"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "dragging chats selects manual ordering and preserves the draft"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "profile menus hide groups and filters restore every profile without losing the draft"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "sessions from every profile share pictured sections"
+      }
+    ],
+    "removal": "Remove when upstream profile headers use the configured profile picture and support a single shared-gateway list.",
+    "handlers": [
+      "useBrowserProfileControllers",
+      "sessionReorderingGroups"
+    ],
+    "sourceHash": "7499db0f9583cdcbadfe66f488cf2dea6562d2e4de0c73674c3013ebb951b83c",
+    "sourceRoot": "renderer",
+    "inputHash": "7499db0f9583cdcbadfe66f488cf2dea6562d2e4de0c73674c3013ebb951b83c",
+    "outputHash": "db4d84f8a02582e672d8919a8de68c60149c2d5961618dd3835058c08ec2637f"
+  },
+  {
+    "name": "shared-gateway-profile-route",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "store/gateway-shared-route.ts",
+    "reason": "Use the existing shared gateway for browser profiles",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "scripts/renderer-release-contracts.test.mjs",
+        "scenario": "shared browser routes reuse the primary without asking the native backend"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "phone session-row actions stay open without resuming the row"
+      }
+    ],
+    "removal": "Remove when the upstream gateway registry supports shared browser connections without backend activation.",
+    "sourceHash": "5fdfb53a8c771ed38acf3abe793752c551478ab8c2aec263ec384f876dc092ef",
+    "outputHash": "992fdd36f0bac5649818ddb6ca77f1d5aa04f113420502dc5a629c054de4fa23",
+    "handler": "shared-gateway-profile-route",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-connection-preferences",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "store/connections.ts",
+    "reason": "Preserve per-connection startup preferences when the Nanostores listener has no previous snapshot.",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "scripts/renderer-release-contracts.test.mjs",
+        "scenario": "connection preference listener tolerates an absent previous snapshot"
+      }
+    ],
+    "removal": "Remove when upstream handles the optional previous listener value.",
+    "sourceHash": "96c36a3877e93f886dc5e90e8be6ebfb27d10d6260deb5671480c277526eaa05",
+    "outputHash": "aa7f02254984c01d069846673bc79ff236c83feecf615c61333e84ffb0b705ee",
+    "handler": "browser-connection-preferences",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-catalog-idle-task",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/capabilities/catalog/catalog-data.ts",
+    "reason": "Use cancellable timer scheduling where browser idle callbacks are unavailable so Capabilities does not crash the application.",
+    "owner": "apps/web-desktop/build/renderer/transforms/host.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "catalog prefetch works without idle callbacks and cancels on unmount"
+      }
+    ],
+    "removal": "Remove when upstream catalog prefetch feature-detects the browser idle APIs.",
+    "handlers": [
+      "useBrowserCatalogIdleTask"
+    ],
+    "sourceHash": "26748edcd4ab686b9806eb0db9b4737f97acda5f0e2e4e54c4d7b0b61281c833",
+    "sourceRoot": "renderer",
+    "inputHash": "26748edcd4ab686b9806eb0db9b4737f97acda5f0e2e4e54c4d7b0b61281c833",
+    "outputHash": "5ae78b58a873063beeb0d5d4f33ac1ce45b7b5e5182b3b5faf333fe5d2061e2d"
+  },
+  {
+    "name": "browser-crash-recovery",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/error-boundary.tsx",
+    "reason": "Keep crash recovery independent of desktop IPC and unmounted modal hosts, with a route escape, visible error details and a local diagnostic download.",
+    "owner": "apps/web-desktop/build/renderer/transforms/host.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser crash recovery keeps the boundary lifecycle and replaces desktop-only actions"
+      }
+    ],
+    "removal": "Remove when upstream error recovery supports standalone browser actions.",
+    "handlers": [
+      "useBrowserErrorFallback"
+    ],
+    "sourceHash": "95c86078f8510f7ffdf558b9b147f387edadbc16f97dd23fa436dfe6c731559e",
+    "sourceRoot": "renderer",
+    "inputHash": "95c86078f8510f7ffdf558b9b147f387edadbc16f97dd23fa436dfe6c731559e",
+    "outputHash": "ecd1229c8ec2ce229c298d34d0f2b52cfaa06884e959c62bb7a190b0d3f357e2"
+  },
+  {
+    "name": "browser-single-stylesheet-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "main.tsx",
+    "reason": "Load renderer styles through web.css once so a later incomplete Tailwind compilation cannot hide responsive capability tabs.",
+    "owner": "apps/web-desktop/build/renderer/transforms/host.ts",
+    "tests": [
+      {
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser entry loads renderer styles once so responsive tabs remain visible"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "capabilities loads and switches tabs without browser idle APIs"
+      }
+    ],
+    "removal": "Remove when the renderer exposes an entry without its own stylesheet import.",
+    "handlers": [
+      "useBrowserStylesheetOwner"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "a6a886010f5f9c1c6b94e8ffe777deafe04854e6ac47cbeb0963b87ccd56de6d",
+    "inputHash": "a6a886010f5f9c1c6b94e8ffe777deafe04854e6ac47cbeb0963b87ccd56de6d",
+    "outputHash": "47ad543012f495c7b28c4054b1b23ad8bc76b78ac66fa4bad7b617cb979a8f0f"
+  },
+  {
+    "name": "browser-messaging-presentation",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/messaging/index.tsx",
+    "reason": "Present messaging with a compact searchable header, readable platform statuses, responsive navigation and grouped setup sections while retaining upstream profile, credential, pairing and save ownership.",
+    "owner": "apps/web-desktop/build/renderer/transforms/host.ts",
+    "tests": [
+      {
+        "file": "scripts/compatibility-registry.test.mjs",
+        "scenario": "registered browser pipeline:"
+      }
+    ],
+    "removal": "Remove when upstream provides an equivalent responsive messaging presentation.",
+    "handlers": [
+      "useBrowserMessagingPresentation"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "2ef2b6fc46549a2d1066005313811d76278bb3d67925f3d7417f0e431da5ea1a",
+    "inputHash": "2ef2b6fc46549a2d1066005313811d76278bb3d67925f3d7417f0e431da5ea1a",
+    "outputHash": "7473a0a7ec35644f286c20cb09b11508ae95a1cb064112768d2260f11cc792db"
+  },
+  {
+    "name": "browser-session-reference-links",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/assistant-ui/directive-text.tsx",
+    "reason": "Give chat references real Athena URLs and browser open/copy gestures.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/link-navigation.spec.mjs",
+        "scenario": "chat references open real browser tabs and preserve the original draft"
+      }
+    ],
+    "removal": "Remove when upstream supports a browser host without internal tabs or an embedded browser.",
+    "handlers": [
+      "useBrowserSessionLinks"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "a45fb87126e1508cd6ddea44d871577066c41a127a00c2959c4fc8071d11627c",
+    "inputHash": "a45fb87126e1508cd6ddea44d871577066c41a127a00c2959c4fc8071d11627c",
+    "outputHash": "a81b2ce868632e9f16465f90c9ce9d281861d1e0f373771031d646057b1cbfa7"
+  },
+  {
+    "name": "browser-zone-tab-controls",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/pane-shell/tree/renderer/tree-group.tsx",
+    "reason": "Remove desktop tab closing and tab strip controls from pane fallback menus.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/link-navigation.spec.mjs",
+        "scenario": "link context menus open browser tabs and copy URLs without desktop tab controls"
+      }
+    ],
+    "removal": "Remove when upstream supports a browser host without internal tabs or an embedded browser.",
+    "handlers": [
+      "removeBrowserZoneTabControls"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "af1ece179ff672f9ddfbce8201991d055b7faf4b00201d2f35be23f84ccb2fce",
+    "inputHash": "af1ece179ff672f9ddfbce8201991d055b7faf4b00201d2f35be23f84ccb2fce",
+    "outputHash": "965c90d60ae33346f3e60bdd2d6ca7f5737a77211719708c6fb3403dfe99fb93"
+  },
+  {
+    "name": "browser-shell-tab-control",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/context-menu/shell-menu-items.tsx",
+    "reason": "Remove the unsupported desktop tab strip action from shell menus.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "tests": [
+      {
+        "file": "tests/browser/link-navigation.spec.mjs",
+        "scenario": "link context menus open browser tabs and copy URLs without desktop tab controls"
+      }
+    ],
+    "removal": "Remove when upstream supports a browser host without internal tabs or an embedded browser.",
+    "handlers": [
+      "removeBrowserShellTabControl"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "2c2857b8dd219b374e195f4836683ca4b84c9a4118240f5dd7afdacea2f9d0aa",
+    "inputHash": "2c2857b8dd219b374e195f4836683ca4b84c9a4118240f5dd7afdacea2f9d0aa",
+    "outputHash": "a8548d21df5a0e0eeceac41e24bc512cec411287a346ec4f68b48e8720fece12"
+  },
+  {
+    "name": "browser-project-delete-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/projects.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "449905f256cdbfdff6a283ba224ea00955ce57df0a37f3d912694521ee965efe",
+    "inputHash": "449905f256cdbfdff6a283ba224ea00955ce57df0a37f3d912694521ee965efe",
+    "outputHash": "c6b90b816874b59a3cc646ce0ad076f164d1844baac617ff3f055378dd2a0a7a",
+    "handlers": [
+      "useBrowserProjectDeleteOwner",
+      "scopeBrowserProjectTitles"
+    ],
+    "reason": "Resolve saved project ownership across profiles before deletion and keep the confirmation mounted until the request succeeds. Preserve active profile caches when deleting a sibling profile project. Keep explicitly renamed session titles on their profile in project caches.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "project deletion follows the owning profile and preserves failed confirmations"
+      },
+      {
+        "file": "scripts/project-delete.test.mjs",
+        "scenario": "project deletion resolves the exact id across profiles including empty projects"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "a background copied row cannot rename the selected profile runtime"
+      }
+    ],
+    "removal": "Remove when upstream routes combined-view project deletion to its owning profile and retains failed confirmations."
+  },
+  {
+    "name": "browser-config-field-presentation",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/config-field.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "77ae894827d5b7ff9fb93b02c2e6422a4bd351e324d6a6d61178251cc05c1b02",
+    "inputHash": "77ae894827d5b7ff9fb93b02c2e6422a4bd351e324d6a6d61178251cc05c1b02",
+    "outputHash": "4a8eab00ca8f0634530f25356eebb1fc9cc1b817ce4e0eb5d11cbe81dc37507e",
+    "handlers": [
+      "exposeBrowserConfigFieldPresentation"
+    ],
+    "reason": "Expose resolved schema-field labels, values and original commit commands to the shared Settings presentation.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "scripts/config-field-presentation.test.mjs",
+        "scenario": "schema field descriptors retain renderer boolean, number, list and JSON commit semantics"
+      },
+      {
+        "file": "tests/browser/native-settings.spec.mjs",
+        "scenario": "explicit field commands cannot cross a profile or owner change"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "connection preparation flushes a settings edit with timers paused"
+      }
+    ],
+    "removal": "Remove when the renderer publishes explicit settings field presentation and row registration as a public host contract."
+  },
+  {
+    "name": "browser-settings-row-refs",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/settings/primitives.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "413a1da1d9c04f64203cd4733c608ced8692e2d57b2ac4f75b3c4cf9af63f30a",
+    "inputHash": "413a1da1d9c04f64203cd4733c608ced8692e2d57b2ac4f75b3c4cf9af63f30a",
+    "outputHash": "c2019981e129f609b35ca2847da1a8976ec0a84c9abea00c9950ff60774621a3",
+    "handlers": [
+      "exposeBrowserSettingsRowRefs"
+    ],
+    "reason": "Pass an optional presentation ref to existing settings row elements without changing their layout.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "scripts/config-field-presentation.test.mjs",
+        "scenario": "schema field descriptors retain renderer boolean, number, list and JSON commit semantics"
+      },
+      {
+        "file": "tests/browser/native-settings.spec.mjs",
+        "scenario": "explicit field commands cannot cross a profile or owner change"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "connection preparation flushes a settings edit with timers paused"
+      }
+    ],
+    "removal": "Remove when the renderer publishes explicit settings field presentation and row registration as a public host contract."
+  },
+  {
+    "name": "browser-workspace-lanes",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/projects/workspace-group.tsx",
+    "reason": "Keep Hermes worktree controllers, captured owner commands and paging while Athena owns sidebar tree presentation.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
+    "tests": [
+      {
+        "file": "tests/browser/sidebar-tree.spec.mjs",
+        "scenario": "tree views preserve disclosure, paging, live owner commands and the draft"
+      },
+      {
+        "file": "scripts/sidebar-controller.test.mjs",
+        "scenario": "worktree creation retains the captured lane owner and refuses creation after a failed branch switch"
+      }
+    ],
+    "removal": "Remove when a public renderer controller contract supplies the same worktree facts and commands.",
+    "handlers": [
+      "useBrowserWorkspaceController"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "a3a0d4ca5b794f508f0df7f328ce632976d04376bd34347f4a5d9fab79f47141",
+    "inputHash": "a3a0d4ca5b794f508f0df7f328ce632976d04376bd34347f4a5d9fab79f47141",
+    "outputHash": "ef00bad0c54dbc4160845614428b835e6ba9e7d0fb80c61d7a10a221dc1ebf06"
+  },
+  {
+    "name": "browser-workspace-controls",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/projects/workspace-header.tsx",
+    "reason": "Keep Hermes worktree controllers, captured owner commands and paging while Athena owns sidebar tree presentation.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
+    "tests": [
+      {
+        "file": "tests/browser/sidebar-tree.spec.mjs",
+        "scenario": "tree views preserve disclosure, paging, live owner commands and the draft"
+      },
+      {
+        "file": "scripts/sidebar-controller.test.mjs",
+        "scenario": "worktree creation retains the captured lane owner and refuses creation after a failed branch switch"
+      }
+    ],
+    "removal": "Remove when a public renderer controller contract supplies the same worktree facts and commands.",
+    "handlers": [
+      "useBrowserWorkspacePresentation"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "34495797a4d9932cfa22555af662e61634fbbbd935f91fd47fc4b6ba86b82803",
+    "inputHash": "34495797a4d9932cfa22555af662e61634fbbbd935f91fd47fc4b6ba86b82803",
+    "outputHash": "1e550a096c30ae728449155adbd4199bd1411fe1556369793cfbcd086c101509"
+  },
+  {
+    "name": "browser-repository-sections",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/projects/entered-content.tsx",
+    "reason": "Keep Hermes worktree controllers, captured owner commands and paging while Athena owns sidebar tree presentation.",
+    "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
+    "tests": [
+      {
+        "file": "tests/browser/sidebar-tree.spec.mjs",
+        "scenario": "tree views preserve disclosure, paging, live owner commands and the draft"
+      },
+      {
+        "file": "scripts/sidebar-controller.test.mjs",
+        "scenario": "worktree creation retains the captured lane owner and refuses creation after a failed branch switch"
+      }
+    ],
+    "removal": "Remove when a public renderer controller contract supplies the same worktree facts and commands.",
+    "handlers": [
+      "useBrowserRepositoryController"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "1023cb3c8ab1ca55c6416f6f87ad75b7eb189a3cdc3589b042ce6c66ab39934b",
+    "inputHash": "1023cb3c8ab1ca55c6416f6f87ad75b7eb189a3cdc3589b042ce6c66ab39934b",
+    "outputHash": "f328ee78bf6d732508b4d6ba4c548cb13934fa78573d1d4761bd47665fb83957"
+  },
+  {
+    "name": "browser-timeline-scrubbing",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/assistant-ui/thread/timeline-rail.tsx",
+    "reason": "Scope drag navigation to the mounted virtual timeline and its original jump command without document listeners or simulated clicks.",
+    "owner": "apps/web-desktop/build/renderer/transforms/timeline.ts",
+    "tests": [
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline drags call the owning command once per entry without synthetic clicks"
+      },
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline dragging respects virtual scroll offsets and UI scale"
+      },
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline gestures cannot cross owners or survive replacement and unmount"
+      },
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline scrubbing continues when entries refresh within the same owner"
+      },
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline scrubbing stops when the command owner changes with stable entries"
+      }
+    ],
+    "removal": "Remove when the renderer exposes equivalent scoped pointer scrubbing through its timeline navigation owner.",
+    "sourceHash": "6f104cd714617622a569be35e4efb801ed6879889c908489316889443ff3cce7",
+    "inputHash": "6f104cd714617622a569be35e4efb801ed6879889c908489316889443ff3cce7",
+    "outputHash": "a93126af7d269687dfc94b45b59704bd0da5d1a9f5871d1ec4a9498cd130b489",
+    "handlers": [
+      "useBrowserTimelineScrubbing"
+    ],
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-composer-line-break",
+    "kind": "browser-transform",
+    "order": 40,
+    "module": "app/chat/composer/index.tsx",
+    "after": [
+      "browser-alternate-composer-submit"
+    ],
+    "reason": "Handle Shift+Enter after the composer IME guards using its existing insertion, undo and draft owners.",
+    "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
+    "tests": [
+      {
+        "file": "tests/browser/composer-keyboard.spec.mjs",
+        "scenario": "composer line breaks preserve undo, draft persistence and ordinary submission"
+      },
+      {
+        "file": "tests/browser/composer-keyboard.spec.mjs",
+        "scenario": "composer line breaks respect IME commits, selection and unrelated editors"
+      }
+    ],
+    "removal": "Remove when the renderer provides an equivalent browser line-break command with IME, undo and persistence coverage.",
+    "sourceHash": "ca94b09fe9d9aeb2e63bce9ac639d74fb60663638490456d70963f65382efcf0",
+    "inputHash": "8911f57ee1d2eb506ac8be817571be9508f39e8a9dceeec361fea98b2e3ec681",
+    "outputHash": "28683ee45060b3a01dfbcdbcca435ef3e2015623ee6d744499eedf95f2a2b6a4",
+    "handlers": [
+      "useBrowserComposerLineBreak"
+    ],
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-timeline-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/assistant-ui/thread/timeline.tsx",
+    "reason": "Pass the timeline index owner to the mounted rail without deriving conversation identity from refreshed entries.",
+    "owner": "apps/web-desktop/build/renderer/transforms/timeline.ts",
+    "tests": [
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline scrubbing continues when entries refresh within the same owner"
+      },
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline scrubbing stops when the command owner changes with stable entries"
+      }
+    ],
+    "removal": "Remove when the renderer supplies a stable conversation owner to its scoped timeline gesture API.",
+    "sourceHash": "723b1b9773a59fd2590e252ec9975a3b19abb3a3564162623f9c7ecb88350831",
+    "inputHash": "723b1b9773a59fd2590e252ec9975a3b19abb3a3564162623f9c7ecb88350831",
+    "outputHash": "52c810a74568b8cd809a851d06a9e4d123c75f96305ef60e9edf3d8727d519cf",
+    "handlers": [
+      "useBrowserTimelineOwner"
+    ],
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-timeline-history-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/assistant-ui/thread/use-timeline-history.ts",
+    "reason": "Project the existing connection/profile/session index key without creating another state owner.",
+    "owner": "apps/web-desktop/build/renderer/transforms/timeline.ts",
+    "tests": [
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline scrubbing continues when entries refresh within the same owner"
+      },
+      {
+        "file": "tests/browser/timeline-scrubbing.spec.mjs",
+        "scenario": "timeline scrubbing stops when the command owner changes with stable entries"
+      }
+    ],
+    "removal": "Remove when the renderer supplies a stable conversation owner to its scoped timeline gesture API.",
+    "sourceHash": "26d7d4eee402f9aa50cdd50ac845bfd31e156ea323b45b15547a980a16d65775",
+    "inputHash": "26d7d4eee402f9aa50cdd50ac845bfd31e156ea323b45b15547a980a16d65775",
+    "outputHash": "bc75e4156a7dfbf52cef12bcbad758acb710b4aec576cba7e6abf195a2f0764e",
+    "handlers": [
+      "exposeBrowserTimelineHistoryOwner"
+    ],
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-mounted-submit-scroll",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/assistant-ui/thread/list.tsx",
+    "reason": "Bind accepted-message positioning to the transcript's existing surface, scroll refs and session/profile/visibility lifetime without document discovery or global events.",
+    "owner": "apps/web-desktop/build/renderer/transforms/transcript.ts",
+    "tests": [
+      {
+        "file": "tests/browser/submit-scroll.spec.mjs",
+        "scenario": "submitted prompt follows the browser layout policy"
+      },
+      {
+        "file": "tests/browser/submit-scroll.spec.mjs",
+        "scenario": "accepted commands and reservations belong to the mounted transcript surface"
+      },
+      {
+        "file": "tests/browser/composer-keyboard.spec.mjs",
+        "scenario": "accepted sends position their real mounted renderer transcript"
+      }
+    ],
+    "removal": "Remove when the renderer exposes equivalent mounted accepted-submit positioning and reservation lifecycle hooks.",
+    "handlers": [
+      "useBrowserThreadSubmitScroll"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "3b5c0ca769aec48b88852aa0f5f54409abbd46a515dd7f5c5558dd0071583202",
+    "inputHash": "3b5c0ca769aec48b88852aa0f5f54409abbd46a515dd7f5c5558dd0071583202",
+    "outputHash": "705dae4c556bee9353ab84810dc6469da47c8049cb542d50e526935d4349d9e3"
+  },
+  {
+    "name": "browser-selected-session-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/session-states.ts",
+    "reason": "Resolve the displayed session from its explicit engine selection before ambiguous historical rows.",
+    "owner": "apps/web-desktop/build/renderer/transforms/session-routing.ts",
+    "tests": [
+      {
+        "file": "scripts/renderer-adapter.test.mjs",
+        "scenario": "the complete adapted graph retains every reviewed final renderer and browser fingerprint"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "owned session references preserve copied ids through sends and toolbar writes"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "owned routes survive profile filtering and browser history"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "a late archive of one copy preserves a newer selection of the other profile"
+      }
+    ],
+    "removal": "Remove when the renderer preserves explicit selected owners and shared-gateway profile scope throughout session requests.",
+    "handlers": [
+      "useBrowserSelectedSessionOwner"
+    ],
+    "sourceHash": "8ba8a43bd57c9f6e7b9647bb6daedcc2628cf08cc19812b2b88d3f97d425067c",
+    "sourceRoot": "renderer",
+    "inputHash": "8ba8a43bd57c9f6e7b9647bb6daedcc2628cf08cc19812b2b88d3f97d425067c",
+    "outputHash": "49e0b1a1c9e176c95d317ad2dbba29706ff810e6d57b9741ebb3dd7203f18ec2"
+  },
+  {
+    "name": "browser-owned-session-rpc",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/session-request-router.ts",
+    "reason": "Preserve exact profile scope for session RPCs on the shared browser gateway, including startup profiles.",
+    "owner": "apps/web-desktop/build/renderer/transforms/session-routing.ts",
+    "tests": [
+      {
+        "file": "scripts/renderer-adapter.test.mjs",
+        "scenario": "the complete adapted graph retains every reviewed final renderer and browser fingerprint"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "owned session references preserve copied ids through sends and toolbar writes"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "owned routes survive profile filtering and browser history"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "a late archive of one copy preserves a newer selection of the other profile"
+      }
+    ],
+    "removal": "Remove when the renderer preserves explicit selected owners and shared-gateway profile scope throughout session requests.",
+    "handlers": [
+      "useBrowserOwnedSessionRpc"
+    ],
+    "sourceHash": "60bbb2a1e63405d95a8639f6b8d78c9a4fa50f97e1b749493bcf9a3f2dafb8f6",
+    "sourceRoot": "renderer",
+    "inputHash": "60bbb2a1e63405d95a8639f6b8d78c9a4fa50f97e1b749493bcf9a3f2dafb8f6",
+    "outputHash": "b61e58024e9e5b24dee0b9738ee39a3a69b0878661a1317b2607d36543260f4e"
+  },
+  {
+    "name": "browser-session-title-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/session.ts",
+    "reason": "Publish an explicitly owned rename only to matching profile rows in existing session slices.",
+    "owner": "apps/web-desktop/build/renderer/transforms/session-routing.ts",
+    "tests": [
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "a background copied row cannot rename the selected profile runtime"
+      }
+    ],
+    "removal": "Remove when renderer title publication accepts and preserves the captured profile.",
+    "handlers": [
+      "scopeBrowserSessionTitles"
+    ],
+    "sourceHash": "89088e919378bf4f908baa23d8b06e80962b760e8a3e04fce31abd7c0003cd0c",
+    "sourceRoot": "renderer",
+    "inputHash": "89088e919378bf4f908baa23d8b06e80962b760e8a3e04fce31abd7c0003cd0c",
+    "outputHash": "7f157d02551ed8e60c7d1a460e1726bea09d026de9b2aeed2abeb29b3e7a0c38"
+  }
+]

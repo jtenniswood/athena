@@ -66,6 +66,7 @@ val prepareAndroidBridgeTest by tasks.registering(Exec::class) {
     inputs.file(rootProject.file("../web-desktop/src/platform/android.ts"))
     inputs.file(rootProject.file("../../scripts/android-test-adapter.mjs"))
     inputs.file(rootProject.file("../web-desktop/src/upstream/native-settings.ts"))
+    inputs.file(rootProject.file("../web-desktop/src/platform/settings-presentation.ts"))
     outputs.file(adapter)
     outputs.file(layout.buildDirectory.file("generated/androidTestAssets/native-settings.js"))
     workingDir(rootProject.projectDir.resolve("../.."))
