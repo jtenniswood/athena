@@ -62,6 +62,12 @@ changing router history state. Android retains one app window. Hosts without the
 readiness channel also omit app-window commands. Ordinary external browser links
 keep their existing owner.
 
+The clipboard bridge captures the native writer before the renderer installs its
+shim. Missing or denied native access falls back to the renderer's existing
+selection-copy helper, preserving editor focus and selection and keeping temporary
+copy controls inside the active dialog or menu scope. Copy refusal still rejects
+through Athena's bridge so the caller can report failure.
+
 `experience/settings/settings-route.tsx` assembles settings navigation from the
 catalog. The checked settings controller adapter extracts the existing Hermes
 page controls and commands without generating the browser frame. Schemas, values,
