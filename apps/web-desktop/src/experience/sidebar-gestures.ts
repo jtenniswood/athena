@@ -6,6 +6,7 @@ interface SessionProjectDrag {
   source: HTMLElement
   sessionId: string
   profile: string
+  sourceProjectId?: string
   startX: number
   startY: number
   active: boolean
@@ -27,17 +28,24 @@ interface SessionReorderDrag {
 export function useSidebarGestures(root: RefObject<HTMLElement | null>, projects: BrowserEngine['projects'], owner: string) {
   const sessionProjectDrag = useRef<SessionProjectDrag | null>(null)
   const sessionReorderDrag = useRef<SessionReorderDrag | null>(null)
+  const suppressClick = useRef(false)
   useLayoutEffect(() => {
     const clearTarget = (drag: SessionProjectDrag) => {
       drag.target?.removeAttribute('data-session-drop-active')
       drag.target = null
+    }
+    const clearDrag = (drag: SessionProjectDrag) => {
+      clearTarget(drag)
+      drag.source.removeAttribute('data-session-moving')
+      root.current?.removeAttribute('data-session-project-dragging')
+      if (drag.source.hasPointerCapture(drag.pointerId)) drag.source.releasePointerCapture(drag.pointerId)
     }
     const clearReorderTarget = (drag: SessionReorderDrag) => {
       drag.target?.removeAttribute('data-session-order-drop')
       drag.target = null
     }
     const cancel = () => {
-      if (sessionProjectDrag.current) clearTarget(sessionProjectDrag.current)
+      if (sessionProjectDrag.current) clearDrag(sessionProjectDrag.current)
       if (sessionReorderDrag.current) clearReorderTarget(sessionReorderDrag.current)
       sessionProjectDrag.current = null
       sessionReorderDrag.current = null
@@ -53,7 +61,7 @@ export function useSidebarGestures(root: RefObject<HTMLElement | null>, projects
       if (!drag || drag.pointerId !== event.pointerId) return
       const valid = mounted(drag.source) && mounted(drag.target)
       sessionProjectDrag.current = null
-      clearTarget(drag)
+      clearDrag(drag)
       if (!commit || !valid || !drag.active || !drag.targetProjectId) return
       void projects.move(drag.sessionId, drag.targetProjectId, drag.profile)
         .catch(projects.reportFailure)
@@ -86,12 +94,18 @@ export function useSidebarGestures(root: RefObject<HTMLElement | null>, projects
       const drag = sessionProjectDrag.current
       if (!drag || drag.pointerId !== event.pointerId) return
       if (!drag.active && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return
-      drag.active = true
+      if (!drag.active) {
+        drag.active = true
+        suppressClick.current = true
+        drag.source.setAttribute('data-session-moving', '')
+        root.current?.setAttribute('data-session-project-dragging', '')
+        drag.source.setPointerCapture(event.pointerId)
+      }
       event.preventDefault()
       const element = root.current?.ownerDocument.elementFromPoint(event.clientX, event.clientY)
       const candidate = element instanceof Element ? element.closest<HTMLElement>('[data-sessions-project]') : null
       const projectId = candidate && root.current?.contains(candidate) ? candidate.dataset.sessionsProject : undefined
-      const nextTargetProjectId = projects.eligibleDrop(projectId)
+      const nextTargetProjectId = projectId === drag.sourceProjectId ? null : projects.eligibleDrop(projectId)
       const nextTarget = nextTargetProjectId ? candidate : null
       if (nextTarget === drag.target) return
       clearTarget(drag)
@@ -103,6 +117,15 @@ export function useSidebarGestures(root: RefObject<HTMLElement | null>, projects
     const onPointerCancel = (event: PointerEvent) => finish(event, false)
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') cancel() }
     const onVisibilityChange = () => { if (document.hidden) cancel() }
+    // Pointer capture sends the release click back to the source. A drag must
+    // never select that chat, including after cancellation or a rejected move.
+    const onClick = (event: MouseEvent) => {
+      if (!suppressClick.current || event.detail === 0 || !(event.target instanceof Node) || !root.current?.contains(event.target)) return
+      suppressClick.current = false
+      event.preventDefault()
+      event.stopImmediatePropagation()
+    }
+    window.addEventListener('click', onClick, true)
     window.addEventListener('keydown', onKeyDown, true)
     window.addEventListener('blur', cancel)
     document.addEventListener('visibilitychange', onVisibilityChange)
@@ -111,6 +134,7 @@ export function useSidebarGestures(root: RefObject<HTMLElement | null>, projects
     window.addEventListener('pointercancel', onPointerCancel)
     return () => {
       cancel()
+      window.removeEventListener('click', onClick, true)
       window.removeEventListener('keydown', onKeyDown, true)
       window.removeEventListener('blur', cancel)
       document.removeEventListener('visibilitychange', onVisibilityChange)
@@ -120,6 +144,7 @@ export function useSidebarGestures(root: RefObject<HTMLElement | null>, projects
     }
   }, [root, projects, owner])
   return (event: ReactPointerEvent<HTMLElement>) => {
+    suppressClick.current = false
     const target = event.target
     if (!(target instanceof Element) || !event.currentTarget.contains(target)) return
     const reorderHandle = target.closest('[data-reorder-handle]')
@@ -141,15 +166,16 @@ export function useSidebarGestures(root: RefObject<HTMLElement | null>, projects
     const row = target.closest<HTMLElement>('[data-web-session-id]')
     if (!row || target.closest('[data-reorder-handle], [data-row-actions]')) return
 
-    // Sidebar session drags can reorder sessions or move them into a project.
-    // Let sortable rows receive the press; their adapter suppresses desktop pane dragging.
-    if (!row.querySelector('[data-reorder-handle]')) event.stopPropagation()
+    // Row drags move chats; the grab handle retains the existing reorder gesture.
+    // Keep dnd-kit from lifting a row at the same time as a project move.
+    event.stopPropagation()
     if (event.button !== 0) return
     sessionProjectDrag.current = {
       pointerId: event.pointerId,
       source: row,
       sessionId: row.dataset.webSessionId!,
       profile: row.dataset.webSessionProfile || 'default',
+      sourceProjectId: row.closest<HTMLElement>('[data-sessions-project]')?.dataset.sessionsProject,
       startX: event.clientX,
       startY: event.clientY,
       active: false,

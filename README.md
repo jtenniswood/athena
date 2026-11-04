@@ -14,6 +14,10 @@ or **Separate** to use the profile switcher. Choose **Grouping** independently:
 None, Updated, Project, or Status. For example, Combined + Status groups chats by
 status within each profile.
 
+With Project grouping, drag a chat by its title onto another project to move it.
+The destination highlights before you drop; press Escape
+to cancel. Destinations need a working folder, so Home is not a drop target.
+
 ## Docker self-hosting
 
 The image contains Athena’s web UI, nginx, and a small settings storage service.

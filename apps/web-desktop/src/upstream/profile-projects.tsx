@@ -6,11 +6,11 @@ import type { NewSessionSplitHandler } from '@/app/chat/new-session-drag'
 import { SidebarWorkspaceGroup, type SidebarProjectTree, type SidebarSessionGroup } from '@/app/chat/sidebar/projects'
 
 /** Use the backend's project membership, scoped to the rows of one profile. */
-export function browserProfileProjectGroups(sessions: SessionInfo[], projects: SidebarProjectTree[]): SidebarSessionGroup[] {
+export function browserProfileProjectGroups(sessions: SessionInfo[], projects: SidebarProjectTree[]): (SidebarSessionGroup & { projectId?: string })[] {
   const owner = sessions[0]
   if (!owner) return []
   const remaining = new Set(sessions)
-  const groups: SidebarSessionGroup[] = []
+  const groups: (SidebarSessionGroup & { projectId?: string })[] = []
   for (const project of projects.filter(project => !project.isNoProject)) {
     const members = new Set(project.sessionIds ?? [
       ...(project.previewSessions ?? []), ...project.repos.flatMap(repo => repo.groups.flatMap(group => group.sessions))
@@ -19,11 +19,11 @@ export function browserProfileProjectGroups(sessions: SessionInfo[], projects: S
     if (!rows.length) continue
     rows.forEach(session => remaining.delete(session))
     groups.push({ id: JSON.stringify(['profile-project', owner.connection_id, owner.profile, project.id]),
-      label: project.label, path: project.path, sessions: rows, mode: 'workspace' })
+      projectId: project.id, label: project.label, path: project.path, sessions: rows, mode: 'workspace' })
   }
   const home = projects.find(project => project.isNoProject)
   if (remaining.size) groups.unshift({ id: JSON.stringify(['profile-project', owner.connection_id, owner.profile, 'home']),
-    label: home?.label ?? 'Home', path: null, sessions: [...remaining], mode: 'workspace' })
+    projectId: home?.id, label: home?.label ?? 'Home', path: null, sessions: [...remaining], mode: 'workspace' })
   return groups
 }
 
@@ -33,7 +33,7 @@ export function BrowserProfileProjects({ sessions, projects, renderRows, onNewSe
   onNewSessionSplit?: NewSessionSplitHandler
 }) {
   const owner = sessions[0] ? { connectionId: sessions[0].connection_id ?? WEB_CONNECTION_ID, profile: sessions[0].profile ?? 'default' } : undefined
-  return browserProfileProjectGroups(sessions, projects).map(group => <SidebarWorkspaceGroup key={group.id} group={group} renderRows={renderRows} onNewSession={onNewSession ? path => onNewSession(path, owner) : undefined}
+  return browserProfileProjectGroups(sessions, projects).map(group => <div key={group.id} data-sessions-project={group.projectId}><SidebarWorkspaceGroup group={group} renderRows={renderRows} onNewSession={onNewSession ? path => onNewSession(path, owner) : undefined}
     onNewSessionSplit={onNewSessionSplit ? (dir, options) => onNewSessionSplit(dir, { ...options, profile: sessions[0]?.profile,
-      route: owner }) : undefined} />)
+      route: owner }) : undefined} /></div>)
 }
