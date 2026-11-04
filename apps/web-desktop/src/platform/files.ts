@@ -9,15 +9,20 @@ import { servingBase } from '../web-bridge/gateways'
  */
 export const pluginRoots = () => [`${servingBase()}/desktop-plugins`, `${servingBase()}/plugins`]
 
-/**
- * True when `path` is one of the plugin roots itself, or something under it.
- * A plain `path.startsWith(root)` (the previous check) is a string-prefix
- * bug: a sibling path like `${root}Secret` also starts with `root`, since
- * `root` carries no trailing slash. Require an exact match or a `/`
- * boundary so a sibling directory can't pass as "under" a plugin root.
- */
+/** Admit the normalized asset URL, before either file or directory reads fetch it. */
 export function isUnderPluginRoot(path: string): boolean {
-  return pluginRoots().some(root => path === root || path.startsWith(`${root}/`))
+  try {
+    const target = new URL(path)
+    if (target.username || target.password || target.search || target.hash) return false
+    // Hosts decode these separators after URL parsing; they must not create a
+    // different path from the one whose root boundary was checked here.
+    if (/%2f|%5c/i.test(target.pathname)) return false
+    return pluginRoots().some(root => {
+      const allowed = new URL(root)
+      return target.origin === allowed.origin &&
+        (target.pathname === allowed.pathname || target.pathname.startsWith(`${allowed.pathname}/`))
+    })
+  } catch { return false }
 }
 
 /**

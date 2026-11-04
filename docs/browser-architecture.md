@@ -91,6 +91,12 @@ callers. Selection, cancellation, opening errors and the existing missing-cancel
 deadline share one cleanup path for listeners and the reload-safety operation.
 The bridge still registers the selected blobs under its existing file handles.
 
+Plugin file and directory reads share an asset URL admission check. It compares
+same-origin plugin roots after browser URL normalization, so dot segments cannot
+redirect a file read into an API route. Credentials, query/fragment suffixes and
+encoded path separators are refused before fetching; ordinary nested asset URLs
+and returned directory paths keep their existing shape.
+
 The mounted composer projects its existing voice-capture state into reload safety.
 The media guard spans recording and transcription, including live WebSocket or
 direct-provider transcripts after the microphone stream ends. Settling or
