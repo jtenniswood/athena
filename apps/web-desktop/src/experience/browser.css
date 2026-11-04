@@ -1,5 +1,5 @@
 /* Browser-focused shell chrome. The chat, composer, themes and surfaces are upstream. */
-.browser-shell [data-reorder-handle]:has([data-browser-profile-picture]) { width:24px; height:24px; }
+.browser-shell [data-reorder-handle]:has([data-browser-profile-picture]) { width:16px; height:16px; }
 .browser-shell [data-reorder-handle]:has([data-browser-profile-picture]) > span:has([data-browser-profile-picture]) { opacity:1 !important; }
 .browser-shell [data-reorder-handle]:has([data-browser-profile-picture]) > .codicon-grabber { display:none; }
 .browser-sessions-pane [data-gateway-group]:has([data-browser-profile-picture]) + [data-gateway-group]:has([data-browser-profile-picture]) { margin-top:var(--web-space-3); }

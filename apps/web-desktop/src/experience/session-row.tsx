@@ -39,8 +39,8 @@ export function BrowserSessionRow({ row, className, ...props }: ComponentProps<'
       row.openElsewhere && 'bg-(--ui-row-open-background)', row.working && 'text-foreground',
       row.dragging && 'z-10 cursor-grabbing bg-(--ui-sidebar-surface-background)', className)}>
     {row.running && <span aria-hidden="true" className="arc-border arc-row" />}
-    <div className={cn('z-0 flex h-full w-full min-w-0 cursor-pointer items-center self-stretch gap-1.5 py-0.5 pl-2 pr-2',
-      row.branch && 'pl-3.5', row.card && 'flex-col items-stretch justify-center gap-[0.4rem] py-1.5 pr-0')}
+    <div className={cn('z-0 flex h-full w-full min-w-0 cursor-pointer items-center self-stretch gap-1.5 py-0.5 pl-0 pr-2',
+      row.branch && 'pl-3.5', row.card && 'flex-col items-stretch justify-center gap-[0.4rem] py-1.5 pl-2 pr-0')}
       onClick={event => {
         // React portals retain their logical parent. Dialogs and menu items must
         // never inherit the row's primary action even when they portal to body.
