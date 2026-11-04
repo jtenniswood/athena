@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input'
 import { ProfileGlyph } from '@/components/ui/profile-glyph'
 import { useI18n } from '@/i18n'
-import { $sidebarRowMeta } from '@/store/layout'
+import { $sidebarGrouping, $sidebarRowMeta } from '@/store/layout'
 import { BrowserProfileGroup, BrowserProfileNesting } from '../experience/sidebar-profile'
 import { BrowserHideProfileItem } from '../experience/profile-list-visibility'
 import { useBrowserProfileSection } from './profile-section'
@@ -71,13 +71,14 @@ interface ProfileGroupController {
 export function BrowserProfileGroupControllerSurface({ model }: { model: ProfileGroupController }) {
   const { t } = useI18n(), s = t.sidebar, copy = s.gatewayGroups
   const { group, sortable } = model
+  const grouping = useStore($sidebarGrouping)
   const renameLabel = group.profile ? 'Rename profile' : copy.rename
   const browserProfile = useBrowserProfileSection(group.profile)
   const label = model.alias || browserProfile?.label || model.label
   const figures = useBrowserSidebarFigures(model.usage ? { tokens: model.usage.tokens, costUsd: model.usage.cost_usd } : undefined)
   const toggle = () => toggleGatewayGroup(group.id)
   const actions = <div className="flex items-center">
-    {group.profile && !model.embedded && <Button aria-label={s.newSessionIn(label)} title={s.newSessionIn(label)} size="icon-xs" variant="ghost"
+    {group.profile && !model.embedded && grouping !== 'project' && <Button aria-label={s.newSessionIn(label)} title={s.newSessionIn(label)} size="icon-xs" variant="ghost"
       onClick={model.startSession} onPointerDown={model.onNewSessionSplit ? event => startNewSessionDrag(placement => {
         if (!model.open) toggle()
         model.onNewSessionSplit?.(placement.dir, { anchor: placement.anchor, before: placement.before, profile: group.profile, route: model.route })
@@ -88,17 +89,20 @@ export function BrowserProfileGroupControllerSurface({ model }: { model: Profile
       <DropdownMenuContent align="end">
         {browserProfile && group.profile && !model.embedded && <BrowserHideProfileItem profile={group.profile} />}
         <DropdownMenuItem onSelect={() => { model.setDraft(model.alias || ''); model.setRenaming(true) }}>{renameLabel}</DropdownMenuItem>
-        <DropdownMenuItem disabled={!model.alias} onSelect={() => renameGatewayGroup(group.id, '')}>{copy.resetName}</DropdownMenuItem>
         <DropdownMenuItem disabled={model.first} onSelect={() => model.onMove(-1)}>{copy.moveUp}</DropdownMenuItem>
         <DropdownMenuItem disabled={model.last} onSelect={() => model.onMove(1)}>{copy.moveDown}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   </div>
   const dialog = <Dialog onOpenChange={model.setRenaming} open={model.renaming}><DialogContent>
-    <form onSubmit={event => { event.preventDefault(); renameGatewayGroup(group.id, model.draft); model.setRenaming(false) }}>
+    <form className="grid gap-4" onSubmit={event => { event.preventDefault(); renameGatewayGroup(group.id, model.draft); model.setRenaming(false) }}>
       <DialogHeader><DialogTitle>{renameLabel}</DialogTitle><DialogDescription>{copy.aliasHint}</DialogDescription></DialogHeader>
       <Input aria-label={copy.aliasLabel} autoFocus maxLength={120} onChange={event => model.setDraft(event.target.value)} placeholder={group.label} value={model.draft} />
-      <DialogFooter><Button onClick={() => model.setRenaming(false)} type="button" variant="ghost">{t.common.cancel}</Button><Button type="submit">{t.common.save}</Button></DialogFooter>
+      <DialogFooter>
+        <Button className="sm:mr-auto" disabled={!model.alias} onClick={() => { renameGatewayGroup(group.id, ''); model.setRenaming(false) }} type="button" variant="outline">{copy.resetName}</Button>
+        <Button onClick={() => model.setRenaming(false)} type="button" variant="ghost">{t.common.cancel}</Button>
+        <Button type="submit">{t.common.save}</Button>
+      </DialogFooter>
     </form>
   </DialogContent></Dialog>
   return <BrowserProfileGroup ref={sortable.ref} style={sortable.style}
