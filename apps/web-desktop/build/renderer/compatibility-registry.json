@@ -478,7 +478,7 @@
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "search and disclosure form one navigation list"
+        "scenario": "settings lists panel links after all categories"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
