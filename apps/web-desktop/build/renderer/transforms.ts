@@ -56,11 +56,19 @@ function rewrite(code: string, id: string): { code: string; map: null } | null {
       const switchTarget = '        switchToken = beginGatewaySwitch()'
       if (patched.split(switchTarget).length !== 2) throw new Error('Browser connection apply no longer matches gateway boot')
       patched = patched.replace(switchTarget, `        if (window.__HERMES_WEB_BRIDGE__ && bootCompleted) {
+          const expected = await getWindowBackend()
           await reconnectGateway()
+          const applied = $connection.get()
+          if (applied?.authMode !== expected.authMode || applied?.token !== expected.token) {
+            await reconnectGateway()
+          }
           return
         }
 
 ${switchTarget}`)
+      const appliedTarget = 'desktop.onConnectionApplied?.(() => void softSwitch())'
+      if (patched.split(appliedTarget).length !== 2) throw new Error('Browser connection completion no longer matches gateway boot')
+      patched = patched.replace(appliedTarget, 'desktop.onConnectionApplied?.(() => softSwitch())')
       return { code: patched, map: null }
     }
     if (normalizedId.endsWith('/desktop/src/components/boot-failure-overlay.tsx')) {

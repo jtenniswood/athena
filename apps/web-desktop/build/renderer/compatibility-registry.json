@@ -251,7 +251,7 @@
     "kind": "renderer-transform",
     "order": 30,
     "module": "app/gateway/hooks/use-gateway-boot.ts",
-    "reason": "Keep background Bot readiness from replacing an explicit browser profile choice, and refresh same-gateway credentials through the existing reconnect command without clearing the selected conversation.",
+    "reason": "Keep background Bot readiness from replacing an explicit browser profile choice. Refresh same-gateway credentials through the existing reconnect command without clearing the selected conversation, and return its completion to the bridge's exclusive apply transaction.",
     "owner": "apps/web-desktop/build/renderer/transforms.ts",
     "tests": [
       {
@@ -261,11 +261,19 @@
       {
         "file": "tests/browser/sign-in-credentials.spec.mjs",
         "scenario": "a confirmed token apply replaces the saved credential and preserves the draft"
+      },
+      {
+        "file": "tests/browser/sign-in-credentials.spec.mjs",
+        "scenario": "connection apply stays exclusive until the engine reconnect completes"
+      },
+      {
+        "file": "tests/browser/sign-in-credentials.spec.mjs",
+        "scenario": "a credential apply follows an older manual reconnect with a fresh dial"
       }
     ],
     "removal": "Remove when public gateway contracts preserve browser selection during background profile readiness and same-gateway credential refresh.",
     "sourceHash": "0c350dd0c22a17791998c2326e7a4e5142524dfca86951d7919aa29d36f2c060",
-    "outputHash": "37eb70b2a9268fec9f9ae5d691eb397969cdf1557e1cb91b7b2dcc5a30a9664f",
+    "outputHash": "921f8ded0fd86dad22265986161485c4cf6746dd2db15accdcb5a03070939b82",
     "handler": "browser-profile-commit",
     "sourceRoot": "renderer"
   },

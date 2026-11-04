@@ -1,4 +1,5 @@
 import { assertSafeConnectionChange, setActiveWork } from '../platform/reload-safety'
+import { beginBrowserTransition } from '../platform/browser-transition'
 import { browserCapabilities } from '../platform/capabilities'
 import { claimBrowserAmbientCue } from '../platform/ambient-claims'
 import { browserSignInTarget } from '../platform/sign-in-target'
@@ -51,7 +52,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
   window.__HERMES_WEB_BRIDGE__ = true
   const capabilities = browserCapabilities()
 
-  const connectionListeners = new Set<() => void>()
+  const connectionListeners = new Set<() => void | Promise<void>>()
   const bridge: WebBridge = {
     // The browser has no native translucent window backing. Reporting this
     // explicitly also prevents the renderer's platform fallback from enabling
@@ -165,12 +166,14 @@ export function createWebBridge(): Window['hermesDesktop'] {
     getConnectionConfig: async () => toConnectionConfig(loadStoredConnection()),
     saveConnectionConfig: async input => toConnectionConfig(persistConnection(input)),
     applyConnectionConfig: async input => {
-      await assertSafeConnectionChange()
-      const next = persistConnection(input)
-      // Use upstream's normal soft reconnect, preserving in-memory credentials.
-      queueMicrotask(() => { for (const callback of connectionListeners) callback() })
-
-      return toConnectionConfig(next)
+      const release = beginBrowserTransition()
+      if (!release) throw new Error('Wait for the current page transition to finish.')
+      try {
+        await assertSafeConnectionChange()
+        const next = persistConnection(input)
+        await Promise.all([...connectionListeners].map(callback => callback()))
+        return await toConnectionConfig(next)
+      } finally { release() }
     },
     testConnectionConfig: async input => {
       const remoteUrl = input?.remoteUrl ?? loadStoredConnection().remoteUrl

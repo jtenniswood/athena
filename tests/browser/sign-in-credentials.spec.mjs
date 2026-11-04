@@ -27,6 +27,21 @@ async function retainedDraft(page) {
   await expect(editor(page)).toHaveText('Keep the sign-in attempt draft', { timeout: 30000 })
   expect(await credentials(page)).toEqual(saved)
 }
+async function holdFirstCredentialDial(page) {
+  await page.evaluate(() => {
+    const mint = window.hermesDesktop.getGatewayWsUrlFor
+    let first = true
+    window.hermesDesktop.getGatewayWsUrlFor = async scope => {
+      const result = await mint(scope)
+      if (first) { first = false; await new Promise(resolve => { window.releaseCredentialDial = resolve }) }
+      return result
+    }
+  })
+  return {
+    entered: () => page.waitForFunction(() => Boolean(window.releaseCredentialDial)),
+    release: () => page.evaluate(() => window.releaseCredentialDial?.())
+  }
+}
 test.beforeEach(async ({ page }) => {
   await page.goto(`${application.origin}/?token=synthetic-existing-token#/preview-week`)
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
@@ -104,5 +119,52 @@ test('a confirmed token apply replaces the saved credential and preserves the dr
   await page.getByRole('button', { name: 'Save and reconnect', exact: true }).click()
   await expect.poll(() => credentials(page)).toEqual({ mode: 'token', token: 'synthetic-new-token' })
   await expect(token).toHaveValue('')
+  await retainedDraft(page)
+})
+
+test('connection apply stays exclusive until the engine reconnect completes', async ({ page }) => {
+  const dials = []
+  page.on('websocket', socket => dials.push(new URL(socket.url()).searchParams.get('token')))
+  const held = await holdFirstCredentialDial(page)
+  const token = page.getByLabel('Session token', { exact: true })
+  const save = page.getByRole('button', { name: 'Save and reconnect', exact: true })
+  try {
+    await token.fill('synthetic-first-token')
+    await save.click()
+    await held.entered()
+    await expect(page.locator('#root')).toHaveJSProperty('inert', true)
+    await expect(save).toBeDisabled()
+    const rejected = await page.evaluate(async () => {
+      try { await window.hermesDesktop.applyConnectionConfig({ mode: 'remote', remoteAuthMode: 'token', remoteToken: 'synthetic-second-token' }) }
+      catch (error) { return error.message }
+    })
+    expect(rejected).toBe('Wait for the current page transition to finish.')
+    expect(await credentials(page)).toEqual({ mode: 'token', token: 'synthetic-first-token' })
+    await expect(page.locator('#root')).toHaveJSProperty('inert', true)
+  } finally { await held.release() }
+  await expect(page.locator('#root')).toHaveJSProperty('inert', false)
+  await expect(save).toBeEnabled()
+  expect(dials.at(-1)).toBe('synthetic-first-token')
+  await token.fill('synthetic-second-token')
+  await save.click()
+  await expect(save).toBeEnabled()
+  expect(dials.at(-1)).toBe('synthetic-second-token')
+  await retainedDraft(page)
+})
+
+test('a credential apply follows an older manual reconnect with a fresh dial', async ({ page }) => {
+  const dials = []
+  page.on('websocket', socket => dials.push(new URL(socket.url()).searchParams.get('token')))
+  const held = await holdFirstCredentialDial(page)
+  try {
+    await page.getByRole('region', { name: 'Gateway connection', exact: true }).getByRole('button', { name: 'Reconnect gateway', exact: true }).click()
+    await held.entered()
+    await page.getByLabel('Session token', { exact: true }).fill('synthetic-new-token')
+    await page.getByRole('button', { name: 'Save and reconnect', exact: true }).click()
+    await expect(page.locator('#root')).toHaveJSProperty('inert', true)
+    expect(await credentials(page)).toEqual({ mode: 'token', token: 'synthetic-new-token' })
+  } finally { await held.release() }
+  await expect(page.locator('#root')).toHaveJSProperty('inert', false)
+  expect(dials).toEqual(['synthetic-existing-token', 'synthetic-new-token'])
   await retainedDraft(page)
 })
