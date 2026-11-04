@@ -1,6 +1,6 @@
 import type { PointerEventHandler, ReactNode, RefObject } from 'react'
 import { SearchField } from '../upstream/browser-api'
-import { BrowserSidebarExtras, BrowserSidebarSettings } from './sidebar-extras'
+import { BrowserSidebarSettings } from './sidebar-extras'
 import { browserClassNames as cn } from './ui/classnames'
 
 export interface BrowserSidebarModel {
@@ -43,7 +43,6 @@ export function BrowserSidebar({ model, children }: { model: BrowserSidebarModel
         <BrowserSidebarSettings />
         {model.showSections && <div className="browser-session-search-section px-2 pt-1">
           <SearchField containerClassName="browser-session-search" aria-label="Search" placeholder="Search" inputRef={model.search.input} value={model.search.value} onChange={model.search.change} />
-          <BrowserSidebarExtras />
         </div>}
       </div>
       {model.profileRail}
