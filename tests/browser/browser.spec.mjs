@@ -1638,7 +1638,7 @@ touchTest('browser workspace panels open and close without losing a draft', asyn
   await expect(page.getByRole('button', { name: 'Open panels', exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
   await page.getByRole('dialog', { name: 'Chat actions', exact: true }).getByRole('button', { name: 'Files', exact: true }).click()
-  const close = page.getByRole('button', { name: 'Close files panel', exact: true })
+  const close = page.getByRole('button', { name: /^Close files panel$/i })
   await expect(close).toBeVisible()
   const closeBounds = await close.boundingBox()
   expect(closeBounds.width).toBeGreaterThanOrEqual(44)

@@ -309,7 +309,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserFollowupSubmit: source => useBrowserFollowupSubmit(source, root), useBrowserAlternateSubmit: source => useBrowserAlternateSubmit(source, root),
     useBrowserCodingActionHooks, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source),
-    scopeBrowserStorage, filterBrowserNarrowNavigation, closeBrowserWorkspacePanels,
+    scopeBrowserStorage, filterBrowserNarrowNavigation: source => filterBrowserNarrowNavigation(source, root), closeBrowserWorkspacePanels,
     useBrowserProjectDeleteOwner: source => useBrowserProjectDeleteOwner(source, root),
     exportBrowserStatusbarItem, filterBrowserActivityToasts,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,

@@ -747,7 +747,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "components/pane-shell/tree/renderer/narrow-overlays.tsx",
-    "reason": "Keep mobile tool overlays and close actions without duplicate navigation.",
+    "reason": "Use the browser tool-pane policy for narrow overlays while retaining engine close actions.",
     "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
     "tests": [
       {
@@ -762,7 +762,7 @@
     "sourceHash": "2d60cf8722b2f011c29cb97424e444ebaff2a6420fd8fe760e55ede30ca96c16",
     "sourceRoot": "renderer",
     "inputHash": "2d60cf8722b2f011c29cb97424e444ebaff2a6420fd8fe760e55ede30ca96c16",
-    "outputHash": "775428df2e5db8955392fd38b82aca9fae7bf3eff74f6f94d1846fa07bff9883"
+    "outputHash": "b3e65cf6e231f8abb8eadb877c17fb564b09f71d6226f6d4a39765ea358b62e1"
   },
   {
     "name": "browser-layout-storage",

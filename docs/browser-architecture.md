@@ -158,6 +158,11 @@ pagination, lazy project hydration and saved ordering keep their original owners
 Escape, lost focus, hidden documents, scope changes and detached rows or targets
 cancel pending project drops. Its hit testing stays inside that navigation;
 project moves and saved row ordering still use the engine commands.
+`experience/browser-pane-composition.ts` classifies tool panes for toolbar
+actions, the workspace tree and narrow overlays. The conversation remains in
+the workspace; Sessions, Bots and terminal never become browser tool panels.
+Navigation visibility belongs to Athena's mounted navigation controls, with no
+application-wide interception of desktop minimize buttons.
 The controller projection replaces a named function's return and removes only
 explicitly identified view bindings; nested callbacks and hooks remain intact.
 Source fingerprints and the compiler validate this boundary on renderer updates.

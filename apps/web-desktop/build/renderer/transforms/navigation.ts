@@ -150,9 +150,10 @@ export function scopeBrowserStorage(source: string): string {
   return output
 }
 
-export function filterBrowserNarrowNavigation(source: string): string {
+export function filterBrowserNarrowNavigation(source: string, root: string): string {
   const before = 'panes.filter(p => paneChrome(p).collapsible && inTree.has(p.id)'
-  const after = "panes.filter(p => !['sessions', 'hermes-bots:pane', 'terminal'].includes(p.id) && paneChrome(p).collapsible && inTree.has(p.id)"
+  const after = 'panes.filter(p => isBrowserToolPane(p.id) && paneChrome(p).collapsible && inTree.has(p.id)'
+  const owner = `import { isBrowserToolPane } from ${JSON.stringify(path.join(root, 'src/experience/browser-pane-composition'))}\n`
   const headerTarget = '          {/* Zone-mates share the overlay'
   const closeHeader = `          <div className="browser-overlay-title">
             <span>{revealed.title ?? revealed.id}</span>
@@ -164,7 +165,7 @@ export function filterBrowserNarrowNavigation(source: string): string {
     ['import { $hiddenTreePanes, $layoutTree, $narrowViewport }', 'import { $hiddenTreePanes, $layoutTree, $narrowViewport, closeTabPane }'],
     [headerTarget, closeHeader + headerTarget]
   ]
-  let original = source
+  let original = source.replace(owner, '')
   for (const [target, replacement] of replacements) original = original.replace(replacement, target)
   const contract = contracts.find(item => item.module?.endsWith('/narrow-overlays.tsx'))!
   if (createHash('sha256').update(original).digest('hex') !== contract.sourceHash) throw new Error('Browser narrow tool overlay contract changed')
@@ -173,6 +174,7 @@ export function filterBrowserNarrowNavigation(source: string): string {
     if (output.split(target).length !== 2) throw new Error('Browser narrow tool overlay target changed')
     output = output.replace(target, replacement)
   }
+  output = owner + output
   if (source !== original && source !== output) throw new Error('Browser narrow tool overlay was partially modified')
   return output
 }
