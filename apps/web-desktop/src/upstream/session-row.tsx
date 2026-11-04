@@ -88,7 +88,7 @@ function SidebarSessionRowAdapter({ session, branchStem, isPinned, isSelected, u
   if (figures.length || showTail) trailing.push(<span key="figures" className="pointer-events-none whitespace-nowrap text-[0.625rem] leading-none text-(--ui-text-tertiary)">
     {head}<span className="session-row-tail inline-block min-w-5 text-right transition-opacity group-hover:opacity-0">{head && separator}
       {showUnread ? <span data-session-unread="" role="status" aria-label={r.finishedUnread} title={r.finishedUnread}
-        className="inline-flex size-2.5 items-center justify-center align-middle"><span className="size-1.5 rounded-full bg-(--ui-success)" /></span>
+        className="inline-flex size-2.5 items-center justify-center align-middle"><span className="size-1.5 rounded-full bg-(--ui-blue)" /></span>
         : showAge ? <Tip label={absolute} side="top"><time aria-label={`${age}, ${absolute}`} dateTime={date.toISOString()} tabIndex={0}
         className="pointer-events-auto focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring">{age}</time></Tip> : figures.at(-1)}
     </span></span>)
