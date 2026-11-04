@@ -41,8 +41,8 @@ for (const width of [1440, 390]) {
         await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
         await page.getByRole('tab', { name: 'Sessions', exact: true }).click()
       }
-      await page.getByRole('button', { name: 'More', exact: true }).click()
-      await page.getByRole('button', { name: 'Scheduled', exact: true }).click()
+      await page.getByRole('button', { name: 'Settings', exact: true }).click()
+      await page.getByRole('region', { name: 'Panels', exact: true }).getByRole('button', { name: 'Scheduled', exact: true }).click()
       const surface = page.getByRole('region', { name: 'Scheduled tasks', exact: true })
       await expect(surface.locator('details')).toHaveCount(3)
       for (const profile of ['default', 'research', 'writer']) {

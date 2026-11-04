@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router'
 import { Codicon, type OverlayNavGroup } from '../../upstream/browser-api'
 import { useBrowserEngine } from '../engine'
 import type { BrowserSettingsController, BrowserSettingsPageProps } from '../contracts/settings'
@@ -12,6 +13,8 @@ export function SettingsView(props: BrowserSettingsPageProps) {
 }
 
 function BrowserSettingsRoute({ controller, onClose }: { controller: BrowserSettingsController; onClose(): void }) {
+  const navigate = useNavigate()
+  const engine = useBrowserEngine()
   const known = new Set(settingsCatalog.flatMap(group => group.pages.map(page => page.id)))
   const native = new Map(controller.nativePages.map(page => [page.id, page]))
   const pages: OverlayNavGroup[] = settingsCatalog.flatMap(group => group.pages).filter(page => settingsPageIsVisible(page.id)).map(page => {
@@ -30,6 +33,7 @@ function BrowserSettingsRoute({ controller, onClose }: { controller: BrowserSett
     activeView={controller.view} backLabel={controller.labels.back} closeLabel={controller.labels.close}
     scopeProfile={controller.scope} searchCommand={{ label: controller.search.label, run: controller.search.open }}
     groups={pages} onClose={onClose} title={controller.labels.title}
+    onOpenPanel={path => engine.navigation.openPage(navigate, path)}
     search={<button
       type="button" aria-label={controller.search.label} tabIndex={controller.search.active ? -1 : undefined}
       className={`browser-settings-search-button${controller.search.active ? ' is-active' : ''}`}
