@@ -76,7 +76,7 @@
     "ignore": "7.0.14",
     "katex": "0.19.1",
     "lucide-react": "1.67.0",
-    "mermaid": "12.2.0",
+    "mermaid": "12.3.0",
     "motion": "14.9.0",
     "nanostores": "1.5.5",
     "node-pty": "1.1.0",

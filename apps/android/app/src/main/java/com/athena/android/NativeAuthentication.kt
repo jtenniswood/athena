@@ -7,6 +7,7 @@ import android.net.Uri
 class NativeAuthentication(
     activity: Activity,
     private val connection: ConnectionCoordinator,
+    launchAccess: (Uri) -> Unit,
     private val connected: () -> Unit,
     accessConnected: () -> Unit
 ) {
@@ -20,7 +21,7 @@ class NativeAuthentication(
         }
     }
     private val browser = BrowserSignIn(activity, { code, message -> progress(false, code, message) }, connected = connected)
-    private val access = AccessSignIn(activity, progress = { code, message -> progress(true, code, message) }, connected = accessConnected)
+    private val access = AccessSignIn(activity, progress = { code, message -> progress(true, code, message) }, launch = launchAccess, connected = accessConnected)
 
     fun start(origin: String, useAccess: Boolean, path: String = "/login", started: (Boolean) -> Unit = {}) {
         lastAccess = useAccess

@@ -146,7 +146,7 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
       <div className="grid size-6 place-items-center"><Tip label={s.showProjects}><Button aria-label={s.showProjects} className={headerButton} size="icon-xs" variant="ghost"
         onClick={event => { event.stopPropagation(); exitProjectScope() }}><Codicon name="list-unordered" size="0.75rem" /></Button></Tip></div>
     </div> : <>
-      {c.grouping === 'project' ? <Tip label={s.projects.newButton}>
+      {c.grouping === 'project' ? !c.combinedProfiles && <Tip label={s.projects.newButton}>
         <Button aria-label={s.projects.newButton} className={`${headerButton} transition-opacity`} size="icon-xs" variant="ghost"
           onClick={event => { event.stopPropagation(); openProjectCreate() }}
           onPointerDown={event => startNewProjectDrag(placement => $newProjectDropPlacement.set(placement), event, { onTap: openProjectCreate })}>
