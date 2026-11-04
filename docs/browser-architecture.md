@@ -304,11 +304,12 @@ unsent edits and drain requests already in flight; a completed request from the
 old profile cannot seed the new profile's configuration cache. Failed writes
 continue to block readiness instead of being treated as durable.
 
-PWA preparation and applying synced preferences share one exclusive page-transition
-lock. A competing transition is refused before changing interaction or network
+PWA preparation, applying synced preferences, and sign-out share one exclusive
+page-transition lock. A competing transition is refused before changing interaction or network
 admission. Abort, expiry and failure release only the lock their transition owns;
 late cleanup cannot unlock a newer owner. The update protocol, pending-work flush
-and draft verification remain unchanged.
+and draft verification remain unchanged. Sign-out holds its reservation through
+logout, verified credential removal, and reload, and releases it on failure.
 
 Filesystem plugin discovery uses the renderer's existing disk loader. The bridge
 returns both files and directories, including package markers, with encoded URL
