@@ -91,6 +91,12 @@ callers. Selection, cancellation, opening errors and the existing missing-cancel
 deadline share one cleanup path for listeners and the reload-safety operation.
 The bridge still registers the selected blobs under its existing file handles.
 
+The mounted composer projects its existing voice-capture state into reload safety.
+The media guard spans recording and transcription, including live WebSocket or
+direct-provider transcripts after the microphone stream ends. Settling or
+unmounting that owner releases its guard; the engine retains the voice state,
+transcript insertion and cancellation lifecycle.
+
 `experience/settings/settings-route.tsx` assembles settings navigation from the
 catalog. The checked settings controller adapter extracts the existing Hermes
 page controls and commands without generating the browser frame. Schemas, values,

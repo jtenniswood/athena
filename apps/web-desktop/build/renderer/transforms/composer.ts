@@ -56,6 +56,15 @@ ${support}`)
     .replace(denied, `    return new Error(copy.microphoneAccessDenied + ' Allow microphone access for this site in your browser settings, then try again.')`)
 }
 
+/** Keep stopped recordings protected until the engine settles their transcript. */
+export function guardBrowserVoiceLifetime(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/upstream/voice-lifetime'))
+  const target = "  const capturing = voiceConversationActive || voiceStatus !== 'idle'"
+  return `import { useBrowserVoiceLifetime } from ${owner}\n` + replaceBrowserContract(source, [
+    [target, target + '\n  useBrowserVoiceLifetime(capturing)']
+  ])
+}
+
 export function useBrowserComposerLayoutWidth(source: string): string {
   const target = '    const { width } = composer.getBoundingClientRect()'
   if (source.split(target).length !== 2) throw new Error('Browser composer width target changed')

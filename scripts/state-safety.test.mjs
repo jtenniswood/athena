@@ -130,3 +130,31 @@ test('UI updates allow running turns but retain every browser work and draft gua
   flush = async () => { draft.attachments = 1 }
   assert.match((await ready()).reason, /attachments/)
 })
+
+test('media leases keep separate voice and permission owners guarded until each finishes', async () => {
+  let resolveStream, rejectPermission
+  const navigator = { mediaDevices: { getUserMedia: () => new Promise((resolve, reject) => { resolveStream = resolve; rejectPermission = reject }) } }
+  const safety = load('reload-safety', { navigator,
+    draftSafety: { browserDraftSnapshot: () => ({ blocked: false, storageKey: 'drafts', texts: {}, attachments: 0 }) },
+    window: { localStorage: { getItem: () => '{}' } }
+  })
+  safety.setActiveWork({ count: 0 })
+  safety.trackMediaRequests()
+  const firstVoice = safety.beginMediaOperation(), secondVoice = safety.beginMediaOperation()
+  const permission = navigator.mediaDevices.getUserMedia({ audio: true })
+  firstVoice(); firstVoice(); secondVoice()
+  assert.match(safety.reloadReadiness().reason, /recording/)
+  const track = { readyState: 'live' }
+  resolveStream({ getTracks: () => [track] })
+  await permission
+  assert.match(safety.reloadReadiness().reason, /recording/)
+  const transcript = safety.beginMediaOperation()
+  track.readyState = 'ended'
+  assert.match(safety.reloadReadiness().reason, /transcribing/)
+  transcript(); transcript()
+  assert.equal(safety.reloadReadiness().ready, true)
+  const denied = navigator.mediaDevices.getUserMedia({ audio: true })
+  rejectPermission(new Error('Permission denied'))
+  await assert.rejects(denied, /Permission denied/)
+  assert.equal(safety.reloadReadiness().ready, true)
+})
