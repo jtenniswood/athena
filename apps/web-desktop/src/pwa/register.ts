@@ -129,7 +129,7 @@ export function registerPwa(): void {
       setStatus('Checking open Hermes tabs…')
       registration.waiting?.postMessage({ type: 'HERMES_PREPARE_UPDATE' })
     }
-    notice = { update, message: 'A UI update is ready. Running tasks will continue while the app reconnects.' }
+    notice = { update, message: 'Your running tasks will continue.' }
     publishPwaUpdate(notice)
   }
   const register = async () => {
