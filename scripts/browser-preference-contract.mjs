@@ -23,8 +23,19 @@ function definition(key, owner, defaultValue, parse, serialize = String, extra =
 const list = raw => { const value = json(raw); return Array.isArray(value) ? strings(value) : [] }
 const scale = raw => { const value = Number(raw); return Number.isFinite(value) && value > 0 ? value : 125 }
 export const browserPreferences = Object.freeze({
-  // Legacy setting, retained only to migrate existing selections to Profile grouping.
+  // Legacy setting, retained only to migrate existing combined-profile selections.
   presentationMode: definition('hermes-web.browser.presentation-mode', 'experience/browser-shell', false, raw => raw === 'true', String, { memoryOnFailure: true }),
+  combinedProfiles: definition('hermes-web.browser.combined-profiles', 'upstream/profile-section', true, (raw, storage) => {
+    if (raw === 'true' || raw === 'false') return raw === 'true'
+    if (storage?.getItem('hermes-web.browser.presentation-mode') === 'true') return true
+    return storage?.getItem('hermes-web.browser.hermes.desktop.showAllProfiles') !== 'false' &&
+      storage?.getItem('hermes-web.browser.hermes.desktop.sidebarAgentsGrouped.allProfiles') !== 'true' &&
+      (storage?.getItem('hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles') ?? 'profile') === 'profile'
+  }, String, { memoryOnFailure: true, migration: {
+    legacyKeys: ['hermes-web.browser.presentation-mode', 'hermes-web.browser.hermes.desktop.showAllProfiles',
+      'hermes-web.browser.hermes.desktop.sidebarAgentsGrouped.allProfiles', 'hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles'],
+    rule: 'Preserve the former profile presentation independently of content grouping.'
+  } }),
   activeTab: definition('hermes-web.browser.navigation', 'experience/browser-preferences', 'sessions', raw => raw === 'bots' ? 'bots' : 'sessions'),
   hiddenProfiles: definition('hermes-web.browser.hidden-profiles', 'experience/browser-preferences', empty, list, JSON.stringify),
   hiddenProfileGroups: definition('hermes-web.browser.hidden-profile-groups', 'experience/profile-list-visibility', empty, list, JSON.stringify, { memoryOnFailure: true }),
