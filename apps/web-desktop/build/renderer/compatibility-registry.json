@@ -2108,6 +2108,14 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "sidebar cron peek and trigger retain the selected conversation and prevent duplicate runs"
+      },
+      {
+        "file": "scripts/browser-services.test.mjs",
+        "scenario": "explicit endpoint profile filters take precedence over ambient API scope"
+      },
+      {
+        "file": "tests/browser/scheduled-profile-scope.spec.mjs",
+        "scenario": "scheduled tasks retain each endpoint profile from a Research chat"
       }
     ],
     "removal": "Remove when a public renderer controller contract supplies the same job and live-run projections.",
