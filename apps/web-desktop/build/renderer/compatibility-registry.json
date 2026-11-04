@@ -2096,7 +2096,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "2ebde4eff5928b33dddbb4fd00255441c1b9f21180db651389df64fb82fbdc7e",
     "inputHash": "2ebde4eff5928b33dddbb4fd00255441c1b9f21180db651389df64fb82fbdc7e",
-    "outputHash": "134d513f74c7759f749106bdbab23e37e9008ffb6c77dd1a14ecd15d9a44dc9a"
+    "outputHash": "c3c246545b382a685c183a545a07f6f27825ce28d06ad437eed8b3211c434dfa"
   },
   {
     "name": "browser-cron-jobs-section-styling",
