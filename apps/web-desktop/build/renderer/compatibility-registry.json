@@ -2096,7 +2096,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "2ebde4eff5928b33dddbb4fd00255441c1b9f21180db651389df64fb82fbdc7e",
     "inputHash": "2ebde4eff5928b33dddbb4fd00255441c1b9f21180db651389df64fb82fbdc7e",
-    "outputHash": "134d513f74c7759f749106bdbab23e37e9008ffb6c77dd1a14ecd15d9a44dc9a"
+    "outputHash": "c3c246545b382a685c183a545a07f6f27825ce28d06ad437eed8b3211c434dfa"
   },
   {
     "name": "browser-cron-jobs-section-styling",
@@ -3505,12 +3505,12 @@
     "sourceRoot": "renderer",
     "sourceHash": "449905f256cdbfdff6a283ba224ea00955ce57df0a37f3d912694521ee965efe",
     "inputHash": "449905f256cdbfdff6a283ba224ea00955ce57df0a37f3d912694521ee965efe",
-    "outputHash": "c6b90b816874b59a3cc646ce0ad076f164d1844baac617ff3f055378dd2a0a7a",
+    "outputHash": "3a2215aa1558fc9b075fc4a3155b71d26103d3665e8f55ffac08c9ce9f8a6581",
     "handlers": [
       "useBrowserProjectDeleteOwner",
       "scopeBrowserProjectTitles"
     ],
-    "reason": "Resolve saved project ownership across profiles before deletion and keep the confirmation mounted until the request succeeds. Preserve active profile caches when deleting a sibling profile project. Keep explicitly renamed session titles on their profile in project caches.",
+    "reason": "Resolve saved project ownership across profiles before rename, appearance, folder, active-project, and delete writes. Keep failed delete confirmations mounted and preserve active profile caches. Keep explicitly renamed session titles on their profile in project caches.",
     "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
     "tests": [
       {
@@ -3524,9 +3524,17 @@
       {
         "file": "tests/browser/session-routing.spec.mjs",
         "scenario": "a background copied row cannot rename the selected profile runtime"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "profile layout composes with content grouping and preserves the draft"
+      },
+      {
+        "file": "scripts/project-delete.test.mjs",
+        "scenario": "combined project edits resolve their saved owner and reject profile changes before writing"
       }
     ],
-    "removal": "Remove when upstream routes combined-view project deletion to its owning profile and retains failed confirmations."
+    "removal": "Remove when upstream routes combined-view project edits to the saved owner and retains failed confirmations."
   },
   {
     "name": "browser-config-field-presentation",

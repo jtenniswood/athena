@@ -71,6 +71,7 @@ interface ProfileGroupController {
 export function BrowserProfileGroupControllerSurface({ model }: { model: ProfileGroupController }) {
   const { t } = useI18n(), s = t.sidebar, copy = s.gatewayGroups
   const { group, sortable } = model
+  const renameLabel = group.profile ? 'Rename profile' : copy.rename
   const browserProfile = useBrowserProfileSection(group.profile)
   const label = model.alias || browserProfile?.label || model.label
   const figures = useBrowserSidebarFigures(model.usage ? { tokens: model.usage.tokens, costUsd: model.usage.cost_usd } : undefined)
@@ -86,7 +87,7 @@ export function BrowserProfileGroupControllerSurface({ model }: { model: Profile
     <DropdownMenu><DropdownMenuTrigger asChild><Button aria-label={`${copy.actions}: ${label}`} size="icon-xs" variant="ghost"><Codicon name="ellipsis" /></Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {browserProfile && group.profile && !model.embedded && <BrowserHideProfileItem profile={group.profile} />}
-        <DropdownMenuItem onSelect={() => { model.setDraft(model.alias || ''); model.setRenaming(true) }}>{copy.rename}</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => { model.setDraft(model.alias || ''); model.setRenaming(true) }}>{renameLabel}</DropdownMenuItem>
         <DropdownMenuItem disabled={!model.alias} onSelect={() => renameGatewayGroup(group.id, '')}>{copy.resetName}</DropdownMenuItem>
         <DropdownMenuItem disabled={model.first} onSelect={() => model.onMove(-1)}>{copy.moveUp}</DropdownMenuItem>
         <DropdownMenuItem disabled={model.last} onSelect={() => model.onMove(1)}>{copy.moveDown}</DropdownMenuItem>
@@ -95,7 +96,7 @@ export function BrowserProfileGroupControllerSurface({ model }: { model: Profile
   </div>
   const dialog = <Dialog onOpenChange={model.setRenaming} open={model.renaming}><DialogContent>
     <form onSubmit={event => { event.preventDefault(); renameGatewayGroup(group.id, model.draft); model.setRenaming(false) }}>
-      <DialogHeader><DialogTitle>{copy.rename}</DialogTitle><DialogDescription>{copy.aliasHint}</DialogDescription></DialogHeader>
+      <DialogHeader><DialogTitle>{renameLabel}</DialogTitle><DialogDescription>{copy.aliasHint}</DialogDescription></DialogHeader>
       <Input aria-label={copy.aliasLabel} autoFocus maxLength={120} onChange={event => model.setDraft(event.target.value)} placeholder={group.label} value={model.draft} />
       <DialogFooter><Button onClick={() => model.setRenaming(false)} type="button" variant="ghost">{t.common.cancel}</Button><Button type="submit">{t.common.save}</Button></DialogFooter>
     </form>
