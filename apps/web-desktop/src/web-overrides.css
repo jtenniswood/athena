@@ -42,25 +42,11 @@ body,
   width: 100% !important;
 }
 
-/* Keep the new-session control on the right and dimmed at rest. Reveal the
-   project menu on header hover, keyboard focus, and while its menu is open. */
+/* Keep the new-session control on the right. Sidebar group actions share
+   hover, keyboard focus, open-menu, and touch visibility in browser.css. */
 [data-browser-project-controls]:has(button:has(.codicon-kebab-vertical)):has(button:has(.codicon-add)) {
   position: relative;
   inset-inline-end: -1.25rem;
-}
-
-[data-browser-project-controls] > button:has(.codicon-add) {
-  opacity: 0.5 !important;
-}
-
-[data-browser-project-controls] > button:has(.codicon-kebab-vertical) {
-  opacity: 0 !important;
-}
-
-[data-browser-project-controls] > button:has(.codicon-add):is(:hover, :focus-visible),
-[data-browser-project-controls] > button:has(.codicon-kebab-vertical):is(:focus-visible, [data-state='open']),
-[data-browser-group-header]:hover [data-browser-project-controls] > button:has(.codicon-kebab-vertical) {
-  opacity: 1 !important;
 }
 
 [data-sessions-project][data-session-drop-active] {
