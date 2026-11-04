@@ -134,7 +134,7 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
     }, event) : undefined
   }))
   const model: BrowserSidebarModel = {
-    navigation, flipped: c.panesFlipped, showSections: c.showSessionSections,
+    navigation, flipped: c.panesFlipped, showNewSession: c.grouping !== 'profile', showSections: c.showSessionSections,
     search: { value: c.searchQuery, change: c.setSearchQuery, input: c.searchInputRef }, mode: c.sessionsMode,
     project: c.inProject ? c.enteredProjectId : undefined, notice: <SidebarStorageCorruptNotice />,
     empty: <SidebarBlankState onNewProject={openProjectCreate} />,
