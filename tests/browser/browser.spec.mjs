@@ -92,11 +92,12 @@ const open = async (page, session = 'preview-week', { defaultGrouping = false } 
 }
 
 for (const width of [1440, 390]) {
-  test.extend({ hasTouch: width === 390 })(`project Show all expands sessions inline at ${width}px`, async ({ page }) => {
+  test.extend({ hasTouch: width === 390 })(`project groups show all sessions without clipping at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 960 })
     await page.route('**/api/athena/preferences', route => route.abort())
     await page.addInitScript(() => {
       localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarAgentsGrouped.allProfiles', 'true')
+      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarShowAllSessions', 'false')
     })
     const sessions = Array.from({ length: 5 }, (_, index) => ({
       id: index === 0 ? 'preview-week' : `project-extra-${index}`,
@@ -107,34 +108,25 @@ for (const width of [1440, 390]) {
     }))
     const home = { id: '__no_project__', label: 'Home', path: null, isNoProject: true, sessionCount: 5,
       sessionIds: sessions.map(session => session.id), repos: [] }
-    let failExpansion = true
     await page.route('**/api/profiles/projects/tree?**', async route => {
       const limit = Number(new URL(route.request().url()).searchParams.get('preview_limit'))
-      if (limit > 3 && failExpansion) return route.fulfill({ status: 503, json: { error: 'Temporarily unavailable' } })
+      expect(limit).toBe(2000)
       await route.fulfill({ json: { projects: [
         { ...home, previewSessions: sessions.slice(0, limit) },
         { id: 'p_other', label: 'Another project', path: '/workspace/another', sessionCount: 0, repos: [] }
       ], active_id: null, scoped_session_ids: sessions.map(session => session.id) } })
     })
     await open(page)
-    await editor(page).fill('Keep this draft while expanding Home')
+    await editor(page).fill('Keep this draft while showing all chats')
     if (width === 390) await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
     const project = page.locator('[data-sessions-project="__no_project__"]')
-    const showAll = project.getByRole('button', { name: 'Show all 5 sessions', exact: true })
-    await expect(showAll).toBeVisible()
-    await expect(project.getByRole('button', { name: 'Extra project session 4', exact: true })).toHaveCount(0)
-    await showAll.click()
-    await expect(page.getByText('Could not load project sessions', { exact: true })).toBeVisible()
-    await expect(showAll).toBeEnabled()
-    failExpansion = false
-    await showAll.click()
-    await expect(showAll).toHaveCount(0)
+    await expect(project.getByRole('button', { name: /Show all|Show .*more/ })).toHaveCount(0)
     for (const session of sessions) await expect(project.getByRole('button', { name: session.title, exact: true })).toHaveCount(1)
     await expect(project.getByRole('button', { name: 'Extra project session 4', exact: true })).toBeVisible()
     await expect(page.locator('[data-sessions-project="p_other"]')).toBeVisible()
     await expect(page).toHaveURL(/#\/preview-week$/)
     if (width === 390) await project.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
-    await expect(editor(page)).toHaveText('Keep this draft while expanding Home')
+    await expect(editor(page)).toHaveText('Keep this draft while showing all chats')
   })
 }
 

@@ -1,6 +1,6 @@
 import type { ComponentProps, HTMLAttributes, ReactNode, RefObject } from 'react'
 import { browserClassNames as cn } from './ui/classnames'
-import { BrowserTreeAdd, BrowserTreeHeader, BrowserTreeMore, BrowserTreeStack } from './sidebar-tree'
+import { BrowserTreeAdd, BrowserTreeHeader, BrowserTreeStack } from './sidebar-tree'
 
 export interface BrowserSidebarProjectModel {
   id: string
@@ -23,7 +23,6 @@ export interface BrowserSidebarProjectModel {
   wrapHeader?(header: ReactNode): ReactNode
   figures: string
   create?: { label: string; run(): void; pointerDown?: ComponentProps<'button'>['onPointerDown'] }
-  more: { label: string; disabled?: boolean; run(): void }[]
 }
 
 /** Browser tree geometry and disclosure, driven by the existing project owner. */
@@ -48,8 +47,6 @@ export function BrowserSidebarProject({ model, children, ...props }: ComponentPr
       </div> }} />
   return <BrowserTreeStack {...props} data-sessions-project={model.id} className={cn('rounded-[6px] data-[session-drop-hover=true]:outline-2 data-[session-drop-hover=true]:-outline-offset-2 data-[session-drop-hover=true]:outline-sidebar-ring', model.dragging && 'relative z-10')}>
     {model.wrapHeader ? model.wrapHeader(header) : header}
-    {model.open && model.hasRows && <>{children}
-      {model.more.map(action => <BrowserTreeMore key={action.label} label={action.label} disabled={action.disabled} onClick={action.run} />)}
-    </>}
+    {model.open && model.hasRows && children}
   </BrowserTreeStack>
 }
