@@ -249,6 +249,12 @@ unsent edits and drain requests already in flight; a completed request from the
 old profile cannot seed the new profile's configuration cache. Failed writes
 continue to block readiness instead of being treated as durable.
 
+PWA preparation and applying synced preferences share one exclusive page-transition
+lock. A competing transition is refused before changing interaction or network
+admission. Abort, expiry and failure release only the lock their transition owns;
+late cleanup cannot unlock a newer owner. The update protocol, pending-work flush
+and draft verification remain unchanged.
+
 ## Runtime service ownership
 
 `apps/web-desktop/server/` owns the running preference, Android authentication,

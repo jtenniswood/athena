@@ -71,3 +71,63 @@ test('notification routes yield to a prepared update and work again after abort'
   expect(await route(page, target.href)).toEqual({ ready: true })
   expect(await page.evaluate(() => window.notificationDocument)).toBe('Retain this document')
 })
+
+async function offerRemotePreferences(page) {
+  const saved = await (await page.request.get(`${origin}/api/athena/preferences`)).json()
+  const theme = saved.values['hermes-desktop-theme-v2'] === 'light' ? 'dark' : 'light'
+  const changed = await page.request.patch(`${origin}/api/athena/preferences`, {
+    headers: { Origin: origin },
+    data: { version: 1, accountId: saved.accountId, seed: false, changes: { 'hermes-desktop-theme-v2': theme } }
+  })
+  expect(changed.ok(), `Preference patch status: ${changed.status()}`).toBe(true)
+  await page.evaluate(() => { window.location.hash = '/settings?tab=config%3Abrowser-configuration'; window.dispatchEvent(new Event('focus')) })
+  await expect(page.getByRole('button', { name: 'Apply changes', exact: true })).toBeVisible()
+  return theme
+}
+
+test('a postponed update cannot unlock a pending preference application', async ({ page }) => {
+  await offerRemotePreferences(page)
+  let pending
+  await page.route('**/api/athena/preferences', async route => {
+    if (!pending && route.request().method() === 'GET' && await page.locator('#root').evaluate(root => root.inert)) {
+      await new Promise(resolve => { pending = resolve })
+      await route.fulfill({ status: 503, body: 'Synthetic preference application failure' })
+    } else await route.continue()
+  })
+  try {
+    await page.getByRole('button', { name: 'Apply changes', exact: true }).click()
+    await expect.poll(() => typeof pending).toBe('function')
+    await expect(page.locator('#root')).toHaveJSProperty('inert', true)
+    expect((await sendFromWorker(page, { type: 'HERMES_FLUSH_UPDATE', transaction: 'preferences-pending' })).ready).toBe(false)
+    expect(await page.locator('#root').evaluate(root => root.inert)).toBe(true)
+  } finally { pending?.() }
+  await expect(page.getByRole('alert')).toContainText('Settings sync is unavailable')
+  await expect(page.locator('#root')).toHaveJSProperty('inert', false)
+  expect(await route(page, page.url())).toEqual({ ready: true })
+  const original = new URL(page.url()); original.hash = '/preview-research'
+  expect(await route(page, original.href)).toEqual({ ready: true })
+  await expect(composer(page)).toHaveText('Keep this notification-tab draft')
+})
+
+
+test('a prepared update refuses preference application until abort and preserves its draft on reload', async ({ page }) => {
+  const theme = await offerRemotePreferences(page)
+  let requests = 0
+  await page.route('**/api/athena/preferences', async request => { requests++; await request.continue() })
+  expect((await sendFromWorker(page, { type: 'HERMES_FLUSH_UPDATE', transaction: 'update-first' })).ready).toBe(true)
+  // A stale presenter command can invoke an action even while ordinary input is inert.
+  await page.getByRole('button', { name: 'Apply changes', exact: true }).evaluate(button => button.click())
+  expect(requests).toBe(0)
+  expect(await page.locator('#root').evaluate(root => root.inert)).toBe(true)
+  await sendFromWorker(page, { type: 'HERMES_ABORT_UPDATE', transaction: 'update-first' }, false)
+  await expect(page.locator('#root')).toHaveJSProperty('inert', false)
+  await Promise.all([
+    page.waitForEvent('domcontentloaded'),
+    page.getByRole('button', { name: 'Apply changes', exact: true }).click()
+  ])
+  await expect(page.getByRole('heading', { name: 'Sync across devices', exact: true })).toBeVisible()
+  expect(await page.evaluate(() => window.notificationDocument)).toBeUndefined()
+  expect(await page.evaluate(() => localStorage.getItem('hermes-desktop-theme-v2'))).toBe(theme)
+  await page.evaluate(() => { window.location.hash = '/preview-research' })
+  await expect(composer(page)).toHaveText('Keep this notification-tab draft')
+})
