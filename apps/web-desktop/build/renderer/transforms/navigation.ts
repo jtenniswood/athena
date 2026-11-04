@@ -498,7 +498,7 @@ export function disableBrowserSessionOpenActions(source: string, root: string): 
   const titleUpdate = JSON.stringify(path.join(root, 'src/upstream/update-session-title'))
   menu = replaceBrowserContract(menu, [
     ["  const [renameOpen, setRenameOpen] = useState(false)", "  const [renameOpen, setRenameOpen] = useState(false)\n  const { updatingTitle, updateTitle } = useBrowserUpdateTitle(sessionId, profile)"],
-    ["          })\n        ]\n      : []),\n    spec({\n      disabled: !onPin,", "          }),\n          spec({\n            key: 'update-title',\n            disabled: !sessionId || updatingTitle,\n            icon: 'refresh',\n            label: updatingTitle ? 'Updating title…' : 'Update title',\n            onSelect: () => void updateTitle()\n          })\n        ]\n      : []),\n    spec({\n      disabled: !onPin,"]
+    ["          })\n        ]\n      : []),\n    spec({\n      disabled: !onPin,", "          }),\n          spec({\n            key: 'update-title',\n            disabled: !sessionId || updatingTitle,\n            icon: 'refresh',\n            label: browserSessionActionLabel('update-title', updatingTitle ? 'Updating title…' : 'Update title'),\n            onSelect: () => void updateTitle()\n          })\n        ]\n      : []),\n    spec({\n      disabled: !onPin,"]
   ])
   return `import { useBrowserUpdateTitle } from ${titleUpdate}\nimport { browserSessionActionLabel } from ${owner}\n` + menu
 }

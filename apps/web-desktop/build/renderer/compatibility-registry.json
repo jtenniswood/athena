@@ -712,6 +712,10 @@
       {
         "file": "tests/browser/update-title.spec.mjs",
         "scenario": "sidebar Update title failure keeps the existing title and current conversation"
+      },
+      {
+        "file": "tests/browser/update-title.spec.mjs",
+        "scenario": "Update title shortcut shares menu behavior and protects editing on"
       }
     ],
     "removal": "The browser also owns sidebar session menus or upstream accepts browser capabilities.",
@@ -722,7 +726,7 @@
     "sourceHash": "42f9e8057e0b92521d9f636c85c043ce34cdb25c91a49cb1f09fb131e06210c0",
     "sourceRoot": "renderer",
     "inputHash": "42f9e8057e0b92521d9f636c85c043ce34cdb25c91a49cb1f09fb131e06210c0",
-    "outputHash": "564161d5b982258482ba75aee9835f0f66521ca22d5b7ffc738385cc03c0107e"
+    "outputHash": "af8c20dbbf0e4fa343387bef23312f215a0a42b664eb12ec9c50688c4c59bbbb"
   },
   {
     "name": "canonical-bot-row-actions",

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { IS_MAC } from '../upstream/browser-api'
 
-const shortcutKeys = { rename: 'r', pin: 'p', unread: 'u', files: 'e', review: 'g', archive: 'a', delete: 'backspace' } as const
+const shortcutKeys = { rename: 'r', 'update-title': 'x', pin: 'p', unread: 'u', files: 'e', review: 'g', archive: 'a', delete: 'backspace' } as const
 type SessionAction = keyof typeof shortcutKeys
 type ShortcutActions = Partial<Record<SessionAction, { disabled?: boolean; onSelect(event: Event): void }>>
 
