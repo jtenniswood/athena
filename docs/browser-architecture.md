@@ -64,6 +64,10 @@ profile to the hash chat route. `upstream/browser-session-routes.ts` admits that
 owner through the engine's existing resume command before initial rendering and
 native history changes. The outer window-profile query can still change with
 the sidebar filter while the chat route retains its own owner.
+When cold connection recovery clears selection without changing that URL, the
+same route owner reissues its unfulfilled intent after the gateway-switch
+barrier falls. A newer engine request or selection takes precedence; recovery
+reads the latest URL and leaves new-chat and tool routes alone.
 
 The captured engine selection distinguishes copied session IDs when projecting
 conversation metadata and toolbar commands. It also precedes historical rows in
@@ -310,6 +314,20 @@ admission. Abort, expiry and failure release only the lock their transition owns
 late cleanup cannot unlock a newer owner. The update protocol, pending-work flush
 and draft verification remain unchanged. Sign-out holds its reservation through
 logout, verified credential removal, and reload, and releases it on failure.
+
+Gateway settings keeps a sign-in attempt separate from the saved connection.
+Browser and Android OAuth completion verifies the cookie session even when an
+existing token is available. Confirmed browser sign-in reaches the bridge's
+guarded connection apply command; failed browser authentication or preparation
+retains the previous credentials and the entered token for retry. Once boot has
+completed, credential application uses the engine's existing reconnect command
+to retain the selected conversation and draft. The bridge holds the shared page
+transition lock until that engine command finishes, so a later apply cannot
+overtake a socket dialing with the previous credentials. The engine's credential
+reconnect command waits for older recovery, then starts a fresh dial, including
+when a renewed cookie leaves the mode/token fields unchanged. Ordinary manual
+reconnect requests retain their coalescing behavior. Initial connection recovery
+keeps the engine's original boot path.
 
 Filesystem plugin discovery uses the renderer's existing disk loader. The bridge
 returns both files and directories, including package markers, with encoded URL

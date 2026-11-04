@@ -172,7 +172,7 @@ export function openOauthLoginPopup(base: string, origin: string | null, loginPa
     const deadline = Date.now() + 5 * 60_000
     while (Date.now() < deadline) {
       await new Promise<void>(resolve => window.setTimeout(resolve, 600))
-      try { if (await probeAuthConnected(base, origin)) return { ok: true, baseUrl: base, connected: true } }
+      try { if (await checkBrowserSession(base, origin)) return { ok: true, baseUrl: base, connected: true } }
       catch { /* Keep waiting while returning from the browser offline. */ }
     }
     return { ok: true, baseUrl: base, connected: false }
@@ -228,7 +228,8 @@ export function openOauthLoginPopup(base: string, origin: string | null, loginPa
         if (settled || polling) {return}
         polling = true
         try {
-          if (await probeAuthConnected(base, origin)) { finish(true); return }
+          // An existing token must not stand in for the login's cookie session.
+          if (await checkBrowserSession(base, origin).catch(() => false)) { finish(true); return }
           if (popup.closed || Date.now() - startedAt > TIMEOUT_MS) finish(false)
         } finally { polling = false }
       })()
