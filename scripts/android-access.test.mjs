@@ -31,6 +31,9 @@ test('Access bootstrap automatically returns an encrypted Access cookie to the r
   assert.equal(approved.headers.get('cache-control'), 'no-store')
   const nonce = result.match(/<script nonce="([A-Za-z0-9_-]+)">/)[1]
   assert.ok(approved.headers.get('content-security-policy').includes(`script-src 'nonce-${nonce}'`))
+  assert.ok(approved.headers.get('content-security-policy').includes(`style-src 'nonce-${nonce}'`))
+  assert.ok(result.includes(`<style nonce="${nonce}">`))
+  assert.doesNotMatch(approved.headers.get('content-security-policy'), /unsafe-inline/)
   assert.ok(!result.includes(token) && !result.includes('private'))
   const callback = result.match(/athena-android:\/\/access#([A-Za-z0-9_-]+)/)[1]
   assert.ok(result.includes(`window.location.replace("athena-android://access#${callback}")`))
