@@ -413,6 +413,32 @@
     "outputHash": "eb4b75db99c25a5341bfd23f81066640be4fd2d26a7436546cbdc2df71f135c8"
   },
   {
+    "name": "browser-voice-lifetime",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/hooks/use-composer-voice.ts",
+    "reason": "Protect recording and pending transcription through the mounted composer capture owner.",
+    "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
+    "tests": [
+      {
+        "file": "tests/browser/voice-readiness.spec.mjs",
+        "scenario": "an update waits for the dictation transcript after its microphone closes"
+      },
+      {
+        "file": "tests/browser/voice-readiness.spec.mjs",
+        "scenario": "a failed dictation releases update safety without changing the draft"
+      }
+    ],
+    "removal": "Upstream exposes mounted voice capture activity to browser reload safety.",
+    "handlers": [
+      "guardBrowserVoiceLifetime"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "b45727db67819a91f2a92cec55edf1a06166fc807a36a78e1104b6e2938980e8",
+    "inputHash": "b45727db67819a91f2a92cec55edf1a06166fc807a36a78e1104b6e2938980e8",
+    "outputHash": "8910de130fe7e3442a56314c82fde2bb8612b7587a68004017783fa11b9a8024"
+  },
+  {
     "name": "composer-layout-width",
     "kind": "browser-transform",
     "order": 20,

@@ -46,6 +46,7 @@ export {
 } from './transforms/settings'
 import {
   useBrowserMicrophoneCapture,
+  guardBrowserVoiceLifetime,
   useBrowserComposerLayoutWidth,
   useBrowserTouchHooks,
   useBrowserAcceptedSubmit,
@@ -58,6 +59,7 @@ import {
 } from './transforms/composer'
 export {
   useBrowserMicrophoneCapture,
+  guardBrowserVoiceLifetime,
   useBrowserComposerLayoutWidth,
   useBrowserTouchHooks,
   useBrowserAcceptedSubmit,
@@ -314,6 +316,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     removeBrowserGatewayGroupsRefresh: source => removeBrowserGatewayGroupsRefresh(source, root),
     useBrowserBotsPullRefresh: source => useBrowserBotsPullRefresh(source, root),
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth,
+    guardBrowserVoiceLifetime: source => guardBrowserVoiceLifetime(source, root),
     filterBrowserSessionMenu: source => filterBrowserSessionMenu(source, root),
     showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
     disableBrowserSessionOpenActions: source => disableBrowserSessionOpenActions(source, root),

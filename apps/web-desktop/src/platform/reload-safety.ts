@@ -16,18 +16,25 @@ export function beginOperation(): () => void {
   return () => { if (!complete) { complete = true; operations-- } }
 }
 
+/** Hold reloads while a media owner is recording or still producing its transcript. */
+export function beginMediaOperation(): () => void {
+  pendingMedia++
+  let complete = false
+  return () => { if (!complete) { complete = true; pendingMedia-- } }
+}
+
 /** Track the actual browser media lifetime, including permission prompts. */
 export function trackMediaRequests(): void {
   const devices = navigator.mediaDevices
   if (!devices?.getUserMedia) return
   const original = devices.getUserMedia.bind(devices)
   devices.getUserMedia = async constraints => {
-    pendingMedia++
+    const finish = beginMediaOperation()
     try {
       const stream = await original(constraints)
       for (const track of stream.getTracks()) tracks.add(track)
       return stream
-    } finally { pendingMedia-- }
+    } finally { finish() }
   }
 }
 
@@ -38,7 +45,7 @@ export function reloadReadiness(requirePersisted = true, purpose: ReloadPurpose 
   if (activeWork > 0 && purpose !== 'ui-update') return { ready: false, reason: 'Wait for the active response to finish, or cancel it.' }
   if (operations > 0) return { ready: false, reason: 'Finish selecting or uploading files first.' }
   for (const track of tracks) if (track.readyState === 'ended') tracks.delete(track)
-  if (pendingMedia || tracks.size) return { ready: false, reason: 'Finish recording first.' }
+  if (pendingMedia || tracks.size) return { ready: false, reason: 'Finish recording or transcribing first.' }
   try {
     const drafts = browserDraftSnapshot()
     if (!drafts) return { ready: false, reason: 'Wait for the app to finish connecting.' }
