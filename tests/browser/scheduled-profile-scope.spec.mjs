@@ -53,7 +53,9 @@ for (const width of [1440, 390]) {
       }
       expect(requests.length).toBeGreaterThanOrEqual(3)
       expect(requests.every(profiles => profiles.length === 1)).toBe(true)
-      expect([...new Set(requests.flat())].sort()).toEqual(['default', 'research', 'writer'])
+      // The combined sidebar also requests the intentional all-profile filter.
+      const endpointProfiles = [...new Set(requests.flat())].filter(profile => profile !== 'all').sort()
+      expect(endpointProfiles).toEqual(['default', 'research', 'writer'])
       await surface.getByLabel('Profile', { exact: true }).selectOption('research')
       await expect(surface.locator('details')).toHaveCount(1)
       await expect(surface.getByText('research briefing', { exact: true })).toBeVisible()
