@@ -251,7 +251,7 @@
     "kind": "renderer-transform",
     "order": 30,
     "module": "app/gateway/hooks/use-gateway-boot.ts",
-    "reason": "Keep background Bot readiness from replacing an explicit browser profile choice. Refresh same-gateway credentials through the existing reconnect command without clearing the selected conversation, and return its completion to the bridge's exclusive apply transaction.",
+    "reason": "Keep background Bot readiness from replacing an explicit browser profile choice. Refresh same-gateway credentials through a fresh engine reconnect without clearing the selected conversation, and return completion to the bridge's exclusive apply transaction.",
     "owner": "apps/web-desktop/build/renderer/transforms.ts",
     "tests": [
       {
@@ -273,8 +273,31 @@
     ],
     "removal": "Remove when public gateway contracts preserve browser selection during background profile readiness and same-gateway credential refresh.",
     "sourceHash": "0c350dd0c22a17791998c2326e7a4e5142524dfca86951d7919aa29d36f2c060",
-    "outputHash": "921f8ded0fd86dad22265986161485c4cf6746dd2db15accdcb5a03070939b82",
+    "outputHash": "23ab492b6414f1832a9e567968c32f059869e20c59a0dc3053bb34255c5b5151",
     "handler": "browser-profile-commit",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-credential-reconnect",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "store/gateway-reconnect.ts",
+    "reason": "Expose a fresh credential reconnect through the existing engine owner after any older recovery settles, including when browser-session credentials keep the same mode and token fields.",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "scripts/renderer-adapter.test.mjs",
+        "scenario": "credential reconnect waits for prior recovery and starts a fresh dial"
+      },
+      {
+        "file": "tests/browser/sign-in-credentials.spec.mjs",
+        "scenario": "a credential apply follows an older manual reconnect with a fresh dial"
+      }
+    ],
+    "removal": "Remove when the engine exposes a fresh-after-pending reconnect command for browser credential changes.",
+    "sourceHash": "5150b06b388e5ae799270d0ba83af1beb83fdaffd97864dea16d3c22b139d670",
+    "outputHash": "4e3aeb5e34d5d6502da10cd79d1fd38fee8535763937af20e6a13ee15ec38544",
+    "handler": "browser-credential-reconnect",
     "sourceRoot": "renderer"
   },
   {

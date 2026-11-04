@@ -319,10 +319,11 @@ retains the previous credentials and the entered token for retry. Once boot has
 completed, credential application uses the engine's existing reconnect command
 to retain the selected conversation and draft. The bridge holds the shared page
 transition lock until that engine command finishes, so a later apply cannot
-overtake a socket dialing with the previous credentials. If an older manual
-reconnect was already pending, it checks the engine's applied connection and
-redials when its credentials differ. Initial connection recovery keeps the
-engine's original boot path.
+overtake a socket dialing with the previous credentials. The engine's credential
+reconnect command waits for older recovery, then starts a fresh dial, including
+when a renewed cookie leaves the mode/token fields unchanged. Ordinary manual
+reconnect requests retain their coalescing behavior. Initial connection recovery
+keeps the engine's original boot path.
 
 Filesystem plugin discovery uses the renderer's existing disk loader. The bridge
 returns both files and directories, including package markers, with encoded URL

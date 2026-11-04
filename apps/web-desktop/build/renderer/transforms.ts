@@ -42,6 +42,18 @@ function rewrite(code: string, id: string): { code: string; map: null } | null {
       if (code.split(target).length !== 2) throw new Error('Browser external link routing no longer matches the renderer source')
       return { code: code.replace(target, '    window.__HERMES_WEB_BRIDGE__ ||\n' + target), map: null }
     }
+    if (normalizedId.endsWith('/desktop/src/store/gateway-reconnect.ts')) {
+      const target = '/** Toast button'
+      if (code.split(target).length !== 2) throw new Error('Browser credential reconnect no longer matches its owner')
+      const command = `/** Credential changes start a new dial after an older recovery settles. */
+export async function reconnectGatewayAfterPending(options?: GatewayReconnectOptions): Promise<void> {
+  if (inFlight) await inFlight.catch(() => undefined)
+  return reconnectGateway(options)
+}
+
+`
+      return { code: code.replace(target, command + target), map: null }
+    }
     if (normalizedId.endsWith('/desktop/src/app/gateway/hooks/use-gateway-boot.ts')) {
       // Browser profile selection scopes the sidebar; a background Bot socket
       // becoming ready must not replace an explicit user choice.
@@ -56,12 +68,7 @@ function rewrite(code: string, id: string): { code: string; map: null } | null {
       const switchTarget = '        switchToken = beginGatewaySwitch()'
       if (patched.split(switchTarget).length !== 2) throw new Error('Browser connection apply no longer matches gateway boot')
       patched = patched.replace(switchTarget, `        if (window.__HERMES_WEB_BRIDGE__ && bootCompleted) {
-          const expected = await getWindowBackend()
-          await reconnectGateway()
-          const applied = $connection.get()
-          if (applied?.authMode !== expected.authMode || applied?.token !== expected.token) {
-            await reconnectGateway()
-          }
+          await reconnectGatewayAfterPending()
           return
         }
 
@@ -69,6 +76,9 @@ ${switchTarget}`)
       const appliedTarget = 'desktop.onConnectionApplied?.(() => void softSwitch())'
       if (patched.split(appliedTarget).length !== 2) throw new Error('Browser connection completion no longer matches gateway boot')
       patched = patched.replace(appliedTarget, 'desktop.onConnectionApplied?.(() => softSwitch())')
+      const importTarget = 'type GatewayReconnectOptions, reconnectGateway, registerGatewayReconnect'
+      if (patched.split(importTarget).length !== 2) throw new Error('Browser reconnect imports no longer match gateway boot')
+      patched = patched.replace(importTarget, 'type GatewayReconnectOptions, reconnectGateway, reconnectGatewayAfterPending, registerGatewayReconnect')
       return { code: patched, map: null }
     }
     if (normalizedId.endsWith('/desktop/src/components/boot-failure-overlay.tsx')) {
