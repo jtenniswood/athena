@@ -42,21 +42,24 @@ body,
   width: 100% !important;
 }
 
-/* Keep project actions visible in the browser sidebar and give the new-session
-   control the leading position with enough room to tap it independently. */
-[data-sessions-project] [data-row-actions]:has(button:has(.codicon-kebab-vertical)):has(button:has(.codicon-add)) {
-  gap: 0.75rem;
+/* Keep the new-session control on the right and dimmed at rest. Reveal the
+   project menu on header hover, keyboard focus, and while its menu is open. */
+[data-browser-project-controls]:has(button:has(.codicon-kebab-vertical)):has(button:has(.codicon-add)) {
   position: relative;
   inset-inline-end: -1.25rem;
 }
 
-[data-sessions-project] [data-row-actions]:has(button:has(.codicon-kebab-vertical)):has(button:has(.codicon-add)) > button:has(.codicon-add) {
-  order: 0;
-  opacity: 1 !important;
+[data-browser-project-controls] > button:has(.codicon-add) {
+  opacity: 0.5 !important;
 }
 
-[data-sessions-project] [data-row-actions]:has(button:has(.codicon-kebab-vertical)):has(button:has(.codicon-add)) > button:has(.codicon-kebab-vertical) {
-  order: 1;
+[data-browser-project-controls] > button:has(.codicon-kebab-vertical) {
+  opacity: 0 !important;
+}
+
+[data-browser-project-controls] > button:has(.codicon-add):is(:hover, :focus-visible),
+[data-browser-project-controls] > button:has(.codicon-kebab-vertical):is(:focus-visible, [data-state='open']),
+[data-browser-group-header]:hover [data-browser-project-controls] > button:has(.codicon-kebab-vertical) {
   opacity: 1 !important;
 }
 
