@@ -1,3 +1,4 @@
+import { constants } from 'node:fs'
 import { open, readdir, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
@@ -51,7 +52,8 @@ export function createPluginAssets({ home }) {
         }))
         return send(200, rows.filter(Boolean))
       }
-      file = await open(target)
+      // A non-regular entry must not block a worker before its type is checked.
+      file = await open(target, constants.O_RDONLY | constants.O_NONBLOCK)
       const info = await file.stat()
       if (!info.isFile()) return send(404, { error: 'Plugin asset is unavailable' })
       let start = 0, end = info.size - 1, status = 200

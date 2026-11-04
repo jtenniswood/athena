@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
 import { mkdtemp, mkdir, writeFile, symlink, rm } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
@@ -112,4 +113,15 @@ test('plugin bytes, MIME, HEAD and byte ranges use the same mounted source as li
   for (const route of ['/desktop-plugins/review%20%23%3F%25', '/desktop-plugins/missing.js', '/desktop-plugins/x%2f..%2f../private.txt']) {
     assert.equal((await call(route)).status, 404)
   }
+})
+
+
+test('non-regular plugin entries cannot block a file reader', async t => {
+  const { call, home } = await fixture(t)
+  const root = path.join(home, 'desktop-plugins')
+  await mkdir(root)
+  execFileSync('mkfifo', [path.join(root, 'pipe')])
+  const response = await call('/desktop-plugins/pipe', { signal: AbortSignal.timeout(2000) })
+  assert.equal(response.status, 404)
+  assert.deepEqual(await (await call('/desktop-plugins/.listing')).json(), [])
 })
