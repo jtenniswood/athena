@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input'
 import { ProfileGlyph } from '@/components/ui/profile-glyph'
 import { useI18n } from '@/i18n'
-import { $sidebarRowMeta } from '@/store/layout'
+import { $sidebarGrouping, $sidebarRowMeta } from '@/store/layout'
 import { BrowserProfileGroup, BrowserProfileNesting } from '../experience/sidebar-profile'
 import { BrowserHideProfileItem } from '../experience/profile-list-visibility'
 import { useBrowserProfileSection } from './profile-section'
@@ -71,13 +71,14 @@ interface ProfileGroupController {
 export function BrowserProfileGroupControllerSurface({ model }: { model: ProfileGroupController }) {
   const { t } = useI18n(), s = t.sidebar, copy = s.gatewayGroups
   const { group, sortable } = model
+  const grouping = useStore($sidebarGrouping)
   const renameLabel = group.profile ? 'Rename profile' : copy.rename
   const browserProfile = useBrowserProfileSection(group.profile)
   const label = model.alias || browserProfile?.label || model.label
   const figures = useBrowserSidebarFigures(model.usage ? { tokens: model.usage.tokens, costUsd: model.usage.cost_usd } : undefined)
   const toggle = () => toggleGatewayGroup(group.id)
   const actions = <div className="flex items-center">
-    {group.profile && !model.embedded && <Button aria-label={s.newSessionIn(label)} title={s.newSessionIn(label)} size="icon-xs" variant="ghost"
+    {group.profile && !model.embedded && grouping !== 'project' && <Button aria-label={s.newSessionIn(label)} title={s.newSessionIn(label)} size="icon-xs" variant="ghost"
       onClick={model.startSession} onPointerDown={model.onNewSessionSplit ? event => startNewSessionDrag(placement => {
         if (!model.open) toggle()
         model.onNewSessionSplit?.(placement.dir, { anchor: placement.anchor, before: placement.before, profile: group.profile, route: model.route })
