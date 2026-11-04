@@ -27,17 +27,21 @@ export interface ConversationSession {
   title?: unknown
   profile?: unknown
   hidden?: unknown
+  connection_id?: unknown
 }
 
 export interface ConversationBot {
   name?: unknown
   display_name?: unknown
   connectionId?: unknown
+  targetProfile?: unknown
+  route?: { profile?: unknown; targetProfile?: unknown } | null
   canonical_session?: { id?: unknown; resolved_id?: unknown } | null
 }
 
 export interface ConversationInput {
   selectedSessionId: string | null
+  selectedSessionOwner?: { connectionId: string; profile: string } | null
   selectedBotKey: string | null
   groupName: string | null
   sessions: readonly ConversationSession[]
@@ -56,6 +60,10 @@ function flag(value: unknown): boolean {
 
 function botKey(bot: ConversationBot): string {
   return `${text(bot.connectionId) || 'legacy'}::${text(bot.name)}`
+}
+
+function botMatchesProfile(bot: ConversationBot, profile: string): boolean {
+  return [bot.name, bot.route?.profile, bot.targetProfile, bot.route?.targetProfile].some(value => text(value) === profile)
 }
 
 function botSessionIds(bot: ConversationBot): string[] {
@@ -88,24 +96,27 @@ export function resolveConversationIdentity(input: ConversationInput): BrowserCo
   const selectedId = text(input.selectedSessionId)
   if (!selectedId) return emptyConversation()
 
-  const session = input.sessions.find(candidate => text(candidate.id) === selectedId)
+  const selectedOwner = input.selectedSessionOwner
+  const session = input.sessions.find(candidate => text(candidate.id) === selectedId &&
+    (!selectedOwner || ((text(candidate.profile) || 'default') === selectedOwner.profile &&
+      (!text(candidate.connection_id) || text(candidate.connection_id) === selectedOwner.connectionId))))
   if (!session) {
     const owner = input.selectedBotOwner
-    if (owner && botSessionIds(owner).includes(selectedId)) {
-      return botConversation(owner, selectedId, text(owner.name) || null)
+    if (owner && botSessionIds(owner).includes(selectedId) && (!selectedOwner || botMatchesProfile(owner, selectedOwner.profile))) {
+      return { ...botConversation(owner, selectedId, selectedOwner?.profile || text(owner.name) || null), connectionId: selectedOwner?.connectionId || text(owner.connectionId) || null }
     }
-    return { kind: 'unknown', status: 'loading', id: selectedId, sessionId: selectedId, profile: null, displayName: null, connectionId: null }
+    return { kind: 'unknown', status: 'loading', id: selectedId, sessionId: selectedId, profile: selectedOwner?.profile || null, displayName: null, connectionId: selectedOwner?.connectionId || null }
   }
 
-  const profile = text(session.profile) || null
+  const profile = selectedOwner?.profile || text(session.profile) || null
   const bot = input.bots.find(candidate =>
-    botSessionIds(candidate).includes(selectedId) ||
+    (botSessionIds(candidate).includes(selectedId) && (!selectedOwner || botMatchesProfile(candidate, selectedOwner.profile))) ||
     (flag(session.hidden) && text(input.selectedBotKey) === botKey(candidate) && (!profile || profile === text(candidate.name)))
   )
 
   if (bot) {
-    return botConversation(bot, selectedId, profile)
+    return { ...botConversation(bot, selectedId, profile), connectionId: selectedOwner?.connectionId || text(bot.connectionId) || null }
   }
 
-  return { kind: 'session', status: 'ready', id: selectedId, sessionId: selectedId, profile, displayName: text(session.title) || null, connectionId: null }
+  return { kind: 'session', status: 'ready', id: selectedId, sessionId: selectedId, profile, displayName: text(session.title) || null, connectionId: selectedOwner?.connectionId || null }
 }

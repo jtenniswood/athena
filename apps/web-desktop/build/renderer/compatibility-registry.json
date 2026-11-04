@@ -627,8 +627,8 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/session-actions-menu.tsx",
-    "reason": "Keep browser sidebar session menus single-view and share shortcut labels. Browser toolbar menus and panel commands are owned by Athena components.",
-    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "reason": "Keep single-view browser menus, shared shortcut labels and profile-correct runtime selection for row renames.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -637,16 +637,21 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "conversation action shortcuts"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "a background copied row cannot rename the selected profile runtime"
       }
     ],
     "removal": "The browser also owns sidebar session menus or upstream accepts browser capabilities.",
     "handlers": [
-      "disableBrowserSessionOpenActions"
+      "disableBrowserSessionOpenActions",
+      "keepBrowserRenameProfile"
     ],
     "sourceHash": "42f9e8057e0b92521d9f636c85c043ce34cdb25c91a49cb1f09fb131e06210c0",
     "sourceRoot": "renderer",
     "inputHash": "42f9e8057e0b92521d9f636c85c043ce34cdb25c91a49cb1f09fb131e06210c0",
-    "outputHash": "99b73764b7ab4a56f843feeec18f993278a9303b9008d57994391b317aa882d2"
+    "outputHash": "b90cfafd8c67a58e611a2480c658f8d568a783c56eba3890cc9e132debe774c7"
   },
   {
     "name": "canonical-bot-row-actions",
@@ -3384,12 +3389,13 @@
     "sourceRoot": "renderer",
     "sourceHash": "449905f256cdbfdff6a283ba224ea00955ce57df0a37f3d912694521ee965efe",
     "inputHash": "449905f256cdbfdff6a283ba224ea00955ce57df0a37f3d912694521ee965efe",
-    "outputHash": "00e2c10e3ddb978ee7cfee3e8a7154430a29e472370c73a6b4cecc6597fbe2da",
+    "outputHash": "c6b90b816874b59a3cc646ce0ad076f164d1844baac617ff3f055378dd2a0a7a",
     "handlers": [
-      "useBrowserProjectDeleteOwner"
+      "useBrowserProjectDeleteOwner",
+      "scopeBrowserProjectTitles"
     ],
-    "reason": "Resolve saved project ownership across profiles before deletion and keep the confirmation mounted until the request succeeds. Preserve active profile caches when deleting a sibling profile project.",
-    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
+    "reason": "Resolve saved project ownership across profiles before deletion and keep the confirmation mounted until the request succeeds. Preserve active profile caches when deleting a sibling profile project. Keep explicitly renamed session titles on their profile in project caches.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -3398,6 +3404,10 @@
       {
         "file": "scripts/project-delete.test.mjs",
         "scenario": "project deletion resolves the exact id across profiles including empty projects"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "a background copied row cannot rename the selected profile runtime"
       }
     ],
     "removal": "Remove when upstream routes combined-view project deletion to its owning profile and retains failed confirmations."
@@ -3688,5 +3698,95 @@
     "sourceHash": "3b5c0ca769aec48b88852aa0f5f54409abbd46a515dd7f5c5558dd0071583202",
     "inputHash": "3b5c0ca769aec48b88852aa0f5f54409abbd46a515dd7f5c5558dd0071583202",
     "outputHash": "705dae4c556bee9353ab84810dc6469da47c8049cb542d50e526935d4349d9e3"
+  },
+  {
+    "name": "browser-selected-session-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/session-states.ts",
+    "reason": "Resolve the displayed session from its explicit engine selection before ambiguous historical rows.",
+    "owner": "apps/web-desktop/build/renderer/transforms/session-routing.ts",
+    "tests": [
+      {
+        "file": "scripts/renderer-adapter.test.mjs",
+        "scenario": "the complete adapted graph retains every reviewed final renderer and browser fingerprint"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "owned session references preserve copied ids through sends and toolbar writes"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "owned routes survive profile filtering and browser history"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "a late archive of one copy preserves a newer selection of the other profile"
+      }
+    ],
+    "removal": "Remove when the renderer preserves explicit selected owners and shared-gateway profile scope throughout session requests.",
+    "handlers": [
+      "useBrowserSelectedSessionOwner"
+    ],
+    "sourceHash": "8ba8a43bd57c9f6e7b9647bb6daedcc2628cf08cc19812b2b88d3f97d425067c",
+    "sourceRoot": "renderer",
+    "inputHash": "8ba8a43bd57c9f6e7b9647bb6daedcc2628cf08cc19812b2b88d3f97d425067c",
+    "outputHash": "49e0b1a1c9e176c95d317ad2dbba29706ff810e6d57b9741ebb3dd7203f18ec2"
+  },
+  {
+    "name": "browser-owned-session-rpc",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/session-request-router.ts",
+    "reason": "Preserve exact profile scope for session RPCs on the shared browser gateway, including startup profiles.",
+    "owner": "apps/web-desktop/build/renderer/transforms/session-routing.ts",
+    "tests": [
+      {
+        "file": "scripts/renderer-adapter.test.mjs",
+        "scenario": "the complete adapted graph retains every reviewed final renderer and browser fingerprint"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "owned session references preserve copied ids through sends and toolbar writes"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "owned routes survive profile filtering and browser history"
+      },
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "a late archive of one copy preserves a newer selection of the other profile"
+      }
+    ],
+    "removal": "Remove when the renderer preserves explicit selected owners and shared-gateway profile scope throughout session requests.",
+    "handlers": [
+      "useBrowserOwnedSessionRpc"
+    ],
+    "sourceHash": "60bbb2a1e63405d95a8639f6b8d78c9a4fa50f97e1b749493bcf9a3f2dafb8f6",
+    "sourceRoot": "renderer",
+    "inputHash": "60bbb2a1e63405d95a8639f6b8d78c9a4fa50f97e1b749493bcf9a3f2dafb8f6",
+    "outputHash": "b61e58024e9e5b24dee0b9738ee39a3a69b0878661a1317b2607d36543260f4e"
+  },
+  {
+    "name": "browser-session-title-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/session.ts",
+    "reason": "Publish an explicitly owned rename only to matching profile rows in existing session slices.",
+    "owner": "apps/web-desktop/build/renderer/transforms/session-routing.ts",
+    "tests": [
+      {
+        "file": "tests/browser/session-routing.spec.mjs",
+        "scenario": "a background copied row cannot rename the selected profile runtime"
+      }
+    ],
+    "removal": "Remove when renderer title publication accepts and preserves the captured profile.",
+    "handlers": [
+      "scopeBrowserSessionTitles"
+    ],
+    "sourceHash": "89088e919378bf4f908baa23d8b06e80962b760e8a3e04fce31abd7c0003cd0c",
+    "sourceRoot": "renderer",
+    "inputHash": "89088e919378bf4f908baa23d8b06e80962b760e8a3e04fce31abd7c0003cd0c",
+    "outputHash": "7f157d02551ed8e60c7d1a460e1726bea09d026de9b2aeed2abeb29b3e7a0c38"
   }
 ]
