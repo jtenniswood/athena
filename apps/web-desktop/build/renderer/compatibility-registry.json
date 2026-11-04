@@ -2613,7 +2613,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/composer/hooks/use-composer-submit.ts",
-    "reason": "Apply browser Queue/Steer submission policy through the engine command and report accepted user messages for browser positioning.",
+    "reason": "Apply browser Queue/Steer policy through the engine command and announce accepted visible messages only to their unchanged mounted composer surface.",
     "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
     "tests": [
       {
@@ -2635,6 +2635,22 @@
       {
         "file": "scripts/composer-policy.test.mjs",
         "scenario": "a waiting card consumes typed answers before either browser follow-up preference"
+      },
+      {
+        "file": "scripts/composer-policy.test.mjs",
+        "scenario": "accepted sends cannot scroll a different stored or fresh draft owner"
+      },
+      {
+        "file": "scripts/composer-policy.test.mjs",
+        "scenario": "accepted scrolling follows its own fresh-session assignment"
+      },
+      {
+        "file": "scripts/composer-policy.test.mjs",
+        "scenario": "hidden sends and late steering cannot scroll the visible transcript"
+      },
+      {
+        "file": "scripts/composer-policy.test.mjs",
+        "scenario": "a positioning failure cannot restore or retry an accepted message"
       }
     ],
     "removal": "Remove when the renderer exposes an accepted-submit event for browser integrations.",
@@ -2645,7 +2661,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "54e6152cda82507a5e3882886a40ab9542fc4b4dfaf10b35f3242f33bac5cc6c",
     "inputHash": "54e6152cda82507a5e3882886a40ab9542fc4b4dfaf10b35f3242f33bac5cc6c",
-    "outputHash": "8c1541575c4196cb6ed09afb7be8804d33f5a6de829209a80e3c6753ca87fdb7"
+    "outputHash": "36f503c1f53dc42df7e45ed6fe83dd24e8ec02ba9ecc38750025576aef1bd90c"
   },
   {
     "name": "browser-draft-safety-alias",
@@ -3616,5 +3632,35 @@
       "exposeBrowserTimelineHistoryOwner"
     ],
     "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-mounted-submit-scroll",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/assistant-ui/thread/list.tsx",
+    "reason": "Bind accepted-message positioning to the transcript's existing surface, scroll refs and session/profile/visibility lifetime without document discovery or global events.",
+    "owner": "apps/web-desktop/build/renderer/transforms/transcript.ts",
+    "tests": [
+      {
+        "file": "tests/browser/submit-scroll.spec.mjs",
+        "scenario": "submitted prompt follows the browser layout policy"
+      },
+      {
+        "file": "tests/browser/submit-scroll.spec.mjs",
+        "scenario": "accepted commands and reservations belong to the mounted transcript surface"
+      },
+      {
+        "file": "tests/browser/composer-keyboard.spec.mjs",
+        "scenario": "accepted sends position their real mounted renderer transcript"
+      }
+    ],
+    "removal": "Remove when the renderer exposes equivalent mounted accepted-submit positioning and reservation lifecycle hooks.",
+    "handlers": [
+      "useBrowserThreadSubmitScroll"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "3b5c0ca769aec48b88852aa0f5f54409abbd46a515dd7f5c5558dd0071583202",
+    "inputHash": "3b5c0ca769aec48b88852aa0f5f54409abbd46a515dd7f5c5558dd0071583202",
+    "outputHash": "705dae4c556bee9353ab84810dc6469da47c8049cb542d50e526935d4349d9e3"
   }
 ]

@@ -140,6 +140,16 @@ index key, including its connection/profile/session scope; refreshing entries
 within that owner does not interrupt a drag. Keyboard and ordinary click navigation,
 virtualization, history loading and jump cancellation remain renderer-owned.
 
+Submit scrolling is mounted inside the renderer's transcript list. It consumes
+the existing scroll/content refs, composer surface ID and session/profile/visibility
+lifetime. Accepted sends address only that mounted surface, after checking the
+original draft owner or the send's explicit fresh-session assignment. Hidden sends
+and late acceptance for another draft do not reposition the visible transcript.
+The transient command registry stores callbacks, not conversation data. Reservations
+and pending animation frames are released on selection, profile, visibility or
+mount changes; content reconciliation remains observed inside that transcript.
+No document search or window event chooses a transcript by display identity.
+
 ## Capability and lifecycle boundaries
 
 Browser, hosting, and connected-server support facts are described in

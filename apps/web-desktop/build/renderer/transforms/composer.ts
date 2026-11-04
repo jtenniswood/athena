@@ -94,17 +94,15 @@ export function useBrowserTouchHooks(source: string, root: string): string {
 }
 
 export function useBrowserAcceptedSubmit(source: string, root: string): string {
-  const importTarget = 'import '
   const submitAccepted = '.then(accepted => {\n        if (accepted === false) {'
   const steerAccepted = '.then(accepted => {\n        if (!accepted) {\n          keep()\n        }'
-  if (!source.startsWith(importTarget) || source.split(submitAccepted).length !== 2 || source.split(steerAccepted).length !== 2) {
-    throw new Error('Browser accepted-submit boundary changed')
-  }
   const owner = JSON.stringify(path.join(root, 'src/experience/ui/accepted-submit'))
-  return `import { announceBrowserAcceptedSubmit } from ${owner}\n` + source
-    .replace(submitAccepted, `.then(accepted => {\n        if (accepted !== false) announceBrowserAcceptedSubmit({ text, sessionId })\n        if (accepted === false) {`)
-    .replace(steerAccepted, `.then(accepted => {\n        if (!accepted) {\n          keep()\n        } else {\n          announceBrowserAcceptedSubmit({ text, sessionId })\n        }`)
-
+  return `import { announceBrowserAcceptedSubmit } from ${owner}\n` + replaceBrowserContract(source, [
+    ['    const submittedScope =\n', '    const browserSubmittedScope = draftScopeRef.current\n    const submittedScope =\n'],
+    ["  const steerDraft = (mode: 'interrupt' | 'steer' = 'interrupt') => {", "  const steerDraft = (mode: 'interrupt' | 'steer' = 'interrupt') => {\n    const browserSubmittedScope = draftScopeRef.current"],
+    [submitAccepted, `.then(accepted => {\n        if (accepted !== false && !displayKind && draftScopeRef.current === (restoreScope ?? browserSubmittedScope)) {\n          announceBrowserAcceptedSubmit(surfaceId, { text })\n        }\n        if (accepted === false) {`],
+    [steerAccepted, `.then(accepted => {\n        if (!accepted) {\n          keep()\n        } else if (draftScopeRef.current === browserSubmittedScope) {\n          announceBrowserAcceptedSubmit(surfaceId, { text })\n        }`]
+  ])
 }
 
 /** Keep the renderer's submit/restore engine; supply the browser's follow-up policy. */

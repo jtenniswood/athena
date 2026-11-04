@@ -84,3 +84,22 @@ test('composer line breaks respect IME commits, selection and unrelated editors'
   await editor.press('Shift+Enter')
   await expect.poll(async () => (await editor.innerText()).replaceAll('\u00a0', ' ')).toBe('Before \n after')
 })
+
+test('accepted sends position their real mounted renderer transcript', async ({ page }) => {
+  for (const [text, fresh] of [['Position this accepted prompt', false], ['First prompt in a fresh chat', true]]) {
+    if (fresh) await page.getByRole('button', { name: 'New session', exact: true }).click()
+    const editor = composer(page)
+    await editor.fill(text)
+    await editor.press('Enter')
+    const prompt = page.locator('[data-slot="aui_user-message-root"]').last()
+    await expect(prompt).toContainText(text)
+    await expect.poll(() => prompt.evaluate(node => node.closest('[data-slot="aui_turn-pair"]').style.minHeight)).not.toBe('')
+    // The first turn starts at scrollTop zero; it cannot scroll above its natural top.
+    await expect.poll(() => prompt.evaluate(node => {
+      const turn = node.closest('[data-slot="aui_turn-pair"]')
+      const viewport = node.closest('[data-slot="aui_thread-viewport"]')
+      const scale = viewport.getBoundingClientRect().height / viewport.offsetHeight
+      return (turn.getBoundingClientRect().top - viewport.getBoundingClientRect().top) / scale
+    })).toBeCloseTo(fresh ? 0 : 12, 0)
+  }
+})

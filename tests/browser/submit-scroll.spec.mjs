@@ -41,12 +41,12 @@ async function geometry(page) {
   })
 }
 
-for (const [width, height, scale] of [[1100, 800, 1], [390, 844, 1.25]]) {
-  test(`submitted prompt follows the browser layout policy at ${width}px`, async ({ page }) => {
+for (const [width, height, scale, bot] of [[1100, 800, 1, false], [390, 844, 1.25, false], [1100, 800, 1, true]]) {
+  test(`submitted prompt follows the browser layout policy at ${width}px${bot ? ' for a canonical Bot session' : ''}`, async ({ page }) => {
     const errors = []
     page.on('pageerror', error => errors.push(error.message))
     await page.setViewportSize({ width, height })
-    await page.goto(`${origin}/tests/browser/fixtures/submit-scroll.html`)
+    await page.goto(`${origin}/tests/browser/fixtures/submit-scroll.html${bot ? '?bot=1' : ''}`)
     const editor = page.locator('[contenteditable]')
     await expect(editor).toBeVisible()
     await page.evaluate(value => document.documentElement.style.setProperty('--scale', String(value)), scale)
@@ -116,3 +116,39 @@ for (const [width, height, scale] of [[1100, 800, 1], [390, 844, 1.25]]) {
     expect(errors).toEqual([])
   })
 }
+
+
+test('accepted commands and reservations belong to the mounted transcript surface', async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 800 })
+  await page.goto(`${origin}/tests/browser/fixtures/submit-scroll.html?multiple=1`)
+  const first = page.locator('[data-surface="first"]'), second = page.locator('[data-surface="second"]')
+  await expect(second.locator('[contenteditable]')).toBeVisible()
+  await page.evaluate(() => window.chats.first.appendPrompt('Same question'))
+  await expect(first.locator('[data-slot="aui_user-message-root"]').last()).toHaveText('Same question')
+  await second.locator('[contenteditable]').fill('Same question')
+  await second.getByRole('button', { name: 'Send', exact: true }).click()
+  const turn = second.locator('[data-slot="aui_turn-pair"]').last()
+  await expect.poll(() => turn.evaluate(node => node.style.minHeight)).not.toBe('')
+  expect(await first.locator('[data-slot="aui_turn-pair"]').last().evaluate(node => node.style.minHeight)).toBe('')
+
+  // Profile changes dispose the old reservation while keeping its DOM mounted.
+  await page.evaluate(() => window.chats.second.setProfile('research'))
+  await expect.poll(() => turn.evaluate(node => node.style.minHeight)).toBe('')
+  await page.evaluate(() => window.chats.second.announce('Same question'))
+  await expect.poll(() => turn.evaluate(node => node.style.minHeight)).not.toBe('')
+  await page.evaluate(() => window.chats.second.setVisible(false))
+  await expect.poll(() => turn.evaluate(node => node.style.minHeight)).toBe('')
+  await page.evaluate(() => window.chats.second.announce('Same question'))
+  expect(await turn.evaluate(node => node.style.minHeight)).toBe('')
+
+  await page.evaluate(() => window.chats.second.setVisible(true))
+  await expect(second).toBeVisible()
+  await page.evaluate(() => window.chats.second.announce('Same question'))
+  await expect.poll(() => turn.evaluate(node => node.style.minHeight)).not.toBe('')
+  const detachedTurn = await turn.elementHandle()
+  await page.evaluate(() => window.unmountSecond())
+  await expect(second).toHaveCount(0)
+  expect(await detachedTurn.evaluate(node => node.style.minHeight)).toBe('')
+  await page.evaluate(() => window.chats.second.announce('Same question'))
+  expect(await first.locator('[data-slot="aui_turn-pair"]').last().evaluate(node => node.style.minHeight)).toBe('')
+})

@@ -1,3 +1,5 @@
+import { useBrowserThreadSubmitScroll } from './transforms/transcript'
+export { useBrowserThreadSubmitScroll } from './transforms/transcript'
 import {
   exposeBrowserConfigFieldPresentation,
   exposeBrowserSettingsRowRefs,
@@ -259,6 +261,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     exposeBrowserTimelineHistoryOwner,
     useBrowserTimelineOwner,
     useBrowserComposerLineBreak,
+    useBrowserThreadSubmitScroll: source => useBrowserThreadSubmitScroll(source, root),
     useBrowserTimelineScrubbing: source => useBrowserTimelineScrubbing(source, root),
     useBrowserSessionSection: source => useBrowserSessionSection(source, root),
     useBrowserProjectController: source => useBrowserProjectController(source, root),

@@ -15,7 +15,6 @@ import { installTranscriptPreferences } from './transcript-preferences'
 import { Codicon, SidebarProvider } from '../upstream/browser-api'
 import { BrowserChatActionsMenu } from './chat-actions-menu'
 import { currentPwaUpdate, subscribePwaUpdate, type PwaUpdateNotice } from '../pwa/register'
-import { installConversationSubmitScroll } from './ui/submit-scroll'
 
 interface SessionProjectDrag {
   pointerId: number
@@ -47,7 +46,6 @@ function BrowserLayout() {
   const engine = useBrowserEngine()
   const { Sessions: BrowserSessionsSurface, Bots: BrowserBotsSurface, Conversation: BrowserConversationSurface, Status: BrowserStatusSurface } = engine.surfaces
   const presentationMode = engine.profiles.useGrouping()
-  useEffect(() => installConversationSubmitScroll(), [])
   useEffect(() => installTranscriptPreferences(), [])
   const sessionProjectDrag = useRef<SessionProjectDrag | null>(null)
   const sessionReorderDrag = useRef<SessionReorderDrag | null>(null)

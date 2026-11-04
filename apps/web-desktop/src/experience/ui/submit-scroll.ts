@@ -1,19 +1,9 @@
-import { BROWSER_SUBMIT_ACCEPTED_EVENT, type BrowserAcceptedSubmit } from './accepted-submit'
+import { useLayoutEffect, type RefObject } from 'react'
+import { subscribeBrowserAcceptedSubmit, type BrowserAcceptedSubmit } from './accepted-submit'
 
-const VIEWPORT = '[data-slot="aui_thread-viewport"]'
 const USER_MESSAGE = '[data-slot="aui_user-message-root"]'
-const CONTENT = '[data-slot="aui_thread-content"]'
 const TURN = '[data-slot="aui_turn-pair"]'
 const TOP_GAP_PX = 12
-
-function visibleChatViewport(): HTMLElement | null {
-  const shell = document.querySelector('[data-browser-shell]')
-  if (!shell) return null
-
-  return [...shell.querySelectorAll<HTMLElement>(VIEWPORT)].find(viewport =>
-    viewport.getClientRects().length > 0 && !viewport.closest('[hidden]')
-  ) ?? null
-}
 
 function latestUserMessage(viewport: HTMLElement): HTMLElement | null {
   const messages = viewport.querySelectorAll<HTMLElement>(USER_MESSAGE)
@@ -24,16 +14,12 @@ function viewportScale(viewport: HTMLElement): number {
   return viewport.getBoundingClientRect().height / viewport.offsetHeight || 1
 }
 
-function reserveResponseSpace(viewport: HTMLElement, prompt: HTMLElement) {
+function reserveResponseSpace(viewport: HTMLElement, content: HTMLElement, prompt: HTMLElement) {
   const initialTurn = prompt.closest<HTMLElement>(TURN)
-  const content = viewport.querySelector<HTMLElement>(CONTENT)
-  const shell = viewport.closest('[data-browser-shell]')
-  if (!initialTurn || !content || !shell) return null
+  if (!initialTurn) return null
 
   let turn = initialTurn
   let previousMinHeight = turn.style.minHeight
-  let conversationId = shell.getAttribute('data-browser-conversation-id')
-  const conversationKind = shell.getAttribute('data-browser-conversation-kind')
   const promptText = (element: HTMLElement) => (element.querySelector('[data-slot="aui_user-message-text"]') ?? element).textContent
   const submittedText = promptText(prompt)
   const resize = () => {
@@ -51,14 +37,7 @@ function reserveResponseSpace(viewport: HTMLElement, prompt: HTMLElement) {
   }
   const sizes = new ResizeObserver(resize)
   const changes = new MutationObserver(() => {
-    const nextConversationId = shell.getAttribute('data-browser-conversation-id')
-    if (!viewport.isConnected || (conversationId && nextConversationId !== conversationId)
-      || shell.getAttribute('data-browser-conversation-kind') !== conversationKind) {
-      dispose()
-      return
-    }
-    // A fresh draft receives its session identity after the first send.
-    conversationId ??= nextConversationId
+    if (!viewport.isConnected) { dispose(); return }
     const latest = latestUserMessage(viewport)
     if (!latest || latest === prompt) return
 
@@ -92,10 +71,7 @@ function reserveResponseSpace(viewport: HTMLElement, prompt: HTMLElement) {
   resize()
   sizes.observe(viewport)
   sizes.observe(content)
-  changes.observe(shell, {
-    childList: true, subtree: true, attributes: true,
-    attributeFilter: ['data-browser-conversation-id', 'data-browser-conversation-kind']
-  })
+  changes.observe(content, { childList: true, subtree: true })
 
   return {
     dispose,
@@ -110,7 +86,7 @@ function reserveResponseSpace(viewport: HTMLElement, prompt: HTMLElement) {
 }
 
 /** Keep a submitted prompt and the start of its response together in view. */
-export function installConversationSubmitScroll(): () => void {
+function installConversationSubmitScroll(surfaceId: string, viewport: HTMLElement, content: HTMLElement): () => void {
   const mobileViewport = window.matchMedia('(width < 48rem)')
   let firstFrame = 0
   let secondFrame = 0
@@ -121,7 +97,7 @@ export function installConversationSubmitScroll(): () => void {
     window.cancelAnimationFrame(secondFrame)
   }
 
-  const onSubmitAccepted = (event: Event) => {
+  const onSubmitAccepted = (detail: BrowserAcceptedSubmit) => {
     if (mobileViewport.matches) {
       clearPending()
       space?.dispose()
@@ -129,19 +105,13 @@ export function installConversationSubmitScroll(): () => void {
       return
     }
 
-    const viewport = visibleChatViewport()
-    if (!viewport) return
-    const detail = (event as CustomEvent<BrowserAcceptedSubmit>).detail
-    const shell = viewport.closest('[data-browser-shell]')
-    if (!detail || !shell) return
-    const conversationId = shell.getAttribute('data-browser-conversation-id')
-    if (detail.sessionId && conversationId && detail.sessionId !== conversationId) return
+    if (!viewport.isConnected || !viewport.getClientRects().length) return
     const prompt = latestUserMessage(viewport)
     if (!prompt || (prompt.querySelector('[data-slot="aui_user-message-text"]') ?? prompt).textContent !== detail.text) return
 
     clearPending()
     space?.dispose()
-    space = reserveResponseSpace(viewport, prompt)
+    space = reserveResponseSpace(viewport, content, prompt)
     firstFrame = window.requestAnimationFrame(() => {
       secondFrame = window.requestAnimationFrame(() => {
         if (!mobileViewport.matches && viewport.isConnected && prompt.isConnected) space?.align()
@@ -155,12 +125,27 @@ export function installConversationSubmitScroll(): () => void {
     space = null
   }
 
-  window.addEventListener(BROWSER_SUBMIT_ACCEPTED_EVENT, onSubmitAccepted)
+  const unsubscribe = subscribeBrowserAcceptedSubmit(surfaceId, onSubmitAccepted)
   mobileViewport.addEventListener('change', onViewportModeChange)
   return () => {
-    window.removeEventListener(BROWSER_SUBMIT_ACCEPTED_EVENT, onSubmitAccepted)
+    unsubscribe()
     mobileViewport.removeEventListener('change', onViewportModeChange)
     clearPending()
     space?.dispose()
   }
+}
+
+/** The engine owns surface identity, selection lifetime and both transcript refs. */
+export function useBrowserSubmitScroll({ surfaceId, sessionKey, profile, visible, scrollRef, contentRef }: {
+  surfaceId: string | null
+  sessionKey?: string | null
+  profile?: string
+  visible: boolean
+  scrollRef: RefObject<HTMLElement | null>
+  contentRef: RefObject<HTMLElement | null>
+}): void {
+  useLayoutEffect(() => {
+    if (!visible || !surfaceId || !scrollRef.current || !contentRef.current) return
+    return installConversationSubmitScroll(surfaceId, scrollRef.current, contentRef.current)
+  }, [surfaceId, sessionKey, profile, visible, scrollRef, contentRef])
 }
