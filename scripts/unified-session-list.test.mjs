@@ -123,7 +123,35 @@ test('combined profiles keep backend project membership and isolate disclosure i
   assert.deepEqual(Array.from(groups, group => group.label), ['Home', 'Project'])
   assert.equal(groups[0].sessions[0], b)
   assert.equal(groups[1].sessions[0], a)
+  assert.equal(groups[1].project, projects[0])
   const other = browserProfileProjectGroups([{ ...a, profile: 'writer' }], projects)
   assert.notEqual(other[0].id, groups[1].id)
   assert.deepEqual(Array.from(browserProfileProjectGroups([], projects)), [])
+})
+
+test('combined project rows retain saved menu identity, independent disclosure and captured creation routes', () => {
+  const element = (type, props) => ({ type, props }), disclosure = [], creates = [], splits = []
+  const { BrowserProfileProjects, BrowserProfileProjectRow } = load('src/upstream/profile-projects.tsx', () => ({
+    jsx: element, jsxs: element, WEB_CONNECTION_ID: 'web-single', useRef: () => ({ current: null }),
+    useWorkspaceNodeOpen: id => { disclosure.push(id); return [true, () => {}] },
+    BrowserProjectControllerSurface: 'project-surface'
+  }))
+  const ids = Array.from({ length: 6 }, (_, index) => `chat-${index}`)
+  const saved = { id: 'p_saved', label: 'Repairs', path: null, icon: 'tools', color: 'blue', repos: [{ path: '/workspace/repairs', groups: [] }], sessionIds: ids, sessionCount: ids.length }
+  const render = profile => {
+    const [row] = BrowserProfileProjects({ sessions: ids.map(id => ({ id, profile })), projects: [saved], renderRows: rows => rows,
+      onNewSession: (path, owner) => creates.push([path, owner.profile]),
+      onNewSessionSplit: (dir, options) => splits.push([dir, options.route.profile]) })
+    return BrowserProfileProjectRow(row.props).props.model
+  }
+  const research = render('research'), writer = render('writer')
+  assert.equal(research.project, saved)
+  assert.equal(writer.project, saved)
+  assert.equal(research.rows.length, ids.length)
+  assert.notEqual(disclosure[0], disclosure[1])
+  research.onNewSession(research.newSessionPath)
+  writer.onNewSession(writer.newSessionPath)
+  research.onNewSessionSplit('right', { cwd: research.newSessionPath })
+  assert.deepEqual(creates, [['/workspace/repairs', 'research'], ['/workspace/repairs', 'writer']])
+  assert.deepEqual(splits, [['right', 'research']])
 })

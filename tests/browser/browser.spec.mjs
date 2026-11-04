@@ -3889,6 +3889,23 @@ for (const width of [1440, 390]) {
     await page.route('**/api/athena/preferences', route => route.abort())
     const extra = { id: 'profile-extra', title: 'Research project conversation', profile: 'research', source: 'desktop',
       started_at: 1900000000, last_active: 1900000000, message_count: 2 }
+    let projectLabel = 'Shared project'
+    const projectWrites = []
+    await page.routeWebSocket(/\/api\/ws/, socket => {
+      const server = socket.connectToServer()
+      socket.onMessage(data => {
+        const frame = JSON.parse(String(data))
+        if (!['projects.list', 'projects.update'].includes(frame.method)) return server.send(data)
+        if (frame.method === 'projects.update') {
+          projectWrites.push(frame.params)
+          if (frame.params.profile === 'research') projectLabel = frame.params.name
+        }
+        socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, result: {
+          projects: frame.params.profile === 'research' ? [{ id: 'shared-project', name: projectLabel, folders: [] }] : [], active_id: null
+        } }))
+      })
+      server.onMessage(data => socket.send(data))
+    })
     await page.route(/\/api\/(?:profiles\/)?sessions(?:\/sidebar)?(?:\?|$)/, async route => {
       const response = await route.fetch(), data = await response.json()
       const rows = data.recents?.sessions ?? data.sessions
@@ -3897,7 +3914,7 @@ for (const width of [1440, 390]) {
     })
     await page.route('**/api/profiles/projects/tree?**', route => route.fulfill({ json: { projects: [
       { id: '__no_project__', label: 'Home', path: null, isNoProject: true, sessionCount: 1, repos: [], sessionIds: ['preview-idea'] },
-      { id: 'shared-project', label: 'Shared project', path: '/workspace/project', sessionCount: 2, repos: [],
+      { id: 'shared-project', label: projectLabel, path: '/workspace/project', sessionCount: 2, repos: [],
         sessionIds: ['preview-week', extra.id], previewSessions: [extra] }
     ], active_id: null } }))
     await open(page, 'preview-week', { defaultGrouping: true })
@@ -3930,8 +3947,21 @@ for (const width of [1440, 390]) {
     await choose('Profiles', 'Combined')
     await expect(group('default').getByRole('button', { name: 'Show Done sessions', exact: true })).toBeVisible()
     await choose('Grouping', 'Project')
-    await expect(group('default').getByRole('button', { name: 'Shared project', exact: true })).toBeVisible()
-    await expect(group('research').getByRole('button', { name: 'Shared project', exact: true })).toBeVisible()
+    const project = profile => group(profile).locator('[data-sessions-project="shared-project"]')
+    await expect(project('default')).toBeVisible()
+    await expect(project('research')).toBeVisible()
+    await project('research').hover()
+    await project('research').getByRole('button', { name: 'Actions', exact: true }).click()
+    for (const name of ['Rename…', 'Appearance', 'Add folder', 'Set active', 'Copy path', 'Delete…']) {
+      await expect(page.getByRole('menuitem', { name, exact: true })).toBeVisible()
+    }
+    await page.getByRole('menuitem', { name: 'Rename…', exact: true }).click()
+    const rename = page.getByRole('dialog', { name: 'Rename project', exact: true })
+    await rename.getByRole('textbox').fill('Renamed shared project')
+    await rename.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(rename).toBeHidden()
+    expect(projectWrites).toEqual([{ id: 'shared-project', name: 'Renamed shared project', profile: 'research' }])
+    await expect(project('research')).toContainText('Renamed shared project')
     await expect(group('research').getByRole('button', { name: 'Plan a calmer working week', exact: true })).toHaveCount(0)
     await choose('Grouping', 'Updated')
     await expect(group('default')).toBeVisible()

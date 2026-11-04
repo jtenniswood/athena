@@ -7,7 +7,7 @@ export function BrowserHideProfileItem({ profile }: { profile: string }) {
   return <DropdownMenuItem onSelect={() => {
     const preference = browserPreference('hiddenProfileGroups')
     preference.write([...new Set([...preference.read(), profile])])
-  }}><Codicon name="eye-closed" size="0.8125rem" />Hide profile</DropdownMenuItem>
+  }}>Hide profile</DropdownMenuItem>
 }
 
 export function BrowserRestoreProfilesItem() {
