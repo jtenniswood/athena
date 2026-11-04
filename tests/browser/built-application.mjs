@@ -31,6 +31,6 @@ export async function createBuiltApplication() {
     }
     for (const [key, value] of Object.entries(environment)) { previous.set(key, process.env[key]); process.env[key] = value }
     server = await preview({ root: path.join(root, 'apps/web-desktop'), logLevel: 'error', preview: { host: '127.0.0.1', port: 0 } })
-    return { origin: `http://127.0.0.1:${server.httpServer.address().port}`, close }
+    return { origin: `http://127.0.0.1:${server.httpServer.address().port}`, gateway, close }
   } catch (error) { await close(); throw error }
 }

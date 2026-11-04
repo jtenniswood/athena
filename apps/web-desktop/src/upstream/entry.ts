@@ -10,6 +10,8 @@ export async function startBrowserHost(): Promise<void> {
   prepareBrowserBridge()
   installSidebarCollapse()
   await import('./engine-registration')
+  const { installBrowserWindowCommands } = await import('./browser-windows')
+  installBrowserWindowCommands()
   const { initializeBrowserShell } = await import('./browser-initialize')
   initializeBrowserShell()
   await import('../../../desktop/src/main')

@@ -44,7 +44,7 @@ function readyBootProgress(): DesktopBootProgress {
  * self-disable (terminal), or never reach the native path in remote mode
  * (git). The browser provides its own zoom implementation below.
  */
-type WebBridge = Omit<Window['hermesDesktop'], 'terminal' | 'git'> & { agentPluginsRoot: () => Promise<string> }
+type WebBridge = Omit<Window['hermesDesktop'], 'terminal' | 'git' | 'openWindow' | 'openSessionWindow'> & { agentPluginsRoot: () => Promise<string> }
 
 export function createWebBridge(): Window['hermesDesktop'] {
   window.__HERMES_WEB_BRIDGE__ = true
@@ -97,16 +97,6 @@ export function createWebBridge(): Window['hermesDesktop'] {
       }
 
       return bridge.getGatewayWsUrl()
-    },
-    openSessionWindow: async sessionId => {
-      const opened = window.open(`${window.location.pathname}#/${sessionId}`, '_blank', 'noopener')
-
-      return opened ? { ok: true } : { ok: false, error: 'popup-blocked' }
-    },
-    openWindow: async () => {
-      const opened = window.open(window.location.pathname, '_blank', 'noopener')
-
-      return opened ? { ok: true } : { ok: false, error: 'popup-blocked' }
     },
     // No external terminal in a browser — resume-in-terminal is unavailable.
     openSessionInTerminal: async () => ({ ok: false, error: 'terminal is unavailable in the web app' }),
@@ -544,6 +534,8 @@ export function createWebBridge(): Window['hermesDesktop'] {
   }
 
   // Desktop declares terminal as required, but browser consumers probe for it.
-  // Keep native APIs absent; the checked WebBridge type covers every supported member.
+  // Keep native APIs absent. The host installs browser window commands after
+  // engine registration; Android retains a single app window. Consumers probe
+  // these capabilities when used. The checked type covers the remaining members.
   return bridge as unknown as Window['hermesDesktop']
 }

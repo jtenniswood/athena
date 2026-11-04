@@ -51,6 +51,17 @@ small adapters instead of replacing that startup contract wholesale. External-li
 and preview commands use the shared `externalUrlTarget` policy; only its web
 subset reaches the browser opener. The link menu uses the same command.
 
+Browser app-window commands are installed after engine registration, allowing
+reuse of the renderer's store-dependent opener and readiness handshake. A detached
+window acknowledges that it loaded; a null `window.open` result under `noopener`
+does not imply it was blocked. The existing notification owner handles timeout
+and late readiness. Session/profile/watch routes retain their engine semantics,
+while Athena validates the configured gateway and seeds its existing tab profile
+before stores load. Profile changes update that routed tab's reload seed without
+changing router history state. Android retains one app window. Hosts without the
+readiness channel also omit app-window commands. Ordinary external browser links
+keep their existing owner.
+
 `experience/settings/settings-route.tsx` assembles settings navigation from the
 catalog. The checked settings controller adapter extracts the existing Hermes
 page controls and commands without generating the browser frame. Schemas, values,
