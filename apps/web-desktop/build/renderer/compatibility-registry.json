@@ -3513,12 +3513,13 @@
     "sourceRoot": "renderer",
     "sourceHash": "449905f256cdbfdff6a283ba224ea00955ce57df0a37f3d912694521ee965efe",
     "inputHash": "449905f256cdbfdff6a283ba224ea00955ce57df0a37f3d912694521ee965efe",
-    "outputHash": "3a2215aa1558fc9b075fc4a3155b71d26103d3665e8f55ffac08c9ce9f8a6581",
+    "outputHash": "354e7f235f217fe5cf1a2732047f1d54f2a501ed8deb0f6df98197caa7bd9147",
     "handlers": [
       "useBrowserProjectDeleteOwner",
+      "useBrowserProjectCreateOwner",
       "scopeBrowserProjectTitles"
     ],
-    "reason": "Resolve saved project ownership across profiles before rename, appearance, folder, active-project, and delete writes. Keep failed delete confirmations mounted and preserve active profile caches. Keep explicitly renamed session titles on their profile in project caches.",
+    "reason": "Resolve saved project ownership across profiles before rename, appearance, folder, active-project, and delete writes. Keep failed delete confirmations mounted and preserve active profile caches. Keep explicitly renamed session titles on their profile in project caches. Capture the project dialog destination and reject creation after a profile change.",
     "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
     "tests": [
       {
@@ -3540,6 +3541,10 @@
       {
         "file": "scripts/project-delete.test.mjs",
         "scenario": "combined project edits resolve their saved owner and reject profile changes before writing"
+      },
+      {
+        "file": "scripts/project-create.test.mjs",
+        "scenario": "project creation retains its dialog profile and rejects a changed owner before writing"
       }
     ],
     "removal": "Remove when upstream routes combined-view project edits to the saved owner and retains failed confirmations."
@@ -3939,5 +3944,27 @@
     "outputHash": "72d71f2e6ad037d2fd549b25ba39e7672228b7f4a2980fd73f2c3b57ceca53dc",
     "handler": "browser-goal-resume-action",
     "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-project-create-dialog-owner",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/sidebar/project-dialog.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "4773aedc4c66ac756abf31f97cd413694cbc246115768b174dfb48e6fc9d1cfb",
+    "inputHash": "4773aedc4c66ac756abf31f97cd413694cbc246115768b174dfb48e6fc9d1cfb",
+    "outputHash": "3f2d82c2b58f46817761fcc2724bc2571e3f2b9860c9a38f39537b9e25ba4d0e",
+    "handlers": [
+      "useBrowserProjectDialogOwner"
+    ],
+    "reason": "Show the destination profile in the create dialog and pass its captured profile to project creation.",
+    "owner": "apps/web-desktop/build/renderer/transforms/project-create.ts",
+    "tests": [
+      {
+        "file": "tests/browser/profile-project-create.spec.mjs",
+        "scenario": "combined profiles create projects in the chosen profile without losing the draft"
+      }
+    ],
+    "removal": "Remove when upstream project dialogs capture and display their destination profile."
   }
 ]
