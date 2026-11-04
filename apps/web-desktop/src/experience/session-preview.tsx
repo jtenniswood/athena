@@ -3,12 +3,12 @@ import { Tooltip, TooltipContent, TooltipTrigger, getSessionMessages, type Sessi
 
 function formatUpdatedAge(timestamp: number) {
   const elapsedHours = Math.max(0, Math.floor((Date.now() - timestamp * 1000) / 3_600_000))
-  if (elapsedHours === 0) return 'less than an hour ago'
+  if (elapsedHours === 0) return '<1h ago'
   const days = Math.floor(elapsedHours / 24)
   const hours = elapsedHours % 24
   return [
-    days ? `${days} day${days === 1 ? '' : 's'}` : '',
-    hours ? `${hours} hour${hours === 1 ? '' : 's'}` : ''
+    days ? `${days}d` : '',
+    hours ? `${hours}h` : ''
   ].filter(Boolean).join(' ') + ' ago'
 }
 
@@ -67,10 +67,10 @@ export function BrowserSessionPreview({ session, title, disabled, children, onFo
     }}>{children}</TooltipTrigger>
     <TooltipContent className="browser-session-preview" side="right" align="start" alignOffset={-8} sideOffset={4} collisionPadding={24} boundary="viewport">
       <div className="browser-session-preview-title">{title}</div>
+      <LatestGeneration session={session} />
       <div className="browser-session-preview-meta">
         Updated {formatUpdatedAge(session.last_active || session.started_at)}
       </div>
-      <LatestGeneration session={session} />
     </TooltipContent>
   </Tooltip>
 }
