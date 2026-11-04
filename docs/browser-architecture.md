@@ -41,7 +41,9 @@ boundary as plain projections, commands or React surfaces. Settings controllers
 remain lazy so opening chat does not eagerly load the settings implementation.
 The provider carries the host implementation; it does not cache or copy engine
 state. Specialized feature adapters and visual primitives retain their separate
-boundaries.
+boundaries. The composer and status-bar approval controls share one menu view
+and catalog of labels, descriptions and icons. Both use the engine's approval
+state and commands.
 
 The pinned renderer also supplies a complete browser-host installer, but it
 assumes injected Hermes bootstrap data, the `local` connection identity and its

@@ -390,10 +390,11 @@ test('browser approval modes have distinct menu icons and a static toolbar shiel
   const source = readFileSync(filename, 'utf8')
   assert.equal(browserPlugin(root).transform(source, filename), null)
   const output = readFileSync(path.join(root, 'src/experience/browser-approval-mode-menu.tsx'), 'utf8')
-  assert.match(output, /Brain.*Power.*ShieldLock.*from '..\/upstream\/browser-api'/)
+  const menu = readFileSync(path.join(root, 'src/experience/approval-mode-menu.tsx'), 'utf8')
+  assert.match(menu, /Brain.*Power.*ShieldLock.*from '..\/upstream\/browser-api'/)
   assert.match(output, /icon: <ShieldLock className="size-3\.5" \/>/)
-  assert.match(output, /smart: 'Ask when needed'/)
-  assert.doesNotMatch(output, /DropdownMenuSeparator/)
+  assert.match(menu, /description: 'Ask when needed'/)
+  assert.doesNotMatch(menu, /DropdownMenuSeparator/)
 })
 
 test('browser microphone capture distinguishes insecure origins and lets getUserMedia own permission', async () => {
