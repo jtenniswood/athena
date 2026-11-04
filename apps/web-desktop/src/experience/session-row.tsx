@@ -32,7 +32,7 @@ export function BrowserSessionRow({ row, className, ...props }: ComponentProps<'
   return <div {...props} data-web-session-id={row.id} data-web-session-profile={row.profile}
     data-web-session-selected={row.selected || undefined} data-working={row.working ? 'true' : undefined}
     data-glass-opaque={row.dragging ? '' : undefined}
-    className={cn('group row-hover relative grid min-h-[1.625rem] grid-cols-[minmax(0,1fr)_auto] items-stretch rounded-md pr-2',
+    className={cn('group row-hover relative grid min-h-[1.875rem] grid-cols-[minmax(0,1fr)_auto] items-stretch rounded-md pr-2',
       row.card && 'min-h-[3.375rem]', !row.card && row.density !== 'compact' && 'min-h-[2.75rem]',
       !row.card && row.density === 'detailed' && 'min-h-[3.875rem]', row.selected && 'bg-(--ui-row-active-background)',
       row.openElsewhere && 'bg-(--ui-row-open-background)', row.working && 'text-foreground',
