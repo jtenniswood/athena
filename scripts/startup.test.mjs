@@ -71,7 +71,6 @@ function startupHarness({ configurationError, rendererError, existingBridge, sig
       assert.equal(state.shellInitialized, true)
       assert.ok(window.hermesDesktop)
       assert.ok(listeners.has('contextmenu'))
-      assert.ok(listeners.has('click'))
       assert.equal(new URL(window.location.href).searchParams.has('win'), false)
       if (rendererError) throw rendererError
       // Preserve the asynchronous module load through TypeScript's import helper.

@@ -564,11 +564,13 @@ test('browser pane composition shares the toolbar and workspace ownership rules'
 test('narrow tool overlays retain upstream behavior without duplicating browser navigation', () => {
   const { filterBrowserNarrowNavigation } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/components/pane-shell/tree/renderer/narrow-overlays.tsx'), 'utf8')
-  const output = filterBrowserNarrowNavigation(source)
-  assert.equal(filterBrowserNarrowNavigation(output), output)
-  assert.throws(() => filterBrowserNarrowNavigation(source + '\n// drift'), /contract changed/)
+  const output = filterBrowserNarrowNavigation(source, root)
+  assert.equal(filterBrowserNarrowNavigation(output, root), output)
+  assert.throws(() => filterBrowserNarrowNavigation(source + '\n// drift', root), /contract changed/)
+  assert.match(output, /import \{ isBrowserToolPane \} from .*browser-pane-composition/)
+  assert.match(output, /panes\.filter\(p => isBrowserToolPane\(p\.id\)/)
   assert.match(output, /Close \$\{revealed.title \?\? revealed.id\} panel/)
-  assert.throws(() => filterBrowserNarrowNavigation(output.replace('closeTabPane(revealed.id)', 'closeTabPane("files")')), /contract changed/)
+  assert.throws(() => filterBrowserNarrowNavigation(output.replace('closeTabPane(revealed.id)', 'closeTabPane("files")'), root), /contract changed/)
 })
 
 test('empty workspace panels retain a working close action', () => {
