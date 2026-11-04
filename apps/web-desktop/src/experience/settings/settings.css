@@ -260,6 +260,7 @@
 .browser-settings-category-icon { width: var(--web-icon-size); height: var(--web-icon-size); flex: 0 0 auto; color: var(--web-text-subtle); }
 .browser-settings-category-button.is-active .browser-settings-category-icon { color: var(--web-text); }
 .browser-settings-category-chevron { display: none !important; }
+.browser-settings-panel-icon { flex: 0 0 auto; color: var(--web-text-subtle); }
 
 .browser-settings-detail { display: flex; min-width: 0; min-height: 0; flex-direction: column; overflow: hidden; padding: var(--web-space-6) clamp(1rem, 3vw, 3rem) var(--web-sheet-padding-bottom); }
 .browser-settings-detail > * { box-sizing: border-box; width: min(100%, 54rem); max-width: 54rem; margin-inline: 0; }
