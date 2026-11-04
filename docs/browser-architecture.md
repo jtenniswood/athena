@@ -77,6 +77,14 @@ of reloading an existing document; page notifications use the same admission
 policy. An active UI-update transaction refuses notification routing until it
 finishes or aborts. Existing engine routes continue to own chat selection.
 
+Ambient sound and speech claims use one module SharedWorker across app windows.
+It delegates expiry and duplicate handling to the renderer's pure ambient claim
+arbiter. Gateway-scoped keys preserve the speech discriminator and its longer
+claim lifetime. The browser bridge keeps only bounded, temporary request callbacks;
+no conversation state or storage is added. Missing, refused or failed workers and
+unanswered claims retain the existing emit behavior. Page departure releases the
+port and pending callbacks; a restored page reconnects on its next claim.
+
 `experience/settings/settings-route.tsx` assembles settings navigation from the
 catalog. The checked settings controller adapter extracts the existing Hermes
 page controls and commands without generating the browser frame. Schemas, values,
