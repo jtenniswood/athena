@@ -4,7 +4,7 @@ import type { AgentProfileRoute } from '@/store/profile'
 import type { SessionInfo } from '@/hermes'
 import type { NewSessionSplitHandler } from '@/app/chat/new-session-drag'
 import type { SidebarProjectTree, SidebarSessionGroup } from '@/app/chat/sidebar/projects'
-import { PROJECT_PREVIEW_COUNT, useRevealedRows, useWorkspaceNodeOpen } from '@/app/chat/sidebar/projects/model'
+import { useWorkspaceNodeOpen } from '@/app/chat/sidebar/projects/model'
 import { BrowserProjectControllerSurface } from './sidebar-project'
 
 type BrowserProfileProjectGroup = SidebarSessionGroup & { project: SidebarProjectTree }
@@ -46,15 +46,12 @@ export function BrowserProfileProjectRow({ group, renderRows, activeProjectId, o
 } & Omit<BrowserProfileProjectsProps, 'sessions' | 'projects'>) {
   const [open, toggleOpen] = useWorkspaceNodeOpen(group.id)
   const rowRef = useRef<HTMLDivElement>(null)
-  const page = useRevealedRows(group.sessions, PROJECT_PREVIEW_COUNT)
   const project = group.project
   return <BrowserProjectControllerSurface model={{
     project, isActive: project.id === activeProjectId, open, toggleOpen, rowRef,
     onEnter: onEnterProject, onNewSession, onNewSessionSplit,
     newSessionPath: project.path || project.repos.find(repo => repo.path)?.path || null,
-    reorderable: false, dragging: false, hasRows: group.sessions.length > 0, rows: renderRows(page.shown),
-    offerShowAll: false, expanding: false, showAll: page.showMore, total: group.sessions.length,
-    moreCount: page.more, showMore: page.showMore
+    reorderable: false, dragging: false, hasRows: group.sessions.length > 0, rows: renderRows(group.sessions)
   }} />
 }
 

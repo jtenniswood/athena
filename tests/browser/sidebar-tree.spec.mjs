@@ -20,15 +20,14 @@ test.afterAll(async () => { await server?.close(); if (cache) rmSync(cache, { re
 
 // Browser startup deliberately parks project drill-in at the overview. Exercise
 // its reusable tree views independently without changing that product policy.
-test('tree views preserve disclosure, paging, live owner commands and the draft', async ({ page }) => {
+test('tree views show every row and preserve disclosure, live owner commands and the draft', async ({ page }) => {
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   await page.goto(`${origin}/tests/browser/fixtures/sidebar-tree.html`)
   const repo = page.getByRole('button', { name: 'Repository A', exact: true })
   const lane = page.getByRole('button', { name: 'feature/keep-distinct-tail', exact: true })
   const last = page.getByRole('button', { name: 'Worktree conversation 6', exact: true })
-  await expect(last).toHaveCount(0)
-  await page.getByRole('button', { name: 'Show 2 more conversations', exact: true }).click()
+  await expect(page.getByRole('button', { name: /Show .*more conversations/ })).toHaveCount(0)
   await expect(last).toBeVisible()
   await page.getByRole('button', { name: 'New conversation in Research', exact: true }).click()
   await page.getByRole('button', { name: 'Change owner', exact: true }).click()

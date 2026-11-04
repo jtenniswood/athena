@@ -1,5 +1,6 @@
-import { useEffect, useState, type ComponentProps } from 'react'
+import { useEffect, useState, useSyncExternalStore, type ComponentProps } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger, getSessionMessages, type SessionInfo, chatMessageText, toChatMessages } from '../upstream/session-preview-api'
+import { readPreviewSummary, refreshPreviewSummary, subscribePreviewSummaries } from '../upstream/session-summaries'
 
 function formatUpdatedAge(timestamp: number) {
   const elapsedHours = Math.max(0, Math.floor((Date.now() - timestamp * 1000) / 3_600_000))
@@ -15,12 +16,15 @@ function formatUpdatedAge(timestamp: number) {
 // Mounted by the tooltip portal only after an intentional hover or keyboard focus.
 // A passive, owner-scoped read never selects a chat or changes its read watermark.
 function LatestGeneration({ session }: { session: SessionInfo }) {
+  const summary = useSyncExternalStore(subscribePreviewSummaries, () => readPreviewSummary(session), () => null)
   const [result, setResult] = useState<string | null>(null)
   const [unavailable, setUnavailable] = useState(false)
   useEffect(() => {
     let active = true
     setResult(null)
     setUnavailable(false)
+    void refreshPreviewSummary(session)
+    if (summary) return
     getSessionMessages(session.id, {
       profile: session.profile || 'default',
       connectionId: session.connection_id || undefined
@@ -38,10 +42,10 @@ function LatestGeneration({ session }: { session: SessionInfo }) {
       else setUnavailable(true)
     }).catch(() => { if (active) setUnavailable(true) })
     return () => { active = false }
-  }, [session.id, session.profile, session.connection_id, session.last_active, session.message_count])
+  }, [session.id, session.profile, session.connection_id, session._lineage_root_id, session.last_active, session.message_count, summary])
 
   return <div className="browser-session-generation">
-    <p>{result || (unavailable ? 'No recent reply available.' : 'Loading latest reply…')}</p>
+    <p>{summary || result || (unavailable ? 'No recent reply available.' : 'Loading preview…')}</p>
   </div>
 }
 
@@ -65,7 +69,7 @@ export function BrowserSessionPreview({ session, title, disabled, children, onFo
       if (event.defaultPrevented) return
       if (event.pointerType === 'touch' || (event.target as Element).closest('[data-row-actions], [data-reorder-handle]')) event.preventDefault()
     }}>{children}</TooltipTrigger>
-    <TooltipContent className="browser-session-preview" side="right" align="start" alignOffset={-8} sideOffset={4} collisionPadding={24} boundary="viewport">
+    <TooltipContent className="browser-session-preview" side="right" align="start" alignOffset={-8} sideOffset={0} collisionPadding={24} boundary="viewport">
       <div className="browser-session-preview-title">{title}</div>
       <LatestGeneration session={session} />
       <div className="browser-session-preview-meta">

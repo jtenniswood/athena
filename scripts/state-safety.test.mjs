@@ -160,9 +160,9 @@ test('media leases keep separate voice and permission owners guarded until each 
 })
 
 function signOutFixture() {
-  const root = { inert: false }, store = storage(), connection = state(store)
+  const root = { inert: false }, body = { inert: false }, store = storage(), connection = state(store)
   connection.update({ authMode: 'token', token: 'synthetic-session-token' })
-  const transitions = load('browser-transition', { document: { getElementById: () => root } })
+  const transitions = load('browser-transition', { document: { getElementById: () => root, body } })
   let prepare = async () => ({ ready: true }), logout = async () => ({ ok: true })
   let preparations = 0, logouts = 0, reloads = 0
   const { signOut } = load('sign-out', {
@@ -175,10 +175,33 @@ function signOutFixture() {
       oauthLogoutConnectionConfig: () => { logouts++; return logout() }
     } }
   })
-  return { root, store, connection, transitions, signOut,
+  return { root, body, store, connection, transitions, signOut,
     prepareWith(callback) { prepare = callback }, logoutWith(callback) { logout = callback },
     calls: () => ({ preparations, logouts, reloads }) }
 }
+
+test('page transitions reserve portal interaction and reject foreign or stale ownership', () => {
+  const root = { inert: false }, body = { inert: true }
+  const { beginBrowserTransition } = load('browser-transition', { document: { getElementById: () => root, body } })
+  assert.equal(beginBrowserTransition(), undefined, 'a body frozen by another owner must be left alone')
+  assert.equal(root.inert, false)
+  assert.equal(body.inert, true)
+  body.inert = false
+  const first = beginBrowserTransition()
+  assert.equal(root.inert, true)
+  assert.equal(body.inert, true, 'portals outside the root share the same reservation')
+  assert.equal(beginBrowserTransition(), undefined)
+  first()
+  assert.equal(root.inert, false)
+  assert.equal(body.inert, false)
+  const second = beginBrowserTransition()
+  first()
+  assert.equal(root.inert, true)
+  assert.equal(body.inert, true, 'late cleanup cannot release a newer document owner')
+  second(); second()
+  assert.equal(root.inert, false)
+  assert.equal(body.inert, false)
+})
 
 test('sign-out reserves the transition before saving and retains it through logout and reload', async () => {
   const app = signOutFixture(), save = Promise.withResolvers(), logout = Promise.withResolvers(), entered = Promise.withResolvers()
@@ -186,6 +209,7 @@ test('sign-out reserves the transition before saving and retains it through logo
   app.logoutWith(() => { entered.resolve(); return logout.promise })
   const pending = app.signOut()
   assert.equal(app.root.inert, true)
+  assert.equal(app.body.inert, true)
   await app.signOut()
   assert.equal(app.transitions.beginBrowserTransition(), undefined)
   assert.deepEqual(app.calls(), { preparations: 1, logouts: 0, reloads: 0 })
@@ -198,6 +222,7 @@ test('sign-out reserves the transition before saving and retains it through logo
   assert.deepEqual(app.calls(), { preparations: 2, logouts: 1, reloads: 1 })
   assert.equal(app.connection.load().token, '')
   assert.equal(app.root.inert, true, 'the outgoing document remains reserved until navigation')
+  assert.equal(app.body.inert, true)
 })
 
 test('sign-out yields to an existing transition without saving, logging out, or releasing its owner', async () => {
@@ -220,6 +245,7 @@ test('unsafe work and failed logout release sign-out without clearing saved cred
     if (failure === 'late-unsafe') app.prepareWith(async () => app.calls().preparations === 1 ? { ready: true } : { ready: false, reason: 'Recording started' })
     await assert.rejects(app.signOut())
     assert.equal(app.root.inert, false, failure)
+    assert.equal(app.body.inert, false, failure)
     assert.equal(app.calls().reloads, 0, failure)
     assert.equal(app.connection.load().token, 'synthetic-session-token', failure)
     if (['unsafe', 'save-error'].includes(failure)) assert.equal(app.calls().logouts, 0, failure)

@@ -1,6 +1,8 @@
 import { useBrowserSelectedSessionOwner, useBrowserOwnedSessionRpc, keepBrowserRenameProfile, scopeBrowserSessionTitles, scopeBrowserProjectTitles } from './transforms/session-routing'
 export { useBrowserSelectedSessionOwner, useBrowserOwnedSessionRpc, keepBrowserRenameProfile, scopeBrowserSessionTitles, scopeBrowserProjectTitles } from './transforms/session-routing'
 import { useBrowserThreadSubmitScroll } from './transforms/transcript'
+import { useBrowserArchiveUndo } from './transforms/archive'
+export { useBrowserArchiveUndo } from './transforms/archive'
 export { useBrowserThreadSubmitScroll } from './transforms/transcript'
 import {
   exposeBrowserConfigFieldPresentation,
@@ -307,6 +309,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserPinWrites: source => useBrowserPinWrites(source, root),
     useBrowserOpenSessionOwner: source => useBrowserOpenSessionOwner(source, root),
     useBrowserFreshSessionOwner: source => useBrowserFreshSessionOwner(source, root),
+    useBrowserArchiveUndo: source => useBrowserArchiveUndo(source, root),
     useBrowserDefaultSessionProfile: source => useBrowserDefaultSessionProfile(source, root),
     useBrowserDirectResumeOwner: source => useBrowserDirectResumeOwner(source),
     useBrowserTouchHooks: source => useBrowserTouchHooks(source, root), useBrowserAcceptedSubmit: source => useBrowserAcceptedSubmit(source, root),

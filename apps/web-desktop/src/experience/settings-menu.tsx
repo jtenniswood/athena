@@ -11,7 +11,7 @@ type SettingsLinkProps = {
   triggerTooltip?: string
 }
 
-export function SettingsLink({ triggerRef, onOpenRoute, triggerClassName, triggerLabel, triggerTooltip = 'Settings' }: SettingsLinkProps) {
+export function SettingsLink({ triggerRef, onOpenRoute, triggerClassName, triggerLabel, triggerTooltip = triggerLabel ? undefined : 'Settings' }: SettingsLinkProps) {
   return <BrowserToolbarButton ref={triggerRef} tooltip={triggerTooltip} className={triggerClassName} aria-label="Settings" onClick={() => onOpenRoute('/settings')}>
     <Codicon name="settings-gear" />{triggerLabel && <span>{triggerLabel}</span>}
   </BrowserToolbarButton>

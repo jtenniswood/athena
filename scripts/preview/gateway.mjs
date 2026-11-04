@@ -62,6 +62,10 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'setup.status') return { provider_configured: true, ready: true, inference_provider: 'custom' }
     if (method === 'setup.runtime_check') return { ok: true, provider: 'custom', model: info.model, source: 'config' }
     if (method === 'session.active_list') return { sessions: [...sessions.values()].filter(s => s.is_active) }
+    if (method === 'llm.oneshot' && params.task === 'title_generation' && !params.session_id &&
+        typeof params.instructions === 'string' && typeof params.input === 'string' && params.max_tokens === 160) {
+      return { text: 'Develop a thoughtful plan with clear priorities and a small experiment to test the idea.' }
+    }
     if (method === 'commands.catalog') return { commands: [] }
     if (method === 'plugins.manage' && params.action === 'list') return { plugins: [] }
     if (method === 'ping' || method === 'gateway.ping') return { pong: true }
