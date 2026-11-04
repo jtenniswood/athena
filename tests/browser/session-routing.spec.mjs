@@ -281,3 +281,66 @@ test('deleting an owned copy preserves its sibling profile', async ({ page, cont
   await popup.close()
   expect(backend.errors).toEqual([])
 })
+
+async function capturePageNotifications(context) {
+  await context.addInitScript(() => {
+    window.capturedNotifications = []
+    window.Notification = class {
+      static permission = 'granted'
+      constructor(title, options) { this.options = options; window.capturedNotifications.push(this) }
+      close() { this.closed = true }
+    }
+  })
+}
+
+test('copied session notifications retain their emitted owner through delivery and later selections', async ({ page, context }) => {
+  const backend = await copiedSessions(context)
+  await capturePageNotifications(context)
+  await openReferences(page)
+  const popup = await openCopy(page)
+  await popup.locator('[data-profile-key="writer"]').click()
+  await expect.poll(() => new URL(popup.url()).searchParams.get('profile')).toBe('writer')
+  await popup.evaluate(() => {
+    window.notificationDelivery = window.hermesDesktop.notify({ kind: 'turnDone', tag: 'owned-route', sessionId: 'preview-idea', focusSessionId: 'preview-idea' })
+    window.location.hash = '/preview-idea?profile=default'
+  })
+  await expect(popup.getByText('default copied transcript', { exact: true })).toBeVisible()
+  await editor(popup).fill('Keep the newer default copy draft')
+  expect(await popup.evaluate(() => window.notificationDelivery)).toBe(true)
+  const target = `${app.origin}/?profile=research#/preview-idea?profile=research`
+  expect(await popup.evaluate(() => window.capturedNotifications.find(row => row.options.tag === 'owned-route').options.data.url)).toBe(target)
+  const opening = popup.waitForEvent('popup')
+  await popup.evaluate(() => window.capturedNotifications.find(row => row.options.tag === 'owned-route').onclick())
+  const response = await opening
+  await expect(response).toHaveURL(target)
+  await expect(response.getByText('research copied transcript', { exact: true })).toBeVisible()
+  await expect(popup).toHaveURL(/#\/preview-idea\?profile=default$/)
+  await expect(editor(popup)).toHaveText('Keep the newer default copy draft')
+  await response.close()
+  await popup.close()
+  expect(backend.errors).toEqual([])
+})
+
+test('an owned notification reuses its admitted document without replacing another chat draft', async ({ page, context }) => {
+  const backend = await copiedSessions(context)
+  await capturePageNotifications(context)
+  await openReferences(page)
+  const popup = await openCopy(page)
+  await editor(popup).fill('Research notification draft')
+  await popup.evaluate(async () => {
+    window.notificationDocument = 'Keep this live document'
+    await window.hermesDesktop.notify({ kind: 'turnDone', tag: 'owned-route', sessionId: 'preview-idea', focusSessionId: 'preview-idea' })
+    window.location.hash = '/preview-week'
+  })
+  await expect(popup).toHaveURL(/#\/preview-week$/)
+  await editor(popup).fill('Keep the other chat draft')
+  await popup.evaluate(() => window.capturedNotifications.find(row => row.options.tag === 'owned-route').onclick())
+  await expect(popup).toHaveURL(/#\/preview-idea\?profile=research$/)
+  await expect(popup.getByText('research copied transcript', { exact: true })).toBeVisible()
+  await expect(editor(popup)).toHaveText('Research notification draft')
+  expect(await popup.evaluate(() => window.notificationDocument)).toBe('Keep this live document')
+  await popup.goBack()
+  await expect(editor(popup)).toHaveText('Keep the other chat draft')
+  await popup.close()
+  expect(backend.errors).toEqual([])
+})

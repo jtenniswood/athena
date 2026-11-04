@@ -9,7 +9,7 @@ import * as preferenceContract from './browser-preference-contract.mjs'
 const root = path.resolve('apps/web-desktop/src')
 
 function startupHarness({ configurationError, rendererError, existingBridge, signInReady = Promise.resolve(), preferencesReady = Promise.resolve() } = {}) {
-  const state = { configured: false, tracking: false, tokenConsumed: false, signedIn: false, engineRegistered: false, windowsReady: false, sessionRoutesReady: false, preferencesLoaded: false, shellInitialized: false, rendererLoaded: false }
+  const state = { configured: false, tracking: false, tokenConsumed: false, signedIn: false, engineRegistered: false, windowsReady: false, sessionRoutesReady: false, notificationsReady: false, preferencesLoaded: false, shellInitialized: false, rendererLoaded: false }
   const listeners = new Map()
   const storage = new Map([['hermes-web.comparison.profile', 'saved-profile']])
   const window = {
@@ -59,6 +59,10 @@ function startupHarness({ configurationError, rendererError, existingBridge, sig
       assert.equal(state.engineRegistered, true, 'session route dependencies must wait for engine registration')
       return { installBrowserSessionRoutes() { state.sessionRoutesReady = true; return () => { state.sessionRoutesReady = false } } }
     },
+    'upstream/browser-notifications.ts': () => {
+      assert.equal(state.engineRegistered, true, 'notification owner resolution must wait for engine registration')
+      return { installBrowserNotificationCommands() { state.notificationsReady = true; return () => { state.notificationsReady = false } } }
+    },
     'upstream/browser-windows.ts': () => {
       assert.ok(window.hermesDesktop)
       assert.equal(state.engineRegistered, true, 'window helper dependencies must not evaluate before engine registration')
@@ -74,6 +78,7 @@ function startupHarness({ configurationError, rendererError, existingBridge, sig
       state.rendererLoaded = true
       assert.equal(state.shellInitialized, true)
       assert.equal(state.sessionRoutesReady, true)
+      assert.equal(state.notificationsReady, true)
       assert.ok(window.hermesDesktop)
       assert.ok(listeners.has('contextmenu'))
       assert.equal(new URL(window.location.href).searchParams.has('win'), false)
@@ -169,6 +174,7 @@ test('renderer load errors reach the caller unchanged for startup recovery', asy
   const harness = startupHarness({ rendererError: error })
   await assert.rejects(harness.load('startup.ts').startBrowserApplication(), thrown => thrown === error)
   assert.equal(harness.state.sessionRoutesReady, false)
+  assert.equal(harness.state.notificationsReady, false)
 })
 
 test('explicit bridge installation preserves a preinstalled bridge', async () => {

@@ -1,6 +1,7 @@
 import type { HermesNotification } from '../upstream/types'
 import { browserCapabilities } from './capabilities'
 import { routeBrowserNotification } from './notification-navigation'
+import { withBrowserSessionProfile } from './session-route'
 import { androidNotificationPermission, androidNotify, isAndroidApp, refreshAndroidNotificationPermission } from './android'
 
 const WEB_NOTIFICATION_READY_TIMEOUT_MS = 750
@@ -40,13 +41,17 @@ async function readyServiceWorkerRegistration(): Promise<ServiceWorkerRegistrati
   }
 }
 
-export async function webNotify(payload: HermesNotification): Promise<boolean> {
+export async function webNotify(payload: HermesNotification, profile?: string): Promise<boolean> {
   if (isAndroidApp()) return androidNotify(payload)
   if (browserNotificationPermission() !== 'granted') return false
 
   const title = payload.kind === 'turnDone' ? 'Athena · Response ready' : payload.title ?? 'Athena'
-  const target = new URL(window.location.href)
-  if (payload.focusSessionId) target.hash = '/' + encodeURIComponent(payload.focusSessionId)
+  const focusSessionId = payload.focusSessionId
+  let target = new URL(window.location.href)
+  if (focusSessionId) {
+    target.hash = '/' + encodeURIComponent(focusSessionId)
+    target = withBrowserSessionProfile(target, profile)
+  }
   const options: NotificationOptions = {
     body: payload.body,
     icon: '/athena.png',
@@ -72,7 +77,7 @@ export async function webNotify(payload: HermesNotification): Promise<boolean> {
   try {
     const notification = new Notification(title, options)
     notification.onclick = () => {
-      if (!payload.focusSessionId || routeBrowserNotification(target.href)) window.focus()
+      if (!focusSessionId || routeBrowserNotification(target.href)) window.focus()
       else window.open(target.href, '_blank', 'noopener,noreferrer')
       notification.close()
     }
