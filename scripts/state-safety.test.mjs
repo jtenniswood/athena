@@ -158,3 +158,81 @@ test('media leases keep separate voice and permission owners guarded until each 
   await assert.rejects(denied, /Permission denied/)
   assert.equal(safety.reloadReadiness().ready, true)
 })
+
+function signOutFixture() {
+  const root = { inert: false }, store = storage(), connection = state(store)
+  connection.update({ authMode: 'token', token: 'synthetic-session-token' })
+  const transitions = load('browser-transition', { document: { getElementById: () => root } })
+  let prepare = async () => ({ ready: true }), logout = async () => ({ ok: true })
+  let preparations = 0, logouts = 0, reloads = 0
+  const { signOut } = load('sign-out', {
+    require: specifier => ({
+      './connection-state': { connectionState: () => connection },
+      './browser-transition': transitions,
+      './reload-safety': { reloadReadinessAfterSaving: () => { preparations++; return prepare() } }
+    })[specifier],
+    window: { location: { origin, reload: () => { reloads++ } }, hermesDesktop: {
+      oauthLogoutConnectionConfig: () => { logouts++; return logout() }
+    } }
+  })
+  return { root, store, connection, transitions, signOut,
+    prepareWith(callback) { prepare = callback }, logoutWith(callback) { logout = callback },
+    calls: () => ({ preparations, logouts, reloads }) }
+}
+
+test('sign-out reserves the transition before saving and retains it through logout and reload', async () => {
+  const app = signOutFixture(), save = Promise.withResolvers(), logout = Promise.withResolvers(), entered = Promise.withResolvers()
+  app.prepareWith(() => save.promise)
+  app.logoutWith(() => { entered.resolve(); return logout.promise })
+  const pending = app.signOut()
+  assert.equal(app.root.inert, true)
+  await app.signOut()
+  assert.equal(app.transitions.beginBrowserTransition(), undefined)
+  assert.deepEqual(app.calls(), { preparations: 1, logouts: 0, reloads: 0 })
+  save.resolve({ ready: true })
+  await entered.promise
+  assert.equal(app.root.inert, true)
+  assert.equal(app.transitions.beginBrowserTransition(), undefined)
+  logout.resolve({ ok: true })
+  await pending
+  assert.deepEqual(app.calls(), { preparations: 2, logouts: 1, reloads: 1 })
+  assert.equal(app.connection.load().token, '')
+  assert.equal(app.root.inert, true, 'the outgoing document remains reserved until navigation')
+})
+
+test('sign-out yields to an existing transition without saving, logging out, or releasing its owner', async () => {
+  const app = signOutFixture(), release = app.transitions.beginBrowserTransition()
+  await app.signOut()
+  assert.deepEqual(app.calls(), { preparations: 0, logouts: 0, reloads: 0 })
+  assert.equal(app.connection.load().token, 'synthetic-session-token')
+  assert.equal(app.root.inert, true)
+  release()
+  assert.equal(app.root.inert, false)
+})
+
+test('unsafe work and failed logout release sign-out without clearing saved credentials', async () => {
+  for (const failure of ['unsafe', 'save-error', 'logout-error', 'logout-refused', 'late-unsafe']) {
+    const app = signOutFixture()
+    if (failure === 'unsafe') app.prepareWith(async () => ({ ready: false, reason: 'Keep the attachment' }))
+    if (failure === 'save-error') app.prepareWith(async () => { throw new Error('Save failed') })
+    if (failure === 'logout-error') app.logoutWith(async () => { throw new Error('Logout failed') })
+    if (failure === 'logout-refused') app.logoutWith(async () => ({ ok: false }))
+    if (failure === 'late-unsafe') app.prepareWith(async () => app.calls().preparations === 1 ? { ready: true } : { ready: false, reason: 'Recording started' })
+    await assert.rejects(app.signOut())
+    assert.equal(app.root.inert, false, failure)
+    assert.equal(app.calls().reloads, 0, failure)
+    assert.equal(app.connection.load().token, 'synthetic-session-token', failure)
+    if (['unsafe', 'save-error'].includes(failure)) assert.equal(app.calls().logouts, 0, failure)
+    const release = app.transitions.beginBrowserTransition()
+    assert.equal(typeof release, 'function', failure)
+    release()
+  }
+})
+
+test('sign-out verifies credential removal before reloading and unlocks on storage failure', async () => {
+  const app = signOutFixture()
+  app.store.setItem = () => { throw new Error('Storage unavailable') }
+  await assert.rejects(app.signOut(), /saved sign-in could not be cleared/)
+  assert.equal(app.calls().reloads, 0)
+  assert.equal(app.root.inert, false)
+})

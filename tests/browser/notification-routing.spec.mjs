@@ -72,6 +72,32 @@ test('notification routes yield to a prepared update and work again after abort'
   expect(await page.evaluate(() => window.notificationDocument)).toBe('Retain this document')
 })
 
+test('pending sign-out refuses PWA preparation and retains its draft after logout fails', async ({ page }) => {
+  await page.evaluate(() => { location.hash = '/settings?tab=gateway' })
+  let finishLogout
+  await page.route('**/auth/logout', async route => {
+    await new Promise(resolve => { finishLogout = resolve })
+    await route.fulfill({ status: 503, body: 'Synthetic logout failure' })
+  })
+  try {
+    await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+    await expect.poll(() => typeof finishLogout).toBe('function')
+    await expect(page.locator('#root')).toHaveJSProperty('inert', true)
+    expect((await sendFromWorker(page, { type: 'HERMES_FLUSH_UPDATE', transaction: 'sign-out-pending' })).ready).toBe(false)
+    await sendFromWorker(page, { type: 'HERMES_ABORT_UPDATE', transaction: 'sign-out-pending' }, false)
+    await expect(page.locator('#root')).toHaveJSProperty('inert', true)
+    expect(await route(page, page.url())).toEqual({ ready: false })
+  } finally { finishLogout?.() }
+  await expect(page.getByRole('status').filter({ hasText: 'Sign-out failed' })).toBeVisible()
+  await expect(page.locator('#root')).toHaveJSProperty('inert', false)
+  expect(await page.evaluate(() => window.notificationDocument)).toBe('Retain this document')
+  expect((await sendFromWorker(page, { type: 'HERMES_FLUSH_UPDATE', transaction: 'after-sign-out-failure' })).ready).toBe(true)
+  await sendFromWorker(page, { type: 'HERMES_ABORT_UPDATE', transaction: 'after-sign-out-failure' }, false)
+  await expect(page.locator('#root')).toHaveJSProperty('inert', false)
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+  await expect(composer(page)).toHaveText('Keep this notification-tab draft')
+})
+
 async function offerRemotePreferences(page) {
   const saved = await (await page.request.get(`${origin}/api/athena/preferences`)).json()
   const theme = saved.values['hermes-desktop-theme-v2'] === 'light' ? 'dark' : 'light'
