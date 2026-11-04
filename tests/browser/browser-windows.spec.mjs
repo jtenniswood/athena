@@ -60,8 +60,8 @@ test('a new app window keeps its explicit profile through first send and later r
     expect(application.gateway.controls.calls.some(call => call.method === 'session.create' &&
       (call.params?.profile === 'research' || call.profile === 'research'))).toBe(true)
     await popup.getByRole('button', { name: 'Filters', exact: true }).click()
-    await popup.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
-    await popup.getByRole('menuitemradio', { name: 'None', exact: true }).click()
+    await popup.getByRole('menuitem', { name: 'Profiles', exact: true }).hover()
+    await popup.getByRole('menuitemradio', { name: 'Separate', exact: true }).click()
     await popup.keyboard.press('Escape')
     await popup.keyboard.press('Escape')
     await popup.locator('[data-profile-key="writer"]').click()

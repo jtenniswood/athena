@@ -103,3 +103,19 @@ test('the server uses the same wrapper preference keys and excludes session, cre
   assert.ok(!preferenceKeys.includes('hermes:composer-drafts:v3'))
   assert.ok(!preferenceKeys.includes('hermes-web.connection.v2.web'))
 })
+
+
+test('profile layout migration preserves old defaults and saved choices before profile restoration', () => {
+  const read = values => parseBrowserPreference(definitions.combinedProfiles, values['hermes-web.browser.combined-profiles'] ?? null,
+    { getItem: key => values[key] ?? null })
+  const grouping = 'hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles'
+  assert.equal(read({}), true)
+  assert.equal(read({ [grouping]: 'profile' }), true)
+  assert.equal(read({ [grouping]: 'status' }), false)
+  assert.equal(read({ [grouping]: 'none' }), false)
+  assert.equal(read({ 'hermes-web.browser.hermes.desktop.showAllProfiles': 'false' }), false)
+  assert.equal(read({ 'hermes-web.browser.hermes.desktop.sidebarAgentsGrouped.allProfiles': 'true' }), false)
+  assert.equal(read({ [grouping]: 'status', 'hermes-web.browser.presentation-mode': 'true' }), true)
+  assert.equal(read({ [grouping]: 'status', 'hermes-web.browser.combined-profiles': 'true' }), true)
+  assert.equal(read({ [grouping]: 'profile', 'hermes-web.browser.combined-profiles': 'false' }), false)
+})

@@ -69,6 +69,7 @@ interface SidebarController extends Pick<ChatSidebarProps, 'onNavigate' | 'onRes
   recentsLoadMorePending: boolean
   hasMoreSessions: boolean
   rankedGlobally: boolean
+  combinedProfiles: boolean
   grouping: SidebarGrouping
   displayAgentGroups?: SidebarSessionGroup[]
   worktreeGroupingActive: boolean
@@ -145,7 +146,7 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
       <div className="grid size-6 place-items-center"><Tip label={s.showProjects}><Button aria-label={s.showProjects} className={headerButton} size="icon-xs" variant="ghost"
         onClick={event => { event.stopPropagation(); exitProjectScope() }}><Codicon name="list-unordered" size="0.75rem" /></Button></Tip></div>
     </div> : <>
-      {c.grouping !== 'profile' && <SidebarSectionAddButton ariaLabel={c.grouping === 'project' ? s.projects.newButton : s.nav['new-session']}
+      {!c.combinedProfiles && <SidebarSectionAddButton ariaLabel={c.grouping === 'project' ? s.projects.newButton : s.nav['new-session']}
         onNewProjectDrag={c.grouping === 'project' ? { onArm: placement => $newProjectDropPlacement.set(placement) } : undefined}
         onNewSessionSplit={c.grouping === 'project' ? undefined : c.onNewSessionSplit}
         onPlainClick={() => c.grouping === 'project' ? openProjectCreate() : c.onNewSessionInWorkspace(null)} />}
@@ -163,7 +164,7 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
         rootClassName="browser-pinned-section shrink-0 p-0 pb-1" contentClassName="flex flex-col gap-px rounded-lg pb-2 pt-1"
         emptyState={<SidebarPinnedEmptyState archived={c.sessionsMode === 'archived'} filtered={c.filtersNarrow} />} />}
       {c.inProject && c.projectLoadFailed && <SidebarLoadErrorState onRetry={c.retryProject} />}
-      <SidebarSessionsSection {...shared} browserSectionId="sessions" label={c.grouping === 'profile' ? 'Profiles' : c.sessionsLabel}
+      <SidebarSessionsSection {...shared} browserSectionId="sessions" label={c.combinedProfiles ? 'Profiles' : c.sessionsLabel}
         open={c.agentsOpen} onToggle={() => setSidebarRecentsOpen(!c.agentsOpen)} pinned={false} onTogglePin={pinSession}
         card={c.cardRows} collapsible={!c.inProject} dndSensors={c.dndSensors} activeProjectId={c.activeProjectId}
         contentClassName={cn('flex min-h-0 flex-1 flex-col gap-px pb-1.75', scroll, !c.recentsVirtualizes && compactFlat)}
@@ -171,9 +172,9 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
         emptyState={c.inProject && c.projectLoadFailed ? null : c.showSessionSkeletons || (c.inProject && c.projectLoading) ? <SidebarSessionSkeletons /> :
           !c.inProject && c.sessionsLoadError ? <SidebarLoadErrorState onRetry={() => void c.onRetrySessions()} /> :
           <div className="grid min-h-16 place-items-center rounded-lg px-2 text-center text-xs text-(--ui-text-tertiary)">{c.inProject ? s.projectEmpty : c.filtersActive ? s.noFilterMatches : c.pinnedSessions.length ? s.allPinned : s.noSessions}</div>}
-        footer={c.grouping !== 'project' && !c.showSessionSkeletons && c.hasMoreSessions ? <SidebarLoadMoreRow loading={c.sessionsLoading || c.recentsLoadMorePending} onClick={() => void c.onLoadMoreRecents()} step={0} /> : null}
+        footer={(c.combinedProfiles || c.grouping !== 'project') && !c.showSessionSkeletons && c.hasMoreSessions ? <SidebarLoadMoreRow loading={c.sessionsLoading || c.recentsLoadMorePending} onClick={() => void c.onLoadMoreRecents()} step={0} /> : null}
         forceEmptyState={c.showSessionSkeletons && !c.displayAgentGroups?.length}
-        grouping={c.grouping === 'none' || c.sessionsMode === 'archived' || c.rankedGlobally ? 'none' : c.grouping === 'status' ? 'status' : 'date'}
+        grouping={(c.combinedProfiles && c.grouping === 'project') || c.grouping === 'profile' || c.grouping === 'none' || c.sessionsMode === 'archived' || c.rankedGlobally ? 'none' : c.grouping === 'status' ? 'status' : 'date'}
         groups={c.displayAgentGroups} headerAction={controls} labelMeta={c.worktreeGroupingActive && c.reposScanning && !c.projectsSkeletonVisible ? <GlyphSpinner ariaLabel={s.loading} className="text-[0.6875rem] text-(--ui-text-quaternary)" /> : undefined}
         liveSessions={c.inProject ? c.enteredProjectOverlaySessions : undefined} manualOrderIds={c.agentOrderManual ? c.agentOrderIds : c.sortOrderIds}
         onEnterProject={c.onEnterProject} onNewSessionInWorkspace={c.onNewSessionInWorkspace} onNewSessionSplit={c.onNewSessionSplit}
