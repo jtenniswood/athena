@@ -1,4 +1,4 @@
-import type { PointerEvent, RefObject } from 'react'
+import type { RefObject } from 'react'
 import type { useSensors } from '@dnd-kit/core'
 import type { ChatSidebarProps } from '@/app/chat/sidebar'
 import type { SidebarNavItem } from '@/app/types'
@@ -21,7 +21,6 @@ import { ProjectDialog } from '@/app/chat/sidebar/project-dialog'
 import { WorktreeDialog } from '@/app/chat/sidebar/projects/worktree-dialog'
 import { ProfileRail } from '@/app/chat/sidebar/profile-switcher'
 import { buildGatewaySessionGroups, scopeGatewaySessionGroups } from '@/app/chat/sidebar/gateway-group-model'
-import { startNewSessionDrag } from '@/app/chat/new-session-drag'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { GlyphSpinner } from '@/components/ui/glyph-spinner'
@@ -29,7 +28,6 @@ import { Tip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { recordAction } from '@/store/desktop-metrics'
 import { pinSession, unpinSession, setSidebarPinsOpen, setSidebarRecentsOpen, toggleSidebarMessagingOpen, setSidebarCronOpen } from '@/store/layout'
-import { $newChatProfile } from '@/store/profile'
 import { exitProjectScope } from '@/store/project-scope'
 import { $newProjectDropPlacement, openProjectCreate } from '@/store/projects'
 import { markAllSessionsRead } from '@/store/session'
@@ -125,17 +123,14 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
     activeSessionId: c.activeSidebarSessionId, onArchiveSession: c.onArchiveSession, onBranchSession: c.onBranchSession,
     onDeleteSession: c.onDeleteSession, onResumeSession: c.onResumeSession, onToggleUnread: c.toggleUnread
   }
-  const navigation = c.navItems.filter(item => item.id !== 'capabilities').map(item => ({
-    id: item.id, label: item.id === 'new-session' ? 'New Session' : (s.nav[item.id] ?? item.label), icon: <item.icon className="size-4 shrink-0 text-[color-mix(in_srgb,currentColor_72%,transparent)]" />,
+  const navigation = c.navItems.filter(item => item.id !== 'capabilities' && item.id !== 'new-session').map(item => ({
+    id: item.id, label: s.nav[item.id] ?? item.label, icon: <item.icon className="size-4 shrink-0 text-[color-mix(in_srgb,currentColor_72%,transparent)]" />,
     active: (['messaging', 'artifacts', 'cron'].includes(item.id) && c.currentView === item.id) ||
       (c.currentView === 'extension' && Boolean(item.route) && c.pathname === item.route), disabled: !item.action && !item.route,
-    run: () => { if (item.id === 'new-session') $newChatProfile.set(null); if (item.keybindActionId) recordAction(item.keybindActionId, 'click'); c.onNavigate(item) },
-    pointerDown: item.id === 'new-session' ? (event: PointerEvent<HTMLButtonElement>) => startNewSessionDrag(placement => {
-      $newChatProfile.set(null); c.onNewSessionSplit(placement.dir, { anchor: placement.anchor, before: placement.before })
-    }, event) : undefined
+    run: () => { if (item.keybindActionId) recordAction(item.keybindActionId, 'click'); c.onNavigate(item) }
   }))
   const model: BrowserSidebarModel = {
-    navigation, flipped: c.panesFlipped, showNewSession: !c.combinedProfiles, showSections: c.showSessionSections,
+    navigation, flipped: c.panesFlipped, showSections: c.showSessionSections,
     search: { value: c.searchQuery, change: c.setSearchQuery, input: c.searchInputRef }, mode: c.sessionsMode,
     project: c.inProject ? c.enteredProjectId : undefined, notice: <SidebarStorageCorruptNotice />,
     empty: <SidebarBlankState onNewProject={openProjectCreate} />,
