@@ -1,5 +1,6 @@
-import { useEffect, useState, type ComponentProps } from 'react'
+import { useEffect, useState, useSyncExternalStore, type ComponentProps } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger, getSessionMessages, type SessionInfo, chatMessageText, toChatMessages } from '../upstream/session-preview-api'
+import { readPreviewSummary, refreshPreviewSummary, subscribePreviewSummaries } from '../upstream/session-summaries'
 
 function formatUpdatedAge(timestamp: number) {
   const elapsedHours = Math.max(0, Math.floor((Date.now() - timestamp * 1000) / 3_600_000))
@@ -15,12 +16,15 @@ function formatUpdatedAge(timestamp: number) {
 // Mounted by the tooltip portal only after an intentional hover or keyboard focus.
 // A passive, owner-scoped read never selects a chat or changes its read watermark.
 function LatestGeneration({ session }: { session: SessionInfo }) {
+  const summary = useSyncExternalStore(subscribePreviewSummaries, () => readPreviewSummary(session), () => null)
   const [result, setResult] = useState<string | null>(null)
   const [unavailable, setUnavailable] = useState(false)
   useEffect(() => {
     let active = true
     setResult(null)
     setUnavailable(false)
+    void refreshPreviewSummary(session)
+    if (summary) return
     getSessionMessages(session.id, {
       profile: session.profile || 'default',
       connectionId: session.connection_id || undefined
@@ -38,10 +42,10 @@ function LatestGeneration({ session }: { session: SessionInfo }) {
       else setUnavailable(true)
     }).catch(() => { if (active) setUnavailable(true) })
     return () => { active = false }
-  }, [session.id, session.profile, session.connection_id, session.last_active, session.message_count])
+  }, [session.id, session.profile, session.connection_id, session._lineage_root_id, session.last_active, session.message_count, summary])
 
   return <div className="browser-session-generation">
-    <p>{result || (unavailable ? 'No recent reply available.' : 'Loading latest reply…')}</p>
+    <p>{summary || result || (unavailable ? 'No recent reply available.' : 'Loading preview…')}</p>
   </div>
 }
 
