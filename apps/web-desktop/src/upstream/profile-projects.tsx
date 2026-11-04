@@ -5,12 +5,14 @@ import type { SessionInfo } from '@/hermes'
 import type { NewSessionSplitHandler } from '@/app/chat/new-session-drag'
 import { SidebarWorkspaceGroup, type SidebarProjectTree, type SidebarSessionGroup } from '@/app/chat/sidebar/projects'
 
+type BrowserProfileProjectGroup = SidebarSessionGroup & { browserProject: true }
+
 /** Use the backend's project membership, scoped to the rows of one profile. */
-export function browserProfileProjectGroups(sessions: SessionInfo[], projects: SidebarProjectTree[]): SidebarSessionGroup[] {
+export function browserProfileProjectGroups(sessions: SessionInfo[], projects: SidebarProjectTree[]): BrowserProfileProjectGroup[] {
   const owner = sessions[0]
   if (!owner) return []
   const remaining = new Set(sessions)
-  const groups: SidebarSessionGroup[] = []
+  const groups: BrowserProfileProjectGroup[] = []
   for (const project of projects.filter(project => !project.isNoProject)) {
     const members = new Set(project.sessionIds ?? [
       ...(project.previewSessions ?? []), ...project.repos.flatMap(repo => repo.groups.flatMap(group => group.sessions))
@@ -19,11 +21,11 @@ export function browserProfileProjectGroups(sessions: SessionInfo[], projects: S
     if (!rows.length) continue
     rows.forEach(session => remaining.delete(session))
     groups.push({ id: JSON.stringify(['profile-project', owner.connection_id, owner.profile, project.id]),
-      label: project.label, path: project.path, sessions: rows, mode: 'workspace' })
+      label: project.label, path: project.path, sessions: rows, mode: 'workspace', browserProject: true })
   }
   const home = projects.find(project => project.isNoProject)
   if (remaining.size) groups.unshift({ id: JSON.stringify(['profile-project', owner.connection_id, owner.profile, 'home']),
-    label: home?.label ?? 'Home', path: null, sessions: [...remaining], mode: 'workspace' })
+    label: home?.label ?? 'Home', path: null, sessions: [...remaining], mode: 'workspace', isHome: true, browserProject: true })
   return groups
 }
 
