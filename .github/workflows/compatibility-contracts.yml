@@ -73,7 +73,7 @@ jobs:
       - name: Build browser application
         run: pnpm build
       - name: Verify browser commands in the built application
-        run: pnpm exec playwright test tests/browser/composer-keyboard.spec.mjs tests/browser/external-links.spec.mjs tests/browser/browser-windows.spec.mjs tests/browser/clipboard-selection.spec.mjs tests/browser/notification-routing.spec.mjs tests/browser/sign-in-credentials.spec.mjs tests/browser/cold-connection-recovery.spec.mjs tests/browser/ambient-claims.spec.mjs tests/browser/file-picker.spec.mjs tests/browser/voice-readiness.spec.mjs tests/browser/plugin-files.spec.mjs tests/browser/plugin-discovery.spec.mjs tests/browser/sidebar-gestures.spec.mjs tests/browser/session-routing.spec.mjs tests/browser/plugin-notifications.spec.mjs --project=chromium --reporter=line
+        run: pnpm exec playwright test tests/browser/composer-keyboard.spec.mjs tests/browser/external-links.spec.mjs tests/browser/browser-windows.spec.mjs tests/browser/clipboard-selection.spec.mjs tests/browser/notification-routing.spec.mjs tests/browser/sign-in-credentials.spec.mjs tests/browser/cold-connection-recovery.spec.mjs tests/browser/ambient-claims.spec.mjs tests/browser/file-picker.spec.mjs tests/browser/voice-readiness.spec.mjs tests/browser/plugin-files.spec.mjs tests/browser/plugin-discovery.spec.mjs tests/browser/sidebar-gestures.spec.mjs tests/browser/session-routing.spec.mjs tests/browser/plugin-notifications.spec.mjs --project=chromium --reporter=line --workers=2
       - name: Build isolated conversation fixture
         if: steps.behavior.outputs.selection == 'true'
         run: docker build -t athena:compatibility .
