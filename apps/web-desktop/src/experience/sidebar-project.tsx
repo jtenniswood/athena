@@ -34,7 +34,7 @@ export function BrowserSidebarProject({ model, children, ...props }: ComponentPr
     <span className="grid size-full place-items-center transition-opacity group-hover/handle:opacity-0 group-focus-within/handle:opacity-0">{icon}</span>
     <i aria-hidden="true" className={cn('codicon codicon-grabber absolute text-(--ui-text-quaternary) opacity-0 group-hover/handle:opacity-80 group-focus-within/handle:opacity-80', model.dragging && 'opacity-100')} style={{ fontSize: '0.75rem' }} />
   </span> : icon
-  const controls = <>{model.create && <BrowserTreeAdd label={model.create.label} onClick={model.create.run} onPointerDown={model.create.pointerDown} />}{model.menu}</>
+  const controls = <div data-browser-project-controls="" className="flex shrink-0 items-center gap-3">{model.menu}{model.create && <BrowserTreeAdd label={model.create.label} onClick={model.create.run} onPointerDown={model.create.pointerDown} />}</div>
   const header = <BrowserTreeHeader ref={model.anchor}
     className={cn('rounded-md', model.dragging && 'cursor-grabbing bg-(--ui-sidebar-surface-background)')}
     data-glass-opaque={model.dragging ? '' : undefined} onPointerDown={event => {
@@ -42,8 +42,9 @@ export function BrowserSidebarProject({ model, children, ...props }: ComponentPr
       model.dragHandleProps?.onPointerDown?.(event)
     }} model={{ label: model.label, title: model.autoLabel, open: model.open, toggle: model.toggle, enter: model.enter,
       toggleLabel: model.toggleLabel, active: model.active, project: true, icon: lead,
-      actions: <div data-row-actions="" className="flex shrink-0 items-center self-stretch">
-        {model.figures ? <div className="relative flex items-center"><span className="min-w-9 whitespace-nowrap text-right text-[0.625rem] leading-none text-(--ui-text-tertiary) transition-opacity group-hover/workspace:opacity-0">{model.figures}</span><div className="absolute right-0 flex items-center">{controls}</div></div> : controls}
+      actions: <div data-row-actions="" className="flex shrink-0 items-center gap-1 self-stretch [&_.codicon-kebab-vertical]:rotate-90">
+        {model.figures && <span className="min-w-9 whitespace-nowrap text-right text-[0.625rem] leading-none text-(--ui-text-tertiary) transition-opacity group-hover/workspace:opacity-0">{model.figures}</span>}
+        {controls}
       </div> }} />
   return <BrowserTreeStack {...props} data-sessions-project={model.id} className={cn('rounded-[6px] data-[session-drop-hover=true]:outline-2 data-[session-drop-hover=true]:-outline-offset-2 data-[session-drop-hover=true]:outline-sidebar-ring', model.dragging && 'relative z-10')}>
     {model.wrapHeader ? model.wrapHeader(header) : header}
