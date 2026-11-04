@@ -300,6 +300,7 @@ function OptionGlyph({ option }: { option: Option }) {`
   const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-shortcuts'))
   const profilesOwner = JSON.stringify(path.join(root, 'src/experience/profile-list-visibility'))
   output = replaceBrowserContract(output, [
+    ['onValueChange={value => setSidebarOrdering(value as SidebarOrdering)}', 'onValueChange={value => setBrowserSidebarOrdering(value as SidebarOrdering)}'],
     ["  const grouping = useStore($sidebarGrouping)", "  const savedGrouping = useStore($sidebarGrouping)\n  const grouping = savedGrouping === 'profile' ? 'none' : savedGrouping\n  const combinedProfiles = useBrowserProfileGrouping()"],
     ["? projects.map(project => project.id)", "? combinedProfiles ? listGroupIds : projects.map(project => project.id)"],
     ['  const groupings = GROUPINGS.map(option =>', "  const groupings = GROUPINGS.filter(option => option.id !== 'profile').map(option =>"],
@@ -317,8 +318,9 @@ function OptionGlyph({ option }: { option: Option }) {`
     ['{viewCustomized && <DropdownMenuItem onSelect={resetSidebarView}', '{(viewCustomized || !combinedProfiles) && <DropdownMenuItem onSelect={() => resetBrowserSidebarView(resetSidebarView)}']
   ])
   const layoutOwner = JSON.stringify(path.join(root, 'src/upstream/profile-layout-menu'))
+  const orderingOwner = JSON.stringify(path.join(root, 'src/upstream/sidebar-ordering'))
   const sectionOwner = JSON.stringify(path.join(root, 'src/upstream/profile-section'))
-  return `import { BrowserProfileLayoutMenu } from ${layoutOwner}\nimport { useBrowserProfileGrouping, resetBrowserSidebarView } from ${sectionOwner}\n` +
+  return `import { setBrowserSidebarOrdering } from ${orderingOwner}\nimport { BrowserProfileLayoutMenu } from ${layoutOwner}\nimport { useBrowserProfileGrouping, resetBrowserSidebarView } from ${sectionOwner}\n` +
     `import { BrowserRestoreProfilesItem } from ${profilesOwner}\nimport { browserSidebarActionLabel, useBrowserSidebarShortcuts } from ${owner}\n` + output.replace(target, target + hideDesktopOnlyRows)
 }
 

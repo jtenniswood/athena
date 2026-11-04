@@ -4053,13 +4053,15 @@ test('empty configured channels stay hidden and channel controls exclude unset p
   await expect(telegram).toHaveCount(0)
 })
 
-for (const layout of ['flat', 'profiles']) {
+for (const layout of ['flat', 'profiles', 'projects']) {
   test(`dragging chats selects manual ordering and preserves the draft in ${layout}`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 960 })
     await page.route('**/api/athena/preferences', route => route.abort())
     await page.addInitScript(layout => {
       localStorage.setItem('hermes.desktop.showAllProfiles', 'true')
+      localStorage.setItem('hermes-web.browser.combined-profiles', String(layout !== 'flat'))
       localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles', layout === 'profiles' ? 'profile' : 'none')
+      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarAgentsGrouped.allProfiles', String(layout === 'projects'))
     }, layout)
     await page.route('**/api/profiles/sessions/sidebar**', async route => {
       const response = await route.fetch()
@@ -4067,7 +4069,7 @@ for (const layout of ['flat', 'profiles']) {
       const template = body.recents.sessions.find(session => session.id === 'preview-week')
       body.recents.sessions.push(
         { ...template, id: 'drag-first', title: 'Drag first chat', cwd: '/workspace/drag-project', git_repo_root: '/workspace/drag-project', started_at: template.started_at - 1000, last_active: template.last_active - 1000 },
-        { ...template, id: 'drag-second', title: 'Drag second chat', cwd: '/workspace/drag-project', git_repo_root: '/workspace/drag-project', started_at: template.started_at - 2000, last_active: template.last_active - 2000 }
+        { ...template, id: 'drag-second', title: 'Drag second chat', cwd: '/workspace/drag-project', git_repo_root: '/workspace/drag-project', started_at: template.started_at - 500, last_active: template.last_active - 2000 }
       )
       await route.fulfill({ response, json: body })
     })
@@ -4080,11 +4082,29 @@ for (const layout of ['flat', 'profiles']) {
       await page.keyboard.press('Escape')
       await page.keyboard.press('Escape')
     }
-    await chooseOrdering('Updated')
     const first = page.getByRole('button', { name: 'Drag first chat', exact: true })
     const second = page.getByRole('button', { name: 'Drag second chat', exact: true })
     const selectedRoute = page.url()
-    const before = await first.boundingBox(), target = await second.boundingBox()
+    const expectManual = async () => {
+      await page.getByRole('button', { name: 'Filters', exact: true }).click()
+      await page.getByRole('menuitem', { name: 'Ordering', exact: true }).hover()
+      await expect(page.getByRole('menuitemradio', { name: 'Manual', exact: true })).toBeChecked()
+      await page.keyboard.press('Escape')
+      await page.keyboard.press('Escape')
+    }
+    await chooseOrdering('Created')
+    await expect.poll(async () => (await first.boundingBox()).y > (await second.boundingBox()).y).toBe(true)
+    await chooseOrdering('Manual')
+    await expectManual()
+    await expect.poll(async () => (await first.boundingBox()).y > (await second.boundingBox()).y).toBe(true)
+    await expect(editor(page)).toHaveText('Keep this draft while dragging chats')
+    await expect(page).toHaveURL(selectedRoute)
+    await page.reload()
+    await expect(first).toBeVisible()
+    await expectManual()
+    await expect.poll(async () => (await first.boundingBox()).y > (await second.boundingBox()).y).toBe(true)
+    await chooseOrdering('Updated')
+    const before = await page.getByRole('button', { name: 'Reorder Drag first chat', exact: true }).boundingBox(), target = await second.boundingBox()
     expect(before.y).toBeLessThan(target.y)
     await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2)
     await page.mouse.down()
@@ -4096,11 +4116,7 @@ for (const layout of ['flat', 'profiles']) {
     await expect.poll(async () => (await first.boundingBox()).y > (await second.boundingBox()).y).toBe(true)
     await expect(editor(page)).toHaveText('Keep this draft while dragging chats')
     await expect(page).toHaveURL(selectedRoute)
-    await page.getByRole('button', { name: 'Filters', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Ordering', exact: true }).hover()
-    await expect(page.getByRole('menuitemradio', { name: 'Manual', exact: true })).toBeChecked()
-    await page.keyboard.press('Escape')
-    await page.keyboard.press('Escape')
+    await expectManual()
     await page.reload()
     await expect(first).toBeVisible()
     await expect.poll(async () => (await first.boundingBox()).y > (await second.boundingBox()).y).toBe(true)
