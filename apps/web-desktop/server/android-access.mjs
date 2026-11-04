@@ -1,4 +1,5 @@
 import { constants, createCipheriv, createPublicKey, publicEncrypt, randomBytes } from 'node:crypto'
+import { androidSignInPage } from './android-sign-in-page.mjs'
 
 const route = '/api/athena/android/auth/access'
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
@@ -6,13 +7,7 @@ const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', 
 /** Browser-only bootstrap: Cloudflare authenticates this route before it reaches Athena. */
 export function handleAndroidAccess(req, res, origin, now = Date.now) {
   if (new URL(req.url, origin).pathname !== route) return false
-  const page = (status, content, callback) => {
-    const nonce = randomBytes(18).toString('base64url')
-    res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store',
-      'Content-Security-Policy': `default-src 'none'; script-src 'nonce-${nonce}'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'`,
-      'Referrer-Policy': 'same-origin', 'X-Content-Type-Options': 'nosniff' })
-    res.end(`<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Athena Access sign-in</title><h1>Athena Android</h1>${content}${callback ? `<script nonce="${nonce}">window.location.replace(${JSON.stringify(callback)})</script>` : ''}</html>`)
-  }
+  const page = (status, content, callback) => androidSignInPage(res, status, content, callback)
   return (async () => {
     try {
       if (!origin.startsWith('https://')) throw new Error('HTTPS required')
@@ -37,7 +32,7 @@ export function handleAndroidAccess(req, res, origin, now = Date.now) {
       const envelope = Buffer.concat([wrapped, iv, data]).toString('base64url')
       // Only encrypted data enters the callback URL; the app holds the private key.
       const callback = `athena-android://access#${envelope}`
-      page(200, `<p>Returning to Athena Android…</p><p>If the app does not open automatically, <a href="${escape(callback)}">Return to Athena Android</a>.</p>`, callback)
+      page(200, `<p>Sign-in complete. Opening the app…</p><a href="${escape(callback)}">Return to Athena Android</a><p>If your browser asks, choose Continue to open Athena. You can close this tab once you’re back in the app.</p>`, callback)
     } catch { page(400, '<p>This connection request is invalid. Start again from the Android app.</p>') }
   })().then(() => true)
 }
