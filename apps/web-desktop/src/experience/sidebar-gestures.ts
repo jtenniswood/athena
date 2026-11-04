@@ -12,6 +12,8 @@ interface SessionProjectDrag {
   active: boolean
   target: HTMLElement | null
   targetProjectId?: string
+  orderScope: HTMLElement | null
+  orderTarget: HTMLElement | null
 }
 
 interface SessionReorderDrag {
@@ -36,6 +38,8 @@ export function useSidebarGestures(root: RefObject<HTMLElement | null>, projects
     }
     const clearDrag = (drag: SessionProjectDrag) => {
       clearTarget(drag)
+      drag.orderTarget?.removeAttribute('data-session-order-drop')
+      drag.orderTarget = null
       drag.source.removeAttribute('data-session-moving')
       root.current?.removeAttribute('data-session-project-dragging')
       if (drag.source.hasPointerCapture(drag.pointerId)) drag.source.releasePointerCapture(drag.pointerId)
@@ -60,11 +64,22 @@ export function useSidebarGestures(root: RefObject<HTMLElement | null>, projects
       const drag = sessionProjectDrag.current
       if (!drag || drag.pointerId !== event.pointerId) return
       const valid = mounted(drag.source) && mounted(drag.target)
+      const orderTarget = drag.orderTarget
+      const orderScope = drag.orderScope
+      const orderValid = mounted(drag.source) && mounted(orderTarget) && !!orderScope &&
+        drag.source.closest('[data-browser-session-order]') === orderScope &&
+        orderTarget?.closest('[data-browser-session-order]') === orderScope
+      const after = orderTarget?.dataset.sessionOrderDrop === 'after'
       sessionProjectDrag.current = null
       clearDrag(drag)
-      if (!commit || !valid || !drag.active || !drag.targetProjectId) return
-      void projects.move(drag.sessionId, drag.targetProjectId, drag.profile)
-        .catch(projects.reportFailure)
+      if (!commit || !drag.active) return
+      if (valid && drag.targetProjectId) {
+        void projects.move(drag.sessionId, drag.targetProjectId, drag.profile).catch(projects.reportFailure)
+      } else if (orderValid && orderTarget && orderScope) {
+        orderScope.dispatchEvent(new CustomEvent('browser-session-reorder', {
+          detail: { sourceId: drag.sessionId, targetId: orderTarget.dataset.webSessionId!, after }
+        }))
+      }
     }
     const onPointerMove = (event: PointerEvent) => {
       if ((sessionProjectDrag.current && !mounted(sessionProjectDrag.current.source)) ||
@@ -107,6 +122,14 @@ export function useSidebarGestures(root: RefObject<HTMLElement | null>, projects
       const projectId = candidate && root.current?.contains(candidate) ? candidate.dataset.sessionsProject : undefined
       const nextTargetProjectId = projectId === drag.sourceProjectId ? null : projects.eligibleDrop(projectId)
       const nextTarget = nextTargetProjectId ? candidate : null
+      const orderRow = element instanceof Element ? element.closest<HTMLElement>('[data-web-session-id]') : null
+      drag.orderTarget?.removeAttribute('data-session-order-drop')
+      drag.orderTarget = !nextTarget && orderRow !== drag.source && orderRow?.hasAttribute('data-web-session-reorderable') && drag.orderScope &&
+        orderRow?.closest('[data-browser-session-order]') === drag.orderScope ? orderRow : null
+      if (drag.orderTarget) {
+        const rect = drag.orderTarget.getBoundingClientRect()
+        drag.orderTarget.dataset.sessionOrderDrop = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+      }
       if (nextTarget === drag.target) return
       clearTarget(drag)
       drag.target = nextTarget
@@ -166,7 +189,7 @@ export function useSidebarGestures(root: RefObject<HTMLElement | null>, projects
     const row = target.closest<HTMLElement>('[data-web-session-id]')
     if (!row || target.closest('[data-reorder-handle], [data-row-actions]')) return
 
-    // Row drags move chats; the grab handle retains the existing reorder gesture.
+    // Title drops reorder within their list or move into a different project.
     // Keep dnd-kit from lifting a row at the same time as a project move.
     event.stopPropagation()
     if (event.button !== 0) return
@@ -180,7 +203,9 @@ export function useSidebarGestures(root: RefObject<HTMLElement | null>, projects
       startY: event.clientY,
       active: false,
       target: null,
-      targetProjectId: undefined
+      targetProjectId: undefined,
+      orderScope: row.hasAttribute('data-web-session-reorderable') ? row.closest<HTMLElement>('[data-browser-session-order]') : null,
+      orderTarget: null
     }
   }
 }

@@ -1,5 +1,5 @@
 /* Browser-focused shell chrome. The chat, composer, themes and surfaces are upstream. */
-.browser-shell [data-reorder-handle]:has([data-browser-profile-picture]) { width:24px; height:24px; }
+.browser-shell [data-reorder-handle]:has([data-browser-profile-picture]) { width:16px; height:16px; }
 .browser-shell [data-reorder-handle]:has([data-browser-profile-picture]) > span:has([data-browser-profile-picture]) { opacity:1 !important; }
 .browser-shell [data-reorder-handle]:has([data-browser-profile-picture]) > .codicon-grabber { display:none; }
 .browser-sessions-pane [data-gateway-group]:has([data-browser-profile-picture]) + [data-gateway-group]:has([data-browser-profile-picture]) { margin-top:var(--web-space-3); }
@@ -114,11 +114,19 @@
 .browser-sessions-pane button[aria-label*="Mark all as read" i] { display:none !important; }
 .browser-sessions-pane :is(button[aria-label="New session"],[data-browser-section-header] button[data-size="icon-xs"]) { color:var(--web-text-muted); opacity:1 !important; }
 .browser-sessions-pane button[aria-label="New session"] { visibility:visible !important; pointer-events:auto !important; }
-/* All group headers share the profile controls and trailing inset.
-   Mark the header actions explicitly so disclosure and session rows keep their spacing. */
+/* Match the chat action columns, including nested profile/project controls. */
 .browser-sessions-pane [data-browser-group-header] { min-height:1.625rem; padding-block:0; padding-inline-end:.625rem; }
-.browser-sessions-pane [data-browser-group-actions] { gap:0; margin-inline-end:0; }
+.browser-sessions-pane [data-browser-group-actions] { margin-inline-end:0; }
+.browser-sessions-pane [data-browser-group-actions],
+.browser-sessions-pane [data-browser-group-actions] div:has(> button) { gap:var(--web-space-1); }
 .browser-sessions-pane [data-browser-group-actions] button { margin:0; color:var(--web-text-muted); opacity:1; }
+/* Reveal header controls on hover, keyboard focus, or an open menu.
+   Touch devices keep the controls visible because they cannot hover. */
+.browser-sessions-pane [data-browser-group-header]:is(:focus-within,:has([data-state="open"])) [data-browser-group-figures] { opacity:0; }
+@media (hover:hover) and (pointer:fine) {
+ .browser-sessions-pane [data-browser-group-actions] button { opacity:0; }
+ .browser-sessions-pane [data-browser-group-header]:is(:hover,:focus-within,:has([data-state="open"])) [data-browser-group-actions] button { opacity:1; }
+}
 /* Inset chat ages and unread dots while aligning hover actions with the header controls. */
 .browser-sessions-pane [data-web-session-id] .session-row-tail:has(time, [data-session-unread]) { padding-inline-end:var(--web-space-2); }
 /* Let metadata set the resting fade boundary, then reserve room for visible actions. */
@@ -221,9 +229,13 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-sessions-pane [data-web-session-id] > :first-child { padding-block:0; }
  .browser-sessions-pane [data-row-actions] { gap:var(--web-space-1); }
  .browser-sessions-pane [data-row-actions] button { position:relative; box-sizing:border-box; min-width:var(--web-touch-min); width:var(--web-touch-min); min-height:var(--web-touch-min); height:var(--web-touch-min); flex-shrink:0; color:var(--web-text-subtle) !important; }
+ /* Keep row creation and overflow controls out of the mobile chat list. */
+ .browser-sessions-pane :is([data-browser-group-actions], [data-row-actions]) button:has(:is(.codicon-add, .codicon-ellipsis, .codicon-kebab-vertical)) { display:none; }
+ /* Match the profile header inset instead of adding a second row gutter. */
+ .browser-sessions-pane [data-gateway-group] [data-web-session-id] { padding-inline-start:0; }
  .browser-sessions-pane [data-browser-session-actions] { position:relative; opacity:1; pointer-events:auto; }
- /* Session ages can sit beside the row button. Hide their separator too and
-    keep the always-visible context button in flow so it has its own space. */
+ .browser-sessions-pane [data-web-session-id]:is(:hover,:focus-within,:has([data-state="open"])) [data-row-actions]:has(> [data-browser-session-actions]) { min-width:0; }
+ /* Session ages can sit beside the row button. Hide their separator too. */
  .browser-sessions-pane :is([data-row-actions], button[data-slot="row-button"]) :is(time, span:has(> time)) { display:none !important; }
  .browser-main :has(> button[aria-label="Branch in new chat"]) { opacity:1 !important; pointer-events:auto !important; }
  .browser-main :is(button[aria-label="Branch in new chat"],button[aria-label="Copy"],button[aria-label="Read aloud"],button[aria-label="Refresh"],button[aria-label="Restore checkpoint"],button[aria-label="Scroll to bottom"]) { box-sizing:border-box; min-width:var(--web-touch-target); min-height:var(--web-touch-target); }
