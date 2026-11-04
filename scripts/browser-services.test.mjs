@@ -6,7 +6,7 @@ import ts from 'typescript'
 
 function load(name, globals) {
   const source = readFileSync(new URL(`../apps/web-desktop/src/platform/${name}.ts`, import.meta.url), 'utf8')
-  const context = vm.createContext({ exports: {}, Blob, ...globals })
+  const context = vm.createContext({ exports: {}, Blob, URL, ...globals })
   vm.runInContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context)
   return context.exports
 }
@@ -47,4 +47,22 @@ test('API errors keep the shell in place and websocket tickets are minted per ca
   await assert.rejects(client.apiFetch({ path: '/api/session' }), /401: Sign in again/)
   response = { ok: true, text: async () => '<html>wrong route</html>' }
   await assert.rejects(client.apiFetch({ path: '/api/session' }), /Expected JSON/)
+})
+
+test('plugin asset admission follows browser URL normalization for both roots', () => {
+  const files = load('files', { require: () => ({ servingBase: () => 'https://web.example.test' }) })
+  for (const root of ['plugins', 'desktop-plugins']) {
+    for (const suffix of ['', '/', '/review-widget/package.json', '/nested/../review-widget/package.json', '/file%20name.json', '/%2econfig']) {
+      assert.equal(files.isUnderPluginRoot(`https://web.example.test/${root}${suffix}`), true, suffix)
+    }
+    for (const suffix of ['Secret', '/../api/config', '/%2e%2e/api/config', '/nested/../../api/config', '/nested/%2f..%2f..%2fapi/config', '/nested/%5c..%5c..%5capi/config', '?alternate=/api/config', '#/api/config']) {
+      assert.equal(files.isUnderPluginRoot(`https://web.example.test/${root}${suffix}`), false, suffix)
+    }
+    assert.equal(files.isUnderPluginRoot(String.raw`https://web.example.test/${root}/nested/..\..\api/config`), false)
+    assert.equal(files.isUnderPluginRoot(`https://web.example.test:444/${root}/package.json`), false)
+    assert.equal(files.isUnderPluginRoot(`https://other.example.test/${root}/package.json`), false)
+    assert.equal(files.isUnderPluginRoot(`https://user:password@web.example.test/${root}/package.json`), false)
+    assert.equal(files.isUnderPluginRoot(`/${root}/package.json`), false)
+  }
+  assert.equal(files.isUnderPluginRoot('not a URL'), false)
 })
