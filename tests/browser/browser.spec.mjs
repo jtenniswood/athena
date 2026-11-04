@@ -224,7 +224,11 @@ test('sidebar cron peek and trigger retain the selected conversation and prevent
   await expect(editor(page)).toHaveText('Keep my cron sidebar draft')
 })
 
-test('chat hover previews show the latest reply without selecting the chat or changing its draft', async ({ page }) => {
+test('chat hover previews cache purpose summaries without selecting the chat or changing its draft', async ({ page }) => {
+  let generations = 0
+  page.on('websocket', socket => socket.on('framesent', ({ payload }) => {
+    try { if (JSON.parse(String(payload)).method === 'llm.oneshot') generations++ } catch { /* Ignore transport frames. */ }
+  }))
   const fullTitle = 'Explore a product idea with a deliberately long title that should fade at the edge and remain fully readable in the preview card'
   await page.route(/\/api\/profiles\/sessions/, async route => {
     const response = await route.fetch()
@@ -237,7 +241,8 @@ test('chat hover previews show the latest reply without selecting the chat or ch
   await row.hover()
   const card = page.locator('.browser-session-preview:visible')
   await expect(card.locator('.browser-session-preview-title')).toHaveText(fullTitle)
-  await expect(card.locator('.browser-session-generation p')).toContainText('one person, one problem, and one small experiment')
+  await expect(card.locator('.browser-session-generation p')).toContainText('Develop a thoughtful plan with clear priorities')
+  expect(generations).toBe(1)
   const rowBox = await row.boundingBox()
   const cardBox = await card.boundingBox()
   expect(cardBox.x).toBeGreaterThanOrEqual(rowBox.x + rowBox.width)
@@ -270,6 +275,52 @@ test('chat hover previews show the latest reply without selecting the chat or ch
   await page.keyboard.press('Tab')
   await page.keyboard.press('Shift+Tab')
   await expect(page.locator('.browser-session-preview:visible')).toBeVisible()
+  expect(generations).toBe(1)
+  await page.reload()
+  await expect(editor(page)).toBeVisible()
+  await row.hover()
+  await expect(card.locator('.browser-session-generation p')).toContainText('Develop a thoughtful plan with clear priorities')
+  expect(generations).toBe(1)
+  await page.keyboard.press('Escape')
+  const before = await (await page.request.get(`${origin}/api/sessions/preview-week/messages?profile=default`)).json()
+  await editor(page).fill('Revise the goal to protect two afternoons for focused research')
+  await editor(page).press('Enter')
+  // A fresh completion warms the selected chat even without opening its preview.
+  await expect.poll(() => generations, { timeout: 15000 }).toBe(2)
+  await expect.poll(() => page.evaluate(() => Object.entries(localStorage)
+    .filter(([key]) => key.startsWith('athena.session-summaries.v1.'))
+    .some(([, value]) => Object.keys(JSON.parse(value)).some(key => JSON.parse(key).at(-1) === 'preview-week')))).toBe(true)
+  const after = await (await page.request.get(`${origin}/api/sessions/preview-week/messages?profile=default`)).json()
+  expect(after.messages.length).toBe(before.messages.length + 2)
+  await expect(page).toHaveURL(/#\/preview-week$/)
+})
+
+test('failed purpose summaries retain the latest-reply preview without retrying every hover', async ({ page }) => {
+  let generations = 0
+  await page.routeWebSocket(/\/api\/ws/, socket => {
+    const server = socket.connectToServer()
+    socket.onMessage(message => {
+      const frame = JSON.parse(String(message))
+      if (frame.method === 'llm.oneshot') {
+        generations++
+        socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, error: { code: 5030, message: 'Summary model unavailable' } }))
+      } else server.send(message)
+    })
+  })
+  await open(page)
+  await editor(page).fill('Keep this draft after a summary failure')
+  const row = page.locator('[data-web-session-id="preview-idea"]').first()
+  const card = page.locator('.browser-session-preview:visible')
+  await row.hover()
+  await expect(card.locator('.browser-session-generation p')).toContainText('one person, one problem, and one small experiment')
+  await expect.poll(() => generations).toBe(1)
+  await page.keyboard.press('Escape')
+  await editor(page).hover()
+  await row.hover()
+  await expect(card.locator('.browser-session-generation p')).toContainText('one person, one problem, and one small experiment')
+  expect(generations).toBe(1)
+  await expect(editor(page)).toHaveText('Keep this draft after a summary failure')
+  await expect(page).toHaveURL(/#\/preview-week$/)
 })
 
 async function setFollowupPreference(page, value) {

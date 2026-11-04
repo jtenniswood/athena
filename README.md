@@ -116,6 +116,21 @@ gateway's local account. Backend profile configuration continues to be saved by
 Hermes. Drafts, credentials, browser permissions, transcript caches, and the
 currently selected conversation stay local.
 
+### Chat previews
+
+Hover or keyboard-focus a chat to see a short summary of its purpose. Athena
+generates summaries after completed turns while open, and fills older previews
+on demand. It uses the chat profile's **Title generation** auxiliary model in
+Settings → Models → Auxiliary; configure a cheap model there to reduce cost.
+When that slot is unset, Hermes uses the profile's default model and its normal
+provider fallback policy. Summaries use a small excerpt of the opening and recent
+messages and a short output limit, without adding messages to the conversation.
+
+The browser caches up to 100 summaries per account and gateway. They stay on
+that browser and are separate from settings sync. Reopening an unchanged preview
+reuses its cached summary; a failed generation retains the previous summary or
+the latest-reply preview. Drafts, selection, and read status are preserved.
+
 ### Browser notifications
 
 Open **Settings → Notifications → Allow browser notifications**, then accept

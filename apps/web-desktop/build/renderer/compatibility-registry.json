@@ -673,7 +673,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "chat hover previews show the latest reply without selecting the chat or changing its draft"
+        "scenario": "chat hover previews cache purpose summaries without selecting the chat or changing its draft"
       },
       {
         "file": "tests/browser/session-row.spec.mjs",
