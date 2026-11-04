@@ -9,8 +9,6 @@ import { $pinnedSessionIds, pinSession, unpinSession } from '@/store/layout'
 import { requestGatewayForAgent } from '@/store/gateway'
 import type { SessionOwnerRoute } from '@/store/session-request-router'
 import { deleteSession, renameSession, setSessionArchived } from '@/api/sessions'
-import { restoreListedSession } from '@/app/session/hooks/use-session-actions/utils'
-import { beginSessionMutation, endSessionMutation, tombstoneSessions, untombstoneSessions } from '@/store/session-removal'
 import { $unreadWriteGuard, markSessionUnread, pendingUnreadValue } from './browser-unread'
 import { reportActionFailure } from '../experience/action-errors'
 import { prepareBrowserArchiveUndo } from './archive-undo'
@@ -51,16 +49,8 @@ export function useBrowserSessionActions(conversation: BrowserConversationModel)
   const remove = async (action: 'archive' | 'delete') => {
     if (!selected) return
     const offerUndo = action === 'archive' ? prepareBrowserArchiveUndo(selected, profile, session) : undefined
-    const archivedIds = [selected, session?.id, session?._lineage_root_id]
-    let archiving = false
     try {
       if (action === 'archive' && !await confirmAndStopBrowserArchive(selected, profile, session)) return
-      if (action === 'archive') {
-        // Stop emits a refresh; keep its older sidebar snapshot from restoring this row.
-        tombstoneSessions(archivedIds)
-        beginSessionMutation(archivedIds)
-        archiving = true
-      }
       const result = action === 'archive'
         ? await setSessionArchived(selected, true, profile)
         : await deleteSession(selected, profile)
@@ -70,13 +60,7 @@ export function useBrowserSessionActions(conversation: BrowserConversationModel)
       // Completion belongs to this command; a newer selection keeps its route.
       if ($selectedStoredSessionId.get() === selected && $sessionResumeRequest.get() === resume) navigate('/')
     } catch {
-      if (archiving) {
-        untombstoneSessions(archivedIds)
-        if (session) restoreListedSession(session)
-      }
       reportActionFailure(`Could not ${action} conversation.`)
-    } finally {
-      if (archiving) endSessionMutation(archivedIds)
     }
   }
 
