@@ -9,7 +9,7 @@ import * as preferenceContract from './browser-preference-contract.mjs'
 const root = path.resolve('apps/web-desktop/src')
 
 function startupHarness({ configurationError, rendererError, existingBridge, signInReady = Promise.resolve(), preferencesReady = Promise.resolve() } = {}) {
-  const state = { configured: false, tracking: false, tokenConsumed: false, signedIn: false, engineRegistered: false, windowsReady: false, preferencesLoaded: false, shellInitialized: false, rendererLoaded: false }
+  const state = { configured: false, tracking: false, tokenConsumed: false, signedIn: false, engineRegistered: false, windowsReady: false, sessionRoutesReady: false, preferencesLoaded: false, shellInitialized: false, rendererLoaded: false }
   const listeners = new Map()
   const storage = new Map([['hermes-web.comparison.profile', 'saved-profile']])
   const window = {
@@ -55,6 +55,10 @@ function startupHarness({ configurationError, rendererError, existingBridge, sig
       state.engineRegistered = true
       return {}
     },
+    'upstream/browser-session-routes.ts': () => {
+      assert.equal(state.engineRegistered, true, 'session route dependencies must wait for engine registration')
+      return { installBrowserSessionRoutes() { state.sessionRoutesReady = true; return () => { state.sessionRoutesReady = false } } }
+    },
     'upstream/browser-windows.ts': () => {
       assert.ok(window.hermesDesktop)
       assert.equal(state.engineRegistered, true, 'window helper dependencies must not evaluate before engine registration')
@@ -69,6 +73,7 @@ function startupHarness({ configurationError, rendererError, existingBridge, sig
     '../../desktop/src/main.ts': () => {
       state.rendererLoaded = true
       assert.equal(state.shellInitialized, true)
+      assert.equal(state.sessionRoutesReady, true)
       assert.ok(window.hermesDesktop)
       assert.ok(listeners.has('contextmenu'))
       assert.equal(new URL(window.location.href).searchParams.has('win'), false)
@@ -163,6 +168,7 @@ test('renderer load errors reach the caller unchanged for startup recovery', asy
   const error = new Error('Failed to fetch dynamically imported module')
   const harness = startupHarness({ rendererError: error })
   await assert.rejects(harness.load('startup.ts').startBrowserApplication(), thrown => thrown === error)
+  assert.equal(harness.state.sessionRoutesReady, false)
 })
 
 test('explicit bridge installation preserves a preinstalled bridge', async () => {

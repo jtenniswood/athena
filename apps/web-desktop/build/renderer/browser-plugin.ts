@@ -1,3 +1,5 @@
+import { useBrowserSelectedSessionOwner, useBrowserOwnedSessionRpc, keepBrowserRenameProfile, scopeBrowserSessionTitles, scopeBrowserProjectTitles } from './transforms/session-routing'
+export { useBrowserSelectedSessionOwner, useBrowserOwnedSessionRpc, keepBrowserRenameProfile, scopeBrowserSessionTitles, scopeBrowserProjectTitles } from './transforms/session-routing'
 import { useBrowserThreadSubmitScroll } from './transforms/transcript'
 export { useBrowserThreadSubmitScroll } from './transforms/transcript'
 import {
@@ -260,6 +262,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
   if (digest(code) === entry.outputHash) return { code, map: null }
   if (digest(code) !== entry.inputHash) throw new Error(`Browser compatibility changed: ${entry.name} (${entry.module}). Review this registry entry.`)
   const handlers: Record<string, (source: string) => string> = {
+    useBrowserSelectedSessionOwner, keepBrowserRenameProfile, scopeBrowserSessionTitles, scopeBrowserProjectTitles,
+    useBrowserOwnedSessionRpc: source => useBrowserOwnedSessionRpc(source, root),
     exposeBrowserTimelineHistoryOwner,
     useBrowserTimelineOwner,
     useBrowserComposerLineBreak,

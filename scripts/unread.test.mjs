@@ -10,15 +10,15 @@ function harness(rows = [{ id: 'chat', profile: 'research', unread: false }]) {
     const listeners = new Set()
     return { get: () => value, set(next) { const previous = value; value = next; for (const listener of listeners) listener(next, previous) }, listen(listener) { listeners.add(listener); return () => listeners.delete(listener) } }
   }
-  const sessions = atom(rows), requests = []
+  const sessions = atom(rows), requests = [], resume = atom(null)
   const dependencies = {
-    atom, $sessions: sessions, setSessions: update => sessions.set(update(sessions.get())),
+    atom, $sessionResumeRequest: resume, $sessions: sessions, setSessions: update => sessions.set(update(sessions.get())),
     setSessionUnreadRemote: (id, unread, profile) => new Promise((resolve, reject) => requests.push({ id, unread, profile, resolve, reject }))
   }
   const context = vm.createContext({ exports: {}, require: () => dependencies })
   vm.runInContext(ts.transpileModule(readFileSync('apps/web-desktop/src/upstream/browser-unread.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, context)
   context.exports.watchUnreadWriteGuard()
-  return { ...context.exports, sessions, requests }
+  return { ...context.exports, sessions, requests, resume }
 }
 const flush = () => new Promise(resolve => setImmediate(resolve))
 
@@ -129,4 +129,21 @@ test('settled unread writes notify subscribers after pending ownership is releas
   h.requests[0].reject(new Error('Unread rejected'))
   await rejected
   assert.equal(observed, false, 'the last published state must include the rollback and completed ownership')
+})
+
+test('manual and automatic unread writes retain the selected profile for copied ids', async () => {
+  const h = harness([{ id: 'chat', profile: 'default', unread: true }, { id: 'chat', profile: 'research', unread: true }])
+  h.resume.set({ sessionId: 'chat', ownerRoute: { connectionId: 'web-single', profile: 'research' } })
+  const opened = h.clearUnreadOnOpen('chat')
+  await flush()
+  assert.equal(h.requests[0].profile, 'research')
+  assert.equal(h.sessions.get()[0].unread, true)
+  assert.equal(h.sessions.get()[1].unread, false)
+  h.requests[0].resolve({ ok: true })
+  await opened
+  const toggled = h.markSessionUnread('chat', true, 'research')
+  await flush()
+  assert.equal(h.requests[1].profile, 'research')
+  h.requests[1].resolve({ ok: true })
+  await toggled
 })

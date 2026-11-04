@@ -1,6 +1,6 @@
 import { useStore } from '@nanostores/react'
 
-import { $selectedStoredSessionId, $sessions } from '@/store/session'
+import { $selectedStoredSessionId, $sessionResumeRequest, $sessions } from '@/store/session'
 import { $groupChatWorkspace } from '@/plugins/hermes-bots/group-chat'
 import { $lastRoster } from '@/plugins/hermes-bots/data'
 import { $selectedBot } from '@/plugins/hermes-bots/bot-state'
@@ -14,6 +14,8 @@ export function useBrowserConversation(): BrowserConversationModel {
   const selectedBotKey = useStore($selectedBot)
   const groupName = useStore($groupChatWorkspace)
   const sessions = useStore($sessions)
+  const resume = useStore($sessionResumeRequest)
+  const selectedSessionOwner = resume?.sessionId === selectedSessionId ? resume.ownerRoute : undefined
   const bots = useStore($lastRoster)
   const workspaceMode = useStore($workspaceMode)
   const workspaceOwner = useStore($workspaceOwnerKey)
@@ -22,6 +24,7 @@ export function useBrowserConversation(): BrowserConversationModel {
 
   const identity = resolveConversationIdentity({
     selectedSessionId,
+    selectedSessionOwner,
     selectedBotKey,
     groupName,
     sessions,
@@ -32,6 +35,6 @@ export function useBrowserConversation(): BrowserConversationModel {
   // Dismiss navigation only for a different session or group, including before
   // that session's title and Bot identity have finished loading.
   const selectionKey = JSON.stringify(identity.kind === 'group'
-    ? ['group', identity.id] : ['session', identity.sessionId])
+    ? ['group', identity.id] : ['session', identity.sessionId, selectedSessionOwner?.connectionId || null, selectedSessionOwner?.profile || null])
   return { ...identity, selectionKey }
 }

@@ -82,7 +82,7 @@ test('session watch windows retain the requested profile and spectator route', a
     expect(url.searchParams.get('profile')).toBe('research')
     expect(url.searchParams.get('win')).toBe('secondary')
     expect(url.searchParams.get('watch')).toBe('1')
-    expect(url.hash).toBe('#/preview-research')
+    expect(url.hash).toBe('#/preview-research?profile=research')
     expect((await popup.evaluate(() => window.hermesDesktop.getConnection())).profile).toBe('research')
     await expect(composer(page)).toHaveText('Retain the original tab draft')
   } finally { await popup.close() }

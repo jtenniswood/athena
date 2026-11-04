@@ -1,6 +1,6 @@
 import { atom } from 'nanostores'
 import { setSessionUnreadRemote } from '@/hermes'
-import { $sessions, setSessions } from '@/store/session'
+import { $sessionResumeRequest, $sessions, setSessions } from '@/store/session'
 
 export const UNREAD_WRITE_GUARD_MS = 10_000
 type WriteGuard = { at: number; value: boolean; profile?: string | null }
@@ -15,8 +15,9 @@ export function pendingUnreadValue(id: string | null, profile?: string | null): 
 }
 
 /** All callers, including automatic read-on-open, share this commit owner. */
-export async function markSessionUnread(storedId: string, unread: boolean): Promise<void> {
-  const row = $sessions.get().find(candidate => candidate.id === storedId)
+export async function markSessionUnread(storedId: string, unread: boolean, ownerProfile?: string): Promise<void> {
+  const row = $sessions.get().find(candidate => candidate.id === storedId &&
+    (!ownerProfile || (candidate.profile || 'default') === ownerProfile))
   if (!row) return
   const profile = row.profile
   const key = ownerKey(storedId, profile)
@@ -64,9 +65,12 @@ export async function markSessionUnread(storedId: string, unread: boolean): Prom
 }
 
 export async function clearUnreadOnOpen(storedId: string): Promise<void> {
-  const row = $sessions.get().find(candidate => candidate.id === storedId)
+  const resume = $sessionResumeRequest.get()
+  const ownerProfile = resume?.sessionId === storedId ? resume.ownerRoute?.profile : undefined
+  const row = $sessions.get().find(candidate => candidate.id === storedId &&
+    (!ownerProfile || (candidate.profile || 'default') === ownerProfile))
   if (!row || (pendingUnreadValue(storedId, row.profile) ?? row.unread) !== true) return
-  try { await markSessionUnread(storedId, false) } catch { /* A later refresh reconciles automatic read failures. */ }
+  try { await markSessionUnread(storedId, false, ownerProfile) } catch { /* A later refresh reconciles automatic read failures. */ }
 }
 
 /** Optimistic rows are not confirmation; retain their guards during writes. */

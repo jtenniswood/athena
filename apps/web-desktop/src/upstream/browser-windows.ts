@@ -2,6 +2,7 @@ import { announceWebappWindow, createBrowserWindowOpener, sessionWindowTarget } 
 import { $activeGatewayProfile } from '@/store/profile'
 import { apiFetch, WEB_CONNECTION_ID } from '../platform/connection'
 import { isAndroidApp } from '../platform/android'
+import { withBrowserSessionProfile } from '../platform/session-route'
 
 /** Engine-dependent window helpers load only after bridge and store registration. */
 export function installBrowserWindowCommands(): void {
@@ -24,7 +25,7 @@ export function installBrowserWindowCommands(): void {
     const target = sessionWindowTarget(window.location.href, sessionId, {
       profile: profileFor(options), watch: options?.watch
     })
-    return target ? open(target) : { ok: false, error: 'invalid_session_id' }
+    return target ? open(withBrowserSessionProfile(target, options?.profile)) : { ok: false, error: 'invalid_session_id' }
   }
   bridge.openWindow = async route => {
     const target = new URL(window.location.href)

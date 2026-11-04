@@ -8,9 +8,13 @@ export async function startBrowserHost(): Promise<void> {
   observeRendererPreferences()
   prepareBrowserBridge()
   await import('./engine-registration')
-  const { installBrowserWindowCommands } = await import('./browser-windows')
-  installBrowserWindowCommands()
-  const { initializeBrowserShell } = await import('./browser-initialize')
-  initializeBrowserShell()
-  await import('../../../desktop/src/main')
+  const { installBrowserSessionRoutes } = await import('./browser-session-routes')
+  const stopSessionRoutes = installBrowserSessionRoutes()
+  try {
+    const { installBrowserWindowCommands } = await import('./browser-windows')
+    installBrowserWindowCommands()
+    const { initializeBrowserShell } = await import('./browser-initialize')
+    initializeBrowserShell()
+    await import('../../../desktop/src/main')
+  } catch (error) { stopSessionRoutes(); throw error }
 }

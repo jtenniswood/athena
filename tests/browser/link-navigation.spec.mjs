@@ -82,7 +82,7 @@ test('chat references open real browser tabs and preserve the original draft', a
     await expect(popup).toHaveURL(destination)
     expect(await popup.evaluate(() => window.opener)).toBeNull()
     await expect(editor(popup)).toBeVisible({ timeout: 30000 })
-    if (destination.endsWith('/preview-research')) {
+    if (new URL(destination).hash.split('?')[0] === '#/preview-research') {
       await expect(popup.getByText('I can help you investigate a question, compare approaches, and organize your findings. What are you curious about?', { exact: true })).toBeVisible()
     }
     await popup.close()

@@ -59,7 +59,22 @@ window acknowledges that it loaded; a null `window.open` result under `noopener`
 does not imply it was blocked. The existing notification owner handles timeout
 and late readiness. Session/profile/watch routes retain their engine semantics,
 while Athena validates the configured gateway and seeds its existing tab profile
-before stores load. Profile changes update that routed tab's reload seed without
+before stores load. Explicit session references and window commands also bind the
+profile to the hash chat route. `upstream/browser-session-routes.ts` admits that
+owner through the engine's existing resume command before initial rendering and
+native history changes. The outer window-profile query can still change with
+the sidebar filter while the chat route retains its own owner.
+
+The captured engine selection distinguishes copied session IDs when projecting
+conversation metadata and toolbar commands. It also precedes historical rows in
+the shared session-owner resolver. Owned session RPCs always name their profile
+on Athena's multiplexed socket, including a tab's startup profile. Background
+row renames cannot borrow another profile's selected runtime. The existing title
+publishers accept the captured profile for session slices and project previews,
+so renaming one copy preserves the other copy's metadata. Drafts, prepared
+submissions, retries and session state retain their existing engine owners.
+
+Profile changes update that routed tab's reload seed without
 changing router history state. Android retains one app window. Hosts without the
 readiness channel also omit app-window commands. Ordinary external browser links
 keep their existing owner.
