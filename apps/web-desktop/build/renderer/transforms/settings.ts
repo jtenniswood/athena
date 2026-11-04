@@ -187,6 +187,10 @@ export function filterBrowserSettingsFields(source: string, root: string): strin
     if (output.split(before).length !== 2) throw new Error('Browser device-only configuration boundary changed')
     output = output.replace(before, after)
   }
+  // The empty state follows the controls that survive browser capability filtering.
+  output = replaceBrowserContract(output, [[
+    "      ? activeSectionId !== 'chat'", "      ? !showAttachments"
+  ]])
   return `import { isSettingsFieldVisible } from ${owner}\n` + output
 }
 
