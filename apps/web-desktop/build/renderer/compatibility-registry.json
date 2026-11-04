@@ -3797,5 +3797,24 @@
     "sourceRoot": "renderer",
     "inputHash": "89088e919378bf4f908baa23d8b06e80962b760e8a3e04fce31abd7c0003cd0c",
     "outputHash": "7f157d02551ed8e60c7d1a460e1726bea09d026de9b2aeed2abeb29b3e7a0c38"
+  },
+  {
+    "name": "browser-goal-resume-action",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "app/chat/composer/status-stack/session-control-goal.tsx",
+    "reason": "Expose the existing goal resume action in expanded and collapsed headers.",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/goal-resume.spec.mjs",
+        "scenario": "without losing drafts"
+      }
+    ],
+    "removal": "Remove when upstream goal headers expose a direct resume action.",
+    "sourceHash": "562b5a1e3fba44d3670aa45eee56e1150d5ae8d79ca5992b28c81cabd4493e15",
+    "outputHash": "72d71f2e6ad037d2fd549b25ba39e7672228b7f4a2980fd73f2c3b57ceca53dc",
+    "handler": "browser-goal-resume-action",
+    "sourceRoot": "renderer"
   }
 ]
