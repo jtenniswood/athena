@@ -13,14 +13,14 @@ test.beforeEach(async ({ page }) => {
 })
 test.afterEach(async ({ page }) => { expect(pageErrors.get(page)).toEqual([]) })
 
-async function openSidebar(page, { combined = false, occupied = false, failMove = false, sourceProfile = 'default' } = {}) {
+async function openSidebar(page, { combined = false, occupied = false, failMove = false, sourceProfile = 'default', grouped = true } = {}) {
   const moves = []
   await page.route('**/api/athena/preferences', route => route.abort())
-  await page.addInitScript(combined => {
+  await page.addInitScript(({ combined, grouped }) => {
     localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles', combined ? 'project' : 'none')
-    localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarAgentsGrouped.allProfiles', 'true')
+    localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarAgentsGrouped.allProfiles', String(grouped))
     localStorage.setItem('hermes-web.browser.combined-profiles', String(combined))
-  }, combined)
+  }, { combined, grouped })
   const sessions = [...app.gateway.sessions.values()].filter(session => !session.hidden).map(session => ({
     ...session, profile: session.id === 'preview-idea' ? sourceProfile : session.profile
   }))
@@ -173,6 +173,64 @@ for (const change of ['source row', 'destination', 'window focus']) {
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
     expect(moves).toEqual([])
     await expect(page.locator('[data-session-drop-active]')).toHaveCount(0)
+    await expect(editor).toHaveText('Keep the draft through sidebar gestures')
+  })
+}
+
+async function aimOrder(page) {
+  const source = page.locator('[data-web-session-id="preview-idea"]').first()
+  const target = page.locator('[data-web-session-id="preview-week"]').first()
+  const title = source.locator('.browser-session-title')
+  const start = await title.boundingBox(), end = await target.boundingBox()
+  const after = start.y < end.y
+  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(end.x + end.width / 2, end.y + end.height * (after ? .8 : .2), { steps: 10 })
+  await expect(target).toHaveAttribute('data-session-order-drop', after ? 'after' : 'before')
+  return { source, target, after }
+}
+
+for (const [layout, combined, grouped] of [
+  ['flat', false, false], ['profiles', true, false],
+  ['projects', false, true], ['combined projects', true, true]
+]) {
+  test(`chat title drops save the order and preserve the draft in ${layout}`, async ({ page }) => {
+    const { moves, editor } = await openSidebar(page, { combined, grouped })
+    const { source, target, after } = await aimOrder(page)
+    await page.mouse.up()
+    const isAfter = async () => (await source.boundingBox()).y > (await target.boundingBox()).y
+    await expect.poll(isAfter).toBe(after)
+    expect(moves).toEqual([])
+    await expect(page).toHaveURL(/#\/preview-week$/)
+    await expect(editor).toHaveText('Keep the draft through sidebar gestures')
+    await expect(page.locator('[data-session-moving], [data-session-order-drop]')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Filters', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Ordering', exact: true }).hover()
+    await expect(page.getByRole('menuitemradio', { name: 'Manual', exact: true })).toBeChecked()
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('Escape')
+    await page.reload()
+    await expect(source).toBeVisible()
+    await expect.poll(isAfter).toBe(after)
+    await expect(editor).toHaveText('Keep the draft through sidebar gestures')
+  })
+}
+
+for (const cancellation of ['Escape', 'pointercancel', 'outside', 'source removed']) {
+  test(`cancelling a title reorder with ${cancellation} keeps the order and draft`, async ({ page }) => {
+    const { moves, editor } = await openSidebar(page)
+    const { source, target, after } = await aimOrder(page)
+    if (cancellation === 'Escape') await page.keyboard.press('Escape')
+    else if (cancellation === 'pointercancel') await source.dispatchEvent('pointercancel', { pointerId: 1, bubbles: true })
+    else if (cancellation === 'outside') await page.mouse.move(1200, 500)
+    else await source.evaluate(element => element.remove())
+    await page.mouse.up()
+    if (cancellation !== 'source removed') {
+      await expect.poll(async () => (await source.boundingBox()).y > (await target.boundingBox()).y).toBe(!after)
+    }
+    await expect(page.locator('[data-session-moving], [data-session-order-drop]')).toHaveCount(0)
+    expect(moves).toEqual([])
+    await expect(page).toHaveURL(/#\/preview-week$/)
     await expect(editor).toHaveText('Keep the draft through sidebar gestures')
   })
 }

@@ -30,6 +30,7 @@ export function BrowserSessionRow({ row, className, ...props }: ComponentProps<'
       'group-hover:text-foreground group-data-[working=true]:text-foreground/90')}><span>{row.title}</span></span>
   </button>
   return <div {...props} data-web-session-id={row.id} data-web-session-profile={row.profile}
+    data-web-session-reorderable={row.reorderable ? '' : undefined}
     data-web-session-selected={row.selected || undefined} data-working={row.working ? 'true' : undefined}
     data-glass-opaque={row.dragging ? '' : undefined}
     className={cn('group row-hover relative grid min-h-[1.625rem] grid-cols-[minmax(0,1fr)_auto] items-stretch rounded-md pr-2',

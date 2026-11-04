@@ -39,6 +39,10 @@ export function useBrowserSidebarController(source: string, root: string): strin
 export function useBrowserSessionSection(source: string, root: string): string {
   source = replaceBrowserContract(source, [
     ['interface SidebarSessionsSectionProps {', 'interface SidebarSessionsSectionProps {\n  browserSectionId: string'],
+    ['<ReorderableList ids={sortableRowIds} onReorder={persistSessionOrder} sensors={dndSensors}>\n        {virtual}', '<BrowserSessionReorderList ids={sortableRowIds} onReorder={persistSessionOrder} sensors={dndSensors}>\n        {virtual}'],
+    ['<ReorderableList ids={sortableRowIds} onReorder={persistSessionOrder} sensors={dndSensors}>\n        {visibleRows.map', '<BrowserSessionReorderList ids={sortableRowIds} onReorder={persistSessionOrder} sensors={dndSensors}>\n        {visibleRows.map'],
+    ['        {virtual}\n      </ReorderableList>', '        {virtual}\n      </BrowserSessionReorderList>'],
+    ['        {visibleRows.map(row => renderListRow(row, true, dividerAction))}\n      </ReorderableList>', '        {visibleRows.map(row => renderListRow(row, true, dividerAction))}\n      </BrowserSessionReorderList>'],
     ['export function SidebarSessionsSection({', 'export function SidebarSessionsSection({\n  browserSectionId,']
   ])
   source = replaceBrowserContract(source, [
@@ -62,7 +66,8 @@ export function useBrowserSessionSection(source: string, root: string): string {
     icon: labelIcon, meta: labelMeta, actions: headerAction, className: rootClassName,
     contentClassName: resolvedContentClassName, pinned
   }} footer={footer}>{inner}</BrowserSidebarSection>`)
-  return `import { browserProfileListRows } from ${JSON.stringify(path.join(root, 'src/upstream/profile-list-rows'))}\n` +
+  return `import { BrowserSessionReorderList } from ${JSON.stringify(path.join(root, 'src/upstream/session-reorder-list'))}\n` +
+    `import { browserProfileListRows } from ${JSON.stringify(path.join(root, 'src/upstream/profile-list-rows'))}\n` +
     `import { BrowserProfileProjects, browserProfileProjectGroups } from ${JSON.stringify(path.join(root, 'src/upstream/profile-projects'))}\n` +
     `import { BrowserSidebarSection } from ${JSON.stringify(path.join(root, 'src/experience/sidebar-section'))}\n` + source
 }

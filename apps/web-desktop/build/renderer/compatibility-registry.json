@@ -2094,6 +2094,14 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "profile layout composes with content grouping and preserves the draft"
+      },
+      {
+        "file": "tests/browser/sidebar-gestures.spec.mjs",
+        "scenario": "chat title drops save the order and preserve the draft"
+      },
+      {
+        "file": "tests/browser/sidebar-gestures.spec.mjs",
+        "scenario": "cancelling a title reorder"
       }
     ],
     "removal": "Remove when the renderer exposes the same section controller through a public host contract.",
@@ -2104,7 +2112,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "2ebde4eff5928b33dddbb4fd00255441c1b9f21180db651389df64fb82fbdc7e",
     "inputHash": "2ebde4eff5928b33dddbb4fd00255441c1b9f21180db651389df64fb82fbdc7e",
-    "outputHash": "c3c246545b382a685c183a545a07f6f27825ce28d06ad437eed8b3211c434dfa"
+    "outputHash": "ef154ffc33e0517c7a3d3c2d9664a092dac6be463d6185a70310803d1741374e"
   },
   {
     "name": "browser-cron-jobs-section-styling",

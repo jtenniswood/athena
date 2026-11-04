@@ -363,17 +363,26 @@ export function useBrowserSessionReordering(source: string, surface: 'section' |
       const profileGroups = !embeddedGroups && groups?.every(group => group.mode === 'profile')
       const scoped = profileGroups ? browserProfileListRows(items, grouping, dotStates, statusDividerLabels)
         : toSessionRows(flattenSessionsWithBranches(items))
-      const rows = orderRowsWithinGroups(scoped, manualOrderIds ?? [])
-      const visible = hideCollapsedGroupRows(rows, isListGroupOpen)
-      const content = visible.map(row => renderListRow(row, sessionsDraggable))
-      if (!sessionsDraggable) return content
-      const allIds = reorderableRowIds(orderRowsWithinGroups(toSessionRows(flattenSessionsWithBranches(sessions)), manualOrderIds ?? []))
-      return <ReorderableList ids={reorderableRowIds(visible)} sensors={dndSensors}
-        onReorder={ids => onReorderSessions?.(mergeVisibleReorder(allIds, ids))}>
-        {content}
-      </ReorderableList>
+      return renderBrowserRows(scoped)
     },
-    [renderListRow, sessionsDraggable, manualOrderIds, sessions, dndSensors, onReorderSessions, embeddedGroups, groups, grouping, dotStates, statusDividerLabels, isListGroupOpen]`]
+    [renderBrowserRows, embeddedGroups, groups, grouping, dotStates, statusDividerLabels]`],
+    ['  const renderRows = useCallback(', `  const renderBrowserRows = useCallback((rows: SidebarListRow[]) => {
+    const ordered = orderRowsWithinGroups(rows, manualOrderIds ?? [])
+    const visible = hideCollapsedGroupRows(ordered, isListGroupOpen)
+    const content = visible.map(row => renderListRow(row, sessionsDraggable))
+    if (!sessionsDraggable) return content
+    const allIds = reorderableRowIds(orderRowsWithinGroups(toSessionRows(flattenSessionsWithBranches(sessions)), manualOrderIds ?? []))
+    return <BrowserSessionReorderList ids={reorderableRowIds(visible)} sensors={dndSensors}
+      onReorder={ids => onReorderSessions?.(mergeVisibleReorder(allIds, ids))}>
+      {content}
+    </BrowserSessionReorderList>
+  }, [renderListRow, sessionsDraggable, manualOrderIds, sessions, dndSensors, onReorderSessions, isListGroupOpen])
+
+  const renderRows = useCallback(`],
+    ['return hideCollapsedGroupRows(ordered, isListGroupOpen).map(row => renderListRow(row, false))', 'return renderBrowserRows(ordered)'],
+    ['[isListGroupOpen, manualOrderIds, renderListRow, showAllSessions]', '[manualOrderIds, renderBrowserRows, showAllSessions]'],
+    ['return hideCollapsedGroupRows(rows, isListGroupOpen).map(row => renderListRow(row, false))', 'return renderBrowserRows(rows)'],
+    ['[grouping, isListGroupOpen, renderListRow]', '[grouping, renderBrowserRows]']
   ] : [
     ['  const rankIds = useStore($sidebarSessionRankIds)', `  const rankedIds = useStore($sidebarSessionRankIds)
   const manualIds = useStore($sidebarSessionOrderIds)
