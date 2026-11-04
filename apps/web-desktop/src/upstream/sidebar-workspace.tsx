@@ -10,7 +10,7 @@ import { BrowserProfileHeader, BrowserTreeAdd, BrowserTreeBody, BrowserTreeHeade
 import { useBrowserSidebarFigures } from './sidebar-profile'
 
 interface WorkspaceController {
-  group: SidebarSessionGroup
+  group: SidebarSessionGroup & { browserProject?: boolean }
   isProfileGroup: boolean
   usage?: { tokens: number; cost_usd: number }
   open: boolean
@@ -40,8 +40,8 @@ export function BrowserWorkspaceControllerSurface({ model }: { model: WorkspaceC
       icon: <ProfileGlyph className="size-full" color={group.color ?? null} isDefault={group.id === 'default'} name={group.label} /> }} /> :
       <WorkspaceContextMenu onRemove={model.onRemove} path={group.path}>
         <BrowserTreeHeader model={{ label: group.label, title: group.path ? displayPath(group.path) : undefined,
-          toggle: model.toggleOpen, open: model.open,
-          icon: <i aria-hidden="true" className={`codicon codicon-${group.isKanban ? 'checklist' : group.isHome ? 'home' : 'git-branch'} shrink-0 text-(--ui-text-tertiary)`} style={{ fontSize: '0.75rem' }} />,
+          toggle: model.toggleOpen, open: model.open, project: group.browserProject,
+          icon: <i aria-hidden="true" className={`codicon codicon-${group.browserProject ? model.open ? 'folder-opened' : 'folder' : group.isKanban ? 'checklist' : group.isHome ? 'home' : 'git-branch'} shrink-0 text-(--ui-text-tertiary)`} style={{ fontSize: '0.75rem' }} />,
           actions: (model.canCreate || model.onRemove) && <div className="flex items-center">{create}{model.onRemove && <WorkspaceMenu onRemove={model.onRemove} path={group.path} />}</div> }} />
       </WorkspaceContextMenu>}
     {model.open && <BrowserTreeBody empty={model.empty} emptyLabel={s.noSessions}
