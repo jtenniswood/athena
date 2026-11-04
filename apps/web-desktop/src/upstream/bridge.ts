@@ -20,7 +20,7 @@ import { openBrowserExternalLink } from './external-links'
 import { browserDefaultProfile as defaultProfileRoute } from '../platform/browser-default-profile'
 import { createWebZoomBridge } from '../platform/display'
 import { clipboardImageAsFile, readClipboard, writeClipboard } from '../platform/clipboard'
-import { isUnderPluginRoot, isWebFileHandle, registerWebFile, webFileAsDataUrl, ensureFileInput, pickWithInput, acceptsFor } from '../platform/files'
+import { isUnderPluginRoot, isWebFileHandle, registerWebFile, webFileAsDataUrl, pickBrowserFiles } from '../platform/files'
 import { webNotify } from '../platform/notifications'
 import { androidPushGatewayUrl, resumeAndroidPush, stopAndroidPush } from '../platform/android-push'
 import { WEB_CONNECTION_ID, wsBaseUrl, connection, connectionForProfile, resolveToken, buildTokenWsUrl, mintWsTicket, apiFetch, waitForRemoteRestart, loadStoredConnection, persistConnection, toConnectionConfig, fetchStatus, baseUrl, isSameOrigin, openOauthLoginPopup } from '../platform/connection'
@@ -315,19 +315,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
       return { path: filePath, text }
     },
     selectPaths: async options => {
-      if (options?.directories) {
-        // Folders have no single byte payload a remote gateway can stage
-        // (`@folder:` refs point at a server-side path); keep the picker
-        // file-only rather than emitting a ref to an unreadable handle.
-        return []
-      }
-
-      const input = ensureFileInput()
-      input.multiple = options?.multiple !== false
-      input.webkitdirectory = false
-      input.accept = acceptsFor(options?.filters)
-
-      const files = await pickWithInput(input)
+      const files = await pickBrowserFiles(options)
 
       return files.map(file => registerWebFile(file, file.name))
     },

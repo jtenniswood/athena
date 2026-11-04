@@ -87,62 +87,52 @@ export function webFileAsDataUrl(handle: string): Promise<string> {
   })
 }
 
-// Persistent hidden <input type=file> backing selectPaths. We reuse one
-// element (retargeting `accept`/`multiple` per call) so the picker always
-// opens inside a plain user gesture without rebuilding DOM nodes.
-let fileInputEl: null | HTMLInputElement = null
+let cancelPicker: (() => void) | undefined
 
-export function ensureFileInput(): HTMLInputElement {
-  if (!fileInputEl) {
-    fileInputEl = document.createElement('input')
-    fileInputEl.type = 'file'
-    fileInputEl.style.display = 'none'
-    document.body.appendChild(fileInputEl)
-  }
-
-  return fileInputEl
+/** Each request owns its input; removing it cannot affect another draft's picker. */
+export async function pickBrowserFiles(options?: { directories?: boolean; multiple?: boolean; filters?: Array<{ extensions: string[] }> }): Promise<File[]> {
+  // Folders have no single byte payload a remote gateway can stage.
+  if (options?.directories) return []
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.style.display = 'none'
+  input.multiple = options?.multiple !== false
+  input.webkitdirectory = false
+  input.accept = acceptsFor(options?.filters)
+  document.body.appendChild(input)
+  try { return await pickWithInput(input) }
+  finally { input.remove() }
 }
 
-/** Open the native picker and resolve to the chosen files ([] on cancel).
- *  input.click() must stay inside the triggering click's user-gesture window;
- *  the Promise executor runs synchronously, so it does. */
+/** Open synchronously in the user gesture; a newer request cancels the old owner. */
 export function pickWithInput(input: HTMLInputElement): Promise<File[]> {
+  cancelPicker?.()
   const finish = beginOperation()
-  input.value = '' // allow re-selecting the same file
-
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     let settled = false
-
-    input.addEventListener('change', onChange)
-    input.addEventListener('cancel', onCancel)
-    try { input.click() } catch (error) { finish(); throw error }
-
-    // Some mobile / webview pickers never fire `cancel`, which would leave this
-    // pending forever. Fall back to [] if nothing settles in time — far longer
-    // than any real selection, so it only guards against the missed-cancel leak.
-    const pendingTimer = setTimeout(fallback, 120_000)
-
-    function settle(files: File[]): void {
-      if (settled) return
+    let pendingTimer: ReturnType<typeof setTimeout> | undefined
+    const cleanup = (): boolean => {
+      if (settled) return false
       settled = true
       clearTimeout(pendingTimer)
       input.removeEventListener('change', onChange)
       input.removeEventListener('cancel', onCancel)
+      if (cancelPicker === onCancel) cancelPicker = undefined
       finish()
-      resolve(files)
+      return true
     }
-
-    function onChange(): void {
-      settle(Array.from(input.files ?? []))
-    }
-
-    function onCancel(): void {
-      settle([])
-    }
-
-    function fallback(): void {
-      settle([])
-    }
+    function settle(files: File[]): void { if (cleanup()) resolve(files) }
+    function onChange(): void { settle(Array.from(input.files ?? [])) }
+    function onCancel(): void { settle([]) }
+    cancelPicker = onCancel
+    try {
+      input.value = ''
+      input.addEventListener('change', onChange)
+      input.addEventListener('cancel', onCancel)
+      // Retain the existing deadline for clients that omit the cancel event.
+      pendingTimer = setTimeout(onCancel, 120_000)
+      input.click()
+    } catch (error) { if (cleanup()) reject(error) }
   })
 }
 
