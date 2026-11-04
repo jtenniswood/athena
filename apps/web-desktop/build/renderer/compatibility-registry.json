@@ -2391,6 +2391,18 @@
       {
         "file": "tests/browser/interruptions.spec.mjs",
         "scenario": "rejected Bot duplication and deletion leave the roster and draft intact"
+      },
+      {
+        "file": "scripts/state-safety.test.mjs",
+        "scenario": "page transitions reserve portal interaction and reject foreign or stale ownership"
+      },
+      {
+        "file": "tests/browser/transition-portals.spec.mjs",
+        "scenario": "connection apply blocks portaled menu actions and restores interaction after reconnect"
+      },
+      {
+        "file": "tests/browser/notification-routing.spec.mjs",
+        "scenario": "a prepared update blocks portal menus until the worker aborts"
       }
     ],
     "removal": "Remove when upstream controlled dialogs restore their opening control and constrain resizable content to the scaled browser viewport."

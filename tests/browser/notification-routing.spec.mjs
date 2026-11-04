@@ -72,6 +72,25 @@ test('notification routes yield to a prepared update and work again after abort'
   expect(await page.evaluate(() => window.notificationDocument)).toBe('Retain this document')
 })
 
+test('a prepared update blocks portal menus until the worker aborts', async ({ page }) => {
+  await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
+  const rename = page.locator('[role="menuitem"]').filter({ hasText: /^Rename/ })
+  await expect(rename).toBeVisible()
+  expect(await rename.evaluate(node => document.getElementById('root').contains(node))).toBe(false)
+  try {
+    expect((await sendFromWorker(page, { type: 'HERMES_FLUSH_UPDATE', transaction: 'portal-check' })).ready).toBe(true)
+    await expect(page.locator('body')).toHaveJSProperty('inert', true)
+    await expect(rename.click({ timeout: 500 })).rejects.toThrow()
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0)
+  } finally { await sendFromWorker(page, { type: 'HERMES_ABORT_UPDATE', transaction: 'portal-check' }, false) }
+  await expect(page.locator('body')).toHaveJSProperty('inert', false)
+  if (!await rename.isVisible()) await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
+  await rename.click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(composer(page)).toHaveText('Keep this notification-tab draft')
+})
+
 test('pending sign-out refuses PWA preparation and retains its draft after logout fails', async ({ page }) => {
   await page.evaluate(() => { location.hash = '/settings?tab=gateway' })
   let finishLogout
