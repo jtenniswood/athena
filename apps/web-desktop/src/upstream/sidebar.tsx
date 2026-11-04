@@ -126,7 +126,7 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
     onDeleteSession: c.onDeleteSession, onResumeSession: c.onResumeSession, onToggleUnread: c.toggleUnread
   }
   const navigation = c.navItems.filter(item => item.id !== 'capabilities').map(item => ({
-    id: item.id, label: s.nav[item.id] ?? item.label, icon: <item.icon className="size-4 shrink-0 text-[color-mix(in_srgb,currentColor_72%,transparent)]" />,
+    id: item.id, label: item.id === 'new-session' ? 'New Session' : (s.nav[item.id] ?? item.label), icon: <item.icon className="size-4 shrink-0 text-[color-mix(in_srgb,currentColor_72%,transparent)]" />,
     active: (['messaging', 'artifacts', 'cron'].includes(item.id) && c.currentView === item.id) ||
       (c.currentView === 'extension' && Boolean(item.route) && c.pathname === item.route), disabled: !item.action && !item.route,
     run: () => { if (item.id === 'new-session') $newChatProfile.set(null); if (item.keybindActionId) recordAction(item.keybindActionId, 'click'); c.onNavigate(item) },
