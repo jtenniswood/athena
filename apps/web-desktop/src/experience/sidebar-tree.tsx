@@ -39,6 +39,7 @@ export interface BrowserTreeHeaderModel {
   enter?(): void
   toggleLabel?: string
   active?: boolean
+  project?: boolean
   emphasis?: boolean
   icon: ReactNode
   actions?: ReactNode
@@ -48,7 +49,7 @@ export interface BrowserTreeHeaderModel {
 export function BrowserTreeHeader({ model, className, ...props }: ComponentProps<'div'> & { model: BrowserTreeHeaderModel }) {
   const tailLength = Math.min(14, Math.floor(model.label.length / 2))
   return <div {...props} className={cn('group/workspace flex min-h-6 items-center gap-1 px-2 pt-1 text-[0.6875rem]',
-    model.emphasis ? 'font-semibold text-(--ui-text-secondary)' : 'font-medium text-(--ui-text-tertiary)', className)}>
+    model.emphasis ? 'font-semibold text-(--ui-text-secondary)' : 'font-medium text-(--ui-text-tertiary)', model.project && 'pl-4.5', className)}>
     <button type="button" aria-label={model.toggleLabel} aria-expanded={model.open} onClick={model.toggle} onDoubleClick={model.enter}
       className={cn('flex min-w-0 flex-1 items-center gap-1.5 bg-transparent text-left', model.emphasis ? 'hover:text-foreground' : 'hover:text-(--ui-text-secondary)')}>
       <span className="grid size-3.5 shrink-0 place-items-center">{model.icon}</span>

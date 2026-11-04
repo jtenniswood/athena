@@ -42,7 +42,7 @@ export function BrowserSidebarProject({ model, children, ...props }: ComponentPr
       if (!event.currentTarget.contains(event.target as Node) || (event.target as Element).closest('[data-reorder-handle], [data-row-actions]')) return
       model.dragHandleProps?.onPointerDown?.(event)
     }} model={{ label: model.label, title: model.autoLabel, open: model.open, toggle: model.toggle, enter: model.enter,
-      toggleLabel: model.toggleLabel, active: model.active, icon: lead,
+      toggleLabel: model.toggleLabel, active: model.active, project: true, icon: lead,
       actions: <div data-row-actions="" className="flex shrink-0 items-center self-stretch">
         {model.figures ? <div className="relative flex items-center"><span className="min-w-9 whitespace-nowrap text-right text-[0.625rem] leading-none text-(--ui-text-tertiary) transition-opacity group-hover/workspace:opacity-0">{model.figures}</span><div className="absolute right-0 flex items-center">{controls}</div></div> : controls}
       </div> }} />
