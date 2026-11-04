@@ -69,7 +69,7 @@ function BrowserLayout() {
         {updateNotice && !updateDismissed && <div className="browser-update-panel" role="status" aria-label="Application update">
           <div className="browser-update-panel-heading"><strong>Update available</strong><button type="button" aria-label="Dismiss update" onClick={() => setUpdateDismissed(true)}>×</button></div>
           <p>{updateNotice.message}</p>
-          <button type="button" className="browser-update-panel-action" onClick={updateNotice.update}>Update when safe</button>
+          <button type="button" className="browser-update-panel-action" onClick={updateNotice.update}>Update</button>
         </div>}
         {!presentationMode && <BrowserProfileNavigation hidden={tab !== 'sessions'} />}
       </aside>

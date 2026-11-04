@@ -60,7 +60,7 @@ window.addEventListener('hermes-update-available', event => {
  if (!notice) return;
  if (!updatePanel) {
   updatePanel=document.createElement('div'); updatePanel.setAttribute('role','status');
-  updateStatus=document.createElement('span'); updateAction=document.createElement('button'); updateAction.textContent='Update when safe';
+  updateStatus=document.createElement('span'); updateAction=document.createElement('button'); updateAction.textContent='Update';
   updatePanel.append(updateStatus, updateAction); document.body.append(updatePanel);
  }
  updateStatus.textContent=notice.message; updateAction.onclick=notice.update;
@@ -94,7 +94,7 @@ async function openFixture(page) {
 async function newCandidate(page) {
   workerVersion++
   await page.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); await r.update() })
-  await expect(page.getByRole('button', { name: 'Update when safe' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Update' })).toBeVisible()
 }
 
 test('nginx serves the built app and uncached identity; API stays available for recovery', async ({ page }, testInfo) => {
@@ -145,7 +145,7 @@ test('returning to an open app discovers an update without replacing its draft',
   await page.evaluate(() => { window.previousDocument = true })
   workerVersion++
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
-  await expect(page.getByRole('button', { name: 'Update when safe' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Update' })).toBeVisible()
   expect(await page.evaluate(() => window.previousDocument)).toBe(true)
   await expect(page.getByRole('textbox', { name: 'Draft' })).toHaveValue('Keep this draft until I choose to update')
 })
@@ -169,12 +169,12 @@ test('unsent files defer an update while active responses in both tabs allow saf
   await page.evaluate(() => { window.safety.setActiveWork({ count: 1 }); window.unsentFiles = 1 })
   await page.getByRole('textbox', { name: 'Draft' }).fill('keep this draft')
   await newCandidate(page)
-  await page.getByRole('button', { name: 'Update when safe' }).click()
+  await page.getByRole('button', { name: 'Update' }).click()
   await expect(page.getByRole('status')).toContainText('attachments')
   expect(await page.evaluate(async () => Boolean((await navigator.serviceWorker.getRegistration()).waiting))).toBe(true)
   await page.evaluate(() => { window.unsentFiles = 0 })
   // Same draft in both tabs avoids an intentional concurrent-edit conflict.
   await other.getByRole('textbox', { name: 'Draft' }).fill('keep this draft')
-  await Promise.all([page.waitForEvent('load'), other.waitForEvent('load'), page.getByRole('button', { name: 'Update when safe' }).click()])
+  await Promise.all([page.waitForEvent('load'), other.waitForEvent('load'), page.getByRole('button', { name: 'Update' }).click()])
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('fixture-drafts')).session)).toBe('keep this draft')
 })

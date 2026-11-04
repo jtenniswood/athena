@@ -12,10 +12,11 @@ async function openPrevious(page, app, session) {
   await page.evaluate(() => { window.__upgradeDocument = 'previous' })
 }
 
+// Accept the older button label in the pinned previous image as well as the current UI.
 async function offerCandidate(page, app) {
   app.publishCandidate()
   await page.evaluate(async () => { const registration = await navigator.serviceWorker.getRegistration(); await registration.update() })
-  await expect(page.getByRole('button', { name: 'Update when safe', exact: true })).toBeVisible({ timeout: 30000 })
+  await expect(page.getByRole('button', { name: /^Update(?: when safe)?$/, exact: true })).toBeVisible({ timeout: 30000 })
 }
 
 async function expectPrevious(page) {
@@ -59,7 +60,7 @@ test('a previous-image verification refusal retries the complete handshake and r
   await offerCandidate(page, upgradeApp)
   await Promise.all([
     page.waitForEvent('load', { timeout: 30000 }), other.waitForEvent('load', { timeout: 30000 }),
-    page.getByRole('button', { name: 'Update when safe', exact: true }).click()
+    page.getByRole('button', { name: /^Update(?: when safe)?$/, exact: true }).click()
   ])
   expect(refusals).toBe(1)
   const candidateEntry = await entryFor(upgradeApp.candidate)
@@ -82,7 +83,7 @@ test('real drafts survive a previous-image upgrade after active work and unsent 
   await editor(other).press('Enter')
   await expect(other.locator('[data-slot="composer-surface"]').getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
   await offerCandidate(page, upgradeApp)
-  await page.getByRole('button', { name: 'Update when safe', exact: true }).click()
+  await page.getByRole('button', { name: /^Update(?: when safe)?$/, exact: true }).click()
   await expect(page.getByRole('status', { name: 'Application update' })).toContainText(/postponed|active response/)
   await expectPrevious(page)
   await expect(editor(page)).toHaveText('First tab keeps its own unsent draft')
@@ -91,14 +92,14 @@ test('real drafts survive a previous-image upgrade after active work and unsent 
   await expect(other.locator('[data-slot="composer-surface"]').getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0)
   await editor(other).fill('Second tab keeps a different conversation draft')
   await attachFile(page)
-  await page.getByRole('button', { name: 'Update when safe', exact: true }).click()
+  await page.getByRole('button', { name: /^Update(?: when safe)?$/, exact: true }).click()
   await expect(page.getByRole('status', { name: 'Application update' })).toContainText('unsent attachments')
   await expectPrevious(page)
   await expect(page.getByRole('button', { name: 'Remove upgrade-draft.txt', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Remove upgrade-draft.txt', exact: true }).click()
   await Promise.all([
     page.waitForEvent('load', { timeout: 60000 }), other.waitForEvent('load', { timeout: 60000 }),
-    page.getByRole('button', { name: 'Update when safe', exact: true }).click()
+    page.getByRole('button', { name: /^Update(?: when safe)?$/, exact: true }).click()
   ])
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
   await expect(editor(other)).toBeVisible({ timeout: 30000 })
@@ -124,7 +125,7 @@ test('two real composers editing the same conversation cannot overwrite one anot
   await editor(page).fill('First independent draft')
   await editor(other).fill('Second independent draft')
   await offerCandidate(page, upgradeApp)
-  await page.getByRole('button', { name: 'Update when safe', exact: true }).click()
+  await page.getByRole('button', { name: /^Update(?: when safe)?$/, exact: true }).click()
   await expect(page.getByRole('status', { name: 'Application update' })).toContainText(/postponed|could not be saved/)
   await expectPrevious(page)
   await expect(editor(page)).toHaveText('First independent draft')
@@ -144,7 +145,7 @@ test('UI rollback reconnects a running response and retains real drafts in both 
   await offerCandidate(page, upgradeApp)
   await Promise.all([
     page.waitForEvent('load', { timeout: 60000 }), other.waitForEvent('load', { timeout: 60000 }),
-    page.getByRole('button', { name: 'Update when safe', exact: true }).click()
+    page.getByRole('button', { name: /^Update(?: when safe)?$/, exact: true }).click()
   ])
   await expect(editor(page)).toHaveText('First draft before the candidate')
   await expect(editor(other)).toHaveText('Second draft before the candidate')
@@ -160,7 +161,7 @@ test('UI rollback reconnects a running response and retains real drafts in both 
   await editor(other).fill('Second draft edited in the candidate')
   upgradeApp.publishPrevious()
   await page.evaluate(async () => { const registration = await navigator.serviceWorker.getRegistration(); await registration.update() })
-  const update = page.getByRole('button', { name: 'Update when safe', exact: true })
+  const update = page.getByRole('button', { name: /^Update(?: when safe)?$/, exact: true })
   await expect(update).toBeVisible({ timeout: 30000 })
   await attachFile(page)
   await update.click()
@@ -212,7 +213,7 @@ test('candidate composers block conflicting rollback drafts and allow retry afte
   await offerCandidate(page, upgradeApp)
   await Promise.all([
     page.waitForEvent('load', { timeout: 60000 }),
-    page.getByRole('button', { name: 'Update when safe', exact: true }).click()
+    page.getByRole('button', { name: /^Update(?: when safe)?$/, exact: true }).click()
   ])
   const other = await context.newPage()
   await openConversation(other, upgradeApp.origin, 'preview-week')
@@ -222,7 +223,7 @@ test('candidate composers block conflicting rollback drafts and allow retry afte
   await editor(other).fill('A different candidate draft')
   upgradeApp.publishPrevious()
   await page.evaluate(async () => { const registration = await navigator.serviceWorker.getRegistration(); await registration.update() })
-  const update = page.getByRole('button', { name: 'Update when safe', exact: true })
+  const update = page.getByRole('button', { name: /^Update(?: when safe)?$/, exact: true })
   await expect(update).toBeVisible({ timeout: 30000 })
   await update.click()
   await expect(page.getByRole('status', { name: 'Application update' })).toContainText(/postponed|could not be saved/)
@@ -242,7 +243,7 @@ test('candidate composers block conflicting rollback drafts and allow retry afte
 test('a candidate update cannot resurrect an unchanged draft sent by another tab', async ({ page, context, upgradeApp }) => {
   await openPrevious(page, upgradeApp, 'preview-week')
   await offerCandidate(page, upgradeApp)
-  await Promise.all([page.waitForEvent('load'), page.getByRole('button', { name: 'Update when safe', exact: true }).click()])
+  await Promise.all([page.waitForEvent('load'), page.getByRole('button', { name: /^Update(?: when safe)?$/, exact: true }).click()])
   await editor(page).fill('This message will be sent by the other tab')
   const other = await context.newPage()
   await openConversation(other, upgradeApp.origin, 'preview-week')
@@ -258,7 +259,7 @@ test('a candidate update cannot resurrect an unchanged draft sent by another tab
   await other.close()
   upgradeApp.publishPrevious()
   await page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration()).update() })
-  const update = page.getByRole('button', { name: 'Update when safe', exact: true })
+  const update = page.getByRole('button', { name: /^Update(?: when safe)?$/, exact: true })
   await expect(update).toBeVisible()
   await update.click()
   await expect(page.getByRole('status', { name: 'Application update' })).toContainText(/stale text/)
