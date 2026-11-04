@@ -198,7 +198,11 @@ for (const [layout, combined, grouped] of [
     const { moves, editor } = await openSidebar(page, { combined, grouped })
     const { source, target, after } = await aimOrder(page)
     await page.mouse.up()
-    const isAfter = async () => (await source.boundingBox()).y > (await target.boundingBox()).y
+    const isAfter = async () => {
+      // Profile/project rows can remount independently while the sidebar reloads.
+      const sourceBox = await source.boundingBox(), targetBox = await target.boundingBox()
+      return sourceBox && targetBox ? sourceBox.y > targetBox.y : null
+    }
     await expect.poll(isAfter).toBe(after)
     expect(moves).toEqual([])
     await expect(page).toHaveURL(/#\/preview-week$/)
@@ -211,6 +215,7 @@ for (const [layout, combined, grouped] of [
     await page.keyboard.press('Escape')
     await page.reload()
     await expect(source).toBeVisible()
+    await expect(target).toBeVisible()
     await expect.poll(isAfter).toBe(after)
     await expect(editor).toHaveText('Keep the draft through sidebar gestures')
   })
