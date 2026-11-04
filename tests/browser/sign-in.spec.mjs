@@ -88,7 +88,7 @@ async function hermesAuth(context, { providers = [externalProvider], signedIn = 
 
 async function selectSignOut(page, compact = false) {
   const trigger = page.getByRole('button', { name: 'Settings', exact: true })
-  if (!await trigger.isVisible()) await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  if (!await trigger.isVisible()) await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
   await trigger.click()
   await page.getByRole('navigation', { name: 'Settings categories' }).getByRole('button', { name: 'Gateway', exact: true }).click()
   await page.getByRole('region', { name: 'Gateway connection', exact: true }).getByRole('button', { name: 'Sign out', exact: true }).click()
@@ -144,7 +144,7 @@ test('failed sign-out keeps chat and token credentials available for retry', asy
   await expect(page.getByRole('region', { name: 'Gateway connection', exact: true }).getByRole('button', { name: 'Sign out', exact: true })).toBeEnabled()
 })
 
-test('sign-out saves text edited while logout is pending', async ({ page, context }) => {
+test('sign-out blocks late edits and preserves the saved draft', async ({ page, context }) => {
   await hermesAuth(context, { signedIn: true })
   let releaseLogout
   const pendingLogout = new Promise(resolve => { releaseLogout = resolve })
@@ -156,13 +156,15 @@ test('sign-out saves text edited while logout is pending', async ({ page, contex
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
   await editor(page).fill('Before sign-out')
   const requested = page.waitForRequest(request => request.url().endsWith('/auth/logout'))
-  await selectSignOut(page)
-  await requested
-  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
-  await editor(page).fill('Edited while signing out')
-  releaseLogout()
+  try {
+    await selectSignOut(page)
+    await requested
+    await expect(page.locator('#root')).toHaveJSProperty('inert', true)
+    await expect(page.locator('body')).toHaveJSProperty('inert', true)
+    await expect(page.getByRole('button', { name: 'Close settings', exact: true }).click({ timeout: 500 })).rejects.toThrow()
+  } finally { releaseLogout() }
   await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes:composer-drafts:v3'))['preview-week'])).toBe('Edited while signing out')
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes:composer-drafts:v3'))['preview-week'])).toBe('Before sign-out')
 })
 
 test('sign-out leaves unsent attachments in chat without ending the session', async ({ page, context }) => {

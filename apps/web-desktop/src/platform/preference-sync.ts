@@ -127,6 +127,8 @@ export function createPreferenceSync(storage: Store, scope: string, request: Tra
     return running
   }
   return {
+    // Derived browser caches require an identity verified in this page lifetime.
+    account: () => remote && !accountChanged() ? accountId : undefined,
     status: () => status,
     async initialize() {
       try { await connect(true) } catch {
@@ -179,6 +181,7 @@ let timer: ReturnType<typeof setTimeout> | undefined
 const listeners = new Set<() => void>()
 const loading: PreferenceSyncStatus = { state: 'loading', remoteChanges: false }
 export const preferenceSyncStatus = () => sync?.status() ?? loading
+export const browserPreferenceAccountId = () => sync?.account()
 export const subscribePreferenceSync = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } }
 function announce() { for (const listener of listeners) listener() }
 

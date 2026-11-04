@@ -243,7 +243,8 @@ export async function apiFetch<T>(request: HermesApiRequest): Promise<T> {
   const { body, method = 'GET', path, profile, timeoutMs } = request
   let url = baseUrl() + path
 
-  if (profile) {
+  // Endpoint filters own their profile; ambient scope only fills an omission.
+  if (profile && !new URL(url).searchParams.has('profile')) {
     url += `${url.includes('?') ? '&' : '?'}profile=${encodeURIComponent(profile)}`
   }
 

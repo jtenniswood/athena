@@ -11,8 +11,11 @@ import type { SessionOwnerRoute } from '@/store/session-request-router'
 import { deleteSession, renameSession, setSessionArchived } from '@/api/sessions'
 import { $unreadWriteGuard, markSessionUnread, pendingUnreadValue } from './browser-unread'
 import { reportActionFailure } from '../experience/action-errors'
+import { prepareBrowserArchiveUndo } from './archive-undo'
+import { confirmAndStopBrowserArchive } from './archive-running'
 import type { BrowserSessionActions } from '../experience/contracts/actions'
 import type { BrowserConversationModel } from '../experience/contracts/conversation'
+import { useBrowserUpdateTitle } from './update-session-title'
 
 /** Retain the displayed owner's runtime for RPC rename, including runtime-only chats. */
 async function renameOwnedSession(id: string, title: string, profile: string, runtimeId: string | null, owner?: SessionOwnerRoute) {
@@ -41,17 +44,21 @@ export function useBrowserSessionActions(conversation: BrowserConversationModel)
   const profile = conversation.profile || activeProfile
   const matches = (row: { id: string; profile?: string | null }) => String(row.id) === selected && (row.profile || 'default') === profile
   const session = sessions.find(matches)
+  const titleUpdate = useBrowserUpdateTitle(selected, profile, owner)
   const pinId = session ? sessionPinId(session) : selected
   const pinned = Boolean(pinId && pins.includes(pinId))
 
   const remove = async (action: 'archive' | 'delete') => {
     if (!selected) return
+    const offerUndo = action === 'archive' ? prepareBrowserArchiveUndo(selected, profile, session) : undefined
     try {
+      if (action === 'archive' && !await confirmAndStopBrowserArchive(selected, profile, session)) return
       const result = action === 'archive'
         ? await setSessionArchived(selected, true, profile)
         : await deleteSession(selected, profile)
       if (!result.ok) throw new Error('Gateway did not confirm the change')
       setSessions(rows => rows.filter(row => !matches(row)))
+      offerUndo?.()
       // Completion belongs to this command; a newer selection keeps its route.
       if ($selectedStoredSessionId.get() === selected && $sessionResumeRequest.get() === resume) navigate('/')
     } catch {
@@ -60,6 +67,7 @@ export function useBrowserSessionActions(conversation: BrowserConversationModel)
   }
 
   return {
+    ...titleUpdate,
     sessionId: selected,
     title: session?.title || '',
     profile,

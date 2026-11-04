@@ -23,13 +23,13 @@ export function useBrowserSidebarController(source: string, root: string): strin
     'enteredProject', 'activeProjectId', 'enteredProjectOverlaySessions', 'agentOrderManual', 'agentOrderIds', 'sortOrderIds',
     'projectOverview', 'overviewHidden', 'overviewPreviews', 'scopedRepoWorktrees', 'enteredProjectContent', 'projectTreeLoading',
     'removedSessionIds', 'displayAgentSessions', 'agentSessions', 'recentsVirtualizes', 'sessionsMode', 'sessionsLabel',
-    'messagingGroups', 'messagingVisible', 'ownerGrouped', 'connectionsRegistry', 'profileColors', 'messagingLoadMorePending',
+    'messagingGroups', 'ownerGrouped', 'connectionsRegistry', 'profileColors', 'messagingLoadMorePending',
     'messagingOpenIds', 'cronJobs', 'profileRailVisible', 'unreadCount', 'toggleUnread', 'reorderPinned', 'reorderSessions',
-    'reorderProjects', 'onLoadMoreRecents', 'onEnterProject', 'revealMoreMessaging',
+    'reorderProjects', 'onLoadMoreRecents', 'onEnterProject', 'loadMoreForMessaging',
     'onNavigate', 'onResumeSession', 'onDeleteSession', 'onArchiveSession', 'onBranchSession', 'onNewSessionInWorkspace',
     'onNewSessionSplit', 'onRetrySessions', 'onManageCronJob', 'onTriggerCronJob'
   ]
-  source = projectRendererController(source, 'ChatSidebar', `<BrowserSidebarControllerSurface model={{ labels: s, ${projection.join(', ')} }} />`)
+  source = projectRendererController(source, 'ChatSidebar', `<BrowserSidebarControllerSurface model={{ labels: s, ${projection.join(', ')} }} />`, ['[messagingVisible, setMessagingVisible]', 'revealMoreMessaging'])
   return `import { useBrowserProfileGrouping } from ${JSON.stringify(path.join(root, 'src/upstream/profile-section'))}\n` +
     `import { BrowserSidebarControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar'))}\n` +
     `import { useBrowserProfileGroups } from ${JSON.stringify(path.join(root, 'src/upstream/profile-groups'))}\n` +
@@ -42,6 +42,7 @@ export function useBrowserSessionSection(source: string, root: string): string {
     ['export function SidebarSessionsSection({', 'export function SidebarSessionsSection({\n  browserSectionId,']
   ])
   source = replaceBrowserContract(source, [
+    ['<SidebarDateDivider\n          action={action}', '<SidebarDateDivider\n          data-browser-group-header=""\n          action={action && <div data-browser-group-actions="" className="flex shrink-0 items-center">{action}</div>}'],
     ["if (grouping !== 'date' && grouping !== 'status') {", "if (grouping !== 'date' && grouping !== 'status' && !combinedProjects) {"],
     ["$sidebarListGroupIds.set(flatRows.flatMap(row => (row.kind === 'divider' ? [listGroupNodeId(row.key)] : [])))", `$sidebarListGroupIds.set(combinedProjects
       ? (groups ?? []).flatMap(group => browserProfileProjectGroups(group.sessions, projectOverview ?? []).map(project => project.id))
@@ -68,29 +69,16 @@ export function useBrowserSessionSection(source: string, root: string): string {
 
 export function useBrowserProjectController(source: string, root: string): string {
   source = replaceBrowserContract(source, [
-    ["import { fetchProjectSessions, projectProfile } from '@/store/projects'", "import { notifyError } from '@/store/notifications'"],
-    ['  expandedProjectSessions,\n', ''],
-    ['expandedProjectSessions(recent, visible)', 'browserExpandedProjectSessions(recent, visible)'],
-    [`    // All-profiles view has no single backend to ask for one project's lanes;
-    // drilling in is the reach there.
-    if (!projectProfile()) {
-      onEnter?.(project.id)
-
-      return
-    }
-
-    setExpanding(true)
-    fetchProjectSessions(project.id, { supersedable: false })`, '    setExpanding(true)\n    fetchBrowserProjectSessions(project)'],
-    ['      .catch(() => onEnter?.(project.id))', "      .catch(error => notifyError(error, 'Could not load project sessions'))"]
+    ['const recent = fetched.length ? fetched : latestProjectSessions(project, limit)',
+      'const recent = previewSessions?.length ? previewSessions : latestProjectSessions(project, Infinity)']
   ])
   source = projectRendererController(source, 'ProjectOverviewRow', `<BrowserProjectControllerSurface ref={ref} style={style} model={{
     project, isActive, open, toggleOpen, onEnter, onNewSession, onNewSessionSplit, newSessionPath,
-    rowRef, reorderable, dragging, dragHandleProps, hasRows: preview.length > 0,
-    rows: renderRows?.(rows), offerShowAll, expanding, showAll, total,
-    moreCount: expanded ? page.more : 0, showMore: page.showMore
-  }} />`, ['lead', 'labelLink', 'shell'])
-  return `import { BrowserProjectControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar-project'))}\n` +
-    `import { browserExpandedProjectSessions, fetchBrowserProjectSessions } from ${JSON.stringify(path.join(root, 'src/upstream/project-sessions'))}\n` + source
+    rowRef, reorderable, dragging, dragHandleProps, hasRows: recent.length > 0,
+    rows: renderRows?.(recent)
+  }} />`, ['lead', 'labelLink', 'shell', 'showAllSessions', '[expanded, setExpanded]', '[expanding, setExpanding]',
+    'limit', 'fetched', 'visible', 'preview', 'page', 'rows', 'total', 'hiddenCount', 'offerShowAll', 'showAll'])
+  return `import { BrowserProjectControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar-project'))}\n` + source
 }
 
 export function useBrowserProfileControllers(source: string, root: string): string {
@@ -121,10 +109,10 @@ export function useBrowserProfileControllers(source: string, root: string): stri
 
 export function useBrowserWorkspaceController(source: string, root: string): string {
   source = projectRendererController(source, 'SidebarWorkspaceGroup', `<BrowserWorkspaceControllerSurface model={{
-    group, isProfileGroup, usage, open, toggleOpen, nextCount, showMore: lane.showMore,
-    empty: visibleSessions.length === 0, rows: renderRows(visibleSessions), canCreate: Boolean(onNewSession || isProfileGroup),
+    group, isProfileGroup, usage, open, toggleOpen,
+    empty: sessions.length === 0, rows: renderRows(sessions), canCreate: Boolean(onNewSession || isProfileGroup),
     handleNewSession, handleNewSessionSplit, onNewSessionSplit, onRemove
-  }} />`, ['leadingIcon', 'addButton'])
+  }} />`, ['leadingIcon', 'addButton', 'showAllSessions', 'lane', 'visibleSessions', 'nextCount'])
   return `import { BrowserWorkspaceControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar-workspace'))}\n` + source
 }
 
@@ -141,6 +129,7 @@ export function useBrowserWorkspacePresentation(source: string, root: string): s
 }
 
 export function useBrowserRepositoryController(source: string, root: string): string {
+  source = projectRendererController(source, 'HomeSessions', '<>{renderRows(sessions)}</>', ['home'])
   source = projectRendererController(source, 'RepoFlatSection', `<BrowserRepository model={{
     label: repo.label, title: repo.path ? displayPath(repo.path) : undefined, open, toggle: toggleOpen, emphasis: true,
     icon: <Codicon className="shrink-0 text-(--ui-text-tertiary)" name="repo" size="0.75rem" />,

@@ -10,6 +10,7 @@ function registration(network = { pause: async () => true, resume() {} }) {
   let poll, pollInterval, updates = 0, update = async () => {}
   const worker = { installing: null, waiting: null, addEventListener() {}, async update() { updates++; await update() } }
   const root = { inert: false }
+  const body = { inert: false }
   let drafts = { blocked: false, storageKey: 'drafts', texts: { first: 'one', second: 'two' }, attachments: 0 }
   let persisted = JSON.stringify(drafts.texts)
   let flushDrafts = async () => {}
@@ -30,7 +31,7 @@ function registration(network = { pause: async () => true, resume() {} }) {
       setInterval: (callback, delay) => { poll = callback; pollInterval = delay },
       localStorage: { getItem: () => persisted }
     },
-    document: { readyState: 'complete', visibilityState: 'visible', getElementById: () => root,
+    document: { readyState: 'complete', visibilityState: 'visible', getElementById: () => root, body,
       addEventListener: (name, listener) => documentListeners.set(name, listener) },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail } },
     setTimeout: callback => { expire = callback; return 1 }, clearTimeout() {}
@@ -57,7 +58,7 @@ function registration(network = { pause: async () => true, resume() {} }) {
   const pwa = load('pwa/register.ts')
   pwa.registerPwa()
   return {
-    safety, transitions, root, location: context.window.location,
+    safety, transitions, root, body, location: context.window.location,
     worker,
     updates: () => updates,
     notice: () => pwa.currentPwaUpdate(),
@@ -196,12 +197,14 @@ test('an aborted or expired asynchronous flush cannot relock the page or acknowl
     app.saveWith(() => new Promise(resolve => { finish = resolve }))
     const flushing = app.ask('HERMES_FLUSH_UPDATE')
     assert.equal(app.root.inert, true)
+    assert.equal(app.body.inert, true)
     await waitFor(() => typeof finish === 'function')
     await abort(app)
     assert.equal(app.root.inert, false)
     finish()
     assert.equal((await flushing).ready, false)
     assert.equal(app.root.inert, false)
+    assert.equal(app.body.inert, false)
   }
 })
 
@@ -290,6 +293,16 @@ test('an update cannot take over a root already frozen outside its transition ow
   assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, false)
   await app.controllerChange()
   assert.equal(app.root.inert, true)
+})
+
+test('an update cannot take over a document body frozen outside its transition owner', async () => {
+  const app = registration()
+  app.body.inert = true
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, false)
+  await app.controllerChange()
+  await app.ask('HERMES_ABORT_UPDATE')
+  assert.equal(app.root.inert, false)
+  assert.equal(app.body.inert, true)
 })
 
 test('notification focus admission preserves the live route and respects update locks', async () => {

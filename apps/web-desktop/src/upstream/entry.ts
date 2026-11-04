@@ -11,7 +11,10 @@ export async function startBrowserHost(): Promise<void> {
   const { installBrowserSessionRoutes } = await import('./browser-session-routes')
   const stopSessionRoutes = installBrowserSessionRoutes()
   let stopNotifications = () => {}
+  let stopSummaries = () => {}
   try {
+    const { installBrowserSessionSummaries } = await import('./session-summaries')
+    stopSummaries = installBrowserSessionSummaries()
     const { installBrowserNotificationCommands } = await import('./browser-notifications')
     stopNotifications = installBrowserNotificationCommands()
     const { installBrowserWindowCommands } = await import('./browser-windows')
@@ -19,5 +22,5 @@ export async function startBrowserHost(): Promise<void> {
     const { initializeBrowserShell } = await import('./browser-initialize')
     initializeBrowserShell()
     await import('../../../desktop/src/main')
-  } catch (error) { stopNotifications(); stopSessionRoutes(); throw error }
+  } catch (error) { stopSummaries(); stopNotifications(); stopSessionRoutes(); throw error }
 }

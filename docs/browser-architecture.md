@@ -69,6 +69,11 @@ same route owner reissues its unfulfilled intent after the gateway-switch
 barrier falls. A newer engine request or selection takes precedence; recovery
 reads the latest URL and leaves new-chat and tool routes alone.
 
+REST endpoint filters retain their explicit profile query. The HTTP adapter adds
+the ambient request profile only when the endpoint has none, matching the engine
+transports. Cross-profile Scheduled reads therefore keep each requested profile
+while sharing the tab's configured gateway and credentials.
+
 The captured engine selection distinguishes copied session IDs when projecting
 conversation metadata and toolbar commands. It also precedes historical rows in
 the shared session-owner resolver. Owned session RPCs always name their profile
@@ -309,7 +314,8 @@ old profile cannot seed the new profile's configuration cache. Failed writes
 continue to block readiness instead of being treated as durable.
 
 PWA preparation, applying synced preferences, and sign-out share one exclusive
-page-transition lock. A competing transition is refused before changing interaction or network
+page-transition lock. The document body and application root become inert together,
+covering engine menus and dialogs portaled outside the root. A competing transition is refused before changing interaction or network
 admission. Abort, expiry and failure release only the lock their transition owns;
 late cleanup cannot unlock a newer owner. The update protocol, pending-work flush
 and draft verification remain unchanged. Sign-out holds its reservation through

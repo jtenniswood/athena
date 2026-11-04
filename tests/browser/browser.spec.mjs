@@ -92,11 +92,12 @@ const open = async (page, session = 'preview-week', { defaultGrouping = false } 
 }
 
 for (const width of [1440, 390]) {
-  test.extend({ hasTouch: width === 390 })(`project Show all expands sessions inline at ${width}px`, async ({ page }) => {
+  test.extend({ hasTouch: width === 390 })(`project groups show all sessions without clipping at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 960 })
     await page.route('**/api/athena/preferences', route => route.abort())
     await page.addInitScript(() => {
       localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarAgentsGrouped.allProfiles', 'true')
+      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarShowAllSessions', 'false')
     })
     const sessions = Array.from({ length: 5 }, (_, index) => ({
       id: index === 0 ? 'preview-week' : `project-extra-${index}`,
@@ -107,34 +108,25 @@ for (const width of [1440, 390]) {
     }))
     const home = { id: '__no_project__', label: 'Home', path: null, isNoProject: true, sessionCount: 5,
       sessionIds: sessions.map(session => session.id), repos: [] }
-    let failExpansion = true
     await page.route('**/api/profiles/projects/tree?**', async route => {
       const limit = Number(new URL(route.request().url()).searchParams.get('preview_limit'))
-      if (limit > 3 && failExpansion) return route.fulfill({ status: 503, json: { error: 'Temporarily unavailable' } })
+      expect(limit).toBe(2000)
       await route.fulfill({ json: { projects: [
         { ...home, previewSessions: sessions.slice(0, limit) },
         { id: 'p_other', label: 'Another project', path: '/workspace/another', sessionCount: 0, repos: [] }
       ], active_id: null, scoped_session_ids: sessions.map(session => session.id) } })
     })
     await open(page)
-    await editor(page).fill('Keep this draft while expanding Home')
+    await editor(page).fill('Keep this draft while showing all chats')
     if (width === 390) await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
     const project = page.locator('[data-sessions-project="__no_project__"]')
-    const showAll = project.getByRole('button', { name: 'Show all 5 sessions', exact: true })
-    await expect(showAll).toBeVisible()
-    await expect(project.getByRole('button', { name: 'Extra project session 4', exact: true })).toHaveCount(0)
-    await showAll.click()
-    await expect(page.getByText('Could not load project sessions', { exact: true })).toBeVisible()
-    await expect(showAll).toBeEnabled()
-    failExpansion = false
-    await showAll.click()
-    await expect(showAll).toHaveCount(0)
+    await expect(project.getByRole('button', { name: /Show all|Show .*more/ })).toHaveCount(0)
     for (const session of sessions) await expect(project.getByRole('button', { name: session.title, exact: true })).toHaveCount(1)
     await expect(project.getByRole('button', { name: 'Extra project session 4', exact: true })).toBeVisible()
     await expect(page.locator('[data-sessions-project="p_other"]')).toBeVisible()
     await expect(page).toHaveURL(/#\/preview-week$/)
     if (width === 390) await project.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
-    await expect(editor(page)).toHaveText('Keep this draft while expanding Home')
+    await expect(editor(page)).toHaveText('Keep this draft while showing all chats')
   })
 }
 
@@ -144,7 +136,7 @@ for (const width of [1440, 390]) {
     page.on('pageerror', error => errors.push(error.message))
     let writerUnavailable = true
     await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => {
-      const profile = new URL(route.request().url()).searchParams.get('profile')
+      const profile = Object.fromEntries(new URL(route.request().url()).searchParams).profile
       if (profile === 'writer' && writerUnavailable) return route.fulfill({ status: 503, json: { error: 'Temporarily unavailable' } })
       const jobs = profile === 'writer' ? [] : [{
         id: 'copied-job', name: profile === 'research' ? 'Research briefing' : 'Morning briefing',
@@ -224,7 +216,11 @@ test('sidebar cron peek and trigger retain the selected conversation and prevent
   await expect(editor(page)).toHaveText('Keep my cron sidebar draft')
 })
 
-test('chat hover previews show the latest reply without selecting the chat or changing its draft', async ({ page }) => {
+test('chat hover previews cache purpose summaries without selecting the chat or changing its draft', async ({ page }) => {
+  let generations = 0
+  page.on('websocket', socket => socket.on('framesent', ({ payload }) => {
+    try { if (JSON.parse(String(payload)).method === 'llm.oneshot') generations++ } catch { /* Ignore transport frames. */ }
+  }))
   const fullTitle = 'Explore a product idea with a deliberately long title that should fade at the edge and remain fully readable in the preview card'
   await page.route(/\/api\/profiles\/sessions/, async route => {
     const response = await route.fetch()
@@ -237,7 +233,8 @@ test('chat hover previews show the latest reply without selecting the chat or ch
   await row.hover()
   const card = page.locator('.browser-session-preview:visible')
   await expect(card.locator('.browser-session-preview-title')).toHaveText(fullTitle)
-  await expect(card.locator('.browser-session-generation p')).toContainText('one person, one problem, and one small experiment')
+  await expect(card.locator('.browser-session-generation p')).toContainText('Develop a thoughtful plan with clear priorities')
+  expect(generations).toBe(1)
   const rowBox = await row.boundingBox()
   const cardBox = await card.boundingBox()
   expect(cardBox.x).toBeGreaterThanOrEqual(rowBox.x + rowBox.width)
@@ -270,6 +267,52 @@ test('chat hover previews show the latest reply without selecting the chat or ch
   await page.keyboard.press('Tab')
   await page.keyboard.press('Shift+Tab')
   await expect(page.locator('.browser-session-preview:visible')).toBeVisible()
+  expect(generations).toBe(1)
+  await page.reload()
+  await expect(editor(page)).toBeVisible()
+  await row.hover()
+  await expect(card.locator('.browser-session-generation p')).toContainText('Develop a thoughtful plan with clear priorities')
+  expect(generations).toBe(1)
+  await page.keyboard.press('Escape')
+  const before = await (await page.request.get(`${origin}/api/sessions/preview-week/messages?profile=default`)).json()
+  await editor(page).fill('Revise the goal to protect two afternoons for focused research')
+  await editor(page).press('Enter')
+  // A fresh completion warms the selected chat even without opening its preview.
+  await expect.poll(() => generations, { timeout: 15000 }).toBe(2)
+  await expect.poll(() => page.evaluate(() => Object.entries(localStorage)
+    .filter(([key]) => key.startsWith('athena.session-summaries.v1.'))
+    .some(([, value]) => Object.keys(JSON.parse(value)).some(key => JSON.parse(key).at(-1) === 'preview-week')))).toBe(true)
+  const after = await (await page.request.get(`${origin}/api/sessions/preview-week/messages?profile=default`)).json()
+  expect(after.messages.length).toBe(before.messages.length + 2)
+  await expect(page).toHaveURL(/#\/preview-week$/)
+})
+
+test('failed purpose summaries retain the latest-reply preview without retrying every hover', async ({ page }) => {
+  let generations = 0
+  await page.routeWebSocket(/\/api\/ws/, socket => {
+    const server = socket.connectToServer()
+    socket.onMessage(message => {
+      const frame = JSON.parse(String(message))
+      if (frame.method === 'llm.oneshot') {
+        generations++
+        socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, error: { code: 5030, message: 'Summary model unavailable' } }))
+      } else server.send(message)
+    })
+  })
+  await open(page)
+  await editor(page).fill('Keep this draft after a summary failure')
+  const row = page.locator('[data-web-session-id="preview-idea"]').first()
+  const card = page.locator('.browser-session-preview:visible')
+  await row.hover()
+  await expect(card.locator('.browser-session-generation p')).toContainText('one person, one problem, and one small experiment')
+  await expect.poll(() => generations).toBe(1)
+  await page.keyboard.press('Escape')
+  await editor(page).hover()
+  await row.hover()
+  await expect(card.locator('.browser-session-generation p')).toContainText('one person, one problem, and one small experiment')
+  expect(generations).toBe(1)
+  await expect(editor(page)).toHaveText('Keep this draft after a summary failure')
+  await expect(page).toHaveURL(/#\/preview-week$/)
 })
 
 async function setFollowupPreference(page, value) {
@@ -946,8 +989,9 @@ for (const startPath of ['', 'preview-week']) {
 }
 
 test('hovered chat archive preserves the selected conversation and draft', async ({ page }) => {
+  let failRestore = true
   await page.route(/\/api\/sessions\/preview-idea(?:\?.*)?$/, route => route.request().method() === 'PATCH'
-    ? route.fulfill({ json: { ok: true } }) : route.fallback())
+    ? route.fulfill({ json: { ok: route.request().postDataJSON().archived || !failRestore } }) : route.fallback())
   await open(page)
   await editor(page).fill('Keep this draft while archiving another chat')
   const row = page.locator('[data-web-session-id="preview-idea"]').first()
@@ -962,14 +1006,134 @@ test('hovered chat archive preserves the selected conversation and draft', async
   const archived = page.waitForRequest(request => request.method() === 'PATCH' &&
     new URL(request.url()).pathname === '/api/sessions/preview-idea' && request.postDataJSON()?.archived === true)
   await archive.click()
-  await archived
+  const archiveRequest = await archived
   await expect(row).toHaveCount(0)
+  await expect(page).toHaveURL(/#\/preview-week$/)
+  await expect(editor(page)).toHaveText('Keep this draft while archiving another chat')
+  const toast = page.locator('.browser-archive-toast')
+  await expect(toast).toBeVisible()
+  const restoreRequest = page.waitForRequest(request => request.method() === 'PATCH' &&
+    new URL(request.url()).pathname === '/api/sessions/preview-idea' && request.postDataJSON()?.archived === false)
+  await toast.getByRole('button', { name: 'Undo', exact: true }).click()
+  const restore = await restoreRequest
+  expect(restore.postDataJSON().profile).toBe(archiveRequest.postDataJSON().profile)
+  await expect(toast.getByRole('alert')).toHaveText('Could not unarchive chat. Try again.')
+  await expect(row).toHaveCount(0)
+  failRestore = false
+  await toast.getByRole('button', { name: 'Undo', exact: true }).click()
+  await expect(row).toBeVisible()
+  await expect(page.locator('.browser-archive-toast')).toHaveCount(0)
   await expect(page).toHaveURL(/#\/preview-week$/)
   await expect(editor(page)).toHaveText('Keep this draft while archiving another chat')
   const selected = page.locator('[data-web-session-id="preview-week"]').first()
   await selected.hover()
   await selected.getByRole('button', { name: 'Session actions', exact: true }).click()
   await expect(page.getByRole('menuitem', { name: /^Rename/ })).toBeVisible()
+})
+
+test('chat menu archive Undo restores the original chat without replacing a newer draft', async ({ page }) => {
+  await page.route(/\/api\/sessions\/preview-week(?:\?.*)?$/, route => route.request().method() === 'PATCH'
+    ? route.fulfill({ json: { ok: true } }) : route.fallback())
+  await open(page)
+  await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
+  await page.getByRole('menuitem', { name: /^Archive/ }).click()
+  const toast = page.locator('.browser-archive-toast')
+  await expect(toast).toContainText('Archived chat')
+  await page.locator('[data-web-session-id="preview-idea"] .browser-session-title').first().click()
+  await editor(page).fill('Keep this newer draft')
+  await toast.getByRole('button', { name: 'Undo', exact: true }).click()
+  await expect(page.locator('[data-web-session-id="preview-week"]').first()).toBeVisible()
+  await expect(toast).toHaveCount(0)
+  await expect(page).toHaveURL(/#\/preview-idea$/)
+  await expect(editor(page)).toHaveText('Keep this newer draft')
+})
+
+test.describe('running chat archives require confirmation before stopping work', () => {
+  test.describe.configure({ retries: 0 })
+  for (const source of ['sidebar', 'chat menu']) {
+    test(source, async ({ page }) => {
+      const operations = []
+      let failStop = true
+      let holdCompletion = true
+      await page.routeWebSocket(/\/api\/ws/, socket => {
+        const server = socket.connectToServer()
+        socket.onMessage(message => {
+          const frame = JSON.parse(String(message))
+          if (frame.method === 'session.active_list') {
+            socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, result: { sessions: [{ id: 'preview-week', status: 'working' }] } }))
+            return
+          }
+          if (frame.method === 'session.interrupt') {
+            operations.push({ method: 'interrupt', params: frame.params })
+            if (failStop) {
+              socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, error: { code: -32603, message: 'Could not stop this response' } }))
+              return
+            }
+            holdCompletion = false
+          }
+          server.send(message)
+        })
+        server.onMessage(message => {
+          const frame = JSON.parse(String(message))
+          if (holdCompletion && frame.params?.type === 'message.complete' && frame.params.session_id === 'preview-week') return
+          socket.send(message)
+        })
+      })
+      await page.route(/\/api\/sessions\/preview-week(?:\?.*)?$/, route => {
+        if (route.request().method() !== 'PATCH') return route.fallback()
+        operations.push({ method: 'archive', body: route.request().postDataJSON() })
+        return route.fallback()
+      })
+      await open(page)
+      await editor(page).fill('Keep working until I confirm')
+      await editor(page).press('Enter')
+      await expect(page.locator('[data-slot="composer-root"]').getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
+      if (source === 'sidebar') await page.locator('[data-web-session-id="preview-idea"] .browser-session-title').first().click()
+      await editor(page).fill('Preserve this draft')
+      const currentUrl = page.url()
+      const row = page.locator('[data-web-session-id="preview-week"]').first()
+      const archive = async () => {
+        if (source === 'sidebar') { await row.hover(); await row.getByRole('button', { name: 'Archive', exact: true }).click() }
+        else {
+          await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
+          await page.getByRole('menuitem', { name: /^Archive/ }).click()
+        }
+      }
+      const confirmation = page.getByRole('dialog', { name: 'Stop and archive this chat?', exact: true })
+      await archive()
+      await expect(confirmation).toBeVisible()
+      await expect(confirmation.getByRole('button', { name: 'Stop and archive', exact: true })).toBeFocused()
+      expect(operations).toEqual([])
+      await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click()
+      await expect(confirmation).toHaveCount(0)
+      expect(operations).toEqual([])
+      await expect(row).toBeVisible()
+      await expect(page).toHaveURL(currentUrl)
+      await expect(editor(page)).toHaveText('Preserve this draft')
+
+      await archive()
+      await confirmation.getByRole('button', { name: 'Stop and archive', exact: true }).click()
+      await expect(confirmation).toContainText('Could not stop this response')
+      expect(operations.map(operation => operation.method)).toEqual(['interrupt'])
+      await expect(row).toBeVisible()
+      await expect(page.locator('.browser-archive-toast')).toHaveCount(0)
+      failStop = false
+      await confirmation.getByRole('button', { name: 'Stop and archive', exact: true }).click()
+      await expect(confirmation).toHaveCount(0)
+      await expect(row).toHaveCount(0)
+      await expect(page.locator('.browser-archive-toast')).toContainText('Archived chat')
+      expect(operations.map(operation => operation.method)).toEqual(['interrupt', 'interrupt', 'archive'])
+      expect(operations[1].params).toMatchObject({ session_id: 'preview-week', profile: 'default' })
+      expect(operations[2].body).toMatchObject({ archived: true, profile: 'default' })
+      if (source === 'sidebar') {
+        await expect(page).toHaveURL(currentUrl)
+        await expect(editor(page)).toHaveText('Preserve this draft')
+      }
+      await page.locator('.browser-archive-toast').getByRole('button', { name: 'Undo', exact: true }).click()
+      await expect(page.locator('.browser-archive-toast')).toHaveCount(0)
+      await expect(row).toBeVisible()
+    })
+  }
 })
 
 test('phone session-row actions stay open without resuming the row', async ({ browser }) => {
@@ -1360,8 +1524,8 @@ test('chat actions open from the title toolbar with panel controls', async ({ pa
   await expect(menu.getByText('Appearance', { exact: true })).toHaveCount(0)
   await expect(menu.getByText('Move to project', { exact: true })).toHaveCount(0)
   expect(await menu.locator('[role^="menuitem"]').evaluateAll(items => items.map(item =>
-    item.querySelector('.browser-action-label > span')?.textContent
-  ))).toEqual(['Rename', 'Pin', 'Mark as unread', 'Files', 'Review', 'Archive', 'Delete'])
+    item.querySelector('.browser-action-label > span')?.textContent ?? item.querySelector('.browser-action-label')?.textContent
+  ))).toEqual(['Rename', 'Update title', 'Pin', 'Mark as unread', 'Files', 'Review', 'Archive', 'Delete'])
   await page.keyboard.press('Escape')
   await page.locator('[data-web-session-id="preview-week"]').first().click({ button: 'right' })
   await expect(page.getByRole('menuitem', { name: 'Appearance', exact: true })).toBeVisible()
