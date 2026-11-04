@@ -92,6 +92,24 @@ delivery, page fallback and later clicks retain that destination even if the
 window filter or current selection changes. This adapter loads after engine
 registration; platform notification delivery does not import engine stores.
 
+The same adapter validates plugin activation and action paths through the engine's
+resolver for app paths. An opaque document identity accompanies each engine
+notification handle; the engine retains the callback registry. Before routing a
+persistent click, the worker asks the emitting document to consume its callback
+and prefers that document for admitted navigation. Alerts with only a callback
+focus the source and preserve navigation performed by plugin code. Only serialized
+destinations survive a closed source. Frozen or expired activation requests discard
+callbacks without executing plugin code, while the normal navigation admission
+can select another window. No function is serialized into notification data.
+
+Delivery that includes callbacks checks worker protocol support, so a new page with
+an older worker uses page fallback. Failed delivery, dismissal and consumption
+release engine handlers. Same-tag publication uses Web Locks when available to
+serialize enumeration, replacement and cleanup across windows; an unsuccessful
+replacement retains the previous alert's callback. Persistent notifications can
+carry action buttons; page fallback retains the body click. This follows the
+[Notifications API's action and close-event semantics](https://notifications.spec.whatwg.org/).
+
 Notification clicks ask a live page to admit hash-only navigation using its
 current origin, path and query. The worker's cached client URL does not decide
 profile ownership. A refused or unanswered request opens another window instead
