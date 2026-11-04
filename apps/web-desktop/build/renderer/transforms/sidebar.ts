@@ -4,6 +4,7 @@ import { replaceBrowserContract } from './contract'
 
 export function useBrowserSidebarController(source: string, root: string): string {
   source = replaceBrowserContract(source, [
+    ["  const ownerGrouped = profileScope === ALL_PROFILES && grouping === 'profile'", "  const combinedProfiles = useBrowserProfileGrouping()\n  const ownerGrouped = profileScope === ALL_PROFILES && combinedProfiles"],
     ['interface ChatSidebarProps extends', 'export interface ChatSidebarProps extends'],
     ['  const messagingProfile = sidebarProfileForScope(profileScope)', '  const messagingProfile = sidebarProfileForScope(profileScope)\n  useBrowserSidebarChannels()'],
     ['const profileGroups = useGatewaySessionGroups(agentSessions, ownerGrouped, filtersNarrow)', 'const profileGroups = useBrowserProfileGroups(useGatewaySessionGroups(agentSessions, ownerGrouped, filtersNarrow))'],
@@ -18,7 +19,7 @@ export function useBrowserSidebarController(source: string, root: string): strin
     'activeSidebarSessionId', 'showAllProfiles', 'cardRows', 'dndSensors', 'pinnedSessions', 'pinsOpen', 'agentsOpen', 'cronOpen',
     'inProject', 'enteredProjectId', 'projectLoadFailed', 'projectLoading', 'retryProject', 'showSessionSkeletons',
     'sessionsLoadError', 'filtersActive', 'filtersNarrow', 'sessionsLoading', 'recentsLoadMorePending', 'hasMoreSessions',
-    'rankedGlobally', 'grouping', 'displayAgentGroups', 'worktreeGroupingActive', 'reposScanning', 'projectsSkeletonVisible',
+    'rankedGlobally', 'grouping', 'combinedProfiles', 'displayAgentGroups', 'worktreeGroupingActive', 'reposScanning', 'projectsSkeletonVisible',
     'enteredProject', 'activeProjectId', 'enteredProjectOverlaySessions', 'agentOrderManual', 'agentOrderIds', 'sortOrderIds',
     'projectOverview', 'overviewHidden', 'overviewPreviews', 'scopedRepoWorktrees', 'enteredProjectContent', 'projectTreeLoading',
     'removedSessionIds', 'displayAgentSessions', 'agentSessions', 'recentsVirtualizes', 'sessionsMode', 'sessionsLabel',
@@ -29,7 +30,8 @@ export function useBrowserSidebarController(source: string, root: string): strin
     'onNewSessionSplit', 'onRetrySessions', 'onManageCronJob', 'onTriggerCronJob'
   ]
   source = projectRendererController(source, 'ChatSidebar', `<BrowserSidebarControllerSurface model={{ labels: s, ${projection.join(', ')} }} />`)
-  return `import { BrowserSidebarControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar'))}\n` +
+  return `import { useBrowserProfileGrouping } from ${JSON.stringify(path.join(root, 'src/upstream/profile-section'))}\n` +
+    `import { BrowserSidebarControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar'))}\n` +
     `import { useBrowserProfileGroups } from ${JSON.stringify(path.join(root, 'src/upstream/profile-groups'))}\n` +
     `import { useBrowserSidebarChannels } from ${JSON.stringify(path.join(root, 'src/experience/sidebar-sections'))}\n` + source
 }
@@ -39,12 +41,29 @@ export function useBrowserSessionSection(source: string, root: string): string {
     ['interface SidebarSessionsSectionProps {', 'interface SidebarSessionsSectionProps {\n  browserSectionId: string'],
     ['export function SidebarSessionsSection({', 'export function SidebarSessionsSection({\n  browserSectionId,']
   ])
+  source = replaceBrowserContract(source, [
+    ["if (grouping !== 'date' && grouping !== 'status') {", "if (grouping !== 'date' && grouping !== 'status' && !combinedProjects) {"],
+    ["$sidebarListGroupIds.set(flatRows.flatMap(row => (row.kind === 'divider' ? [listGroupNodeId(row.key)] : [])))", `$sidebarListGroupIds.set(combinedProjects
+      ? (groups ?? []).flatMap(group => browserProfileProjectGroups(group.sessions, projectOverview ?? []).map(project => project.id))
+      : (!embeddedGroups && groups?.length
+        ? groups.flatMap(group => browserProfileListRows(group.sessions, grouping, dotStates, statusDividerLabels))
+        : flatRows).flatMap(row => row.kind === 'divider' ? [listGroupNodeId(row.key)] : []))`],
+    ['[flatRows, grouping])', '[flatRows, grouping, embeddedGroups, groups, dotStates, statusDividerLabels, combinedProjects, projectOverview])'],
+    ['  const showAllSessions = useStore($sidebarShowAllSessions)', "  const showAllSessions = useStore($sidebarShowAllSessions)\n  const combinedProjects = Boolean(groups?.length && !embeddedGroups && projectOverview)"],
+    ['} else if (projectOverview?.length) {', '} else if (projectOverview?.length && !combinedProjects) {'],
+    ['        renderRows={renderRows}\n        sensors={dndSensors}', `        renderRows={items => combinedProjects
+          ? <BrowserProfileProjects sessions={items} projects={projectOverview ?? []} renderRows={renderRows} onNewSession={onNewSessionInWorkspace} onNewSessionSplit={onNewSessionSplit} />
+          : renderRows(items)}
+        sensors={dndSensors}`]
+  ])
   source = projectRendererController(source, 'SidebarSessionsSection', `<BrowserSidebarSection model={{
     id: browserSectionId, label, open: sectionOpen, collapsible, toggle: onToggle,
     icon: labelIcon, meta: labelMeta, actions: headerAction, className: rootClassName,
     contentClassName: resolvedContentClassName, pinned
   }} footer={footer}>{inner}</BrowserSidebarSection>`)
-  return `import { BrowserSidebarSection } from ${JSON.stringify(path.join(root, 'src/experience/sidebar-section'))}\n` + source
+  return `import { browserProfileListRows } from ${JSON.stringify(path.join(root, 'src/upstream/profile-list-rows'))}\n` +
+    `import { BrowserProfileProjects, browserProfileProjectGroups } from ${JSON.stringify(path.join(root, 'src/upstream/profile-projects'))}\n` +
+    `import { BrowserSidebarSection } from ${JSON.stringify(path.join(root, 'src/experience/sidebar-section'))}\n` + source
 }
 
 export function useBrowserProjectController(source: string, root: string): string {
@@ -76,7 +95,7 @@ export function useBrowserProjectController(source: string, root: string): strin
 
 export function useBrowserProfileControllers(source: string, root: string): string {
   source = replaceBrowserContract(source, [
-    ['  const order = useStore($gatewayGroupOrder)', "  const order = useStore($gatewayGroupOrder)\n  const presentationMode = useStore($sidebarGrouping) === 'profile'\n  const hiddenProfileGroups = useHiddenProfileGroups()"],
+    ['  const order = useStore($gatewayGroupOrder)', "  const order = useStore($gatewayGroupOrder)\n  const presentationMode = useBrowserProfileGrouping()\n  const hiddenProfileGroups = useHiddenProfileGroups()"],
     ['if (nested || embedded || !owner) {', 'if (nested || embedded || !owner || presentationMode) {'],
     ['  const ordered = [...sections].sort((a, b) => {', "  const ordered = sections.filter(group => embedded || !presentationMode || !hiddenProfileGroups.includes(group.profile ?? '')).sort((a, b) => {"],
     ['  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA)', "  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA).filter(item => item.id !== 'hermes-bots:screen-portal')"]
@@ -97,7 +116,7 @@ export function useBrowserProfileControllers(source: string, root: string): stri
   }} />`, ['[visibleCount, setVisibleCount]', 'hiddenCount'])
   return `import { BrowserProfileGroupsControllerSurface, BrowserProfileGroupControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar-profile'))}\n` +
     `import { useHiddenProfileGroups } from ${JSON.stringify(path.join(root, 'src/experience/profile-list-visibility'))}\n` +
-    "import { $sidebarGrouping } from '@/store/layout'\n" + source
+    `import { useBrowserProfileGrouping } from ${JSON.stringify(path.join(root, 'src/upstream/profile-section'))}\n` + source
 }
 
 export function useBrowserWorkspaceController(source: string, root: string): string {
