@@ -9,6 +9,7 @@ import { BrowserNotificationPermissionSetting } from './notification-permission'
 import { SettingsFrameSurface, useSettingsFrame } from './frame-behavior'
 import { useSettingsFramePresentation, useSettingsPresentation } from './presentation'
 import type { SettingsControl, SettingsFrameDescriptor } from '../contracts/settings-presentation'
+import { BROWSER_TOOL_ROUTES } from '../tool-routes'
 import './settings.css'
 
 const PluginManager = lazy(async () => ({ default: (await import('./plugin-manager')).BrowserPluginManager }))
@@ -32,6 +33,7 @@ type Props = {
   closeLabel: string
   groups: SettingsNavGroup[]
   onClose: () => void
+  onOpenPanel: (path: string) => void
   search: ReactNode
   searchCommand?: SettingsFrameDescriptor['search']
   scopeProfile: string
@@ -39,7 +41,7 @@ type Props = {
   children: ReactNode
 }
 
-export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel, groups, onClose, search, searchCommand, scopeProfile, title, children }: Props) {
+export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel, groups, onClose, onOpenPanel, search, searchCommand, scopeProfile, title, children }: Props) {
   const location = useLocation()
   const params = new URLSearchParams(location.search)
   const managingPlugins = activeView === 'plugins' && params.get('manage') === '1'
@@ -65,13 +67,20 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
     close: onClose, back: compact && showDetail ? back : onClose,
     search: !compact || !showDetail ? searchCommand : undefined
   })
-  const navigationControls: SettingsControl[] = navigationGroups.flatMap(section => [
-    { kind: 'heading', label: section.label },
-    ...section.items.flatMap(group => [group, ...(group.active ? activeChildren : [])]).map(item => ({
-      id: `${section.id}:${item.id}`, kind: 'action' as const, presentation: 'navigation' as const,
-      label: item.label, checked: item.active, run: () => select(item.onSelect)
+  const navigationControls: SettingsControl[] = [
+    ...navigationGroups.flatMap<SettingsControl>(section => [
+      { kind: 'heading', label: section.label },
+      ...section.items.flatMap(group => [group, ...(group.active ? activeChildren : [])]).map(item => ({
+        id: `${section.id}:${item.id}`, kind: 'action' as const, presentation: 'navigation' as const,
+        label: item.label, checked: item.active, run: () => select(item.onSelect)
+      }))
+    ]),
+    { kind: 'heading', label: 'Panels' },
+    ...BROWSER_TOOL_ROUTES.map(route => ({
+      id: `panel:${route.path}`, kind: 'action' as const, presentation: 'navigation' as const,
+      label: route.label, description: 'Opens another panel', run: () => onOpenPanel(route.path)
     }))
-  ])
+  ]
   useSettingsPresentation(navigationControls, navigation)
   return <SettingsFrameSurface variant="fullscreen" title={title}
     closeLabel={closeLabel}
@@ -128,6 +137,16 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
               </div>
             })}
             </section>)}
+            <section className="browser-settings-nav-group" aria-labelledby="settings-group-panels">
+              <h2 className="browser-settings-group-heading" id="settings-group-panels">Panels</h2>
+              {BROWSER_TOOL_ROUTES.map(route => <div className="browser-settings-category" key={route.path}>
+                <button type="button" className="browser-settings-category-button" onClick={() => onOpenPanel(route.path)} aria-description="Opens another panel">
+                  <Codicon name={route.icon} className="browser-settings-category-icon" aria-hidden />
+                  <span>{route.label}</span>
+                  <Codicon name="link-external" className="browser-settings-panel-icon" aria-hidden />
+                </button>
+              </div>)}
+            </section>
           </div>
         </nav>
         <main className="browser-settings-detail" aria-label={activeGroup?.label ?? title}>
