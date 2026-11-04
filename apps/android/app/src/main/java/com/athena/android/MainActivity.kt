@@ -27,6 +27,7 @@ import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.textfield.TextInputEditText
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.browser.auth.AuthTabIntent
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import org.json.JSONObject
@@ -47,7 +48,9 @@ class MainActivity : AppCompatActivity() {
     private var navigationId: String? = null
     private var webRevision = "Unknown"
     private var serverProtocol = "Unknown"
-    private val authentication by lazy { NativeAuthentication(this, connection, {
+    private val authentication: NativeAuthentication by lazy { NativeAuthentication(this, connection, { uri ->
+        AuthTabIntent.Builder().build().launch(accessSignInLauncher, uri, "athena-android")
+    }, {
         web?.evaluateJavascript("window.dispatchEvent(new Event('focus'))", null)
     }, { reconnectAthena() }) }
     private val appUpdates by lazy { AppUpdates(this) { action -> prepareNavigation(allowUnloaded = true, action = action) } }
@@ -59,6 +62,11 @@ class MainActivity : AppCompatActivity() {
     private var nightMode = 0
     private var web: WebView? = null
     private var origin = ""
+    // Register before creation, including recreation while browser sign-in is open.
+    private val accessSignInLauncher = AuthTabIntent.registerActivityResultLauncher(this) { result ->
+        if (result.resultCode == AuthTabIntent.RESULT_OK) authentication.receive(result.resultUri, origin)
+        // Fallback Custom Tabs still return through onNewIntent; cancellation must not clear their pending request.
+    }
     private var permissionReply: ((String) -> Unit)? = null
     private var microphoneRequest: PermissionRequest? = null
     private var settingsFilesMultiple = false
