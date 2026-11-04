@@ -140,7 +140,7 @@ for (const width of [1440, 390]) {
     page.on('pageerror', error => errors.push(error.message))
     let writerUnavailable = true
     await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => {
-      const profile = new URL(route.request().url()).searchParams.get('profile')
+      const profile = Object.fromEntries(new URL(route.request().url()).searchParams).profile
       if (profile === 'writer' && writerUnavailable) return route.fulfill({ status: 503, json: { error: 'Temporarily unavailable' } })
       const jobs = profile === 'writer' ? [] : [{
         id: 'copied-job', name: profile === 'research' ? 'Research briefing' : 'Morning briefing',

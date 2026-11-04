@@ -71,6 +71,47 @@ test('Android OAuth verifies the cookie session even while an existing token rem
   assert.equal(probes, 2, 'the first signed-out cookie probe cannot use the saved token')
 })
 
+test('explicit endpoint profile filters take precedence over ambient API scope', async () => {
+  const calls = []
+  let finished = 0
+  const client = load('connection', {
+    AbortSignal,
+    fetch: async (url, options) => { calls.push({ url, options }); return Response.json({ ok: true }) },
+    require: () => ({
+      getActiveGateway: () => ({ url: '', authMode: 'token', token: 'synthetic-scope-token' }),
+      normalizeBase: () => 'https://web.example.test', activeUpstreamOrigin: () => null,
+      withGatewayRoute: url => url, beginOperation: () => () => { finished++ }
+    })
+  })
+  for (const path of [
+    '/api/cron/jobs?profile=default', '/api/cron/jobs?profile=all', '/api/cron/jobs?profile=',
+    '/api/cron/jobs?%70rofile=writer', '/api/cron/jobs?profile=R%26D%20%2F%20writing&cursor=a%2Bb'
+  ]) {
+    await client.apiFetch({ path, profile: 'research' })
+    assert.equal(calls.at(-1).url, 'https://web.example.test' + path, 'preserve the endpoint query bytes')
+    assert.equal(new URL(calls.at(-1).url).searchParams.getAll('profile').length, 1)
+  }
+  for (const [path, profile, expected] of [
+    ['/api/sessions', 'research', ['research']],
+    ['/api/sessions?q=profile%3Dwriter', 'R&D / writing', ['R&D / writing']],
+    ['/api/sessions?limit=10', undefined, []]
+  ]) {
+    await client.apiFetch({ path, profile })
+    const query = new URL(calls.at(-1).url).searchParams
+    assert.deepEqual(query.getAll('profile'), expected)
+    if (path.includes('q=')) assert.equal(query.get('q'), 'profile=writer')
+    if (path.includes('limit=')) assert.equal(query.get('limit'), '10')
+  }
+  await client.apiFetch({ path: '/api/config?profile=writer', profile: 'research', method: 'PUT', body: { enabled: false } })
+  assert.equal(calls.at(-1).url, 'https://web.example.test/api/config?profile=writer')
+  assert.equal(calls.at(-1).options.body, '{"enabled":false}')
+  assert.equal(finished, 1, 'the existing write-operation lifetime remains intact')
+  for (const { options } of calls) {
+    assert.equal(options.credentials, 'same-origin')
+    assert.equal(options.headers['X-Hermes-Session-Token'], 'synthetic-scope-token')
+  }
+})
+
 test('plugin asset admission follows browser URL normalization for both roots', () => {
   const files = load('files', { require: () => ({ servingBase: () => 'https://web.example.test' }) })
   for (const root of ['plugins', 'desktop-plugins']) {
