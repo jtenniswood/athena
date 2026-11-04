@@ -89,17 +89,20 @@ export function BrowserProfileGroupControllerSurface({ model }: { model: Profile
       <DropdownMenuContent align="end">
         {browserProfile && group.profile && !model.embedded && <BrowserHideProfileItem profile={group.profile} />}
         <DropdownMenuItem onSelect={() => { model.setDraft(model.alias || ''); model.setRenaming(true) }}>{renameLabel}</DropdownMenuItem>
-        <DropdownMenuItem disabled={!model.alias} onSelect={() => renameGatewayGroup(group.id, '')}>{copy.resetName}</DropdownMenuItem>
         <DropdownMenuItem disabled={model.first} onSelect={() => model.onMove(-1)}>{copy.moveUp}</DropdownMenuItem>
         <DropdownMenuItem disabled={model.last} onSelect={() => model.onMove(1)}>{copy.moveDown}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   </div>
   const dialog = <Dialog onOpenChange={model.setRenaming} open={model.renaming}><DialogContent>
-    <form onSubmit={event => { event.preventDefault(); renameGatewayGroup(group.id, model.draft); model.setRenaming(false) }}>
+    <form className="grid gap-4" onSubmit={event => { event.preventDefault(); renameGatewayGroup(group.id, model.draft); model.setRenaming(false) }}>
       <DialogHeader><DialogTitle>{renameLabel}</DialogTitle><DialogDescription>{copy.aliasHint}</DialogDescription></DialogHeader>
       <Input aria-label={copy.aliasLabel} autoFocus maxLength={120} onChange={event => model.setDraft(event.target.value)} placeholder={group.label} value={model.draft} />
-      <DialogFooter><Button onClick={() => model.setRenaming(false)} type="button" variant="ghost">{t.common.cancel}</Button><Button type="submit">{t.common.save}</Button></DialogFooter>
+      <DialogFooter>
+        <Button className="sm:mr-auto" disabled={!model.alias} onClick={() => { renameGatewayGroup(group.id, ''); model.setRenaming(false) }} type="button" variant="outline">{copy.resetName}</Button>
+        <Button onClick={() => model.setRenaming(false)} type="button" variant="ghost">{t.common.cancel}</Button>
+        <Button type="submit">{t.common.save}</Button>
+      </DialogFooter>
     </form>
   </DialogContent></Dialog>
   return <BrowserProfileGroup ref={sortable.ref} style={sortable.style}
