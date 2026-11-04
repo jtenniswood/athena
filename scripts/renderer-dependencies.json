@@ -105,8 +105,13 @@
     },
     "@vitejs/plugin-react": {
       "upstream": "6.0.3",
-      "version": "6.1.2",
-      "reason": "Use Athena's existing React build plugin with its reviewed Vite version."
+      "version": "6.2.1",
+      "reason": "Use the React plugin's refresh filtering fixes with Athena's reviewed Vite version; verify typechecking, browser startup and the production build."
+    },
+    "shiki": {
+      "upstream": "4.5.0",
+      "version": "4.6.0",
+      "reason": "Use corrected grammar injection and token offsets with the existing Shiki 4 transcript integration; verify syntax highlighting, typechecking and the production build."
     }
   }
 }
