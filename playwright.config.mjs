@@ -6,7 +6,7 @@ export default defineConfig({
   use: { headless: true, trace: 'retain-on-failure', screenshot: 'only-on-failure' },
   projects: [
     { name: 'chromium', testIgnore: /webkit\.spec\.mjs$/, use: { browserName: 'chromium' } },
-    { name: 'webkit', testMatch: /(?:webkit|gateway-setup|sign-in|mobile-chat-history|timeline-scrubbing|composer-keyboard|display-scale|external-links|browser-windows|clipboard-selection|ambient-claims|file-picker|plugin-files|plugin-discovery)\.spec\.mjs$/, use: { browserName: 'webkit' } }
+    { name: 'webkit', testMatch: /(?:webkit|gateway-setup|sign-in|mobile-chat-history|timeline-scrubbing|composer-keyboard|display-scale|external-links|browser-windows|clipboard-selection|ambient-claims|file-picker|plugin-files|plugin-discovery|sidebar-gestures)\.spec\.mjs$/, use: { browserName: 'webkit' } }
   ],
   reporter: [
     ['list'],
