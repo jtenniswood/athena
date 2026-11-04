@@ -63,7 +63,7 @@ function BrowserLayout() {
       <aside id="browser-navigation" ref={navigation.drawer} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={navigation.compact && navigation.drawerOpen ? 'dialog' : undefined} aria-modal={navigation.compact && navigation.drawerOpen ? true : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
         <BrowserNavigationTabs navigation={navigation} actions={tab !== 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} /> : undefined} />
         <div className="browser-navigation-body" role="tabpanel" aria-label={tab}>
-          <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}><BrowserSidebarNavigation onNavigate={openRoute} settings={tab === 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} row /> : null}><BrowserSessionsSurface /></BrowserSidebarNavigation></BrowserSessionsPane>
+          <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}><BrowserSidebarNavigation settings={tab === 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} row /> : null}><BrowserSessionsSurface /></BrowserSidebarNavigation></BrowserSessionsPane>
           <div hidden={tab !== 'bots'} className="browser-pane"><BrowserBotsSurface fallback={<BrowserBotsFallback />} /></div>
         </div>
         {updateNotice && !updateDismissed && <div className="browser-update-panel" role="status" aria-label="Application update">

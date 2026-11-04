@@ -117,8 +117,8 @@
 .browser-sessions-pane [data-gateway-group] > :first-child { padding-inline-end:.625rem; }
 .browser-sessions-pane [data-gateway-group] > :first-child > [data-row-actions] { gap:0; margin-inline-end:0; }
 .browser-sessions-pane [data-gateway-group] > :first-child > [data-row-actions] button { margin:0; color:var(--web-text-muted); opacity:1; }
-/* Inset chat ages while aligning hover actions with the header controls. */
-.browser-sessions-pane [data-web-session-id] .session-row-tail:has(time) { padding-inline-end:var(--web-space-2); }
+/* Inset chat ages and unread dots while aligning hover actions with the header controls. */
+.browser-sessions-pane [data-web-session-id] .session-row-tail:has(time, [data-session-unread]) { padding-inline-end:var(--web-space-2); }
 /* Let metadata set the resting fade boundary, then reserve room for visible actions. */
 .browser-sessions-pane [data-row-actions]:has(> [data-browser-session-actions]) { min-height:var(--web-control-compact); }
 .browser-sessions-pane [data-browser-session-actions] { position:absolute; right:0; display:flex; align-items:center; gap:var(--web-space-1); opacity:0; pointer-events:none; }
