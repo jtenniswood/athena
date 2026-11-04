@@ -199,6 +199,7 @@ for (const [layout, combined, grouped] of [
     const { source, target, after } = await aimOrder(page)
     await page.mouse.up()
     const isAfter = async () => {
+      // Profile/project rows can remount independently while the sidebar reloads.
       const [sourceBounds, targetBounds] = await Promise.all([source.boundingBox(), target.boundingBox()])
       return sourceBounds && targetBounds ? sourceBounds.y > targetBounds.y : undefined
     }
@@ -214,6 +215,7 @@ for (const [layout, combined, grouped] of [
     await page.keyboard.press('Escape')
     await page.reload()
     await expect(source).toBeVisible()
+    await expect(target).toBeVisible()
     await expect.poll(isAfter).toBe(after)
     await expect(editor).toHaveText('Keep the draft through sidebar gestures')
   })
