@@ -108,6 +108,91 @@ test('visible apps discover waiting updates on return, reconnect, and a timer wi
   }
 })
 
+async function discoverUpdate(app) {
+  const messages = []
+  app.updateWith(async () => { app.worker.waiting = { postMessage(message) { messages.push(message) } } })
+  await app.poll()
+  assert.equal(app.notice().phase, 'available')
+  return messages
+}
+
+test('updating is published before saving and repeated activation requests are ignored', async () => {
+  const app = registration()
+  const messages = await discoverUpdate(app)
+  let finish
+  app.saveWith(() => new Promise(resolve => { finish = resolve }))
+  const update = app.notice().update
+  const preparing = update()
+  assert.equal(app.notice().phase, 'updating')
+  await update()
+  await waitFor(() => typeof finish === 'function')
+  assert.equal(messages.length, 0)
+  finish()
+  await preparing
+  app.saveWith(async () => {})
+  assert.equal(app.notice().phase, 'updating')
+  assert.equal(messages.length, 1)
+  assert.equal(messages[0].type, 'HERMES_PREPARE_UPDATE')
+  await update()
+  assert.equal(messages.length, 1)
+  assert.equal(app.reloads(), 0)
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true)
+  await app.controllerChange()
+  assert.equal(app.reloads(), 1)
+})
+
+test('an unsafe update restores the action and can retry once unsent files are cleared', async () => {
+  const app = registration()
+  const messages = await discoverUpdate(app)
+  app.change({ first: 'one' }, { attachments: 1 })
+  await app.notice().update()
+  assert.equal(app.notice().phase, 'available')
+  assert.match(app.notice().message, /attachments/)
+  assert.equal(messages.length, 0)
+  assert.equal(app.root.inert, false)
+  app.change({ first: 'one' }, { attachments: 0 })
+  await app.notice().update()
+  assert.equal(app.notice().phase, 'updating')
+  assert.equal(messages.length, 1)
+})
+
+test('abort and timeout restore the action and release update locks', async () => {
+  for (const cancel of [app => app.ask('HERMES_ABORT_UPDATE'), app => app.expire()]) {
+    const app = registration()
+    await discoverUpdate(app)
+    await app.notice().update()
+    assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true)
+    assert.equal(app.notice().phase, 'updating')
+    await cancel(app)
+    assert.equal(app.notice().phase, 'available')
+    assert.match(app.notice().message, /postponed/)
+    assert.equal(app.root.inert, false)
+    assert.equal(app.body.inert, false)
+    assert.equal(app.reloads(), 0)
+  }
+})
+
+test('a final safety refusal restores the action instead of leaving a reloading notice', async () => {
+  const app = registration()
+  await discoverUpdate(app)
+  await app.notice().update()
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true)
+  app.change({ first: 'one' }, { attachments: 1 })
+  await app.controllerChange()
+  assert.equal(app.notice().phase, 'available')
+  assert.equal(app.reloads(), 0)
+  assert.equal(app.root.inert, false)
+})
+
+test('an update started in another tab also publishes progress during preparation', async () => {
+  const app = registration()
+  await discoverUpdate(app)
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true)
+  assert.equal(app.notice().phase, 'updating')
+  await app.ask('HERMES_ABORT_UPDATE')
+  assert.equal(app.notice().phase, 'available')
+})
+
 test('background update discovery skips hidden, offline, installing, and concurrent checks', async () => {
   const app = registration()
   app.visible(false)

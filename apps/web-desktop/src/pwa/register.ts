@@ -6,6 +6,7 @@ import { activateBrowserNotificationCallback, browserNotificationCallbackReady, 
 export type PwaUpdateNotice = {
   readonly update: () => void
   readonly message: string
+  readonly phase: 'available' | 'updating'
 }
 
 type PwaUpdateListener = (notice: PwaUpdateNotice | null) => void
@@ -43,9 +44,9 @@ export function registerPwa(): void {
   let snapshot: DraftSnapshot | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
   let notice: PwaUpdateNotice | null = null
-  const setStatus = (message: string) => {
+  const setStatus = (message: string, phase: PwaUpdateNotice['phase'] = 'available') => {
     if (!notice) return
-    notice = { ...notice, message }
+    notice = { ...notice, message, phase }
     publishPwaUpdate(notice)
   }
   const unlock = () => {
@@ -82,7 +83,11 @@ export function registerPwa(): void {
       if (!releaseInteraction) { event.ports[0]?.postMessage({ ready: false }); return }
       transaction = message.transaction
       snapshot = undefined
-      clearTimeout(timer); timer = setTimeout(unlock, 15000)
+      setStatus('Saving drafts and preparing open tabs. Running tasks will continue.', 'updating')
+      clearTimeout(timer); timer = setTimeout(() => {
+        unlock()
+        setStatus('Reload postponed. The update took too long to prepare. Try again.')
+      }, 15000)
       const state = await reloadReadinessAfterSaving('ui-update')
       // A worker timeout/abort must not leave a late save holding the UI locked.
       if (transaction !== message.transaction) { event.ports[0]?.postMessage({ ready: false }); return }
@@ -118,18 +123,27 @@ export function registerPwa(): void {
   })
   navigator.serviceWorker.addEventListener('controllerchange', async () => {
     const prepared = transaction
-    if (prepared && (await reloadReadinessAfterSaving('ui-update')).ready && transaction === prepared) window.location.reload()
-    else unlock()
+    if (prepared && (await reloadReadinessAfterSaving('ui-update')).ready && transaction === prepared) {
+      setStatus('Your chats and saved drafts will return. Running tasks will continue.', 'updating')
+      window.location.reload()
+    } else {
+      unlock()
+      if (notice?.phase === 'updating') setStatus('Reload postponed. Pending changes could not be saved. Try again.')
+    }
   })
   const showUpdate = (registration: ServiceWorkerRegistration) => {
     if (!registration.waiting || !navigator.serviceWorker.controller || notice) return
     const update = async () => {
-      const state = await reloadReadinessAfterSaving('ui-update')
-      if (!state.ready) { setStatus(state.reason || 'Update postponed.'); return }
-      setStatus('Checking open Hermes tabs…')
-      registration.waiting?.postMessage({ type: 'HERMES_PREPARE_UPDATE' })
+      if (notice?.phase === 'updating') return
+      setStatus('Saving drafts and preparing open tabs. Running tasks will continue.', 'updating')
+      try {
+        const state = await reloadReadinessAfterSaving('ui-update')
+        if (!state.ready) { setStatus(state.reason || 'Reload postponed. Try again.'); return }
+        if (!registration.waiting) { setStatus('The update is no longer ready. Check for updates again.'); return }
+        registration.waiting.postMessage({ type: 'HERMES_PREPARE_UPDATE' })
+      } catch { setStatus('The interface could not reload. Try again.') }
     }
-    notice = { update, message: 'A UI update is ready. Running tasks will continue while the app reconnects.' }
+    notice = { update, phase: 'available', message: 'A UI update is ready. Running tasks will continue while the app reconnects.' }
     publishPwaUpdate(notice)
   }
   const register = async () => {
