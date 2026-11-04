@@ -63,7 +63,7 @@ test('composer line breaks respect IME commits, selection and unrelated editors'
 
 test('accepted sends position their real mounted renderer transcript', async ({ page }) => {
   for (const [text, fresh] of [['Position this accepted prompt', false], ['First prompt in a fresh chat', true]]) {
-    if (fresh) await page.getByRole('button', { name: 'New session', exact: true }).click()
+    if (fresh) await page.getByRole('button', { name: 'New session in Hermes', exact: true }).click()
     const editor = composer(page)
     await editor.fill(text)
     await editor.press('Enter')
