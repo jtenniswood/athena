@@ -2,6 +2,7 @@ import { createServer } from 'node:http'
 import { WebSocketServer } from 'ws'
 import { fileURLToPath } from 'node:url'
 import { createFaultControls } from './faults.mjs'
+import { createPreviewConfig } from './config.mjs'
 
 /** Deterministic review backend. No model provider, external API or real user data. */
 export function createPreviewGateway({ log = () => {}, delay = 95, strict = false } = {}) {
@@ -19,7 +20,8 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
   const skills = [{ name: 'preview-planning', category: 'Productivity', description: 'A synthetic planning skill for interface review.', enabled: true, provenance: 'bundled' }]
   const toolsets = [{ name: 'preview', label: 'Preview tools', description: 'Synthetic tools; no external services are called.', enabled: true, configured: true, tools: ['preview_note'] }]
   const platforms = [{ id: 'discord', name: 'Discord', description: 'Synthetic preview only. No external messages are sent.', docs_url: '', enabled: false, configured: true, env_vars: [], gateway_running: true, state: 'disabled' }]
-  const sessions = new Map(), messages = new Map(), timers = new Map(), inflight = new Map(), clients = new Set(), approvalModes = new Map()
+  const config = createPreviewConfig(profiles, info.model)
+  const sessions = new Map(), messages = new Map(), timers = new Map(), inflight = new Map(), clients = new Set()
   let count = 0
   function addSession(id, title, profile = 'default', text = '') {
     const rows = text ? [{ id: `${id}-u`, role: 'user', content: 'Help me make a thoughtful plan.', timestamp: now() - 60 }, { id: `${id}-a`, role: 'assistant', content: text, timestamp: now() - 40 }] : []
@@ -72,7 +74,10 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'shared_metrics.slash_command' && typeof params.command === 'string' && /^[a-z][a-z0-9_-]*$/.test(params.command) && (params.session_id == null || sessions.has(params.session_id))) return { ok: true }
     if (method === 'bot_relay.roster.sync' && Array.isArray(params.agents)) return { ok: true }
     if (method === 'billing.state' || method === 'subscription.state') throw new Error('Billing is unavailable in the synthetic gateway')
-    if (method === 'config.set' && ['display.in_app_tips', 'display.in_app_tours', 'display.message_reactions'].includes(params.key)) return { value: params.value }
+    const configProfile = params.profile || profile
+    if (method === 'config.set' && ['approvals.mode', 'approval_mode', 'display.in_app_tips', 'display.in_app_tours', 'display.message_reactions'].includes(params.key)) return config.set(configProfile, params.key, params.value)
+    if (method === 'config.get' && ['approvals.mode', 'approval_mode'].includes(params.key)) return { value: config.read(configProfile).approvals.mode }
+    if (method === 'config.get' && params.key === 'full') return { config: config.read(configProfile) }
     // Explicit optional startup probes from the pinned renderer. These have no
     // provider, running process, local pet, or speech service in the fixture.
     if (method === 'free_tier.status') return { has_guest: false, enabled: false, available: false }
@@ -86,12 +91,6 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'complete.slash' && typeof params.text === 'string' && params.text.startsWith('/')) return { items: [], replace_from: 1 }
     if (method === 'profiles.set_asset' && params.asset === 'avatar') return { ok: true }
     if (method === 'image.generate') throw new Error('Image generation is unavailable in the synthetic gateway')
-    if (method === 'config.get' && params.key === 'approvals.mode') return { value: approvalModes.get(profile) || 'smart' }
-    if (method === 'config.set' && params.key === 'approvals.mode') {
-      if (!['manual', 'smart', 'off'].includes(params.value)) throw new Error('Invalid approval mode')
-      approvalModes.set(profile, params.value)
-      return { value: params.value }
-    }
     if (method === 'profiles.list') return { profiles: roster(), bot_mode_protocol: true }
     if (method === 'profiles.configure' && params.name === 'default' && Object.keys(params.ui_meta || {}).length === 1 && params.ui_meta['hermes-bots-groups']) {
       const snapshot = params.ui_meta['hermes-bots-groups']
@@ -120,8 +119,8 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       event('sessions.changed', null, {})
       return { session_id: session.id, stored_session_id: session.id, info, ...session, messages: [] }
     }
-    if (method === 'config.get' || method === 'model.info') return { ...info, model: info.model, provider: 'custom', config: { model: { default: info.model, provider: 'custom' }, display: {} } }
-    if (method === 'profiles.get') return { ...profiles.find(p => p.name === params.name), config: { model: { default: info.model } } }
+    if (method === 'model.info') return { ...info, model: info.model, provider: 'custom' }
+    if (method === 'profiles.get') return { ...profiles.find(p => p.name === params.name), config: config.read(params.name) }
     if (method === 'pet.gallery') return { enabled: false, active: '', pets: [] }
     if (method === 'prompt.submit') {
       if (!sessions.has(id)) addSession(id, 'New conversation')
@@ -169,8 +168,10 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       await controls.before({ transport: 'http', method: req.method, path: pathname, query: Object.fromEntries(url.searchParams), body: parsed })
       if (pathname === '/api/status') return send({ status: 'ok', auth_required: false, version: info.version, profile: 'default', desktop_contract: info.desktop_contract })
       if (pathname === '/api/hermes/update/check') return send({ install_method: 'synthetic', current_version: info.version, behind: 0, update_available: false, can_apply: false, update_command: null, message: null, commits: [] })
-      if (pathname === '/api/config/defaults') return send({ model: { default: info.model, provider: 'custom' }, display: {} })
-      if (req.method === 'GET' && pathname === '/api/config/schema') return send({ fields: {} })
+      if (req.method === 'GET' && pathname === '/api/config/defaults') return send(config.defaults())
+      if (req.method === 'GET' && pathname === '/api/config/schema') return send(config.schema())
+      if (req.method === 'GET' && pathname === '/api/config') return send(config.read(url.searchParams.get('profile') || 'default', url.searchParams.get('include_defaults') !== 'false'))
+      if (req.method === 'PUT' && pathname === '/api/config') return send(config.write(parsed.profile || url.searchParams.get('profile') || 'default', parsed.config))
       if (req.method === 'GET' && pathname === '/api/env') return send({})
       if (pathname === '/api/audio/voice-live/status') return send({ mode: 'chained', available: false, reason: 'Synthetic fixture has no voice service', model: '', voice: '' })
       if (pathname === '/api/audio/elevenlabs/voices') return send({ voices: [] })
@@ -199,7 +200,6 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       }
       if (pathname === '/api/profiles') return send({ profiles: profiles.map(p => ({ ...p, is_active: p.name === 'default', path: `/workspace/${p.name}`, has_config: true, has_soul: true })) })
       if (pathname === '/api/profile' || pathname === '/api/profiles/active') return send({ profile: 'default', current: 'default' })
-      if (pathname === '/api/config') return send({ config: { model: { default: info.model, provider: 'custom' }, display: {}, terminal: {} }, raw: '', path: '/workspace/config.yaml' })
       if (pathname === '/api/model/info') return send({ ...info, context_length: 128000, provider_configured: true })
       if (pathname === '/api/model/options') return send(modelOptions)
       if (req.method === 'GET' && pathname === '/api/model/auxiliary') return send({ main: { model: info.model, provider: 'custom' }, tasks: [] })
