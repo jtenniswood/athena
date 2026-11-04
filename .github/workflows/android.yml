@@ -12,7 +12,6 @@ on:
       - 'apps/web-desktop/src/upstream/native-settings.ts'
       - 'apps/web-desktop/src/upstream/config-field-presentation.ts'
       - 'apps/web-desktop/build/renderer/transforms/settings.ts'
-      - 'apps/web-desktop/src/experience/settings/**'
       - 'apps/web-desktop/src/experience/contracts/settings-presentation.ts'
       - 'apps/web-desktop/src/platform/settings-presentation.ts'
       - 'apps/web-desktop/src/experience/browser-shell.tsx'

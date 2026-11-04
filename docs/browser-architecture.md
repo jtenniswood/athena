@@ -118,6 +118,13 @@ original file-import and pending-save owners. Unsupported or oversized snapshots
 leave the complete web editor available. This interface does not reactivate
 native Settings or native menus in the current application entry point.
 
+WebView instrumentation embeds the shipped Android adapter, native settings
+adapter and presentation registry through `scripts/android-test-adapter.mjs`.
+The APK workflow covers native app, bridge/protocol and hosting integration paths.
+The rest of the web Settings UI is verified by the always-running browser
+compatibility workflow; changing only its styles or catalog does not rebuild
+the APK.
+
 `experience/session-row.tsx` owns session-row geometry, density, primary actions,
 keyboard access and drag handles. `upstream/session-row.tsx` projects live engine
 metadata, status and extension decorations and retains the engine's mutation and
