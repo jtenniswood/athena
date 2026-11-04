@@ -32,17 +32,20 @@ export function BrowserSidebar({ model, children }: { model: BrowserSidebarModel
                 item.active && 'border-(--ui-stroke-tertiary) bg-(--ui-control-active-background) text-foreground shadow-none hover:border-(--ui-stroke-tertiary)!',
                 item.disabled && 'cursor-default hover:border-transparent hover:bg-transparent hover:text-inherit')}>
               {item.icon}<span className="min-w-0 truncate" data-tip-arrow-only="" data-tour={`sidebar-nav-${item.id}`}>{item.label}</span>
-            </button>}{item.id === 'new-session' && <BrowserSidebarSettings />}
+            </button>}
           </li>)}
         </ul></div>
       </div>
       {model.notice}
-      {model.showSections && <div className="browser-session-search-section shrink-0 px-2 pb-1 pt-1">
-        <SearchField containerClassName="browser-session-search" aria-label="Search" placeholder="Search" inputRef={model.search.input} value={model.search.value} onChange={model.search.change} />
-        <BrowserSidebarExtras />
-      </div>}
       {model.showSections ? <div data-sessions-mode={model.mode} data-sessions-project={model.project}
         className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain pb-1.75 [scrollbar-gutter:stable] scrollbar-fade">{children}</div> : model.empty}
+      <div data-slot="sidebar-footer" className="mt-auto min-h-0 shrink overflow-y-auto overflow-x-hidden overscroll-contain pb-1 pt-1 scrollbar-fade">
+        <BrowserSidebarSettings />
+        {model.showSections && <div className="browser-session-search-section px-2 pt-1">
+          <SearchField containerClassName="browser-session-search" aria-label="Search" placeholder="Search" inputRef={model.search.input} value={model.search.value} onChange={model.search.change} />
+          <BrowserSidebarExtras />
+        </div>}
+      </div>
       {model.profileRail}
     </div>
     {model.dialogs}
