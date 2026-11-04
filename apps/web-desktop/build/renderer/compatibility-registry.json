@@ -308,7 +308,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "store/layout.ts",
-    "reason": "Expose None grouping and default the browser all-profiles session list to Profile while preserving saved choices.",
+    "reason": "Expose None content grouping, retain legacy saved Profile values, and cycle content grouping independently of profile layout.",
     "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
     "tests": [
       {
@@ -322,6 +322,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "Profile grouping replaces presentation controls and switches live without gateway nesting"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "profile layout composes with content grouping and preserves the draft"
       }
     ],
     "removal": "Upstream supports None grouping as a persisted option.",
@@ -331,14 +335,14 @@
     "sourceHash": "b036ba9cbf09093271bcbfaf825ab5fea1e41f674750e9f1c26f0c6efbd1674f",
     "sourceRoot": "renderer",
     "inputHash": "b036ba9cbf09093271bcbfaf825ab5fea1e41f674750e9f1c26f0c6efbd1674f",
-    "outputHash": "f294d2c80fd25c5893224835c478410967d757a4fbc41abf130a86dd949c1b50"
+    "outputHash": "b2784f123e34c65b1a504ff8b5a77a9cbba3e284536151973cbb05b264c13c9f"
   },
   {
     "name": "browser-session-filters",
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
-    "reason": "Adapt Gateway & profile grouping to Profile, hide desktop profile/card controls and the grouping summary, expose None grouping, add sidebar action shortcuts, and restore hidden profile groups from the filter control.",
+    "reason": "Offer Combined or Separate profile layout independently of content grouping, hide desktop-only controls, and retain sidebar shortcuts and profile visibility actions.",
     "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
     "tests": [
       {
@@ -356,6 +360,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "profile menus hide groups and filters restore every profile without losing the draft"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "profile layout composes with content grouping and preserves the draft"
       }
     ],
     "removal": "The browser owns the filter menu or upstream offers composition flags.",
@@ -366,7 +374,7 @@
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
     "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
-    "outputHash": "b2baf873a6b29cebe35919bc3ad246d5e483a261610f88d67f7f087da96d125a"
+    "outputHash": "5a63f577371e16ac76ed210f593479766f32a41d2f6c9ca6efadf1cd69586925"
   },
   {
     "name": "hidden-bot-roster",
@@ -495,6 +503,10 @@
       {
         "file": "scripts/unified-session-list.test.mjs",
         "scenario": "profile grouping keeps empty configured profiles as new conversation entry points"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "profile layout composes with content grouping and preserves the draft"
       }
     ],
     "removal": "Remove when Hermes exposes the same sidebar controller through a public host contract.",
@@ -504,7 +516,7 @@
     "sourceHash": "851f2833257195fcf6a4020d5f6f606dbe565de213062de22e5ebcd981f6c0dc",
     "sourceRoot": "renderer",
     "inputHash": "851f2833257195fcf6a4020d5f6f606dbe565de213062de22e5ebcd981f6c0dc",
-    "outputHash": "07c43eafd5a2634f5ea0fcf7038b9fe488f4aad1f07c6ef65ca6706e03af0946"
+    "outputHash": "63a3407699d284c23c2f8a0d906788b9e81640248d63d50f425f68568d8956c7"
   },
   {
     "name": "single-conversation-wiring",
@@ -1994,6 +2006,10 @@
       {
         "file": "scripts/unified-session-list.test.mjs",
         "scenario": "profile grouping keeps empty configured profiles as new conversation entry points"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "profile layout composes with content grouping and preserves the draft"
       }
     ],
     "removal": "Remove when the renderer exposes the same section controller through a public host contract.",
@@ -2004,7 +2020,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "2ebde4eff5928b33dddbb4fd00255441c1b9f21180db651389df64fb82fbdc7e",
     "inputHash": "2ebde4eff5928b33dddbb4fd00255441c1b9f21180db651389df64fb82fbdc7e",
-    "outputHash": "7bd04a0b4300425b0e3885ae9e2359930f2098d35011835d9968956f5f60715b"
+    "outputHash": "ae380e48ba9256c7469e5748346b6c8f8148a6c0b76448bb926a5449fb7b9576"
   },
   {
     "name": "browser-cron-jobs-section-styling",
@@ -3165,6 +3181,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "sessions from every profile share pictured sections"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "profile layout composes with content grouping and preserves the draft"
       }
     ],
     "removal": "Remove when upstream profile headers use the configured profile picture and support a single shared-gateway list.",
@@ -3175,7 +3195,7 @@
     "sourceHash": "7499db0f9583cdcbadfe66f488cf2dea6562d2e4de0c73674c3013ebb951b83c",
     "sourceRoot": "renderer",
     "inputHash": "7499db0f9583cdcbadfe66f488cf2dea6562d2e4de0c73674c3013ebb951b83c",
-    "outputHash": "db4d84f8a02582e672d8919a8de68c60149c2d5961618dd3835058c08ec2637f"
+    "outputHash": "a1fbed5c472aa80cd1709924ae336e419f6c91b4d58b95cebd21d46ad770eb83"
   },
   {
     "name": "shared-gateway-profile-route",

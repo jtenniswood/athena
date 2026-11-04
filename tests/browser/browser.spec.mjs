@@ -3715,7 +3715,7 @@ test('Profile grouping replaces presentation controls and switches live without 
   }
   await page.getByRole('button', { name: 'Filters', exact: true }).click()
   await page.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
-  await expect(page.getByRole('menuitemradio', { name: 'Profile', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByRole('menuitemradio', { name: 'None', exact: true })).toHaveAttribute('aria-checked', 'true')
   await page.keyboard.press('Escape')
   await page.keyboard.press('Escape')
   await expect(page.locator('[data-browser-section-id="sessions"] [data-browser-section-header]')).toContainText('Profiles')
@@ -3739,6 +3739,23 @@ test('Profile grouping replaces presentation controls and switches live without 
   await page.goto(`${origin}/#/settings?tab=config:appearance`)
   await expect(page.getByRole('group', { name: 'Session list presentation', exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+  await chooseGrouping('Status')
+  const defaultGroup = page.locator('[data-gateway-group]').filter({ has: page.locator('[data-browser-profile-picture="default"]') })
+  await expect(defaultGroup.getByRole('button', { name: 'Hide Done sessions', exact: true })).toBeVisible()
+  await expect(page.locator('[data-gateway-group]')).toHaveCount(3)
+  await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Filters', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Profiles', exact: true }).hover()
+  await page.getByRole('menuitemradio', { name: 'Separate', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+  await expect(defaultGroup).toHaveCount(0)
+  await page.getByRole('button', { name: 'Filters', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
+  await expect(page.getByRole('menuitemradio', { name: 'Status', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByRole('menuitemradio', { name: 'Profile', exact: true })).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
   await chooseGrouping('None')
   await expect(page.locator('[data-browser-profile-picture]')).toHaveCount(0)
   await expect(page.locator('[data-browser-section-id="sessions"] [data-browser-section-header]')).toContainText('Sessions')
@@ -3752,6 +3769,66 @@ test('Profile grouping replaces presentation controls and switches live without 
   await page.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
   await expect(page.getByRole('menuitemradio', { name: 'None', exact: true })).toHaveAttribute('aria-checked', 'true')
 })
+
+for (const width of [1440, 390]) {
+  test.extend({ hasTouch: width === 390 })(`profile layout composes with content grouping and preserves the draft at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 960 })
+    await page.route('**/api/athena/preferences', route => route.abort())
+    const extra = { id: 'profile-extra', title: 'Research project conversation', profile: 'research', source: 'desktop',
+      started_at: 1900000000, last_active: 1900000000, message_count: 2 }
+    await page.route(/\/api\/(?:profiles\/)?sessions(?:\/sidebar)?(?:\?|$)/, async route => {
+      const response = await route.fetch(), data = await response.json()
+      const rows = data.recents?.sessions ?? data.sessions
+      if (rows && !rows.some(row => row.id === extra.id)) rows.push(extra)
+      await route.fulfill({ response, json: data })
+    })
+    await page.route('**/api/profiles/projects/tree?**', route => route.fulfill({ json: { projects: [
+      { id: '__no_project__', label: 'Home', path: null, isNoProject: true, sessionCount: 1, repos: [], sessionIds: ['preview-idea'] },
+      { id: 'shared-project', label: 'Shared project', path: '/workspace/project', sessionCount: 2, repos: [],
+        sessionIds: ['preview-week', extra.id], previewSessions: [extra] }
+    ], active_id: null } }))
+    await open(page, 'preview-week', { defaultGrouping: true })
+    const draft = 'Keep this draft through independent profile layouts'
+    await editor(page).fill(draft)
+    if (width === 390) await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+    const choose = async (menu, value) => {
+      await page.getByRole('button', { name: 'Filters', exact: true }).click()
+      const submenu = page.getByRole('menuitem', { name: menu, exact: true })
+      if (width === 390) await submenu.click(); else await submenu.hover()
+      await page.getByRole('menuitemradio', { name: value, exact: true }).click()
+      if (width === 390) await page.mouse.click(width - 8, 8)
+      else { await page.keyboard.press('Escape'); await page.keyboard.press('Escape') }
+    }
+    const section = page.locator('[data-browser-section-id="sessions"]')
+    const group = profile => section.locator('[data-gateway-group]').filter({ has: page.locator(`[data-browser-profile-picture="${profile}"]`) })
+    await choose('Grouping', 'Status')
+    await expect(group('default').getByRole('button', { name: 'Hide Done sessions', exact: true })).toBeVisible()
+    await expect(group('research').getByRole('button', { name: extra.title, exact: true })).toBeVisible()
+    await group('default').getByRole('button', { name: 'Hide Done sessions', exact: true }).click()
+    await expect(group('default').getByRole('button', { name: 'Plan a calmer working week', exact: true })).toHaveCount(0)
+    await expect(group('research').getByRole('button', { name: extra.title, exact: true })).toBeVisible()
+    await choose('Grouping', 'None')
+    await expect(group('default').getByRole('button', { name: 'Plan a calmer working week', exact: true })).toBeVisible()
+    await choose('Grouping', 'Status')
+    await choose('Profiles', 'Separate')
+    await expect(page.locator('.browser-profile-footer')).toBeVisible()
+    await expect(section.locator('[data-gateway-group]')).toHaveCount(0)
+    await expect(section.getByRole('button', { name: 'Hide Done sessions', exact: true })).toBeVisible()
+    await choose('Profiles', 'Combined')
+    await expect(group('default').getByRole('button', { name: 'Show Done sessions', exact: true })).toBeVisible()
+    await choose('Grouping', 'Project')
+    await expect(group('default').getByRole('button', { name: 'Shared project', exact: true })).toBeVisible()
+    await expect(group('research').getByRole('button', { name: 'Shared project', exact: true })).toBeVisible()
+    await expect(group('research').getByRole('button', { name: 'Plan a calmer working week', exact: true })).toHaveCount(0)
+    await choose('Grouping', 'Updated')
+    await expect(group('default')).toBeVisible()
+    await page.reload()
+    await expect(group('default')).toBeVisible()
+    if (width === 390) await group('default').getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
+    await expect(editor(page)).toHaveText(draft)
+    await expect(page).toHaveURL(/#\/preview-week$/)
+  })
+}
 
 test('profile menus hide groups and filters restore every profile without losing the draft', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })

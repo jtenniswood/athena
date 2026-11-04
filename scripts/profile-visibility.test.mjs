@@ -22,7 +22,7 @@ function navigation({ active = 'default', all = false, hidden = ['archived'], na
     useRef: value => ({ current: value }),
     useState: value => [typeof value === 'function' ? value() : value, () => {}],
     useEffect: () => {},
-    useBrowserProfiles: () => model,
+    useBrowserEngine: () => ({ profiles: { useProfiles: () => model }, surfaces: { ProfileEditor: 'editor' } }),
     useMobileBrowser: () => false,
     readHiddenProfiles: () => hidden,
     readHideAllProfilesButton: () => false,
@@ -77,6 +77,9 @@ function restoration({ saved = null, active = 'default', all = false, hidden = [
     $profiles: profiles, $activeGatewayProfile: current, $showAllProfiles: scope,
     $profileOrder: atom(order),
     readHiddenProfiles: () => hidden,
+    browserPreference: () => ({ read: () => all, write: () => {} }),
+    readBrowserTabProfile: () => saved,
+    rememberBrowserTabProfile: value => storage.set('hermes-web.browser.profile', value),
     setShowAllProfiles: value => scope.set(value),
     selectProfile: name => { selections.push(name); scope.set(false); current.set(name) },
     sortByProfileOrder: (items, keys) => [...items].sort((a, b) => keys.indexOf(a.name) - keys.indexOf(b.name))

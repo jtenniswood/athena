@@ -9,6 +9,11 @@ build time.
 
 > This is intended for private networks such as Tailscale and is not hardened for the public internet.
 
+In the sidebar Filters menu, choose **Profiles → Combined** to show profiles together,
+or **Separate** to use the profile switcher. Choose **Grouping** independently:
+None, Updated, Project, or Status. For example, Combined + Status groups chats by
+status within each profile.
+
 ## Docker self-hosting
 
 The image contains Athena’s web UI, nginx, and a small settings storage service.
