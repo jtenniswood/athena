@@ -1,5 +1,6 @@
 import { reloadReadiness, reloadReadinessAfterSaving, type DraftSnapshot } from '../platform/reload-safety'
 import { installUpdateNetworkBarrier } from './update-network'
+import { beginBrowserTransition } from '../platform/browser-transition'
 import { routeBrowserNotification } from '../platform/notification-navigation'
 
 export type PwaUpdateNotice = {
@@ -37,6 +38,7 @@ export function registerPwa(): void {
   const local = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost')
   if (protocol !== 'https:' && !local) return
   const network = installUpdateNetworkBarrier()
+  let releaseInteraction: (() => void) | undefined
   let transaction: string | undefined
   let snapshot: DraftSnapshot | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -47,8 +49,8 @@ export function registerPwa(): void {
     publishPwaUpdate(notice)
   }
   const unlock = () => {
-    const root = document.getElementById('root')
-    if (root) root.inert = false
+    releaseInteraction?.()
+    releaseInteraction = undefined
     clearTimeout(timer); transaction = undefined; snapshot = undefined
     network.resume()
   }
@@ -66,10 +68,10 @@ export function registerPwa(): void {
     if (!['HERMES_FLUSH_UPDATE', 'HERMES_VERIFY_UPDATE'].includes(message?.type)) return
     if (message.type === 'HERMES_FLUSH_UPDATE') {
       if (transaction && transaction !== message.transaction) { event.ports[0]?.postMessage({ ready: false }); return }
+      releaseInteraction ??= beginBrowserTransition()
+      if (!releaseInteraction) { event.ports[0]?.postMessage({ ready: false }); return }
       transaction = message.transaction
       snapshot = undefined
-      const root = document.getElementById('root')
-      if (root) root.inert = true
       clearTimeout(timer); timer = setTimeout(unlock, 15000)
       const state = await reloadReadinessAfterSaving('ui-update')
       // A worker timeout/abort must not leave a late save holding the UI locked.

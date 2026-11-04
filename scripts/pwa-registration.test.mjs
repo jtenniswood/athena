@@ -49,13 +49,15 @@ function registration(network = { pause: async () => true, resume() {} }) {
   }
   const safety = load('platform/reload-safety.ts')
   const routing = load('platform/notification-navigation.ts')
+  const transitions = load('platform/browser-transition.ts')
   context.require = name => name === './update-network'
-    ? { installUpdateNetworkBarrier: () => network } : name === '../platform/notification-navigation' ? routing : safety
+    ? { installUpdateNetworkBarrier: () => network } : name === '../platform/notification-navigation' ? routing
+      : name === '../platform/browser-transition' ? transitions : safety
   safety.setActiveWork({ count: 0 })
   const pwa = load('pwa/register.ts')
   pwa.registerPwa()
   return {
-    safety, root, location: context.window.location,
+    safety, transitions, root, location: context.window.location,
     worker,
     updates: () => updates,
     notice: () => pwa.currentPwaUpdate(),
@@ -253,4 +255,39 @@ test('notification routing uses this document and refuses cross-profile or froze
   await app.ask('HERMES_ABORT_UPDATE')
   assert.equal((await app.route('http://localhost/#/other')).ready, true)
   assert.equal(app.location.hash, '#/other')
+})
+
+test('a competing page transition keeps its interaction lock through update refusal and cleanup', async () => {
+  let paused = 0
+  const app = registration({ pause: async () => { paused++; return true }, resume() {} })
+  const release = app.transitions.beginBrowserTransition()
+  assert.equal(typeof release, 'function')
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, false)
+  assert.equal(paused, 0, 'refusal must not pause another transition’s requests')
+  await app.controllerChange()
+  await app.ask('HERMES_ABORT_UPDATE')
+  assert.equal(app.root.inert, true)
+  assert.equal(app.reloads(), 0)
+  release()
+  assert.equal(app.root.inert, false)
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true)
+  assert.equal(app.transitions.beginBrowserTransition(), undefined)
+  release()
+  assert.equal(app.root.inert, true, 'a stale release cannot unlock the update owner')
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true, 'the same update reuses its lock')
+  await app.ask('HERMES_ABORT_UPDATE')
+  assert.equal(app.root.inert, false)
+  const next = app.transitions.beginBrowserTransition()
+  await app.ask('HERMES_ABORT_UPDATE', 'update')
+  assert.equal(app.root.inert, true)
+  next(); next()
+  assert.equal(app.root.inert, false)
+})
+
+test('an update cannot take over a root already frozen outside its transition owner', async () => {
+  const app = registration()
+  app.root.inert = true
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, false)
+  await app.controllerChange()
+  assert.equal(app.root.inert, true)
 })

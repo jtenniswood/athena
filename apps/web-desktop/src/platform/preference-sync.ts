@@ -1,5 +1,6 @@
 import { preferenceKeys, isPreferenceKey, validatePreferenceValues } from '../../../../scripts/preference-schema.mjs'
 import { connectionState } from './connection-state'
+import { beginBrowserTransition } from './browser-transition'
 import { runtimeConfig } from './runtime'
 import { registerPendingBrowserWork } from './pending-work'
 import { reloadReadinessAfterSaving } from './reload-safety'
@@ -234,9 +235,8 @@ export async function initializePreferenceSync(): Promise<void> {
 }
 
 export async function applySyncedPreferences(): Promise<void> {
-  const root = document.getElementById('root')
-  if (!root || root.inert) return
-  root.inert = true
+  const release = beginBrowserTransition()
+  if (!release) return
   try {
     const state = await reloadReadinessAfterSaving()
     if (!state.ready) throw new Error(state.reason)
@@ -245,5 +245,5 @@ export async function applySyncedPreferences(): Promise<void> {
       if (!latest.ready) throw new Error(latest.reason)
     })
     window.location.reload()
-  } catch (error) { root.inert = false; throw error }
+  } catch (error) { release(); throw error }
 }
