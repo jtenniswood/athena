@@ -211,11 +211,11 @@ export function useBrowserProjectDeleteOwner(source: string, root: string): stri
       )
     )
   })`
-  const output = replaceBrowserContract(source, [
+  let output = replaceBrowserContract(source, [
     [start, start + `
   const allProfiles = viewingAllProfiles()
   const deleteProfile = allProfiles
-    ? await browserProjectDeleteProfile(context.gateway, id, $profiles.get().map(profile => profile.name))
+    ? await browserProjectOwnerProfile(context.gateway, id, $profiles.get().map(profile => profile.name))
     : context.profile
   if (!stillOnWritableProjectOwner(context) || viewingAllProfiles() !== allProfiles) {
     throw new Error('Active Hermes profile changed before deleting the project')
@@ -233,8 +233,39 @@ export function useBrowserProjectDeleteOwner(source: string, root: string): stri
     ["// Optimistic: drop the project from the cached tree + list the instant it's\n// clicked (the entered-scope effect exits if you deleted the project you were\n// inside), reconciling from the server payload. A failed delete restores both.",
       '// Remove the cached project only after deletion succeeds so failures stay in the confirmation.']
   ])
-  const owner = JSON.stringify(path.join(root, 'src/upstream/project-delete'))
-  return `import { browserProjectDeleteProfile } from ${owner}\n` + output
+  for (const signature of [
+    `export async function updateProject(
+  id: string,
+  patch: { name?: string; color?: null | string; icon?: null | string }
+): Promise<void> {`,
+    `export async function addProjectFolder(
+  id: string,
+  path: string,
+  opts: { label?: string; isPrimary?: boolean } = {}
+): Promise<void> {`,
+    'export async function setActiveProject(id: null | string): Promise<void> {'
+  ]) {
+    output = replaceBrowserContract(output, [[signature + '\n  const context = await activeProjectsContext(writableProjectProfile())',
+      signature + '\n  const context = await browserProjectWriteContext(id)']])
+  }
+  output = replaceBrowserContract(output, [
+    ['export async function renameProject(id: string, name: string): Promise<void> {', `async function browserProjectWriteContext(id: null | string): Promise<ActiveProjectsContext> {
+  const context = await activeProjectsContext(writableProjectProfile())
+  const allProfiles = viewingAllProfiles()
+  const profile = allProfiles && id
+    ? await browserProjectOwnerProfile(context.gateway, id, $profiles.get().map(profile => profile.name))
+    : context.profile
+  if (!stillOnWritableProjectOwner(context) || viewingAllProfiles() !== allProfiles) {
+    throw new Error('Active Hermes profile changed before editing the project')
+  }
+  return { ...context, profile }
+}
+
+export async function renameProject(id: string, name: string): Promise<void> {`],
+    ['  $activeProjectId.set(res.active_id ?? null)\n}\n\n// ── Project management dialog', '  if (stillOnWritableProjectOwner(context)) $activeProjectId.set(res.active_id ?? null)\n}\n\n// ── Project management dialog']
+  ])
+  const owner = JSON.stringify(path.join(root, 'src/upstream/project-owner'))
+  return `import { browserProjectOwnerProfile } from ${owner}\n` + output
 }
 
 export function filterBrowserSessionMenu(source: string, root: string): string {

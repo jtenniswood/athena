@@ -53,7 +53,7 @@ export function useBrowserSessionSection(source: string, root: string): string {
     ['  const showAllSessions = useStore($sidebarShowAllSessions)', "  const showAllSessions = useStore($sidebarShowAllSessions)\n  const combinedProjects = Boolean(groups?.length && !embeddedGroups && projectOverview)"],
     ['} else if (projectOverview?.length) {', '} else if (projectOverview?.length && !combinedProjects) {'],
     ['        renderRows={renderRows}\n        sensors={dndSensors}', `        renderRows={items => combinedProjects
-          ? <BrowserProfileProjects sessions={items} projects={projectOverview ?? []} renderRows={renderRows} onNewSession={onNewSessionInWorkspace} onNewSessionSplit={onNewSessionSplit} />
+          ? <BrowserProfileProjects sessions={items} projects={projectOverview ?? []} renderRows={renderRows} activeProjectId={activeProjectId} onEnterProject={onEnterProject} onNewSession={onNewSessionInWorkspace} onNewSessionSplit={onNewSessionSplit} />
           : renderRows(items)}
         sensors={dndSensors}`]
   ])
