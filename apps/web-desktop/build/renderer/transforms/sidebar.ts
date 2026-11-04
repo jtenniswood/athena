@@ -42,6 +42,7 @@ export function useBrowserSessionSection(source: string, root: string): string {
     ['export function SidebarSessionsSection({', 'export function SidebarSessionsSection({\n  browserSectionId,']
   ])
   source = replaceBrowserContract(source, [
+    ['<SidebarDateDivider\n          action={action}', '<SidebarDateDivider\n          data-browser-group-header=""\n          action={action && <div data-browser-group-actions="" className="flex shrink-0 items-center">{action}</div>}'],
     ["if (grouping !== 'date' && grouping !== 'status') {", "if (grouping !== 'date' && grouping !== 'status' && !combinedProjects) {"],
     ["$sidebarListGroupIds.set(flatRows.flatMap(row => (row.kind === 'divider' ? [listGroupNodeId(row.key)] : [])))", `$sidebarListGroupIds.set(combinedProjects
       ? (groups ?? []).flatMap(group => browserProfileProjectGroups(group.sessions, projectOverview ?? []).map(project => project.id))

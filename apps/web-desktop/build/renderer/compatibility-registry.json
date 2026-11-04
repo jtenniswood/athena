@@ -2020,7 +2020,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "2ebde4eff5928b33dddbb4fd00255441c1b9f21180db651389df64fb82fbdc7e",
     "inputHash": "2ebde4eff5928b33dddbb4fd00255441c1b9f21180db651389df64fb82fbdc7e",
-    "outputHash": "ae380e48ba9256c7469e5748346b6c8f8148a6c0b76448bb926a5449fb7b9576"
+    "outputHash": "134d513f74c7759f749106bdbab23e37e9008ffb6c77dd1a14ecd15d9a44dc9a"
   },
   {
     "name": "browser-cron-jobs-section-styling",
