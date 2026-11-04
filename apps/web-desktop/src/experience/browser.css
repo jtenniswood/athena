@@ -77,6 +77,7 @@
 /* Share compact control height while retaining the token's touch target floor. */
 .browser-sessions-pane { --browser-session-control-height:var(--web-control-compact); padding-top:var(--web-space-2); }
 .browser-sessions-pane [data-slot="sidebar-footer"] { --browser-session-control-height:var(--web-control-regular); }
+.browser-navigation-body[data-profile-layout="combined"] [data-slot="sidebar-footer"] { padding-bottom:var(--web-space-3); }
 .browser-sessions-pane [data-sidebar="menu-button"] { height:var(--browser-session-control-height); min-height:var(--browser-session-control-height); padding-block:0; }
 .browser-sessions-pane [data-browser-section-hidden] { display:none !important; }
 .browser-sessions-pane [data-gateway-group-empty] { display:none; }
