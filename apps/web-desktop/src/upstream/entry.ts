@@ -10,11 +10,14 @@ export async function startBrowserHost(): Promise<void> {
   await import('./engine-registration')
   const { installBrowserSessionRoutes } = await import('./browser-session-routes')
   const stopSessionRoutes = installBrowserSessionRoutes()
+  let stopNotifications = () => {}
   try {
+    const { installBrowserNotificationCommands } = await import('./browser-notifications')
+    stopNotifications = installBrowserNotificationCommands()
     const { installBrowserWindowCommands } = await import('./browser-windows')
     installBrowserWindowCommands()
     const { initializeBrowserShell } = await import('./browser-initialize')
     initializeBrowserShell()
     await import('../../../desktop/src/main')
-  } catch (error) { stopSessionRoutes(); throw error }
+  } catch (error) { stopNotifications(); stopSessionRoutes(); throw error }
 }

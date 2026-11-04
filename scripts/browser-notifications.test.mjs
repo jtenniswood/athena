@@ -6,6 +6,9 @@ import ts from 'typescript'
 
 const source = readFileSync(new URL('../apps/web-desktop/src/platform/notifications.ts', import.meta.url), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
+const sessionRoutes = { exports: {}, URL, URLSearchParams }
+vm.runInNewContext(ts.transpileModule(readFileSync(new URL('../apps/web-desktop/src/platform/session-route.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, sessionRoutes)
+const adapter = ts.transpileModule(readFileSync(new URL('../apps/web-desktop/src/upstream/browser-notifications.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
 
 function notifications({ permission = 'granted', supported = true, secure = true, worker, rejectPage = false } = {}) {
   const shown = [], calls = []
@@ -28,9 +31,22 @@ function notifications({ permission = 'granted', supported = true, secure = true
   vm.runInContext(ts.transpileModule(readFileSync(new URL('../apps/web-desktop/src/platform/notification-navigation.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, routing)
   const navigator = worker ? { serviceWorker: { ready: Promise.resolve(worker) } } : {}
   const context = vm.createContext({ exports: {}, Notification, window, navigator, URL,
-    require: name => name === './android' ? { isAndroidApp: () => false } : name === './notification-navigation' ? routing.exports : ({ browserCapabilities: () => ({ notifications: supported }) }) })
+    require: name => name === './session-route' ? sessionRoutes.exports : name === './android' ? { isAndroidApp: () => false } : name === './notification-navigation' ? routing.exports : ({ browserCapabilities: () => ({ notifications: supported }) }) })
   vm.runInContext(compiled, context)
-  return { api: context.exports, shown, calls, Notification, window, root }
+  return { api: context.exports, shown, calls, Notification, window, root,
+    installOwner(knownOwnerForSession, android = false) {
+      window.hermesDesktop = { notify: context.exports.webNotify }
+      const ownerContext = { exports: {}, window, Promise, require: name => {
+        if (name === '@/store/session-states') return { knownOwnerForSession }
+        if (name === '../platform/android') return { isAndroidApp: () => android }
+        if (name === '../platform/connection') return { WEB_CONNECTION_ID: 'web-single' }
+        if (name === '../platform/notifications') return context.exports
+        throw new Error(`Unexpected adapter import: ${name}`)
+      } }
+      vm.runInNewContext(adapter, ownerContext)
+      return ownerContext.exports.installBrowserNotificationCommands()
+    }
+  }
 }
 
 test('responses never ask for permission; a user action can grant it', async () => {
@@ -169,4 +185,53 @@ test('a page notification leaves an update-frozen document intact', async () => 
   shown[0].notification.onclick()
   assert.equal(window.location.hash, undefined)
   assert.deepEqual(calls, [['open', 'https://athena.example.test/#/chat-1', '_blank', 'noopener,noreferrer'], 'close'])
+})
+
+test('notification delivery captures the emitting engine owner before waiting and keeps it through fallback and clicks', async () => {
+  let ready, owner = { connectionId: 'web-single', profile: 'helper', targetProfile: 'research' }
+  const worker = new Promise(resolve => { ready = resolve })
+  const seen = [], lookedUp = []
+  const harness = notifications({ worker: { showNotification: async (...args) => { seen.push(args); await worker; throw new Error('Unavailable') } } })
+  harness.window.location.href = 'https://athena.example.test/?profile=writer#/other-chat'
+  const restore = harness.installOwner(id => { lookedUp.push(id); return owner })
+  const payload = { kind: 'turnDone', sessionId: 'research-runtime', focusSessionId: 'copied-chat' }
+  const delivering = harness.window.hermesDesktop.notify(payload)
+  owner = { connectionId: 'web-single', profile: 'default' }
+  payload.focusSessionId = undefined
+  await new Promise(resolve => setImmediate(resolve))
+  const target = 'https://athena.example.test/?profile=research#/copied-chat?profile=research'
+  assert.deepEqual(lookedUp, ['research-runtime'])
+  assert.equal(seen[0][1].data.url, target)
+  ready()
+  assert.equal(await delivering, true)
+  assert.equal(harness.shown[0].options.data.url, target)
+  harness.shown[0].notification.onclick()
+  assert.deepEqual(harness.calls, [['open', target, '_blank', 'noopener,noreferrer'], 'close'])
+  restore()
+  assert.equal(harness.window.hermesDesktop.notify, harness.api.webNotify)
+})
+
+test('owned page alerts reuse an admitted document and preserve the exact profile in its hash', async () => {
+  const harness = notifications()
+  harness.window.location.href = 'https://athena.example.test/?profile=research#/other-chat'
+  harness.installOwner(id => { assert.equal(id, 'stored-chat'); return 'research' })
+  await harness.window.hermesDesktop.notify({ focusSessionId: 'stored-chat' })
+  harness.shown[0].notification.onclick()
+  assert.equal(harness.window.location.hash, '#/stored-chat?profile=research')
+  assert.deepEqual(harness.calls, ['focus', 'close'])
+})
+
+test('engine notification admission leaves native delivery and unrelated bridge replacements alone', async () => {
+  const native = notifications()
+  const stopNative = native.installOwner(() => { throw new Error('Native owns delivery') }, true)
+  assert.equal(native.window.hermesDesktop.notify, native.api.webNotify)
+  stopNative()
+  const foreign = notifications()
+  const restore = foreign.installOwner(() => ({ connectionId: 'another-gateway', profile: 'research' }))
+  assert.equal(await foreign.window.hermesDesktop.notify({ focusSessionId: 'chat' }), false)
+  assert.deepEqual(foreign.shown, [])
+  const replacement = () => Promise.resolve(true)
+  foreign.window.hermesDesktop.notify = replacement
+  restore()
+  assert.equal(foreign.window.hermesDesktop.notify, replacement)
 })

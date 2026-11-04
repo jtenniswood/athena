@@ -85,6 +85,13 @@ selection-copy helper, preserving editor focus and selection and keeping tempora
 copy controls inside the active dialog or menu scope. Copy refusal still rejects
 through Athena's bridge so the caller can report failure.
 
+`upstream/browser-notifications.ts` captures the emitting session's owner from
+the engine before delivery waits. The captured profile and durable session ID
+produce one destination using the same URL policy as session references. Worker
+delivery, page fallback and later clicks retain that destination even if the
+window filter or current selection changes. This adapter loads after engine
+registration; platform notification delivery does not import engine stores.
+
 Notification clicks ask a live page to admit hash-only navigation using its
 current origin, path and query. The worker's cached client URL does not decide
 profile ownership. A refused or unanswered request opens another window instead
