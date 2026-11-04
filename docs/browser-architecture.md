@@ -161,6 +161,11 @@ scope, defaults, parsers, serialization, and legacy migrations. The browser's
 typed access and subscription helper and the account-sync allowlist consume this
 same contract. Existing keys and wire formats remain compatible. Same-tab writes
 and relevant storage events share a subscription path with stable snapshots.
+The zoom bridge projects the active desktop/mobile scale preference into CSS and
+renderer change events. Same-tab and cross-tab writes use the shared preference
+subscription, while pointer/viewport changes select the existing mode's value.
+Bridge commands suppress their own storage notification to preserve shortcut
+precision and one change event per action, including when optional saves fail.
 Sidebar and session-profile migrations are repeatable and preserve migration
 inputs until the replacement is verified. Optional preferences tolerate blocked
 storage; connection credentials, drafts, and account-bound sync outboxes retain
