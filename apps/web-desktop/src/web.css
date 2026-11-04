@@ -38,7 +38,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: clip !important;
-  mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent calc(100% - .5rem));
 }
 
 body > [data-radix-popper-content-wrapper] > .tooltip-bubble.browser-session-preview {
