@@ -60,7 +60,12 @@ class ConnectionTestingTest {
             assertEquals(android.content.Intent.ACTION_VIEW, browser.action)
             assertEquals("https://saved.example/api/athena/android/auth/access",
                 browser.data!!.buildUpon().clearQuery().build().toString())
+            assertTrue(browser.getBooleanExtra(androidx.browser.auth.AuthTabIntent.EXTRA_LAUNCH_AUTH_TAB, false))
+            assertEquals("athena-android", browser.getStringExtra(androidx.browser.auth.AuthTabIntent.EXTRA_REDIRECT_SCHEME))
             assertNull(org.robolectric.shadows.ShadowDialog.getLatestDialog())
+            // Browsers without Auth Tab support report cancellation even when a deep link is still pending.
+            org.robolectric.Shadows.shadowOf(activity).receiveResult(browser, android.app.Activity.RESULT_CANCELED, null)
+            assertTrue(activity.getSharedPreferences("access-sign-in", Context.MODE_PRIVATE).contains("private"))
         } finally { controller.pause().stop().destroy() }
     }
 
