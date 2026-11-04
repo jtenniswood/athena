@@ -69,6 +69,11 @@ same route owner reissues its unfulfilled intent after the gateway-switch
 barrier falls. A newer engine request or selection takes precedence; recovery
 reads the latest URL and leaves new-chat and tool routes alone.
 
+REST endpoint filters retain their explicit profile query. The HTTP adapter adds
+the ambient request profile only when the endpoint has none, matching the engine
+transports. Cross-profile Scheduled reads therefore keep each requested profile
+while sharing the tab's configured gateway and credentials.
+
 The captured engine selection distinguishes copied session IDs when projecting
 conversation metadata and toolbar commands. It also precedes historical rows in
 the shared session-owner resolver. Owned session RPCs always name their profile

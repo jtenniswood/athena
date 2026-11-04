@@ -144,7 +144,7 @@ for (const width of [1440, 390]) {
     page.on('pageerror', error => errors.push(error.message))
     let writerUnavailable = true
     await page.route(/\/api\/cron\/jobs(?:\?|$)/, route => {
-      const profile = new URL(route.request().url()).searchParams.get('profile')
+      const profile = Object.fromEntries(new URL(route.request().url()).searchParams).profile
       if (profile === 'writer' && writerUnavailable) return route.fulfill({ status: 503, json: { error: 'Temporarily unavailable' } })
       const jobs = profile === 'writer' ? [] : [{
         id: 'copied-job', name: profile === 'research' ? 'Research briefing' : 'Morning briefing',
@@ -308,7 +308,7 @@ test('the first enabled profile routes All profiles drafts without changing scop
   await open(page)
   const all = page.getByRole('button', { name: 'All profiles', exact: true })
   await all.click()
-  await page.getByRole('button', { name: 'New session', exact: true }).first().click()
+  await page.getByRole('button', { name: 'New Session', exact: true }).first().click()
   await editor(page).fill('Create this session in research')
   await editor(page).press('Enter')
   await expect.poll(() => creates.length).toBe(1)
@@ -318,7 +318,7 @@ test('the first enabled profile routes All profiles drafts without changing scop
   const writer = page.locator('[data-profile-key="writer"]')
   await writer.click()
   await expect(writer).toHaveAttribute('aria-pressed', 'true')
-  await page.getByRole('button', { name: 'New session', exact: true }).first().click()
+  await page.getByRole('button', { name: 'New Session', exact: true }).first().click()
   await editor(page).fill('Create this session in writer')
   await editor(page).press('Enter')
   await expect.poll(() => creates.length).toBe(2)
