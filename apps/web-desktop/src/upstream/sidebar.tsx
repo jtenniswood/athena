@@ -96,7 +96,6 @@ interface SidebarController extends Pick<ChatSidebarProps, 'onNavigate' | 'onRes
   sessionsMode: string
   sessionsLabel: string
   messagingGroups: MessagingSection[]
-  messagingVisible: Record<string, number>
   ownerGrouped: boolean
   connectionsRegistry: DesktopConnectionsRegistry | null
   profileColors: Record<string, string>
@@ -111,7 +110,7 @@ interface SidebarController extends Pick<ChatSidebarProps, 'onNavigate' | 'onRes
   reorderProjects(ids: string[]): void
   onLoadMoreRecents(): Promise<void>
   onEnterProject(id: string): void
-  revealMoreMessaging(platform: string, loaded: number, hasMore: boolean): void
+  loadMoreForMessaging(platform: string): void
 }
 
 const scroll = 'overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-fade'
@@ -190,15 +189,15 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
         projectsLoading={c.worktreeGroupingActive ? c.projectTreeLoading : false} removedSessionIds={c.inProject ? c.removedSessionIds : undefined}
         sessions={c.displayAgentSessions} sortable={c.agentSessions.length > 1} />
       {c.messagingGroups.map(group => {
-        const visible = c.messagingVisible[group.sourceId] ?? 3, sessions = group.sessions.slice(0, visible)
+        const sessions = group.sessions
         const groups = c.ownerGrouped ? scopeGatewaySessionGroups(buildGatewaySessionGroups(sessions, c.connectionsRegistry, c.profileColors), `messaging:${group.sourceId}`) : undefined
         return <SidebarSessionsSection {...shared} key={group.sourceId} browserSectionId={`messaging:${group.sourceId}`} label={group.label}
           open={c.messagingOpenIds.includes(group.sourceId)} onToggle={() => toggleSidebarMessagingOpen(group.sourceId)} pinned={false} onTogglePin={pinSession}
           sessions={sessions} groups={groups} embeddedGroups showProfileTags={c.showAllProfiles && !c.ownerGrouped}
           rootClassName="shrink-0 p-0" contentClassName={cn('flex max-h-56 flex-col gap-px pb-1.75', scroll, compactFlat)} emptyState={null}
           labelIcon={<PlatformAvatar className="size-4 rounded-[4px] text-[0.5625rem] [&_svg]:size-3" platformId={group.sourceId} platformName={group.label} />}
-          footer={visible < group.sessions.length || group.hasMore ? <SidebarLoadMoreRow loading={Boolean(c.messagingLoadMorePending[group.sourceId])}
-            onClick={() => c.revealMoreMessaging(group.sourceId, group.sessions.length, group.hasMore)} step={Math.min(10, Math.max(0, group.total - sessions.length))} /> : null} />
+          footer={group.hasMore ? <SidebarLoadMoreRow loading={Boolean(c.messagingLoadMorePending[group.sourceId])}
+            onClick={() => c.loadMoreForMessaging(group.sourceId)} step={Math.min(10, Math.max(0, group.total - sessions.length))} /> : null} />
       })}
       {!c.worktreeGroupingActive && c.cronJobs.length > 0 && <SidebarCronJobsSection jobs={c.cronJobs} label={s.cronJobs} onManageJob={c.onManageCronJob}
         onOpenRun={c.onResumeSession} onToggle={() => setSidebarCronOpen(!c.cronOpen)} onTriggerJob={c.onTriggerCronJob} open={c.cronOpen} />}

@@ -22,7 +22,7 @@ function Fixture() {
       <BrowserTreeAdd label="Create workspace chat" onClick={create} />
       <BrowserSidebarProject model={{ id: 'project', label: 'Research', icon: 'folder', active: false, open: true,
         hasRows: false, dragging: false, reorderable: false, reorderLabel: 'Reorder Research', toggleLabel: 'Toggle Research',
-        anchor, toggle() {}, enter() {}, menu: null, figures: '', more: [], create: { label: 'Create project chat', run: create } }} />
+        anchor, toggle() {}, enter() {}, menu: null, figures: '', create: { label: 'Create project chat', run: create } }} />
       <button className="group-hover/workspace:opacity-100" onClick={create}>Unrelated selection</button>
     </section>
     <main ref={main} tabIndex={-1}><output aria-label="Selection">{selection}</output><textarea aria-label="Draft" defaultValue="Preserve this draft" /></main>

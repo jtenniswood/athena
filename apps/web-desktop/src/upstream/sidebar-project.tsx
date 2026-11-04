@@ -23,12 +23,6 @@ interface ProjectController {
   dragHandleProps?: HTMLAttributes<HTMLElement>
   hasRows: boolean
   rows: ReactNode
-  offerShowAll: boolean
-  expanding: boolean
-  showAll(): void
-  total: number
-  moreCount: number
-  showMore(): void
 }
 
 /** Translate the live renderer project controller without owning any tree state. */
@@ -52,11 +46,7 @@ export function BrowserProjectControllerSurface({ model, ...props }: ComponentPr
       pointerDown: model.onNewSessionSplit ? event => startNewSessionDrag(placement => {
         model.onNewSessionSplit?.(placement.dir, { anchor: placement.anchor, before: placement.before, cwd: model.newSessionPath })
       }, event, { cwd: model.newSessionPath, label: s.newSessionIn(project.label) }) : undefined
-    } : undefined,
-    more: [
-      ...(model.offerShowAll ? [{ label: s.projects.showAllCount(model.total), disabled: model.expanding, run: model.showAll }] : []),
-      ...(model.moreCount > 0 ? [{ label: s.showMoreIn(model.moreCount, project.label), run: model.showMore }] : [])
-    ]
+    } : undefined
   }
   return <BrowserSidebarProject {...props} model={row}>{model.rows}</BrowserSidebarProject>
 }

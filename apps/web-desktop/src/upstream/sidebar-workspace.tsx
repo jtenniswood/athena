@@ -6,7 +6,7 @@ import { ProfileGlyph } from '@/components/ui/profile-glyph'
 import { useI18n } from '@/i18n'
 import { displayPath } from '@/lib/display-path'
 import { selectProfile } from '@/store/profile'
-import { BrowserProfileHeader, BrowserTreeAdd, BrowserTreeBody, BrowserTreeHeader, BrowserTreeMore, BrowserTreeStack } from '../experience/sidebar-tree'
+import { BrowserProfileHeader, BrowserTreeAdd, BrowserTreeBody, BrowserTreeHeader, BrowserTreeStack } from '../experience/sidebar-tree'
 import { useBrowserSidebarFigures } from './sidebar-profile'
 
 interface WorkspaceController {
@@ -15,8 +15,6 @@ interface WorkspaceController {
   usage?: { tokens: number; cost_usd: number }
   open: boolean
   toggleOpen(): void
-  nextCount: number
-  showMore(): void
   empty: boolean
   rows: ReactNode
   canCreate: boolean
@@ -44,8 +42,7 @@ export function BrowserWorkspaceControllerSurface({ model }: { model: WorkspaceC
           icon: <i aria-hidden="true" className={`codicon codicon-${group.isKanban ? 'checklist' : group.isHome ? 'home' : 'git-branch'} shrink-0 text-(--ui-text-tertiary)`} style={{ fontSize: '0.75rem' }} />,
           actions: (model.canCreate || model.onRemove) && <div className="flex items-center">{create}{model.onRemove && <WorkspaceMenu onRemove={model.onRemove} path={group.path} />}</div> }} />
       </WorkspaceContextMenu>}
-    {model.open && <BrowserTreeBody empty={model.empty} emptyLabel={s.noSessions}
-      more={model.nextCount > 0 && <BrowserTreeMore label={s.showMoreIn(model.nextCount, group.label)} onClick={model.showMore} />}>
+    {model.open && <BrowserTreeBody empty={model.empty} emptyLabel={s.noSessions}>
       {model.rows}
     </BrowserTreeBody>}
   </BrowserTreeStack>

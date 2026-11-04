@@ -47,14 +47,14 @@ test('sidebar view extraction rejects ambiguous returns and removed presentation
   assert.throws(() => projectRendererController('function Panel() { return null }', 'Panel', '<BrowserPanel />', ['missing']), /binding/)
 })
 
-test('project presentation projection keeps hydration, exclusion and paging with the renderer owner', () => {
+test('project presentation shows all rows without expansion or paging', () => {
   const { useBrowserProjectController } = createBuildModuleLoader().load(path.join(root, 'build/renderer/transforms/sidebar.ts'))
   const original = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/projects/overview-row.tsx'), 'utf8')
   const output = useBrowserProjectController(original, root)
   assert.match(output, /useWorkspaceNodeOpen\(project.id\)/)
-  assert.match(output, /useRevealedRows\(preview, PROJECT_SESSION_PAGE\)/)
-  assert.match(output, /excludeProjectSessions\(expanded, isSessionHidden\)/)
-  assert.match(output, /fetchBrowserProjectSessions\(project\)/)
+  assert.match(output, /latestProjectSessions\(project, Infinity\)/)
+  assert.match(output, /rows: renderRows\?\.\(recent\)/)
+  assert.doesNotMatch(output, /const page =|const showAll =|offerShowAll|setExpanded/)
   assert.match(output, /BrowserProjectControllerSurface/)
   assert.doesNotMatch(output, /const shell =|const labelLink =|const lead =/)
 })
@@ -83,12 +83,14 @@ test('worktree creation retains the captured lane owner and refuses creation aft
   })
   vm.runInContext(ts.transpileModule(functions, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React } }).outputText, context)
   const create = profile => context.exports.SidebarWorkspaceGroup({
-    group: { id: 'same-lane-id', label: 'main', path: `/repo-${profile}`, mode: 'workspace', isMain: true, sessions: [] },
+    group: { id: 'same-lane-id', label: 'main', path: `/repo-${profile}`, mode: 'workspace', isMain: true, sessions: Array.from({ length: 60 }, (_, index) => ({ id: `chat-${index}` })) },
     owner: { connectionId: 'shared', profile }, renderRows: rows => rows,
     onNewSession: path => calls.push(['create', profile, path])
   })
   const first = create('research'), second = create('writer')
   assert.equal(first.type, 'browser-worktree')
+  assert.equal(first.props.model.rows.length, 60, 'a workspace renders beyond both the preview and page limits')
+  assert.equal(first.props.model.rows.at(-1).id, 'chat-59')
   await first.props.model.handleNewSession()
   await second.props.model.handleNewSession()
   assert.deepEqual(calls.filter(call => call[0] === 'switch'), [

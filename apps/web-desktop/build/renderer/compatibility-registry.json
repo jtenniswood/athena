@@ -308,7 +308,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "store/layout.ts",
-    "reason": "Expose None content grouping, retain legacy saved Profile values, and cycle content grouping independently of profile layout.",
+    "reason": "Expose None content grouping, retain legacy saved Profile values, and cycle content grouping independently of profile layout. Always show all sessions independently of saved preview preferences or view reset.",
     "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
     "tests": [
       {
@@ -335,14 +335,14 @@
     "sourceHash": "b036ba9cbf09093271bcbfaf825ab5fea1e41f674750e9f1c26f0c6efbd1674f",
     "sourceRoot": "renderer",
     "inputHash": "b036ba9cbf09093271bcbfaf825ab5fea1e41f674750e9f1c26f0c6efbd1674f",
-    "outputHash": "b2784f123e34c65b1a504ff8b5a77a9cbba3e284536151973cbb05b264c13c9f"
+    "outputHash": "4fcd1b926cf1cb914d5ebc7e6d113fbda992514023c730e91c06e5c724c0f0d5"
   },
   {
     "name": "browser-session-filters",
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
-    "reason": "Offer Combined or Separate profile layout independently of content grouping, hide desktop-only controls, and retain sidebar shortcuts and profile visibility actions.",
+    "reason": "Offer Combined or Separate profile layout independently of content grouping, hide desktop-only controls, and retain sidebar shortcuts and profile visibility actions. Remove the obsolete Show all sessions toggle.",
     "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
     "tests": [
       {
@@ -374,7 +374,7 @@
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
     "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
-    "outputHash": "5a63f577371e16ac76ed210f593479766f32a41d2f6c9ca6efadf1cd69586925"
+    "outputHash": "87a55fbcac31ab50de8080f70e5a481cfcf777f65ccdd17a7139a45e143f5f61"
   },
   {
     "name": "hidden-bot-roster",
@@ -516,7 +516,7 @@
     "sourceHash": "851f2833257195fcf6a4020d5f6f606dbe565de213062de22e5ebcd981f6c0dc",
     "sourceRoot": "renderer",
     "inputHash": "851f2833257195fcf6a4020d5f6f606dbe565de213062de22e5ebcd981f6c0dc",
-    "outputHash": "63a3407699d284c23c2f8a0d906788b9e81640248d63d50f425f68568d8956c7"
+    "outputHash": "86c1bfa43d253c4cfbdb4b479cc28bff229697d733a5a4c0cd184645b3a549b8"
   },
   {
     "name": "single-conversation-wiring",
@@ -2554,7 +2554,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/projects/overview-row.tsx",
-    "reason": "Keep project ownership, lazy hydration, paging and saved disclosure in the renderer controller while Athena owns tree presentation and accessible actions.",
+    "reason": "Keep project ownership and saved disclosure while rendering every available chat without preview clipping, lazy expansion or local paging.",
     "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
     "tests": [
       {
@@ -2563,14 +2563,14 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "project Show all expands sessions inline"
+        "scenario": "project groups show all sessions without clipping"
       }
     ],
     "removal": "Remove when the renderer exports a public project controller with owner-scoped commands.",
     "sourceRoot": "renderer",
     "sourceHash": "e2cba07ac9067e609b355d6c850597e7e06432210d6d583a7fa9ad97579ac268",
     "inputHash": "e2cba07ac9067e609b355d6c850597e7e06432210d6d583a7fa9ad97579ac268",
-    "outputHash": "f122bc7df77c350fdb75eb16e979368066597c72538ab84a1ee63ee424dd71bf",
+    "outputHash": "a7a8605bfd70b42c0a067e1095ff5c96d3118eed131dc6fa708f5c88d6c68765",
     "handlers": [
       "useBrowserProjectController"
     ]
@@ -3497,12 +3497,12 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/projects/workspace-group.tsx",
-    "reason": "Keep Hermes worktree controllers, captured owner commands and paging while Athena owns sidebar tree presentation.",
+    "reason": "Keep Hermes worktree controllers and captured owner commands while showing every chat without local paging.",
     "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
     "tests": [
       {
         "file": "tests/browser/sidebar-tree.spec.mjs",
-        "scenario": "tree views preserve disclosure, paging, live owner commands and the draft"
+        "scenario": "tree views show every row and preserve disclosure, live owner commands and the draft"
       },
       {
         "file": "scripts/sidebar-controller.test.mjs",
@@ -3516,19 +3516,19 @@
     "sourceRoot": "renderer",
     "sourceHash": "a3a0d4ca5b794f508f0df7f328ce632976d04376bd34347f4a5d9fab79f47141",
     "inputHash": "a3a0d4ca5b794f508f0df7f328ce632976d04376bd34347f4a5d9fab79f47141",
-    "outputHash": "ef00bad0c54dbc4160845614428b835e6ba9e7d0fb80c61d7a10a221dc1ebf06"
+    "outputHash": "3ca06cf6a675975f3db2e2a4598b7070257448f46741577dd54c11d7262332a7"
   },
   {
     "name": "browser-workspace-controls",
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/projects/workspace-header.tsx",
-    "reason": "Keep Hermes worktree controllers, captured owner commands and paging while Athena owns sidebar tree presentation.",
+    "reason": "Keep Hermes worktree controllers and captured owner commands while showing every chat without local paging.",
     "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
     "tests": [
       {
         "file": "tests/browser/sidebar-tree.spec.mjs",
-        "scenario": "tree views preserve disclosure, paging, live owner commands and the draft"
+        "scenario": "tree views show every row and preserve disclosure, live owner commands and the draft"
       },
       {
         "file": "scripts/sidebar-controller.test.mjs",
@@ -3549,12 +3549,12 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/projects/entered-content.tsx",
-    "reason": "Keep Hermes worktree controllers, captured owner commands and paging while Athena owns sidebar tree presentation.",
+    "reason": "Keep Hermes worktree controllers and captured owner commands while showing every chat without local paging.",
     "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
     "tests": [
       {
         "file": "tests/browser/sidebar-tree.spec.mjs",
-        "scenario": "tree views preserve disclosure, paging, live owner commands and the draft"
+        "scenario": "tree views show every row and preserve disclosure, live owner commands and the draft"
       },
       {
         "file": "scripts/sidebar-controller.test.mjs",
@@ -3568,7 +3568,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "1023cb3c8ab1ca55c6416f6f87ad75b7eb189a3cdc3589b042ce6c66ab39934b",
     "inputHash": "1023cb3c8ab1ca55c6416f6f87ad75b7eb189a3cdc3589b042ce6c66ab39934b",
-    "outputHash": "f328ee78bf6d732508b4d6ba4c548cb13934fa78573d1d4761bd47665fb83957"
+    "outputHash": "310e5361dca5e96c14cc8a93fe5238ec3be871b4a3e3f714073b63654867728c"
   },
   {
     "name": "browser-timeline-scrubbing",

@@ -23,7 +23,6 @@ export interface BrowserSidebarProjectModel {
   wrapHeader?(header: ReactNode): ReactNode
   figures: string
   create?: { label: string; run(): void; pointerDown?: ComponentProps<'button'>['onPointerDown'] }
-  more: { label: string; disabled?: boolean; run(): void }[]
 }
 
 /** Browser tree geometry and disclosure, driven by the existing project owner. */
@@ -62,14 +61,6 @@ export function BrowserSidebarProject({ model, children, ...props }: ComponentPr
   </div>
   return <div {...props} data-sessions-project={model.id} className={cn('rounded-[6px] data-[session-drop-hover=true]:outline-2 data-[session-drop-hover=true]:-outline-offset-2 data-[session-drop-hover=true]:outline-sidebar-ring', model.dragging && 'relative z-10')}>
     {model.wrapHeader ? model.wrapHeader(header) : header}
-    {model.open && model.hasRows && <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-px pb-1 pl-2">{children}
-      {model.more.map(action => <div key={action.label} className="grid min-h-[1.625rem] grid-cols-[minmax(0,1fr)_auto] items-stretch rounded-md pr-2">
-        <button type="button" data-slot="row-button" disabled={action.disabled} onClick={action.run}
-          className="group/more flex h-full w-full min-w-0 items-center gap-1.5 bg-transparent py-0.5 pl-2 pr-2 text-left text-(--ui-text-tertiary) hover:text-foreground">
-          <i aria-hidden="true" className="codicon codicon-ellipsis grid size-3.5 shrink-0 place-items-center" style={{ fontSize: '0.875rem' }} />
-          <span className="min-w-0 truncate text-xs leading-[1.35] underline-offset-4 group-hover/more:underline">{action.label}</span>
-        </button>
-      </div>)}
-    </div>}
+    {model.open && model.hasRows && <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-px pb-1 pl-2">{children}</div>}
   </div>
 }

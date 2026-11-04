@@ -304,6 +304,16 @@ function OptionGlyph({ option }: { option: Option }) {`
     ["? projects.map(project => project.id)", "? combinedProfiles ? listGroupIds : projects.map(project => project.id)"],
     ['  const groupings = GROUPINGS.map(option =>', "  const groupings = GROUPINGS.filter(option => option.id !== 'profile').map(option =>"],
     ['        <DropdownMenuGroup>\n          <DropdownMenuSub>', '        <DropdownMenuGroup>\n          <BrowserProfileLayoutMenu combined={combinedProfiles} />\n          <DropdownMenuSub>'],
+    [`          {grouping === 'project' && (
+            <OptionCheckbox
+              checked={showAllSessions}
+              onCheck={() => setSidebarShowAllSessions(!showAllSessions)}
+              option={{ icon: 'list-unordered', id: 'all-sessions', label: t.sidebar.projects.showAllSessions }}
+            />
+          )}`, ''],
+    ['  setSidebarShowAllSessions,\n', ''],
+    ['  $sidebarShowAllSessions,\n', ''],
+    ['  const showAllSessions = useStore($sidebarShowAllSessions)\n', ''],
     ['{viewCustomized && <DropdownMenuItem onSelect={resetSidebarView}', '{(viewCustomized || !combinedProfiles) && <DropdownMenuItem onSelect={() => resetBrowserSidebarView(resetSidebarView)}']
   ])
   const layoutOwner = JSON.stringify(path.join(root, 'src/upstream/profile-layout-menu'))
@@ -345,6 +355,13 @@ export function useBrowserSessionReordering(source: string, surface: 'section' |
 export function enableBrowserUngroupedSessions(source: string, surface: 'store' | 'menu'): string {
   const replacements: Record<typeof surface, [string, string][]> = {
     store: [
+      ["const SIDEBAR_SHOW_ALL_SESSIONS_STORAGE_KEY = 'hermes.desktop.sidebarShowAllSessions'\n", ""],
+      ["    $sidebarShowAllSessions,\n", ""],
+      ["(grouping, ordering, rowMeta, cardRows, showAllSessions, filtersActive)", "(grouping, ordering, rowMeta, cardRows, filtersActive)"],
+      ["export const $sidebarShowAllSessions = persistentAtom(SIDEBAR_SHOW_ALL_SESSIONS_STORAGE_KEY, false, Codecs.bool)", "// Browser groups always show every available session, regardless of saved preview preferences.\nexport const $sidebarShowAllSessions = atom(true)"],
+      ["export function setSidebarShowAllSessions(on: boolean) {\n  $sidebarShowAllSessions.set(on)\n}", ""],
+      ["  $sidebarShowAllSessions.set(false)\n", ""],
+      ["    showAllSessions ||\n", ""],
       ["export const SIDEBAR_GROUPING_ORDER = ['date', 'project', 'status', 'profile'] as const", "export const SIDEBAR_GROUPING_ORDER = ['none', 'date', 'project', 'status', 'profile'] as const"],
       ["const currentIndex = SIDEBAR_GROUPING_ORDER.indexOf($sidebarGrouping.get())", "const choices = SIDEBAR_GROUPING_ORDER.filter(grouping => grouping !== 'profile')\n  const currentIndex = choices.indexOf($sidebarGrouping.get() as Exclude<SidebarGrouping, 'profile'>)"],
       ["setSidebarGrouping(SIDEBAR_GROUPING_ORDER[(currentIndex + 1) % SIDEBAR_GROUPING_ORDER.length])", "setSidebarGrouping(choices[(currentIndex + 1) % choices.length])"],
