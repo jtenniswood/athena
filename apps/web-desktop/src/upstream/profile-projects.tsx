@@ -23,7 +23,7 @@ export function browserProfileProjectGroups(sessions: SessionInfo[], projects: S
   }
   const home = projects.find(project => project.isNoProject)
   if (remaining.size) groups.unshift({ id: JSON.stringify(['profile-project', owner.connection_id, owner.profile, 'home']),
-    label: home?.label ?? 'Home', path: null, sessions: [...remaining], mode: 'workspace' })
+    label: home?.label ?? 'Home', path: null, sessions: [...remaining], mode: 'workspace', isHome: true })
   return groups
 }
 

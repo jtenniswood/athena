@@ -36,20 +36,23 @@ export interface BrowserTreeHeaderModel {
   title?: string
   open: boolean
   toggle(): void
+  enter?(): void
+  toggleLabel?: string
+  active?: boolean
   emphasis?: boolean
   icon: ReactNode
   actions?: ReactNode
 }
 
 /** Keep the distinguishing tail of branch names visible in a narrow sidebar. */
-export function BrowserTreeHeader({ model, ...props }: ComponentProps<'div'> & { model: BrowserTreeHeaderModel }) {
+export function BrowserTreeHeader({ model, className, ...props }: ComponentProps<'div'> & { model: BrowserTreeHeaderModel }) {
   const tailLength = Math.min(14, Math.floor(model.label.length / 2))
   return <div {...props} className={cn('group/workspace flex min-h-6 items-center gap-1 px-2 pt-1 text-[0.6875rem]',
-    model.emphasis ? 'font-semibold text-(--ui-text-secondary)' : 'font-medium text-(--ui-text-tertiary)')}>
-    <button type="button" aria-expanded={model.open} onClick={model.toggle}
+    model.emphasis ? 'font-semibold text-(--ui-text-secondary)' : 'font-medium text-(--ui-text-tertiary)', className)}>
+    <button type="button" aria-label={model.toggleLabel} aria-expanded={model.open} onClick={model.toggle} onDoubleClick={model.enter}
       className={cn('flex min-w-0 flex-1 items-center gap-1.5 bg-transparent text-left', model.emphasis ? 'hover:text-foreground' : 'hover:text-(--ui-text-secondary)')}>
       <span className="grid size-3.5 shrink-0 place-items-center">{model.icon}</span>
-      <span className="flex min-w-0 overflow-hidden" title={model.title ? `${model.label}\n${model.title}` : model.label}>
+      <span className={cn('flex min-w-0 overflow-hidden', model.active && 'text-foreground')} title={model.title ? `${model.label}\n${model.title}` : model.label}>
         <span className="truncate">{model.label.slice(0, model.label.length - tailLength)}</span>
         <span className="shrink-0 whitespace-pre">{model.label.slice(model.label.length - tailLength)}</span>
       </span>

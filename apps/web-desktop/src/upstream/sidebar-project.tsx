@@ -40,7 +40,7 @@ export function BrowserProjectControllerSurface({ model, ...props }: ComponentPr
     meta.includes('cost') && cost >= 0.01 ? `$${cost.toFixed(2)}` : null].filter(Boolean).join(' · ')
   const row: BrowserSidebarProjectModel = {
     id: project.id, label: project.label, active: model.isActive, open: model.open, hasRows: model.hasRows,
-    icon: project.isNoProject ? project.icon || 'home' : model.open ? 'folder-opened' : 'folder', color: project.color,
+    icon: project.isNoProject ? project.icon || 'home' : 'git-branch', color: project.color,
     dragging: model.dragging, reorderable: model.reorderable, dragHandleProps: model.dragHandleProps,
     reorderLabel: s.projects.reorder(project.label), toggleLabel: s.projects.toggle(project.label, !model.open),
     autoLabel: project.isAuto ? s.projects.autoDiscovered : undefined, anchor: model.rowRef,
