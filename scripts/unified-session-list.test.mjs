@@ -46,6 +46,7 @@ test('profile sections reuse configured pictures and keep exact owner routes', (
   let enabled = true
   const { useBrowserProfileSection } = load('src/upstream/profile-section.tsx', () => ({
     useStore: () => enabled ? 'profile' : 'none',
+    useBrowserPreference: key => key === 'combinedProfiles' ? enabled : false, useEffect: () => {},
     useBrowserProfiles: () => ({ items: [{ key: 'research', label: 'Researcher', botName: 'Research', appearance: { color: 'blue', image: 'https://example.invalid/profile.png', shape: 'circle' } }] }),
     jsx: element, jsxs: element, avatarColor: color => color, BotFace: 'face'
   }))
@@ -90,4 +91,39 @@ test('profile grouping keeps empty configured profiles as new conversation entry
   const expression = output.match(/const hasGroupedSessions = ([^\n]+)/)[1]
   assert.equal(vm.runInNewContext(expression, { groups: empty }), true)
   assert.equal(vm.runInNewContext(expression, { groups: [{ mode: 'project', sessions: [] }] }), false)
+})
+
+
+test('profile layout switches scope without changing grouping or selecting a fresh conversation', () => {
+  let grouping = 'status', combined = true, all = true
+  const { setBrowserProfilesCombined } = load('src/upstream/profile-section.tsx', id => ({
+    $sidebarGrouping: { get: () => grouping }, setSidebarGrouping: value => { grouping = value },
+    browserPreference: () => ({ write: value => { combined = value } }),
+    setShowAllProfiles: value => { all = value }
+  }))
+  setBrowserProfilesCombined(false)
+  assert.equal(grouping, 'status')
+  assert.equal(combined, false)
+  assert.equal(all, false)
+  setBrowserProfilesCombined(true)
+  assert.equal(grouping, 'status')
+  assert.equal(combined, true)
+  assert.equal(all, true)
+  grouping = 'profile'
+  setBrowserProfilesCombined(false)
+  assert.equal(grouping, 'none')
+})
+
+test('combined profiles keep backend project membership and isolate disclosure identities', () => {
+  const { browserProfileProjectGroups } = load('src/upstream/profile-projects.tsx', () => ({}))
+  const a = { id: 'a', profile: 'research', connection_id: 'local' }
+  const b = { id: 'b', profile: 'research', connection_id: 'local' }
+  const projects = [{ id: 'p', label: 'Project', path: '/workspace/project', sessionIds: ['a'], repos: [] }]
+  const groups = browserProfileProjectGroups([a, b], projects)
+  assert.deepEqual(Array.from(groups, group => group.label), ['Home', 'Project'])
+  assert.equal(groups[0].sessions[0], b)
+  assert.equal(groups[1].sessions[0], a)
+  const other = browserProfileProjectGroups([{ ...a, profile: 'writer' }], projects)
+  assert.notEqual(other[0].id, groups[1].id)
+  assert.deepEqual(Array.from(browserProfileProjectGroups([], projects)), [])
 })
