@@ -133,13 +133,13 @@ test('combined project rows retain saved menu identity, independent disclosure a
   const element = (type, props) => ({ type, props }), disclosure = [], creates = [], splits = []
   const { BrowserProfileProjects, BrowserProfileProjectRow } = load('src/upstream/profile-projects.tsx', () => ({
     jsx: element, jsxs: element, WEB_CONNECTION_ID: 'web-single', useRef: () => ({ current: null }),
-    PROJECT_PREVIEW_COUNT: 3, useRevealedRows: rows => ({ shown: rows, more: 0, showMore() {} }),
     useWorkspaceNodeOpen: id => { disclosure.push(id); return [true, () => {}] },
     BrowserProjectControllerSurface: 'project-surface'
   }))
-  const saved = { id: 'p_saved', label: 'Repairs', path: null, icon: 'tools', color: 'blue', repos: [{ path: '/workspace/repairs', groups: [] }], sessionIds: ['a'], sessionCount: 1 }
+  const ids = Array.from({ length: 6 }, (_, index) => `chat-${index}`)
+  const saved = { id: 'p_saved', label: 'Repairs', path: null, icon: 'tools', color: 'blue', repos: [{ path: '/workspace/repairs', groups: [] }], sessionIds: ids, sessionCount: ids.length }
   const render = profile => {
-    const [row] = BrowserProfileProjects({ sessions: [{ id: 'a', profile }], projects: [saved], renderRows: rows => rows,
+    const [row] = BrowserProfileProjects({ sessions: ids.map(id => ({ id, profile })), projects: [saved], renderRows: rows => rows,
       onNewSession: (path, owner) => creates.push([path, owner.profile]),
       onNewSessionSplit: (dir, options) => splits.push([dir, options.route.profile]) })
     return BrowserProfileProjectRow(row.props).props.model
@@ -147,6 +147,7 @@ test('combined project rows retain saved menu identity, independent disclosure a
   const research = render('research'), writer = render('writer')
   assert.equal(research.project, saved)
   assert.equal(writer.project, saved)
+  assert.equal(research.rows.length, ids.length)
   assert.notEqual(disclosure[0], disclosure[1])
   research.onNewSession(research.newSessionPath)
   writer.onNewSession(writer.newSessionPath)
