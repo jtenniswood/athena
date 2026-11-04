@@ -1,5 +1,6 @@
 import { assertSafeConnectionChange, setActiveWork } from '../platform/reload-safety'
 import { browserCapabilities } from '../platform/capabilities'
+import { claimBrowserAmbientCue } from '../platform/ambient-claims'
 import { browserSignInTarget } from '../platform/sign-in-target'
 import type { DesktopBootProgress, DesktopCloudAgentSignInResult, DesktopCloudDiscoverResult, DesktopCloudStatus, QuickEntryStatus, QuickEntrySubmitPayload } from '../upstream/types'
 import {
@@ -74,8 +75,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
     getSecretStorageEncryption: async () => ({ on: capabilities.secureTokenStorage }),
     setSecretStorageEncryption: async () => ({ on: capabilities.secureTokenStorage }),
     revalidateConnection: async () => ({ ok: true, rebuilt: false }),
-    // Single window in the browser: always the first to claim a cue.
-    claimAmbientCue: async () => true,
+    claimAmbientCue: claimBrowserAmbientCue,
     getGatewayWsUrl: async () => {
       // One origin for both the ticket mint and the socket connect, so the dev
       // proxy routes them to the same gateway (a mismatch would 4403).
