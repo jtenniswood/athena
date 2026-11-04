@@ -48,7 +48,7 @@ class MainActivity : AppCompatActivity() {
     private var navigationId: String? = null
     private var webRevision = "Unknown"
     private var serverProtocol = "Unknown"
-    private val authentication by lazy { NativeAuthentication(this, connection, { uri ->
+    private val authentication: NativeAuthentication by lazy { NativeAuthentication(this, connection, { uri ->
         AuthTabIntent.Builder().build().launch(accessSignInLauncher, uri, "athena-android")
     }, {
         web?.evaluateJavascript("window.dispatchEvent(new Event('focus'))", null)
