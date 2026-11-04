@@ -29,12 +29,12 @@ export interface BrowserSidebarProjectModel {
 /** Browser tree geometry and disclosure, driven by the existing project owner. */
 export function BrowserSidebarProject({ model, children, ...props }: ComponentProps<'div'> & { model: BrowserSidebarProjectModel }) {
   const icon = <i aria-hidden="true" className={`codicon codicon-${model.icon}`} style={{ fontSize: '0.875rem', color: model.color || undefined }} />
-  const controls = <>{model.menu}{model.create && <button type="button" aria-label={model.create.label} title={model.create.label}
+  const controls = <>{model.create && <button type="button" aria-label={model.create.label} title={model.create.label}
     onClick={event => { event.stopPropagation(); preserveNavigationForNextSelection(); model.create?.run() }} onPointerDown={model.create.pointerDown}
     className="grid size-4 shrink-0 place-items-center rounded-sm bg-transparent text-(--ui-text-quaternary) opacity-0 transition-opacity hover:bg-(--ui-control-hover-background) hover:text-foreground group-hover/workspace:opacity-100 focus-visible:opacity-100">
     <i aria-hidden="true" className="codicon codicon-add" style={{ fontSize: '0.75rem' }} />
-  </button>}</>
-  const header = <div ref={model.anchor} className={cn('group/workspace grid min-h-[1.625rem] grid-cols-[minmax(0,1fr)_auto] items-stretch rounded-md pr-2',
+  </button>}{model.menu}</>
+  const header = <div ref={model.anchor} data-browser-group-header="" className={cn('group/workspace grid min-h-[1.625rem] grid-cols-[minmax(0,1fr)_auto] items-stretch rounded-md pr-2',
     model.dragging && 'cursor-grabbing bg-(--ui-sidebar-surface-background)')} data-glass-opaque={model.dragging ? '' : undefined}
     onPointerDown={event => {
       if (!event.currentTarget.contains(event.target as Node) || (event.target as Element).closest('[data-reorder-handle], [data-row-actions]')) return
@@ -56,7 +56,7 @@ export function BrowserSidebarProject({ model, children, ...props }: ComponentPr
         <i aria-hidden="true" className={cn('codicon codicon-chevron-right shrink-0 text-(--ui-text-tertiary) opacity-0 transition-transform duration-150 group-hover/workspace:opacity-100', model.open && 'rotate-90')} style={{ fontSize: '0.75rem' }} />
       </button> : <span className="flex-1" />}
     </div>
-    <div data-row-actions="" className="flex shrink-0 items-center self-stretch">
+    <div data-row-actions="" data-browser-group-actions="" className="flex shrink-0 items-center self-stretch">
       {model.figures ? <div className="relative flex items-center"><span className="min-w-9 whitespace-nowrap text-right text-[0.625rem] leading-none text-(--ui-text-tertiary) transition-opacity group-hover/workspace:opacity-0">{model.figures}</span><div className="absolute right-0 flex items-center">{controls}</div></div> : controls}
     </div>
   </div>

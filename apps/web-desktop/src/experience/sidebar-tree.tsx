@@ -44,7 +44,7 @@ export interface BrowserTreeHeaderModel {
 /** Keep the distinguishing tail of branch names visible in a narrow sidebar. */
 export function BrowserTreeHeader({ model, ...props }: ComponentProps<'div'> & { model: BrowserTreeHeaderModel }) {
   const tailLength = Math.min(14, Math.floor(model.label.length / 2))
-  return <div {...props} className={cn('group/workspace flex min-h-6 items-center gap-1 px-2 pt-1 text-[0.6875rem]',
+  return <div {...props} data-browser-group-header="" className={cn('group/workspace flex min-h-[1.625rem] items-center gap-1 px-2 text-[0.6875rem]',
     model.emphasis ? 'font-semibold text-(--ui-text-secondary)' : 'font-medium text-(--ui-text-tertiary)')}>
     <button type="button" aria-expanded={model.open} onClick={model.toggle}
       className={cn('flex min-w-0 flex-1 items-center gap-1.5 bg-transparent text-left', model.emphasis ? 'hover:text-foreground' : 'hover:text-(--ui-text-secondary)')}>
@@ -54,7 +54,7 @@ export function BrowserTreeHeader({ model, ...props }: ComponentProps<'div'> & {
         <span className="shrink-0 whitespace-pre">{model.label.slice(model.label.length - tailLength)}</span>
       </span>
       <i aria-hidden="true" className={cn('codicon codicon-chevron-right shrink-0 text-(--ui-text-tertiary) opacity-0 transition group-hover/workspace:opacity-100', model.open && 'rotate-90')} style={{ fontSize: '0.75rem' }} />
-    </button>{model.actions}
+    </button>{model.actions && <div data-browser-group-actions="" className="flex shrink-0 items-center">{model.actions}</div>}
   </div>
 }
 
@@ -74,7 +74,7 @@ export interface BrowserProfileHeaderModel {
 
 export function BrowserProfileHeader({ model }: { model: BrowserProfileHeaderModel }) {
   const reorder = model.reorder
-  return <div className={cn('group/workspace grid min-h-[1.625rem] grid-cols-[minmax(0,1fr)_auto] items-stretch rounded-md pr-2', reorder?.dragging && 'cursor-grabbing bg-(--ui-sidebar-surface-background)')}
+  return <div data-browser-group-header="" className={cn('group/workspace grid min-h-[1.625rem] grid-cols-[minmax(0,1fr)_auto] items-stretch rounded-md pr-2', reorder?.dragging && 'cursor-grabbing bg-(--ui-sidebar-surface-background)')}
     data-glass-opaque={reorder?.dragging ? '' : undefined} onPointerDown={event => {
       if (!event.currentTarget.contains(event.target as Node) || (event.target as Element).closest('[data-reorder-handle], [data-row-actions]')) return
       reorder?.bindings.onPointerDown?.(event)
@@ -92,7 +92,7 @@ export function BrowserProfileHeader({ model }: { model: BrowserProfileHeaderMod
         <i aria-hidden="true" className={cn('codicon codicon-chevron-right shrink-0 text-(--ui-text-tertiary) opacity-0 transition group-hover/workspace:opacity-100', model.open && 'rotate-90')} style={{ fontSize: '0.75rem' }} />
       </button>
     </div>
-    <div data-row-actions="" className="flex shrink-0 items-center self-stretch">{model.figures ? <div className="relative flex items-center">
+    <div data-row-actions="" data-browser-group-actions="" className="flex shrink-0 items-center self-stretch">{model.figures ? <div className="relative flex items-center">
       <span className="min-w-9 whitespace-nowrap text-right text-[0.625rem] leading-none text-(--ui-text-tertiary) transition-opacity group-hover/workspace:opacity-0">{model.figures}</span>
       {model.actions && <div className="absolute right-0 flex items-center">{model.actions}</div>}
     </div> : model.actions}</div>
