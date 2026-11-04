@@ -15,12 +15,42 @@ export function redirectAssistantRuntimeHooks(source: string): string {
   })
 }
 
+export function exposeGoalResumeAction(code: string): string {
+  const start = '              accessory={\n                <DropdownMenu'
+  const end = '                </DropdownMenu>\n              }'
+  if (code.split(start).length !== 2 || code.split(end).length !== 2) {
+    throw new Error('Goal header actions changed')
+  }
+  return code.replace(start, `              accessory={
+                <>
+                  {(visibleState === 'paused' || visibleState === 'waiting') && (
+                    <Button
+                      aria-label={visibleState === 'waiting' ? ctrl.resumeNow : ctrl.resumeGoal}
+                      disabled={isBusy}
+                      loading={pendingAction === 'goal.resume' || pendingAction === 'goal.unwait'}
+                      onClick={() => void handleAction(visibleState === 'waiting' ? 'goal.unwait' : 'goal.resume')}
+                      size="xs"
+                      type="button"
+                      variant="secondary"
+                    >
+                      <Codicon name="play" size="0.8rem" />
+                      {visibleState === 'waiting' ? ctrl.resumeNow : ctrl.resumeGoal}
+                    </Button>
+                  )}
+                <DropdownMenu`).replace(end, `                </DropdownMenu>
+                </>
+              }`)
+}
+
 function rewrite(code: string, id: string): { code: string; map: null } | null {
 
     const normalizedId = id.replaceAll('\\', '/').split('?')[0]
     if (normalizedId.endsWith('/desktop/src/components/assistant-ui/thread/assistant-message.tsx') ||
         normalizedId.endsWith('/desktop/src/components/assistant-ui/thread/use-message-reactions.ts')) {
       return { code: redirectAssistantRuntimeHooks(code), map: null }
+    }
+    if (normalizedId.endsWith('/desktop/src/app/chat/composer/status-stack/session-control-goal.tsx')) {
+      return { code: exposeGoalResumeAction(code), map: null }
     }
     if (normalizedId.endsWith('/desktop/src/sdk/bridge.ts')) {
       const target = 'export const pluginDecisions: ReadableAtom<Record<string, boolean>> = {'
