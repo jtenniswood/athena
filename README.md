@@ -236,8 +236,9 @@ of your APK signing certificate. Debug, release, and Google Play signing keys
 have different fingerprints; allow each certificate only when it needs Firebase
 access. Limit the key's API allowlist to Firebase Installations, FCM Registration,
 Firebase Management, and Cloud Logging. Remove unused client keys. Keep the
-server credential private, outside Git and the APK, with file permissions `0600`;
-the container only needs read access. This integration does not need a database,
+server credential private, outside Git and the APK, with file permissions `0600`
+and ownership that lets the official `hermes` runtime user read it through the
+read-only mount. This integration does not need a database,
 Storage bucket, Analytics, or a billing account. If you add data services later,
 configure their Security Rules before storing data.
 

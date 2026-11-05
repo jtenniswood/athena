@@ -17,7 +17,7 @@ FROM dependencies AS build
 COPY apps/web-desktop ./apps/web-desktop
 COPY docs ./docs
 COPY tests ./tests
-COPY hermes-release.json ./
+COPY hermes-release.json Dockerfile ./
 ARG HERMES_WRAPPER_REV=unknown
 ARG HERMES_RELEASE_CHANNEL=local
 ARG SOURCE_DATE_EPOCH

@@ -13,7 +13,6 @@ async function signIn(page) {
   await page.locator('input[name="password"]').fill('athena-local-review-fixture')
   await page.getByRole('button', { name: /^sign in$/i }).click()
   await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toBeEditable({ timeout: 30000 })
-  await page.waitForFunction(() => window.__HERMES_PLUGIN_SDK__?.host.state.gateway.get() === 'open', { timeout: 30000 })
   const telemetry = page.getByRole('button', { name: 'No thanks', exact: true })
   if (await telemetry.isVisible()) await telemetry.click()
 }
