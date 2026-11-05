@@ -59,7 +59,13 @@ export function selectBehavior(registry, { entries = [], owners = [], changed = 
   const files = new Set(changed), all = changed.some(file => globalInputs.has(file))
   const old = new Map(previous.map(entry => [entry.name, entry]))
   const dependencies = new Map()
-  const candidates = [...registry, ...previous.filter(entry => files.has(registryPath) && !registry.some(current => current.name === entry.name))]
+  // Retired interventions may delete their tests in the same change. Keep any
+  // surviving checks, but never filter references belonging to current entries.
+  const retired = previous.filter(entry => files.has(registryPath) && !registry.some(current => current.name === entry.name))
+    .map(entry => ({ ...entry, tests: entry.tests.filter(test => !files.has(test.file) ||
+      (existsSync(path.join(root, test.file)) && readFileSync(path.join(root, test.file), 'utf8').includes(test.scenario))) }))
+    .filter(entry => entry.tests.length)
+  const candidates = [...registry, ...retired]
   return candidates.filter(entry => {
     if (entries.includes(entry.name) || owners.includes(entry.owner) || all) return true
     if (files.has(registryPath) && (!registry.some(current => current.name === entry.name) || JSON.stringify(old.get(entry.name)) !== JSON.stringify(entry))) return true
