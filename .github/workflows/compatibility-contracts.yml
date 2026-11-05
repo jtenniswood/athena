@@ -17,7 +17,7 @@ jobs:
           test "$REPO_URL" = https://github.com/jtenniswood/athena
           test -x /opt/runner-hooks/cleanup.sh
           test "$RUNNER_CLEANUP_DOCKER" = false
-          test -n "$ACCESS_TOKEN"
+          test -z "${ACCESS_TOKEN:-}"
           test "$(stat -f -c %T /runner-work/athena)" = ext2/ext3
           printf 'Athena runner identity and disk-backed workspace verified\n'
       - uses: actions/checkout@v7
