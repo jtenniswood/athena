@@ -25,8 +25,8 @@
       }
     ],
     "removal": "Remove when routed Bot opens use public browser navigation contracts with equivalent interruption tests.",
-    "sourceHash": "42c2ffd6bc62d30e8e0804a6b35e61be3993b5b3cdac73b722ce17c3f45b2d22",
-    "outputHash": "caa5ec54ececf1046640860d2b80c180c2501e4de36b3b70afb29be3d6be94bf",
+    "sourceHash": "cd13df615a0534f4bdac9f9a1ff80338c8416ad1b70f48556933d70f47b4a457",
+    "outputHash": "27b7d8473ade1de6c1086078ec00ba8de135e376565b424ada86907b77420cf2",
     "handler": "bot-session-cancellation",
     "sourceRoot": "renderer"
   },
@@ -940,7 +940,7 @@
     ],
     "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",
     "replacement": "src/experience/browser-bots-toolbar.tsx",
-    "sourceHash": "2a386ad18290adfe3281a1ed80bccc70d1242f06a0e5fb7c835525813fc2d864",
+    "sourceHash": "86ca2617f4b0d38923a9e31e91d0f26e702a25f0d883a0da97561bdebf2b0328",
     "sourceRoot": "renderer"
   },
   {
@@ -1302,7 +1302,7 @@
     "specifier": "@hermes/plugin-sdk",
     "replacement": "../desktop/src/sdk/index.ts",
     "aliasGroup": "renderer",
-    "sourceHash": "42c2ffd6bc62d30e8e0804a6b35e61be3993b5b3cdac73b722ce17c3f45b2d22"
+    "sourceHash": "cd13df615a0534f4bdac9f9a1ff80338c8416ad1b70f48556933d70f47b4a457"
   },
   {
     "name": "renderer-alias-6",
@@ -1814,9 +1814,9 @@
     ],
     "removal": "Remove when upstream shared session entry points supersede older Bot selections and release group identity. Remove the archive adapter when upstream provides archive Undo in the browser shell.",
     "sourceRoot": "renderer",
-    "sourceHash": "8dd027b61969ce6d0e7fcbe532d9013a8b7e93019a5904dbd93fdd8ba16d8355",
-    "inputHash": "8dd027b61969ce6d0e7fcbe532d9013a8b7e93019a5904dbd93fdd8ba16d8355",
-    "outputHash": "55a36fcdc8cd7db96c67bf235cbe0f77253a53cd8f4ccc4af8a361c5c9f9f138"
+    "sourceHash": "190d2249d3cedcdb4f4508ac96779da7dcbef705c253cebf4c7f3aea33b12736",
+    "inputHash": "190d2249d3cedcdb4f4508ac96779da7dcbef705c253cebf4c7f3aea33b12736",
+    "outputHash": "f1c3ebed0584fc61964a1fa52b0a8b321212680646978505cc409dd713e000e5"
   },
   {
     "name": "browser-overlay-focus-owner",
@@ -1909,9 +1909,9 @@
     ],
     "removal": "Remove when upstream controlled Bot creation and section dialogs restore their opening control and fit browser viewport scaling.",
     "sourceRoot": "renderer",
-    "sourceHash": "54b7c9f2da3f7251fb64e33345356725a84dd87fce5e13f6228a7b0486b28800",
-    "inputHash": "54b7c9f2da3f7251fb64e33345356725a84dd87fce5e13f6228a7b0486b28800",
-    "outputHash": "bf33798aa471e6dd235ddf0a722b05374f2cffb32e12257a17f3e0d13c1d1725"
+    "sourceHash": "6636cca7b743b77c6aadc40fdd7dad16a9e7d4a073457fb5d6c0409cc4da4ac6",
+    "inputHash": "6636cca7b743b77c6aadc40fdd7dad16a9e7d4a073457fb5d6c0409cc4da4ac6",
+    "outputHash": "196293c7a9f05607c8cea88054aaffe12827e4f3209de0667d0b409d41e69aac"
   },
   {
     "name": "browser-section-dialog-return-focus",
@@ -2011,9 +2011,9 @@
     ],
     "removal": "Remove when upstream group membership dialogs restore their opening control and respect browser scale.",
     "sourceRoot": "renderer",
-    "sourceHash": "54b7c9f2da3f7251fb64e33345356725a84dd87fce5e13f6228a7b0486b28800",
-    "inputHash": "bf33798aa471e6dd235ddf0a722b05374f2cffb32e12257a17f3e0d13c1d1725",
-    "outputHash": "df899394139cf17c2ec6b07c82b0bc0e37e4f0790c6c48144193e59b417b633d"
+    "sourceHash": "6636cca7b743b77c6aadc40fdd7dad16a9e7d4a073457fb5d6c0409cc4da4ac6",
+    "inputHash": "196293c7a9f05607c8cea88054aaffe12827e4f3209de0667d0b409d41e69aac",
+    "outputHash": "3137b8559cc45dfc785070260d6891102fd1c6b8ecd7946ea4609a41b28d1072"
   },
   {
     "name": "browser-edit-dialog-focus",
@@ -2059,9 +2059,9 @@
     ],
     "removal": "Remove when upstream controlled confirmation dialogs restore a valid opening control and respect browser scale.",
     "sourceRoot": "renderer",
-    "sourceHash": "25fb0355827e4e289de19423ff46ab40cff3c74f1013cbe7e0903b2678ec0b36",
-    "inputHash": "25fb0355827e4e289de19423ff46ab40cff3c74f1013cbe7e0903b2678ec0b36",
-    "outputHash": "1310c3d582fd8580472a8a9cb6a9dcdd64244a3915d65a27734093bd87f8cdaa"
+    "sourceHash": "c51e11d6a8d7dabe48e895537f4f8982d5ce1bca1f70305c020f590a1ba26b28",
+    "inputHash": "c51e11d6a8d7dabe48e895537f4f8982d5ce1bca1f70305c020f590a1ba26b28",
+    "outputHash": "6ff3ca1c056f65d46ec35a5619aeb6650f430e29140bc4b153e3af1a1cbcafeb"
   },
   {
     "name": "browser-sessions-section-styling",
@@ -2194,9 +2194,9 @@
       "omitBrowserDesktopUpdateNotice"
     ],
     "sourceRoot": "renderer",
-    "sourceHash": "6e74351ff0e5889e00e587ea33ec1e27a04d9b7e846dc8cf6ccab62de348466c",
-    "inputHash": "6e74351ff0e5889e00e587ea33ec1e27a04d9b7e846dc8cf6ccab62de348466c",
-    "outputHash": "5898c3a2a0dea2638271a0eaa6a7856a3d9d2c35491dbe53e96a7cafd8fbdf14"
+    "sourceHash": "f2989189842bcdb91fbcfd8177c553695aee83922dfe7188f6465020fedb4658",
+    "inputHash": "f2989189842bcdb91fbcfd8177c553695aee83922dfe7188f6465020fedb4658",
+    "outputHash": "15932f9070012ed49d6af442917dc3e7299add68fcd24e03e502d4c5cb3eb162"
   },
   {
     "name": "browser-semantic-desktop-install-overlay",
@@ -2466,7 +2466,7 @@
     "order": 20,
     "module": "sdk/index.ts",
     "sourceRoot": "renderer",
-    "sourceHash": "42c2ffd6bc62d30e8e0804a6b35e61be3993b5b3cdac73b722ce17c3f45b2d22",
+    "sourceHash": "cd13df615a0534f4bdac9f9a1ff80338c8416ad1b70f48556933d70f47b4a457",
     "replacement": "src/upstream/browser-dialog-sdk.ts",
     "importers": [
       "plugins/hermes-bots/create-dialog.tsx",
@@ -2982,9 +2982,9 @@
       "useBrowserAlternateSubmit"
     ],
     "sourceRoot": "renderer",
-    "sourceHash": "ca94b09fe9d9aeb2e63bce9ac639d74fb60663638490456d70963f65382efcf0",
-    "inputHash": "ca94b09fe9d9aeb2e63bce9ac639d74fb60663638490456d70963f65382efcf0",
-    "outputHash": "8911f57ee1d2eb506ac8be817571be9508f39e8a9dceeec361fea98b2e3ec681"
+    "sourceHash": "ef66387bcbe1a3cda559eb1790d1e7ef0142b1221010bb2cb65b7086f96b359d",
+    "inputHash": "ef66387bcbe1a3cda559eb1790d1e7ef0142b1221010bb2cb65b7086f96b359d",
+    "outputHash": "6b7f1713f6d9badfc639d77684d7ba2544590d9fba50f3e4c2d3d9f1d2e99bf6"
   },
   {
     "name": "browser-workspace-owner-identity",
@@ -3013,7 +3013,7 @@
     "order": 0,
     "module": "plugins/hermes-bots/routing.ts",
     "sourceRoot": "renderer",
-    "sourceHash": "b2b8732319cee7cf1f4802f82468fab6e473c8205e73cc37019a2e1987ffe94c",
+    "sourceHash": "73e83aefedf54e374fe1d99fdd7a7fc1f109219f3bcf62551872f23f2b4a16ba",
     "reason": "Project the exact current engine workspace owner for canonical Bot chats missing from sidebar rows.",
     "owner": "apps/web-desktop/src/upstream/conversation.ts",
     "tests": [
@@ -3261,10 +3261,10 @@
     "handlers": [
       "removeBrowserGatewayGroupsRefresh"
     ],
-    "sourceHash": "4efe09d59fb623f9224f342334ef86d3f66d672216a60266348db4952c5c6c51",
+    "sourceHash": "6c9ff25edc33c361b2281e4c1186bbfeb99c89e2f3b9ac924fcf633b01602a51",
     "sourceRoot": "renderer",
-    "inputHash": "4efe09d59fb623f9224f342334ef86d3f66d672216a60266348db4952c5c6c51",
-    "outputHash": "2665a27438fb5eb5fb7465b35416e00b1256b13bfe7df06f2e382d49acc7aec7"
+    "inputHash": "6c9ff25edc33c361b2281e4c1186bbfeb99c89e2f3b9ac924fcf633b01602a51",
+    "outputHash": "9581749b9e41902dc45b6fbda4d15360de26eee66fdb2aaec90d639ddb491f87"
   },
   {
     "name": "browser-profile-section-pictures",
@@ -3443,9 +3443,9 @@
       "useBrowserMessagingPresentation"
     ],
     "sourceRoot": "renderer",
-    "sourceHash": "2ef2b6fc46549a2d1066005313811d76278bb3d67925f3d7417f0e431da5ea1a",
-    "inputHash": "2ef2b6fc46549a2d1066005313811d76278bb3d67925f3d7417f0e431da5ea1a",
-    "outputHash": "7473a0a7ec35644f286c20cb09b11508ae95a1cb064112768d2260f11cc792db"
+    "sourceHash": "0ffb3ea31a784d079cbde3777bb10a7665930e2a67431655d37ad734421fd895",
+    "inputHash": "0ffb3ea31a784d079cbde3777bb10a7665930e2a67431655d37ad734421fd895",
+    "outputHash": "dda07f4b005a5a7750f68842e64b871b3966aaf4079a57d79f588ed8361740de"
   },
   {
     "name": "browser-session-reference-links",
@@ -3754,9 +3754,9 @@
       }
     ],
     "removal": "Remove when the renderer provides an equivalent browser line-break command with IME, undo and persistence coverage.",
-    "sourceHash": "ca94b09fe9d9aeb2e63bce9ac639d74fb60663638490456d70963f65382efcf0",
-    "inputHash": "8911f57ee1d2eb506ac8be817571be9508f39e8a9dceeec361fea98b2e3ec681",
-    "outputHash": "28683ee45060b3a01dfbcdbcca435ef3e2015623ee6d744499eedf95f2a2b6a4",
+    "sourceHash": "ef66387bcbe1a3cda559eb1790d1e7ef0142b1221010bb2cb65b7086f96b359d",
+    "inputHash": "6b7f1713f6d9badfc639d77684d7ba2544590d9fba50f3e4c2d3d9f1d2e99bf6",
+    "outputHash": "8b5278f45775784fce14afb2ce8a38b72aeaa0ac39fe7aa17dc6c9c25f4bcf00",
     "handlers": [
       "useBrowserComposerLineBreak"
     ],

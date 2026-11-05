@@ -87,8 +87,7 @@ export function removeBrowserNewBotChatAction(source: string): string {
 
 export function removeBrowserGatewayGroupsRefresh(source: string, root: string): string {
   const changes: [string, string][] = [
-    ['  const profile = useValue(host.state.profile)\n', `  const profile = useValue(host.state.profile)
-  const gatewayState = useValue(host.state.gateway)
+    ['  const gateway = useValue(host.state.gateway)\n', `  const gatewayState = useValue(host.state.gateway)
   const gateway = useValue($gateway)
 `],
     ['  const [refresh, setRefresh] = useState(0)\n', '  const [refresh, finishRefresh] = useBotsRefreshSignal()\n'],
@@ -99,8 +98,8 @@ export function removeBrowserGatewayGroupsRefresh(source: string, root: string):
       return
     }
 `],
-    ['[connectionId, profile, refresh, revision]', '[connectionId, profile, gatewayState, gateway, refresh, revision, finishRefresh]'],
-    ["})().catch(e => { if (!cancelled) {setError(e instanceof Error ? e.message : String(e))} })", "})().catch(e => { if (!cancelled) {setError(e instanceof Error ? e.message : String(e))} }).finally(finishRefresh)"],
+    ['[connectionId, gateway, profile, refresh, revision]', '[connectionId, profile, gatewayState, gateway, refresh, revision, finishRefresh]'],
+    ["if (!cancelled && host.state.gateway.get() === 'open') {setError(e instanceof Error ? e.message : String(e))}\n    })", "if (!cancelled && host.state.gateway.get() === 'open') {setError(e instanceof Error ? e.message : String(e))}\n    }).finally(finishRefresh)"],
     ['    <Button onClick={() => setRefresh(value => value + 1)} variant="ghost">{labels.refreshGroups}</Button>\n', '']
   ]
   for (const [before] of changes) {
