@@ -85,7 +85,7 @@
     },
     "@tanstack/react-virtual": {
       "upstream": "3.14.14",
-      "version": "3.14.25",
+      "version": "3.14.26",
       "reason": "Keep a full viewport of virtual rows when a list shrinks at its scroll end; verify conversation selection, sidebar rendering and the production build."
     },
     "react-arborist": {
