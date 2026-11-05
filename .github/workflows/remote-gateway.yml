@@ -61,6 +61,8 @@ jobs:
             serve --host 0.0.0.0 --port 9119
           docker cp test-results/remote/home/. athena-review-gateway:/opt/data/
           docker start athena-review-gateway
+          # docker cp creates root-owned profiles; the test server runs as hermes.
+          docker exec --user 0 athena-review-gateway chown -R hermes:hermes /opt/data
           docker run -d --name athena-review-ui --network athena-remote-review \
             -p 127.0.0.1:4190:80 \
             -e HERMES_GATEWAY_URL=http://athena-review-gateway:9119 \
