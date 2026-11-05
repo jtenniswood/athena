@@ -73,12 +73,9 @@ test('Athena preferences sync across devices through the official authenticated 
   } finally { await first.close(); await second.close() }
 })
 
-test('profile selection creates the conversation on its official serving owner', async ({ page }) => {
+test('creating a chat from a profile group retains its official owner', async ({ page }) => {
   await signIn(page)
-  const profile = page.locator('[data-profile-key="research"]')
-  await expect(profile).toBeVisible()
-  await profile.click()
-  await expect(profile).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'New session in Research', exact: true }).click()
   const prompt = `Research profile check ${Date.now()}`
   const editor = page.getByRole('textbox', { name: 'Message', exact: true })
   await editor.fill(prompt)
