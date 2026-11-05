@@ -5,11 +5,13 @@ user-facing documentation; keep user-facing content in `README.md`.
 
 ## Project
 
-Athena — the **Hermes Desktop chat UI** as a web app / PWA
+Athena — a customised UI on the **official Hermes Webapp** as a web app / PWA
 (`apps/web-desktop`). An **unofficial community wrapper** for
 `NousResearch/hermes-agent` (not affiliated). The renderer sources
 (`apps/desktop`, `apps/shared`) are **not in this repo** — they are fetched from
 the pinned `hermes-agent` at build time.
+The default image extends the formal release pinned in `hermes-release.json`;
+its runtime installation stamp and the renderer commit must match.
 
 ## Non‑negotiable rules
 
@@ -54,10 +56,13 @@ git push origin <branch>
 
 ## Build & dev
 
-- **Docker (primary image, NIX-FREE):** `docker build -t hermes-web .` fetches
-  the exact renderer revision in `flake.lock`, typechecks, and builds the UI.
+- **Docker (primary image, NIX-FREE):** the default target fetches the exact
+  release renderer in `flake.lock`, typechecks, builds the UI and extends the
+  matching official Hermes image. Real image builds run in GitHub Actions.
 - **Dev loop:** `pnpm prepare:renderer` → `pnpm install --frozen-lockfile` →
-  `pnpm dev` (port 5174). `nix develop` is an optional development environment;
+  `ATHENA_OFFICIAL_WEBAPP=1 HERMES_GATEWAY_URL=http://127.0.0.1:9120 pnpm dev`
+  (port 5174, against a running official Webapp with browser sign-in).
+  `nix develop` is an optional development environment;
   do not run Nix builds on the VPS.
 - **Verify:** For application changes, run `pnpm typecheck` and `pnpm build`
   when practical, then exercise the affected workflow. For documentation or

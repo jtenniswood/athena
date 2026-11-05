@@ -3974,5 +3974,39 @@
       }
     ],
     "removal": "Remove when upstream project dialogs capture and display their destination profile."
+  },
+  {
+    "name": "official-browser-host",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "lib/browser-desktop-bridge.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "0fed40f73d0e3e526982647986a6119f9278b06df965beb5b02337da75fb8686",
+    "reason": "Use the official released Webapp host and preference hydration before renderer stores load.",
+    "owner": "apps/web-desktop/src/upstream/official-host.ts",
+    "tests": [
+      {
+        "file": "scripts/official-host-adapter.test.mjs",
+        "scenario": "the official adapter keeps mutation and file-picker lifetimes in Athena reload safety"
+      }
+    ],
+    "removal": "Remove when Athena no longer extends the official Webapp browser host."
+  },
+  {
+    "name": "official-preference-boot",
+    "kind": "source-contract",
+    "order": 0,
+    "module": "lib/ui-preferences/boot.ts",
+    "sourceRoot": "renderer",
+    "sourceHash": "39e3493a93732d571b26a37b0591be6521f179eaee2c9f7cd7f83d37fee106b1",
+    "reason": "Use the official released Webapp host and preference hydration before renderer stores load.",
+    "owner": "apps/web-desktop/src/upstream/official-startup.ts",
+    "tests": [
+      {
+        "file": "tests/browser/official-webapp.spec.mjs",
+        "scenario": "the official runtime preserves chat, drafts, attachments and server sign-out"
+      }
+    ],
+    "removal": "Remove when Athena no longer extends the official Webapp browser host."
   }
 ]

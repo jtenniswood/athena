@@ -9,7 +9,7 @@ function clipboardFixture({ nativeWrite, copy = () => true } = {}) {
   const navigator = { clipboard: nativeWrite ? { writeText: nativeWrite } : undefined }
   const context = vm.createContext({
     exports: {}, navigator,
-    require: name => name === '@/lib/clipboard' ? { copyTextThroughSelection(text) {
+    require: name => name === '../upstream/clipboard' ? { copyTextThroughSelection(text) {
       copies.push(text)
       try { return copy(text) } catch { return false }
     } } : { browserCapabilities: () => ({ clipboard: Boolean(navigator.clipboard) }) }

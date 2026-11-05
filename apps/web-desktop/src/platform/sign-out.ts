@@ -1,6 +1,8 @@
 import { connectionState } from './connection-state'
 import { reloadReadinessAfterSaving } from './reload-safety'
 import { beginBrowserTransition } from './browser-transition'
+import { usesOfficialWebappHost } from './official-host'
+import { browserSignInTarget } from './sign-in-target'
 
 /** Save pending work before ending the session and returning to cold startup. */
 export async function signOut(): Promise<void> {
@@ -17,9 +19,14 @@ export async function signOut(): Promise<void> {
     const latest = await reloadReadinessAfterSaving()
     if (!latest.ready) throw new Error(latest.reason)
 
-    const state = connectionState()
-    state.update({ authMode: 'oauth', token: '' })
-    if (!state.persisted()) throw new Error('Your saved sign-in could not be cleared. Check browser storage and try again.')
-    window.location.reload()
+    if (!usesOfficialWebappHost()) {
+      const state = connectionState()
+      state.update({ authMode: 'oauth', token: '' })
+      if (!state.persisted()) throw new Error('Your saved sign-in could not be cleared. Check browser storage and try again.')
+    }
+    if (usesOfficialWebappHost()) {
+      const { pathname, search, hash } = window.location
+      window.location.assign(browserSignInTarget(pathname + search + hash).path)
+    } else window.location.reload()
   } catch (error) { release(); throw error }
 }

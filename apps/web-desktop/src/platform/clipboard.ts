@@ -1,4 +1,4 @@
-import { copyTextThroughSelection } from '@/lib/clipboard'
+import { copyTextThroughSelection } from '../upstream/clipboard'
 import { browserCapabilities } from './capabilities'
 
 // Capture the browser method before the renderer installs its Electron shim,

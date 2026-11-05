@@ -4,6 +4,7 @@ import type { FirebaseSender } from './firebase-messaging.mjs'
 
 export function createAndroidPush(options: {
   target: string
+  identityTarget?: string
   sender: Pick<FirebaseSender, 'enabled' | 'send'>
   fetch?: typeof fetch
   now?: () => number

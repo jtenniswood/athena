@@ -1,20 +1,22 @@
 # Athena for Hermes Agent
 
-This workspace composes the pinned Hermes Desktop renderer with Athena's browser
-services. Upstream files are fetched at the exact revision in the root
-`flake.lock`; they are never edited here.
+This workspace customises the official Hermes Webapp. Its released browser
+host owns transport, sign-in, files and shared renderer preferences. Athena
+adds its interface, safe PWA lifecycle and small browser/Android extensions.
+Upstream sources are fetched at the release revision in `flake.lock` and remain
+read-only. The runtime image is pinned alongside them in `hermes-release.json`.
 
 See the root [README](../../README.md) for setup and hosting commands.
 See the [tooling index](../../docs/tooling.md) for development and diagnostics.
 
 ## Ownership
 
-- `src/platform`: browser transport, authentication, attachments, clipboard,
-  notifications, runtime configuration, and display preferences.
-- `src/upstream`: renderer imports, desktop bridge assembly, checked transforms,
-  and module overrides.
+- `src/platform`: browser lifecycle, notifications, runtime configuration and
+  Athena preference ownership.
+- `src/upstream`: renderer imports, official host integration, checked UI
+  transforms and module overrides.
 - `src/overrides`: browser components using upstream visual primitives.
-- `src/web-bridge`: stable bridge installation and connection compatibility.
+- `src/web-bridge`: compatibility for the isolated synthetic preview host.
 - `vite.config.ts`: build composition and the single-gateway development server.
 
 ## Settings customization
@@ -53,11 +55,16 @@ The checked settings composition and visibility adapters live in
 `build/renderer/browser-plugin.ts` and are fingerprinted in the compatibility
 registry. Review those contracts when updating the pinned renderer.
 
-Docker and development serve `runtime-config.js` with no caching. Browser
-requests stay on the app origin and the server forwards them to its one
-configured gateway. Profiles and Bots still share that gateway.
+For local development, start an official Webapp with cookie-based sign-in, then
+run `pnpm dev` (the default target is `http://127.0.0.1:9120`). Override
+`HERMES_GATEWAY_URL` when needed. Development supplies credential-free browser
+bootstrap flags; the existing
+development proxy forwards API and login routes. The served Docker bundle uses
+the official server's full bootstrap. Raw Vite preview retains the synthetic
+host for existing fixture checks. `ATHENA_OFFICIAL_WEBAPP=0` explicitly selects
+that synthetic host during Vite development.
 
 Notifications require browser permission and a supported secure context.
 They are page/service-worker notifications, not server push subscriptions.
-Native terminal, native git, desktop overlays, and desktop updating are not
-browser capabilities. File attachments use browser File/Blob handles.
+The official host supplies supported browser file and terminal capabilities.
+Desktop overlays and desktop updating remain unavailable in the browser.

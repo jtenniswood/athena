@@ -5,11 +5,11 @@ import { createAndroidPush } from './android-push.mjs'
 import { createFirebaseSender } from './firebase-messaging.mjs'
 
 /** Identical route owners and lifecycle in Vite, preview and the container. */
-export function createAthenaServices({ target, directory, home, fetch, now, sender = createFirebaseSender() }) {
-  const plugins = createPluginAssets({ home })
-  const preferences = createPreferencesHandler({ target, directory, fetch })
+export function createAthenaServices({ target, identityTarget = target, directory, home, pluginAssets = true, fetch, now, sender = createFirebaseSender() }) {
+  const plugins = pluginAssets ? createPluginAssets({ home }) : () => false
+  const preferences = createPreferencesHandler({ target, identityTarget, directory, fetch })
   const androidAuth = createAndroidAuthHandler({ target, fetch, now })
-  const push = createAndroidPush({ target, directory, fetch, now, sender })
+  const push = createAndroidPush({ target, identityTarget, directory, fetch, now, sender })
   let closed = false
   const attached = new WeakSet()
   const close = () => {

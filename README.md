@@ -2,10 +2,12 @@
   <img src="apps/web-desktop/public/athena.svg" alt="Athena A icon" width="128">
 </h1>
 
-Athena is a web app and installable PWA for Hermes Agent, with a Docker image
-for self-hosting. The pinned Hermes Desktop renderer is fetched from
+Athena customises the official Hermes Webapp with its own interface and
+installable PWA. Its Docker image extends a pinned official Hermes release;
+the renderer is fetched from the same release of
 [`NousResearch/hermes-agent`](https://github.com/NousResearch/hermes-agent) at
-build time.
+build time. The release, source commit and base image digest are recorded in
+[`hermes-release.json`](hermes-release.json).
 
 > This is intended for private networks such as Tailscale and is not hardened for the public internet.
 
@@ -20,48 +22,55 @@ to cancel. Destinations need a working folder, so Home is not a drop target.
 
 ## Docker self-hosting
 
-The image contains Athena’s web UI, nginx, and a small settings storage service.
-It connects to a separate, already-running Hermes Gateway. The quickest setup
-uses the published Docker
-image and `docker run`; Compose is optional. See the [Compose wiki guide](https://github.com/jtenniswood/athena/wiki/Run-with-Docker-Compose)
-if you prefer Compose.
+The image includes the official Hermes gateway and Webapp server. Hermes owns
+sign-in, profiles, conversation state and agent execution. A supervised Athena
+service adds its preferences and Android integrations. Only port 4174 needs to
+be published. [Compose](compose.example.yml) is also available.
 
-### 1. Create the environment file
+### 1. Configure the Hermes Webapp
 
-Copy the template, then edit [`.env.hermes-web`](apps/web-desktop/.env.example) and set the gateway address:
+Add this to your Hermes `config.yaml`, preserving its existing model and other
+settings:
 
-For a gateway running on the same host as Docker, use:
-
-```dotenv
-HERMES_GATEWAY_URL=http://host.docker.internal:9119
-HERMES_GATEWAY_NAME=Local Hermes
-HERMES_HOME=/data/hermes
+```yaml
+webapp:
+  enabled: true
+  host: 0.0.0.0
+  port: 9120
+  public_url: "http://localhost:4174"
 ```
 
-If the gateway is elsewhere, set `HERMES_GATEWAY_URL` to its reachable HTTP(S)
-address, such as its Tailscale IP or MagicDNS hostname. Use the origin only;
-do not add a path such as `/api`.
+Set `public_url` to the address you actually open, including HTTPS when using
+a reverse proxy. Athena reads this same configuration when forwarding requests
+to the internal Webapp listener. Leave port 9120 unpublished.
+
+Copy [the environment template](apps/web-desktop/.env.example) to
+`.env.hermes-web` and configure a sign-in provider. For a private installation,
+set `HERMES_DASHBOARD_BASIC_AUTH_USERNAME`,
+`HERMES_DASHBOARD_BASIC_AUTH_PASSWORD` and a persistent
+`HERMES_DASHBOARD_BASIC_AUTH_SECRET`. The official server also supports Nous and
+OIDC sign-in. See the [official Webapp instructions](https://hermes-agent.nousresearch.com/docs/user-guide/docker#running-the-webapp).
 
 ### 2. Start Athena
 
-The command pulls the published image automatically. On Linux,
-`--add-host` lets the container reach a gateway on the Docker host.
+This container runs the gateway. Stop any existing gateway that uses the same
+Hermes directory before starting it. For an existing Athena installation, follow
+the [migration instructions](docs/official-webapp-migration.md) first.
 
 ```bash
 docker run -d \
   --name athena \
   --restart unless-stopped \
   --env-file .env.hermes-web \
-  --add-host host.docker.internal:host-gateway \
-  -p 4174:80 \
+  -p 4174:4174 \
   -v athena-preferences:/data/athena \
-  -v "$HOME/.hermes:/data/hermes:ro" \
+  -v "$HOME/.hermes:/opt/data" \
   ghcr.io/jtenniswood/athena:latest
 ```
 
-Open <http://localhost:4174/>. The mounted Hermes directory lets Athena serve
-installed `plugins/` and `desktop-plugins/`; remove the Hermes directory mount
-if you do not use filesystem plugins.
+Open <http://localhost:4174/> and sign in. The writable Hermes directory holds
+your profiles, history, configuration and plugins. Keep both data volumes when
+upgrading the container.
 
 Desktop plugin folders are discovered while Athena is open. Use Settings →
 Plugins → Manage plugins to enable packaged desktop plugins, and Rescan after
@@ -80,7 +89,8 @@ When **Update available** appears, you can refresh the UI during a running task.
 Hermes keeps the task running, and Athena reconnects to the conversation after
 the refresh. Text drafts are saved first; recordings, pending saves, and unsent
 attachments still postpone the update. This applies to UI updates, not gateway
-restarts or server changes.
+restarts or server changes. Replacing the container now also restarts its Hermes
+gateway; use a suitable moment between tasks for container upgrades.
 
 ### Container logs
 
@@ -90,15 +100,11 @@ Follow startup and request diagnostics with:
 docker logs --follow athena
 ```
 
-Startup JSON lines report the build revisions, release channel, listening
-address, gateway origin, and plugin directory availability.
-Request JSON lines include a route category, HTTP status, response size, total
-request time, and gateway status and response time (in seconds). WebSocket
-requests are logged when the connection closes. Access logs omit full URLs,
-query strings, cookies, and authorization headers. nginx errors also go to
-Docker logs using nginx's native format and may include request URLs; redact
-these before sharing logs. Athena's container logs cover the UI server and
-proxy; check the separate Hermes Gateway logs for agent execution details.
+The official supervisor reports gateway and Webapp startup, and Athena reports
+its listening port. Gateway execution logs belong to this same container.
+`build-info.json` records Athena's revision, the Hermes release and source
+revision, and the pinned runtime image. Redact credentials and private request
+details before sharing runtime logs.
 
 ### Settings sync
 
@@ -292,14 +298,13 @@ is available for existing token-based setups.
 Browser sign-in opens the standard Hermes Agent login page. Hermes verifies
 credentials and decides which authentication methods are accepted.
 
-To sign out, open the settings menu and select **Sign out**. Athena saves your
+To sign out, open **Settings → Gateway → Sign out**. Athena saves your
 text drafts and returns to the sign-in screen. Finish active responses or
 recordings, and send or remove unsent attachments, before signing out.
 
-Authentication is configured on the **Hermes backend**, separately from Athena's
-container. Keep `/login`, `/auth`, and `/api` on Athena's browser-facing HTTPS
-origin; the bundled nginx proxies these routes. Hermes handles credentials and
-session refresh.
+Authentication is configured on the official Hermes runtime inside Athena's
+container. Keep `/login`, `/auth`, `/webapp`, and `/api` on Athena's
+browser-facing HTTPS origin. Hermes handles credentials and session refresh.
 
 ### New sessions in All profiles
 

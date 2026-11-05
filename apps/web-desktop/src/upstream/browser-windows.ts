@@ -3,9 +3,11 @@ import { $activeGatewayProfile } from '@/store/profile'
 import { apiFetch, WEB_CONNECTION_ID } from '../platform/connection'
 import { isAndroidApp } from '../platform/android'
 import { withBrowserSessionProfile } from '../platform/session-route'
+import { usesOfficialWebappHost } from '../platform/official-host'
 
 /** Engine-dependent window helpers load only after bridge and store registration. */
 export function installBrowserWindowCommands(): void {
+  if (usesOfficialWebappHost()) return
   if (!window.__HERMES_WEB_BRIDGE__ || isAndroidApp() || typeof BroadcastChannel !== 'function') return
   const bridge = window.hermesDesktop
   const open = createBrowserWindowOpener({

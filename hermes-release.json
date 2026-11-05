@@ -1,0 +1,5 @@
+{
+  "version": "v0.22.7",
+  "revision": "b200f5bc60e31588ba2cb60e288029c4a54ba5fa",
+  "image": "nousresearch/hermes-agent@sha256:e6d81ae52ebf6a43efa529701405509f20054ba818f179ddd748bed4f8af584c"
+}
