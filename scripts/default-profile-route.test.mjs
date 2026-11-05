@@ -29,11 +29,11 @@ function setup(initial = null, connectionId = 'web-single') {
 
 const equalJson = (actual, expected) => assert.equal(JSON.stringify(actual), JSON.stringify(expected))
 
-test('the official host retains the legacy default profile without rewriting rollback data', async () => {
-  const { route, storage } = setup({ connectionId: 'web-single', profile: 'research' }, 'local')
-  equalJson(await route.getDefault(), { connectionId: 'local', profile: 'research' })
-  equalJson(JSON.parse(storage.getItem('hermes-web.default-profile-route.v1')), { connectionId: 'web-single', profile: 'research' })
-  assert.equal(await setup({ connectionId: 'other-server', profile: 'research' }, 'local').route.getDefault(), null)
+test('the remote gateway retains a default profile saved by the combined image', async () => {
+  const { route, storage } = setup({ connectionId: 'local', profile: 'research' })
+  equalJson(await route.getDefault(), { connectionId: 'web-single', profile: 'research' })
+  equalJson(JSON.parse(storage.getItem('hermes-web.default-profile-route.v1')), { connectionId: 'local', profile: 'research' })
+  assert.equal(await setup({ connectionId: 'other-server', profile: 'research' }).route.getDefault(), null)
 })
 
 test('browser default profile route persists on the configured gateway and notifies this tab', async () => {

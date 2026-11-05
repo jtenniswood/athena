@@ -27,8 +27,14 @@ The local loop is:
 pnpm prepare:renderer
 pnpm install --frozen-lockfile
 pnpm check:renderer-dependencies
-pnpm dev
+HERMES_GATEWAY_URL=http://127.0.0.1:9119 pnpm dev
 ```
+
+The backend must already be running. Open `http://localhost:5174` and configure
+the Hermes server's `dashboard.public_url` or `HERMES_DASHBOARD_PUBLIC_URL` to that
+browser URL for sign-in and origin validation. The local `.env.example` belongs
+to Vite; production sets its gateway address in Compose. See the
+[setup guide](../wiki/Run-with-Docker-Compose.md).
 
 Run typecheck/build for application changes and try the affected workflow. Use
 existing focused tests for draft durability, selection races, authentication or

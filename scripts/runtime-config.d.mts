@@ -3,7 +3,6 @@ export const navigationFallbackDenylist: RegExp[]
 export function matchesGatewayRoute(url?: string): boolean
 export interface HostingConfiguration {
   target: string
-  identityTarget: string
   home: string
   staticRoot: string
   stateDir: string

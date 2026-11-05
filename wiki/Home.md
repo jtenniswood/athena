@@ -5,8 +5,8 @@ provides the browser interface; you need a separate, running Hermes Gateway.
 
 ## Get started
 
-- [Quick start with Docker](Quick-Start)
-- [Run with Docker Compose](Run-with-Docker-Compose)
+- [Set up Athena with Docker Compose](Run-with-Docker-Compose)
+- [Quick start in the README](https://github.com/jtenniswood/athena#docker-self-hosting)
 
 ## Configure and use Athena
 

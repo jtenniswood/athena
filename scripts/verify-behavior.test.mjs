@@ -57,6 +57,24 @@ test('behavior dependencies follow wrapper imports, cycles and injected paths th
   assert.deepEqual(selectBehavior([e], { root, changed: ['apps/web-desktop/src/commands.ts'] }).map(e => e.name), ['root'])
 })
 
+test('retiring an intervention drops deleted scenarios while retaining surviving and current checks', t => {
+  const root = mkdtempSync(path.join(tmpdir(), 'athena-retired-behavior-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  mkdirSync(path.join(root, 'scripts'))
+  writeFileSync(path.join(root, 'scripts/changed.test.mjs'), 'surviving scenario')
+  const retired = { ...entry('retired'), tests: [
+    { file: 'scripts/deleted.test.mjs', scenario: 'deleted scenario' },
+    { file: 'scripts/changed.test.mjs', scenario: 'removed scenario' },
+    { file: 'scripts/changed.test.mjs', scenario: 'surviving scenario' }
+  ] }
+  const current = entry('current', 'scripts/deleted.test.mjs')
+  const options = { root, changed: [registryPath, 'scripts/deleted.test.mjs', 'scripts/changed.test.mjs'], previous: [retired] }
+  const selected = selectBehavior([current], options)
+  assert.deepEqual(selected.find(item => item.name === 'retired').tests, [retired.tests[2]])
+  assert.deepEqual(selected.find(item => item.name === 'current').tests, current.tests)
+  assert.deepEqual(selectBehavior([], { ...options, previous: [{ ...retired, tests: retired.tests.slice(0, 2) }] }), [])
+})
+
 test('plans distinguish explicit runner scope from deferred upstream references and browser scenarios', () => {
   const entries = [entry('a'), entry('b'), entry('browser', 'tests/browser/example.spec.mjs'), entry('upstream', 'apps/desktop/source.test.tsx')]
   const plan = behaviorPlan(entries, 'node')

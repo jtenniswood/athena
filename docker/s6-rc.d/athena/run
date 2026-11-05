@@ -1,5 +1,0 @@
-#!/command/with-contenv sh
-set -eu
-mkdir -p "$HERMES_PREFERENCES_DIR"
-chown -R -P hermes:hermes "$HERMES_PREFERENCES_DIR"
-exec /command/s6-setuidgid hermes /opt/hermes/.venv/bin/python /opt/athena/apps/web-desktop/server/start.py

@@ -14,7 +14,6 @@ export function buildInfo(env = process.env) {
     wrapperRevision,
     rendererRevision: rendererLock().rev,
     hermesRelease: JSON.parse(readFileSync(new URL('../hermes-release.json', import.meta.url), 'utf8')).version,
-    runtimeImage: JSON.parse(readFileSync(new URL('../hermes-release.json', import.meta.url), 'utf8')).image,
     dependencyLockHash: createHash('sha256').update(readFileSync(path.join(repositoryRoot, 'pnpm-lock.yaml'))).digest('hex'),
     builtAt: new Date(env.SOURCE_DATE_EPOCH ? Number(env.SOURCE_DATE_EPOCH) * 1000 : Date.now()).toISOString(),
     channel: env.HERMES_RELEASE_CHANNEL || 'development'

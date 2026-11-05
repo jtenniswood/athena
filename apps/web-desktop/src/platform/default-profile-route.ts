@@ -13,7 +13,7 @@ const storageKey = browserPreferences.defaultProfile.key
 
 function decode(value: null | string, connectionId: string): BrowserProfileRoute | null {
   const route = parseBrowserPreference(browserPreferences.defaultProfile, value)
-  const legacyOwner = connectionId === 'local' && route?.connectionId === 'web-single'
+  const legacyOwner = connectionId === 'web-single' && route?.connectionId === 'local'
   return route && (!route.connectionId || route.connectionId === connectionId || legacyOwner) ? { ...route, connectionId } : null
 }
 

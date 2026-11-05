@@ -8,7 +8,7 @@ const retentionMs = 24 * 60 * 60 * 1000
 
 /** Retain the authenticated gateway transport while Android suspends its WebView.
  * This forwards Hermes's own RPC protocol and stores no conversation history. */
-export function createAndroidPush({ target, identityTarget = target, sender, fetch: request = globalThis.fetch, now = Date.now, directory }) {
+export function createAndroidPush({ target, sender, fetch: request = globalThis.fetch, now = Date.now, directory }) {
   const store = createAndroidPushStore(directory), relays = new Set()
   let closed = false, pumping
   const removeDevice = (state, key) => {
@@ -61,7 +61,7 @@ export function createAndroidPush({ target, identityTarget = target, sender, fet
       'x-forwarded-proto': req.headers['x-forwarded-proto'] || (req.socket.encrypted ? 'https' : 'http') }
     const response = await probeIdentity(target, headers, request)
     if (!response.ok) throw new Error('Sign in required')
-    return { id: accountIdentity(identityTarget, await response.json()),
+    return { id: accountIdentity(target, await response.json()),
       cookies: response.headers.getSetCookie() }
   }
   const keyFor = (account, deviceId) => `${account}:${deviceId}`

@@ -9,33 +9,8 @@ import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, Select
 import { runtimeConfig } from '../platform/runtime'
 import { getActiveGateway } from '../web-bridge/gateways'
 import './gateway-settings.css'
-import { usesOfficialWebappHost } from '../platform/official-host'
 
 export function GatewaySettings({ embedded = false }: { embedded?: boolean; subpage?: string } = {}) {
-  return usesOfficialWebappHost() ? <ServingGatewaySettings embedded={embedded} /> : <LegacyGatewaySettings embedded={embedded} />
-}
-
-function ServingGatewaySettings({ embedded }: { embedded: boolean }) {
-  const status = useBrowserGatewayStatus()
-  const navigate = useNavigate()
-  const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState('')
-  const content = <section className="browser-gateway-settings" aria-label="Gateway connection">
-    <div className="browser-settings-page-header"><h2 className="browser-settings-page-title">Gateway</h2>
-      <p className="browser-settings-page-description">Athena runs on this Hermes server.</p></div>
-    <BrowserGatewayPanel status={status} onClose={() => {}} onOpenSystem={() => navigate('/settings?tab=config:command-center&section=system', { replace: true })} />
-    <p>{window.location.origin}</p>
-    <p>Sign-in is managed by this server’s Webapp configuration.</p>
-    <Button variant="outline" disabled={busy} onClick={() => {
-      setBusy(true)
-      void signOut().catch(error => setMessage(error instanceof Error ? error.message : 'Sign-out failed.')).finally(() => setBusy(false))
-    }}>Sign out</Button>
-    {message && <p role="status">{message}</p>}
-  </section>
-  return embedded ? content : <SettingsContent>{content}</SettingsContent>
-}
-
-function LegacyGatewaySettings({ embedded }: { embedded: boolean }) {
   const gateway = getActiveGateway()
   const status = useBrowserGatewayStatus()
   const navigate = useNavigate()

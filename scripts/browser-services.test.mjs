@@ -7,8 +7,6 @@ import ts from 'typescript'
 function load(name, globals) {
   const source = readFileSync(new URL(`../apps/web-desktop/src/platform/${name}.ts`, import.meta.url), 'utf8')
   const context = vm.createContext({ exports: {}, Blob, URL, ...globals })
-  const require = globals.require
-  context.require = id => id === './official-host' ? load('official-host', globals) : require(id)
   vm.runInContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context)
   return context.exports
 }

@@ -1,0 +1,94 @@
+name: Remote gateway integration
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'hermes-release.json'
+      - 'flake.lock'
+      - 'pnpm-lock.yaml'
+      - 'apps/web-desktop/**'
+      - 'docker/**'
+      - 'scripts/**'
+      - 'tests/browser/remote-gateway.spec.mjs'
+      - '.github/workflows/remote-gateway.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: remote-gateway-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  remote-gateway:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm prepare:renderer
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:official-release
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Build the UI-only image
+        run: docker build --build-arg HERMES_WRAPPER_REV="$GITHUB_SHA" --build-arg HERMES_RELEASE_CHANNEL=review -t athena:gateway-review .
+      - name: Start an isolated gateway and local model
+        run: |
+          mkdir -p test-results/remote/home/profiles/research
+          node --input-type=module <<'JS'
+          import { writeFileSync } from 'node:fs'
+          const model = { default: 'athena-test-model', provider: 'custom', base_url: 'http://athena-review-model:4191/v1', api_key: 'local-review-fixture', api_mode: 'chat_completions' }
+          writeFileSync('test-results/remote/home/config.yaml', JSON.stringify({
+            model
+          }))
+          writeFileSync('test-results/remote/home/profiles/research/config.yaml', JSON.stringify({ model, webapp: { enabled: false } }))
+          writeFileSync('test-results/remote/home/profiles/research/SOUL.md', 'You are a local review profile.\n')
+          JS
+          docker network create athena-remote-review
+          docker run -d --name athena-review-model --network athena-remote-review \
+            --entrypoint node -e HOST=0.0.0.0 \
+            -v "$PWD/scripts/preview/model.mjs:/model.mjs:ro" athena:gateway-review /model.mjs
+          docker create --init --name athena-review-gateway --network athena-remote-review \
+            --entrypoint hermes -e HERMES_HOME=/opt/data \
+            -e HERMES_DASHBOARD_PUBLIC_URL=http://localhost:4190 \
+            -e HERMES_DASHBOARD_BASIC_AUTH_USERNAME=reviewer \
+            -e HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=athena-local-review-fixture \
+            -e HERMES_DASHBOARD_BASIC_AUTH_SECRET=athena-local-review-session-fixture \
+            nousresearch/hermes-agent@sha256:e6d81ae52ebf6a43efa529701405509f20054ba818f179ddd748bed4f8af584c \
+            serve --host 0.0.0.0 --port 9119
+          docker cp test-results/remote/home/. athena-review-gateway:/opt/data/
+          docker start athena-review-gateway
+          # docker cp creates root-owned profiles; the test server runs as hermes.
+          docker exec --user 0 athena-review-gateway chown -R hermes:hermes /opt/data
+          docker run -d --name athena-review-ui --network athena-remote-review \
+            -p 127.0.0.1:4190:80 \
+            -e HERMES_GATEWAY_URL=http://athena-review-gateway:9119 \
+            athena:gateway-review
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://localhost:4190/login > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          docker logs athena-review-ui
+          exit 1
+      - name: Check real gateway chat, drafts, uploads and preferences
+        env:
+          ATHENA_GATEWAY_TEST_URL: http://localhost:4190
+        run: pnpm exec playwright test tests/browser/remote-gateway.spec.mjs --project=chromium --reporter=line
+      - name: Preserve diagnostics and stop only the test containers
+        if: always()
+        run: |
+          mkdir -p test-results/remote
+          docker logs athena-review-ui > test-results/remote/ui.log 2>&1 || true
+          docker logs athena-review-gateway > test-results/remote/gateway.log 2>&1 || true
+          docker logs athena-review-model > test-results/remote/model.log 2>&1 || true
+          docker rm -fv athena-review-ui athena-review-gateway athena-review-model || true
+          docker network rm athena-remote-review || true
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: remote-gateway-diagnostics
+          path: test-results/
+          retention-days: 7

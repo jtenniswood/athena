@@ -104,7 +104,6 @@ export {
 } from './transforms/roster'
 import {
   useBrowserMessagingPresentation,
-  useBrowserFilePicker,
   useBrowserCatalogIdleTask,
   useBrowserStylesheetOwner,
   useBrowserErrorFallback,
@@ -126,7 +125,6 @@ export {
 } from './transforms/sidebar'
 export {
   useBrowserMessagingPresentation,
-  useBrowserFilePicker,
   useBrowserCatalogIdleTask,
   useBrowserStylesheetOwner,
   useBrowserErrorFallback,
@@ -281,7 +279,6 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     exposeBrowserConfigFieldPresentation: source => exposeBrowserConfigFieldPresentation(source, root),
     exposeBrowserSettingsRowRefs,
     useBrowserMessagingPresentation: source => useBrowserMessagingPresentation(source, root),
-    useBrowserFilePicker: source => useBrowserFilePicker(source, root),
     useBrowserCatalogIdleTask: source => useBrowserCatalogIdleTask(source, root),
     useBrowserErrorFallback: source => useBrowserErrorFallback(source, root),
     useBrowserStylesheetOwner,
