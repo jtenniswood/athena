@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hermes Release Rebase"
+  short_description: "Update Athena against released Hermes versions"
+  default_prompt: "Use $hermes-release-rebase to update Athena against the latest official stable Hermes release, repair compatibility, and prepare a tested pull request."

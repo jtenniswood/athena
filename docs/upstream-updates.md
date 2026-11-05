@@ -6,10 +6,18 @@ ordinary changes. See [releases and rollback](releases.md) for the active workfl
 
 ## Manual renderer changes
 
+Use the repository's
+[`hermes-release-rebase` skill](../.agents/skills/hermes-release-rebase/SKILL.md)
+to update Athena against the latest published stable Hermes release, or a
+specific released version. It advances the upstream baseline with normal commits
+and preserves Athena's UI-only image and Compose-configured external gateway.
+The outcome is a tested PR; backend upgrades, merge and deployment follow their
+own user authorization.
+
 `flake.lock` pins the exact `NousResearch/hermes-agent` revision supplying both
 `apps/desktop` and `apps/shared`. Keep upgrades separate from unrelated UI work
-where practical. Updating the lock metadata with `nix flake update hermes` does
-not build Nix locally.
+where practical. Resolve lock metadata for the verified release commit with
+Nix locking/fetch tooling. Metadata evaluation does not build Nix locally.
 
 ### Update and repair loop
 
@@ -19,9 +27,9 @@ exact commit in `flake.lock` and record the tag and commit in
 upgrade does not replace or restart it. Treat each renderer change as a candidate
 until the browser build and affected workflows pass.
 
-1. Start a `codex/renderer-update-*` branch from current `main`. Keep the first
-   commit limited to the `hermes` pin in `flake.lock` so the compatibility report
-   shows the impact of the upstream change on its own.
+1. Start a `codex/hermes-release-*` branch from current `main`. Update the
+   Hermes lock metadata and `hermes-release.json` together. Keep pin changes
+   easy to distinguish from adapter repairs in the review.
 2. Run the preparation and checks below. Review the upstream compare link for
    changes to renderer entry points, bridges, settings, session selection,
    composer behavior, and dependencies. Use the compatibility report to locate
