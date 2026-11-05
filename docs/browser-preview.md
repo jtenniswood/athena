@@ -36,13 +36,17 @@ deploying them. It builds the UI but does not execute the browser tests below.
 The old `preview-image` label workflow and image-list artifact are no longer
 available. See [releases and rollback](releases.md) for development-image details.
 
-Build the synthetic gateway locally when needed, then run the development image
-in a separate Compose project:
+The default development image now includes the official Hermes runtime. Review
+it using disposable data and the setup in the README. The synthetic fixtures
+below retain their isolated compatibility host through the optional
+`browser-preview` Docker target; they do not use the combined runtime image.
+
+Build the synthetic image pair when needed, then run the separate Compose project:
 
 ```sh
 docker build --target preview-gateway -t athena:browser-preview-gateway .
-HERMES_BROWSER_PREVIEW_IMAGE="ghcr.io/jtenniswood/athena:dev-sha-<revision>" \
-  docker compose -f compose.browser-preview.yml up -d
+docker build --target browser-preview -t athena:browser-preview .
+docker compose -f compose.browser-preview.yml up -d
 ```
 
 Open `http://localhost:4186/`. The preview always uses the browser-focused shell.
@@ -60,7 +64,7 @@ environment file; the normal runtime configuration and sign-in flow apply.
 Build locally when CI images are not needed:
 
 ```sh
-docker build --build-arg HERMES_WRAPPER_REV="$(git rev-parse HEAD)" \
+docker build --target browser-preview --build-arg HERMES_WRAPPER_REV="$(git rev-parse HEAD)" \
   --build-arg HERMES_RELEASE_CHANNEL=browser-preview -t hermes-web:browser-preview .
 docker build --target preview-gateway -t hermes-web:browser-preview-gateway .
 HERMES_BROWSER_PREVIEW_IMAGE=hermes-web:browser-preview \

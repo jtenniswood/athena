@@ -16,6 +16,7 @@ export type {
 } from '@/global'
 
 export type { QuickEntryStatus, QuickEntrySubmitPayload } from '@/store/quick-entry'
+export type { BrowserHostGlobals } from '@/lib/platform'
 
 declare global {
   interface Window {

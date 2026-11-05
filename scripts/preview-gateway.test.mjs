@@ -50,6 +50,12 @@ test('RPC holds allow later selections to complete first without timing guesses'
   gateway.controls.assertExpected()
 })
 
+test('the released MCP health sweep sees an empty synthetic server roster', async t => {
+  const gateway = await fixture(t)
+  assert.deepEqual((await gateway.request('mcp.servers.status')).result, { servers: [] })
+  gateway.controls.assertExpected()
+})
+
 test('the renderer title command persists only the addressed conversation', async t => {
   const gateway = await fixture(t)
   const original = gateway.sessions.get('preview-idea').title

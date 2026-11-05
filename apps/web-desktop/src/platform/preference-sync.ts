@@ -10,9 +10,16 @@ export type PreferenceSnapshot = { version: 1; accountId: string; revision: numb
 export type PreferenceSyncStatus = { state: 'loading' | 'saved' | 'saving' | 'offline' | 'account-changed'; remoteChanges: boolean }
 type Transport = (body?: { version: 1; accountId: string; seed: boolean; changes: Values }) => Promise<PreferenceSnapshot>
 type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
+export interface PreferenceSyncOptions {
+  keys?: readonly string[]
+  importLegacy?: (values: Values) => void
+}
 
 /** Local values remain synchronous; the outbox contains only allowlisted preferences. */
-export function createPreferenceSync(storage: Store, scope: string, request: Transport, changed: () => void) {
+export function createPreferenceSync(storage: Store, scope: string, request: Transport, changed: () => void, options: PreferenceSyncOptions = {}) {
+  const keys = options.keys ?? preferenceKeys
+  const allowed = new Set(keys)
+  const managed = (values: Values): Values => Object.fromEntries(Object.entries(values).filter(([key]) => allowed.has(key)))
   const ownerKey = `athena.preferences.owner.${scope}`
   let accountId: string | undefined
   let seed: Values = {}
@@ -23,11 +30,11 @@ export function createPreferenceSync(storage: Store, scope: string, request: Tra
   let status: PreferenceSyncStatus = { state: 'loading', remoteChanges: false }
   const accountChanged = () => status.state === 'account-changed'
   let durable = true
-  const local = (): Values => Object.fromEntries(preferenceKeys.map(key => [key, storage.getItem(key)]))
+  const local = (): Values => Object.fromEntries(keys.map(key => [key, storage.getItem(key)]))
   const outboxKey = () => `athena.preferences.outbox.${scope}.${accountId}`
   const queued = () => Object.keys(seed).length > 0 || Object.keys(pending).length > 0
   const report = (state: PreferenceSyncStatus['state']) => {
-    const remoteChanges = !!remote && preferenceKeys.some(key => !Object.hasOwn(pending, key) && !Object.hasOwn(seed, key) &&
+    const remoteChanges = !!remote && keys.some(key => !Object.hasOwn(pending, key) && !Object.hasOwn(seed, key) &&
       (remote!.values[key] ?? null) !== (observed[key] ?? null))
     status = { state, remoteChanges }
     changed()
@@ -54,7 +61,7 @@ export function createPreferenceSync(storage: Store, scope: string, request: Tra
     if (!remote || snapshot.revision >= remote.revision) remote = snapshot
   }
   const applyValues = (snapshot: PreferenceSnapshot) => {
-    for (const key of preferenceKeys) {
+    for (const key of keys) {
       const value = Object.hasOwn(pending, key) ? pending[key] : Object.hasOwn(seed, key) ? seed[key] : snapshot.values[key] ?? null
       if (value === null) storage.removeItem(key)
       else storage.setItem(key, value)
@@ -75,6 +82,11 @@ export function createPreferenceSync(storage: Store, scope: string, request: Tra
           pending = validatePreferenceValues(saved.pending)
         }
       } catch { seed = {}; pending = {} }
+      // Hand legacy renderer preferences to the official owner before stores load.
+      // The old server values remain intact for clients that have not upgraded.
+      options.importLegacy?.({ ...snapshot.values, ...seed, ...pending })
+      seed = managed(seed)
+      pending = managed(pending)
       // Only the first account can import unowned legacy settings. Switching
       // accounts never uploads the previous person's local preferences.
       if (snapshot.revision === 0 && (!previousOwner || previousOwner === accountId)) {
@@ -138,8 +150,8 @@ export function createPreferenceSync(storage: Store, scope: string, request: Tra
             accountId = owner
             const saved = JSON.parse(storage.getItem(outboxKey()) || 'null')
             if (saved?.version === 1) {
-              seed = validatePreferenceValues(saved.seed)
-              pending = validatePreferenceValues(saved.pending)
+              seed = managed(validatePreferenceValues(saved.seed))
+              pending = managed(validatePreferenceValues(saved.pending))
             }
           }
           observed = local()
@@ -204,7 +216,7 @@ export function saveSyncedPreference(key: string, value: string | null, requireL
   capturePreferenceChanges()
 }
 
-export async function initializePreferenceSync(): Promise<void> {
+export async function initializePreferenceSync(options: PreferenceSyncOptions = {}): Promise<void> {
   const request: Transport = async body => {
     const headers: Record<string, string> = {}
     const connection = connectionState().load()
@@ -223,7 +235,7 @@ export async function initializePreferenceSync(): Promise<void> {
     setItem: (key, value) => window.localStorage.setItem(key, value),
     removeItem: key => window.localStorage.removeItem(key)
   }
-  sync = createPreferenceSync(storage, runtimeConfig().gateway.id, request, announce)
+  sync = createPreferenceSync(storage, runtimeConfig().gateway.id, request, announce, options)
   await sync.initialize()
   void sync.flush()
   registerPendingBrowserWork({ id: 'browser-preferences', prepare: () => sync!.prepare() })

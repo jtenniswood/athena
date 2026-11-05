@@ -1,4 +1,4 @@
-import { createAmbientClaimArbiter } from '../../../desktop/electron/event-dedupe'
+import { createAmbientClaimArbiter } from '../upstream/ambient-claims'
 
 const owns = createAmbientClaimArbiter()
 const worker = self as unknown as { onconnect: ((event: MessageEvent) => void) | null }

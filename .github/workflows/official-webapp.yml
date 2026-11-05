@@ -1,0 +1,86 @@
+name: Official Webapp integration
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'hermes-release.json'
+      - 'flake.lock'
+      - 'pnpm-lock.yaml'
+      - 'apps/web-desktop/**'
+      - 'docker/**'
+      - 'scripts/**'
+      - 'tests/browser/official-webapp.spec.mjs'
+      - '.github/workflows/official-webapp.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: official-webapp-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  official-webapp:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm prepare:renderer
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:official-base
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Build on the pinned official runtime
+        run: docker build --build-arg HERMES_WRAPPER_REV="$GITHUB_SHA" --build-arg HERMES_RELEASE_CHANNEL=review -t athena:official-review .
+      - name: Start an isolated gateway and local model
+        run: |
+          mkdir -p test-results/official/home/profiles/research
+          node --input-type=module <<'JS'
+          import { writeFileSync } from 'node:fs'
+          const model = { default: 'athena-test-model', provider: 'custom', base_url: 'http://athena-review-model:4191/v1', api_key: 'local-review-fixture', api_mode: 'chat_completions' }
+          writeFileSync('test-results/official/home/config.yaml', JSON.stringify({
+            webapp: { enabled: true, host: '0.0.0.0', port: 9120, public_url: 'http://localhost:4190' },
+            model
+          }))
+          writeFileSync('test-results/official/home/profiles/research/config.yaml', JSON.stringify({ model, webapp: { enabled: false } }))
+          writeFileSync('test-results/official/home/profiles/research/SOUL.md', 'You are a local review profile.\n')
+          JS
+          docker network create athena-official-review
+          docker run -d --name athena-review-model --network athena-official-review \
+            --entrypoint node -e HOST=0.0.0.0 \
+            -v "$PWD/scripts/preview/model.mjs:/model.mjs:ro" athena:official-review /model.mjs
+          docker create --name athena-review-webapp --network athena-official-review \
+            -p 127.0.0.1:4190:4174 \
+            -e HERMES_DASHBOARD_BASIC_AUTH_USERNAME=reviewer \
+            -e HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=athena-local-review-fixture \
+            -e HERMES_DASHBOARD_BASIC_AUTH_SECRET=athena-local-review-session-fixture \
+            athena:official-review
+          docker cp test-results/official/home/. athena-review-webapp:/opt/data/
+          docker start athena-review-webapp
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://localhost:4190/login > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          docker logs athena-review-webapp
+          exit 1
+      - name: Check real gateway chat, drafts, uploads and preferences
+        env:
+          ATHENA_OFFICIAL_TEST_URL: http://localhost:4190
+        run: pnpm exec playwright test tests/browser/official-webapp.spec.mjs --project=chromium --reporter=line
+      - name: Preserve diagnostics and stop only the test containers
+        if: always()
+        run: |
+          mkdir -p test-results/official
+          docker logs athena-review-webapp > test-results/official/webapp.log 2>&1 || true
+          docker logs athena-review-model > test-results/official/model.log 2>&1 || true
+          docker rm -fv athena-review-webapp athena-review-model || true
+          docker network rm athena-official-review || true
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: official-webapp-diagnostics
+          path: test-results/
+          retention-days: 7

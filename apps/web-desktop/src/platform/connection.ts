@@ -1,4 +1,5 @@
 import { beginOperation } from './reload-safety'
+import { officialHostTransport, usesOfficialWebappHost } from './official-host'
 import { androidOpenSignIn, isAndroidApp } from './android'
 import type { DesktopConnectionConfig, DesktopConnectionConfigInput, DesktopOauthLoginResult, HermesApiRequest, HermesConnection } from '../upstream/types'
 import {
@@ -13,7 +14,7 @@ import {
   withGatewayRoute
 } from '../web-bridge/gateways'
 
-export const WEB_CONNECTION_ID = 'web-single'
+export const WEB_CONNECTION_ID = usesOfficialWebappHost() ? 'local' : 'web-single'
 
 /**
  * The bridge always operates on the ACTIVE gateway (see `./gateways`). This is
@@ -55,6 +56,7 @@ export function baseUrl(): string {
 
 /** Only the active deployment's explicitly bound credential is eligible. */
 export function resolveToken(): string {
+  if (usesOfficialWebappHost()) return officialHostTransport()?.token() || ''
   const gateway = getActiveGateway()
   return gateway.authMode === 'token' ? gateway.token ?? '' : ''
 }
@@ -240,6 +242,11 @@ export function openOauthLoginPopup(base: string, origin: string | null, loginPa
 const DEFAULT_API_TIMEOUT_MS = 30_000
 
 export async function apiFetch<T>(request: HermesApiRequest): Promise<T> {
+  const official = officialHostTransport()
+  if (official) {
+    const finish = (request.method || 'GET') === 'GET' ? () => {} : beginOperation()
+    try { return await official.api<T>(request) } finally { finish() }
+  }
   const { body, method = 'GET', path, profile, timeoutMs } = request
   let url = baseUrl() + path
 

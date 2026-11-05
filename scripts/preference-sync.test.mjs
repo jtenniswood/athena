@@ -35,6 +35,26 @@ async function fixture(t) {
   return { server, request, account: value => { account = value }, online: value => { online = value }, hold: value => { hold = value } }
 }
 
+test('the released preference owner receives legacy values while Athena syncs only its own keys', async t => {
+  const f = await fixture(t)
+  await f.server.patch(accountA, { [theme]: 'dark', [sidebar]: '320' })
+  const local = storage({ [theme]: 'local-theme' })
+  let imported
+  const client = createPreferenceSync(local, 'gateway', f.request, () => {}, {
+    keys: [sidebar], importLegacy: values => { imported = { ...values } }
+  })
+  await client.initialize()
+  assert.equal(imported[theme], 'dark')
+  assert.equal(local.getItem(theme), 'local-theme', 'Athena does not overwrite the renderer owner')
+  assert.equal(local.getItem(sidebar), '320')
+  local.setItem(theme, 'changed-by-official-owner')
+  local.setItem(sidebar, '360')
+  await client.flush()
+  const saved = await f.server.read(accountA)
+  assert.equal(saved.values[theme], 'dark', 'legacy data remains available for rollback')
+  assert.equal(saved.values[sidebar], '360')
+})
+
 test('first-device migration loads on a second device and concurrent devices merge different keys', async t => {
   const f = await fixture(t)
   const first = storage({ [theme]: 'dark', 'hermes:composer-drafts:v3': 'private draft', 'hermes-web.session-token': 'secret' })

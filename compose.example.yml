@@ -3,14 +3,12 @@ services:
     image: ghcr.io/jtenniswood/athena:latest
     restart: unless-stopped
     ports:
-      - "4174:80"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "4174:4174"
     volumes:
       - athena-preferences:/data/athena
-    environment:
-      HERMES_GATEWAY_URL: ${HERMES_GATEWAY_URL:-http://host.docker.internal:9119}
-      HERMES_GATEWAY_NAME: ${HERMES_GATEWAY_NAME:-Local Hermes}
+      - ${HERMES_DATA_DIR:-./hermes-data}:/opt/data
+    env_file:
+      - .env.hermes-web
 
 volumes:
   athena-preferences:

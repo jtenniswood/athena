@@ -1,8 +1,8 @@
 # Browser architecture
 
-Athena is a browser shell around the pinned Hermes renderer. The shell keeps
-browser behavior and product composition in wrapper-owned code while the
-renderer remains responsible for conversation state and upstream features.
+Athena is a UI layer on a pinned official Hermes Webapp release. The released
+host owns authentication, transport, browser files and conversation state.
+Athena owns product composition, browser lifecycle and its small extensions.
 
 ## Ownership
 
@@ -11,8 +11,8 @@ renderer remains responsible for conversation state and upstream features.
 - `apps/web-desktop/src/platform/` owns browser APIs, browser persistence,
   connection state, and safe lifecycle transitions such as update and sign-out.
 - `apps/web-desktop/src/upstream/` owns the adapter boundary to the fetched
-  renderer: its browser root, desktop-shaped bridge, route and workspace
-  adapters.
+  renderer: its official browser host extensions, browser root, route and
+  workspace adapters. The legacy bridge remains only for synthetic previews.
 - `apps/web-desktop/build/renderer/` owns build-only transforms, replacements,
   branding and the compatibility registry. Runtime modules do not import it.
 - `apps/web-desktop/src/overrides/` replaces a narrow renderer surface when the
@@ -45,13 +45,12 @@ boundaries. The composer and status-bar approval controls share one menu view
 and catalog of labels, descriptions and icons. Both use the engine's approval
 state and commands.
 
-The pinned renderer also supplies a complete browser-host installer, but it
-assumes injected Hermes bootstrap data, the `local` connection identity and its
-server's UI-preference store. Athena retains its own authentication, `web-single`
-identity and persisted preference owners. Reuse compatible public helpers through
-small adapters instead of replacing that startup contract wholesale. External-link
-and preview commands use the shared `externalUrlTarget` policy; only its web
-subset reaches the browser opener. The link menu uses the same command.
+The pinned renderer supplies the browser-host installer, authenticated bootstrap,
+`local` connection identity and shared UI-preference store. Athena uses that
+contract. `upstream/official-host.ts` adds lifecycle guards, notifications,
+default-profile preferences and Android push to the installed bridge. Legacy
+`web-single` profile preferences remain readable through a narrow migration.
+External links retain the shared `externalUrlTarget` policy.
 
 Browser app-window commands are installed after engine registration, allowing
 reuse of the renderer's store-dependent opener and readiness handshake. A detached
@@ -321,7 +320,7 @@ late cleanup cannot unlock a newer owner. The update protocol, pending-work flus
 and draft verification remain unchanged. Sign-out holds its reservation through
 logout, verified credential removal, and reload, and releases it on failure.
 
-Gateway settings keeps a sign-in attempt separate from the saved connection.
+The synthetic preview's gateway settings keep a sign-in attempt separate from the saved connection.
 Browser and Android OAuth completion verifies the cookie session even when an
 existing token is available. Confirmed browser sign-in reaches the bridge's
 guarded connection apply command; failed browser authentication or preparation
@@ -335,29 +334,29 @@ when a renewed cookie leaves the mode/token fields unchanged. Ordinary manual
 reconnect requests retain their coalescing behavior. Initial connection recovery
 keeps the engine's original boot path.
 
-Filesystem plugin discovery uses the renderer's existing disk loader. The bridge
-returns both files and directories, including package markers, with encoded URL
-path components. It omits unsupported directory watching so the loader's visible-tab
-poll discovers new folders and retires removed plugins. Existing-file edits use
-the renderer's explicit Rescan command. Registration, enablement, package opt-in
-and disposal remain engine-owned; Athena keeps no second plugin registry.
+Production gateway settings describe the serving Hermes host and offer guarded
+sign-out. The official server owns login and session refresh. Reauthentication
+waits for draft and media safety; Android retains its browser handoff.
+
+Filesystem plugins use the release's browser plugin and file APIs. Registration,
+enablement, package opt-in and disposal remain engine-owned. Athena's old asset
+reader is retained for the isolated synthetic preview and is disabled in the
+official production host.
 
 ## Runtime service ownership
 
-`apps/web-desktop/server/` owns mounted plugin assets and the running preference,
-Android authentication and notification services. `createAthenaServices` assembles the same route owners
-for Vite development, Vite preview, and the container's Node server. Each host
-attaches it once and closes it with its HTTP server. The gateway proxy and static
-asset server remain hosting concerns.
+`apps/web-desktop/server/official-main.mjs` starts the production extension
+service. The official s6 supervisor runs it alongside Hermes. `start.py` reads
+the official Webapp configuration, so the internal listener and public URL have
+one owner. `official-host.mjs` forwards ordinary HTTP and WebSocket requests to
+that listener; Hermes serves the UI bundle through `HERMES_WEBAPP_DIST` and
+injects its own bootstrap and page policy.
 
-`server/plugin-assets.mjs` reads the operator's mounted web-server Hermes home
-for plugin files and root or nested `.listing` endpoints. The same reader supplies
-development, preview and nginx through `createAthenaServices`; it lists regular files and
-directories and follows operator-installed symlinks. Files stream from that same
-owner with their content type, HEAD and byte-range support. Responses are not
-cached. Vite and nginx forward plugin routes to this service, so metadata and
-source reads use the same access to private read-only mounts. The bridge retains
-its asset URL admission policy; the gateway filesystem is a separate source.
+`createAthenaServices` assembles account preferences, Android authentication and
+push. Each host attaches it once and closes it with its HTTP server. Production
+disables the synthetic plugin-asset reader. The optional `browser-preview`
+Docker target retains nginx, `server/main.mjs` and the legacy bridge solely for
+the existing synthetic gateway fixtures.
 
 The services share account identity derivation and non-redirecting Hermes session
 probes. Each endpoint explicitly chooses its accepted credentials; browser
@@ -365,9 +364,10 @@ handoffs continue to transfer only approved Hermes cookies, and native token
 refresh remains restricted to its installation binding. Existing account hashes,
 preference files, push bindings, API routes, and the data volume stay compatible.
 
-`apps/web-desktop/server/main.mjs` starts the production host. It uses the shared
-runtime configuration generator from `scripts/`; development and preview continue
-to assemble the same services without starting nginx.
+`ATHENA_PREFERENCES_IDENTITY_URL` retains an existing account namespace while
+transport moves to the local official listener. It never selects a network
+destination. Shared renderer preferences use the official store; Athena's own
+browser keys retain their existing account sync and pending-work safety.
 
 ## Compatibility ownership
 

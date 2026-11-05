@@ -13,11 +13,12 @@ not build Nix locally.
 
 ### Update and repair loop
 
-Check for upstream changes after each tagged Hermes release, or monthly if
-there has been no release. The normal update target is upstream `main`; use an
-exact earlier revision only when a specific fix is needed without taking newer
-changes, and record the reason in the pull request. Treat each renderer change
-as a candidate until the browser build and affected workflows pass.
+Check for upstream changes after each official stable Hermes release. Pin the
+release's exact commit and its matching official Docker image together; the
+normal target is a formal release rather than upstream `main`. See
+[the release-base migration guide](official-webapp-migration.md) for the image
+digest and installation-stamp checks. Treat each change as a candidate until
+the browser build and affected workflows pass.
 
 1. Start a `codex/renderer-update-*` branch from current `main`. Keep the first
    commit limited to the `hermes` pin in `flake.lock` so the compatibility report
@@ -56,6 +57,7 @@ pnpm install --frozen-lockfile
 pnpm report:renderer-dependencies
 pnpm check:renderer-dependencies
 pnpm check:upstream
+pnpm check:official-base
 pnpm typecheck
 pnpm build
 ```

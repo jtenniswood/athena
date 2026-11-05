@@ -10,7 +10,7 @@ const context = vm.createContext({ exports: {}, require: () => preferenceContrac
 vm.runInContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, context)
 const { createBrowserDefaultProfileRoute } = context.exports
 
-function setup(initial = null) {
+function setup(initial = null, connectionId = 'web-single') {
   const values = new Map(initial ? [['hermes-web.default-profile-route.v1', JSON.stringify(initial)]] : [])
   const subscribers = new Set()
   const storage = {
@@ -18,7 +18,7 @@ function setup(initial = null) {
     setItem: (key, value) => values.set(key, value),
     removeItem: key => values.delete(key)
   }
-  const route = createBrowserDefaultProfileRoute(() => storage, 'web-single', {
+  const route = createBrowserDefaultProfileRoute(() => storage, connectionId, {
     subscribe: listener => {
       subscribers.add(listener)
       return () => subscribers.delete(listener)
@@ -28,6 +28,13 @@ function setup(initial = null) {
 }
 
 const equalJson = (actual, expected) => assert.equal(JSON.stringify(actual), JSON.stringify(expected))
+
+test('the official host retains the legacy default profile without rewriting rollback data', async () => {
+  const { route, storage } = setup({ connectionId: 'web-single', profile: 'research' }, 'local')
+  equalJson(await route.getDefault(), { connectionId: 'local', profile: 'research' })
+  equalJson(JSON.parse(storage.getItem('hermes-web.default-profile-route.v1')), { connectionId: 'web-single', profile: 'research' })
+  assert.equal(await setup({ connectionId: 'other-server', profile: 'research' }, 'local').route.getDefault(), null)
+})
 
 test('browser default profile route persists on the configured gateway and notifies this tab', async () => {
   const { route } = setup()

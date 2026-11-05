@@ -19,6 +19,7 @@ const source = plugin.exports.removeBrowserGatewayGroupsRefresh(original, root)
 // socket publication gap, reconnect and late replies without a live gateway.
 function groupList() {
   const state = { connectionId: { value: 'local' }, profile: { value: 'default' }, gateway: { value: 'idle' } }
+  state.gateway.get = () => state.gateway.value
   const socket = { value: null }
   const values = [], requests = []
   let cursor, dependencies, cleanup, effect, refresh = 0, completed = 0

@@ -20,6 +20,7 @@ test('unsupported browser hosts lack app-window capabilities while preinstalled 
       window.hermesDesktop = construction.exports.createWebBridge()
     }
     const context = vm.createContext({ exports: {}, window, URL, ...(channel ? { BroadcastChannel: class {} } : {}), require: name => {
+      if (name.endsWith('/official-host')) return { usesOfficialWebappHost: () => false }
       if (name.endsWith('/android')) return { isAndroidApp: () => android }
       return { createBrowserWindowOpener: () => { throw new Error('Host windows must remain unchanged') } }
     } })

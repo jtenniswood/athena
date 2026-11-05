@@ -67,6 +67,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       return { text: 'Develop a thoughtful plan with clear priorities and a small experiment to test the idea.' }
     }
     if (method === 'commands.catalog') return { commands: [] }
+    if (method === 'mcp.servers.status') return { servers: [] }
     if (method === 'plugins.manage' && params.action === 'list') return { plugins: [] }
     if (method === 'ping' || method === 'gateway.ping') return { pong: true }
     // Optional probes from the pinned renderer, with explicit synthetic support.
