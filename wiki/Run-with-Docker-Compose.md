@@ -1,96 +1,132 @@
 # Run Athena with Docker Compose
 
-Docker Compose is optional. For the direct Docker setup, see the main
-[README](https://github.com/jtenniswood/athena#run-with-docker).
+Athena serves the UI and connects to an existing Hermes server. Compose runs
+only Athena; models, profiles, conversations and authentication stay on Hermes.
+The UI renderer is pinned to the official release recorded in the repository's
+`hermes-release.json`.
 
-Athena serves the web app and proxies requests to a Hermes Gateway that you
-run separately. The Compose service does not start a gateway or model runtime.
+## 1. Configure the existing Hermes server
 
-Configure authentication on the Hermes backend. Athena opens its standard login
-page after the backend connection and HTTPS access are configured.
+Choose the two addresses before starting Athena:
 
-## 1. Create the environment file
+| Setting | Where to configure it | Meaning |
+| --- | --- | --- |
+| `HERMES_GATEWAY_URL` | Athena's Compose service | Hermes HTTP(S) origin reachable from the Athena container, such as `http://host.docker.internal:9119`. |
+| `dashboard.public_url` or `HERMES_DASHBOARD_PUBLIC_URL` | Existing Hermes server | Athena's browser-facing URL, such as `http://localhost:4174` or `https://athena.example.com`. |
 
-From the repository root, copy the supplied template:
+For a local browser setup, merge this into the existing Hermes `config.yaml`,
+preserving its other settings:
 
-```sh
-cp apps/web-desktop/.env.example .env.hermes-web
+```yaml
+dashboard:
+  public_url: "http://localhost:4174"
 ```
 
-Edit `.env.hermes-web` and set `HERMES_GATEWAY_URL` to the gateway address.
-For a gateway running on the same Docker host, use:
+For remote access, use the HTTPS address you actually open instead. Apply the
+setting using your existing Hermes service's configuration/restart procedure.
+Keep authentication and model credentials on that server. See
+[Gateway configuration](Gateway-Configuration) for address and sign-in details.
 
-```dotenv
-HERMES_GATEWAY_URL=http://host.docker.internal:9119
-HERMES_GATEWAY_NAME=Local Hermes
-HERMES_HOME=/data/hermes
-```
+## 2. Configure Athena in Compose
 
-If the gateway runs elsewhere, use an address reachable from the Docker host,
-such as its Tailscale IP or MagicDNS hostname. Use only the HTTP(S) origin; do
-not add a path such as `/api`.
-
-## 2. Create `compose.yml`
-
-Save this file beside `.env.hermes-web`:
+Use `compose.example.yml` from the repository, or save the following as
+`compose.yml` in your deployment directory:
 
 ```yaml
 services:
   athena:
     image: ghcr.io/jtenniswood/athena:latest
-    container_name: athena
     restart: unless-stopped
-    env_file:
-      - .env.hermes-web
-    extra_hosts:
-      - host.docker.internal:host-gateway
     ports:
       - "4174:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - athena-preferences:/data/athena
-      - "${HOME}/.hermes:/data/hermes:ro"
+    # Set the existing Hermes server origin here, or in a local .env file.
+    environment:
+      HERMES_GATEWAY_URL: ${HERMES_GATEWAY_URL:-http://host.docker.internal:9119}
+      HERMES_GATEWAY_NAME: ${HERMES_GATEWAY_NAME:-Hermes}
 
 volumes:
   athena-preferences:
 ```
 
-The `athena-preferences` volume stores account preferences for syncing across
-devices. Keep it when recreating or upgrading the container.
-The Hermes directory mount gives Athena read-only access to installed `plugins/`
-and `desktop-plugins/` assets. Remove that mount if you do not use filesystem plugins.
+Edit `HERMES_GATEWAY_URL` to the existing server's HTTP(S) origin, without an
+`/api` path. The default reaches a server on the Docker host. For a server on
+another machine, use its reachable hostname and port. `localhost` inside the
+Athena container refers to Athena itself.
 
-## 3. Start Athena
+You can set the address directly in Compose, or supply the two interpolated
+values in a local `.env` file beside it:
 
-Run these commands from the directory containing `compose.yml`:
+```dotenv
+HERMES_GATEWAY_URL=http://hermes.example.com:9119
+HERMES_GATEWAY_NAME=Hermes
+```
+
+The repository's `apps/web-desktop/.env.example` is for Vite development.
+Production setup uses the Compose `environment` block above.
+
+Keep the `athena-preferences` volume when recreating the service. The existing
+Hermes data directory stays with the Hermes server. Filesystem plugins hosted
+on Athena's machine can optionally be mounted read-only under `/data/hermes`;
+the basic Compose setup needs no Hermes directory mount.
+
+## 3. Validate and start Athena
+
+For a deployment directory containing `compose.yml`:
 
 ```sh
+docker compose config --quiet
 docker compose up -d
+docker compose logs --follow athena
 ```
 
-Open <http://localhost:4174/>. If you use a different host port, change the
-left side of the `ports` mapping and use that port in the browser.
+From a repository checkout using the supplied example, use
+`docker compose -f compose.example.yml` in place of `docker compose`.
 
-To view startup logs:
+Open <http://localhost:4174/> and sign in. If you change the host port, update
+the left side of `4174:80` and Hermes's public URL to match. For microphone
+access from another device, expose Athena over HTTPS and use that same HTTPS
+URL in the browser and Hermes public-URL setting.
+
+Check that profiles and existing conversations appear, send a message, and
+reload with an unsent text draft to confirm it is restored.
+
+## Update or stop Athena
+
+Pull the selected image and recreate only Athena:
 
 ```sh
-docker compose logs -f athena
+docker compose pull athena
+docker compose up -d athena
 ```
 
-To stop and remove the container:
+Athena reconnects to the existing Hermes server. Finish recordings and send or
+remove unsent attachments before recreating the UI container. Text drafts and
+preferences stay in browser storage and the preference volume.
+
+To stop Athena, retaining its container and volume:
+
+```sh
+docker compose stop athena
+```
+
+To remove the stopped service while retaining its named volume:
 
 ```sh
 docker compose down
 ```
 
-## Update Athena
+## Moving from the combined image
 
-Pull the latest published image and recreate the service:
+Stop the combined Athena container before starting a separate Hermes process
+against its data. Configure your existing Hermes service to use the preserved
+Hermes data, profiles and model/authentication settings. Connect the UI-only
+Athena image to that service with `HERMES_GATEWAY_URL` and change its port mapping
+to `4174:80`.
 
-```sh
-docker compose pull
-docker compose up -d
-```
-
-The environment file and host Hermes directory remain in place. For microphone
-access from another device, expose Athena over HTTPS, for example with Tailscale
-Serve.
+Reuse the existing Athena preference volume and the same browser origin. Keep
+browser storage and the Hermes data intact. Once Hermes owns its data again,
+Athena's Compose service needs only its preference volume.

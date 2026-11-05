@@ -24,7 +24,9 @@ to cancel. Destinations need a working folder, so Home is not a drop target.
 The image contains Athena's UI, nginx and its small preferences/Android service.
 It connects to an existing Hermes server; configure that server's HTTP(S) origin
 in [compose.example.yml](compose.example.yml). Hermes keeps running independently
-when the Athena container restarts or updates.
+when the Athena container restarts or updates. The
+[Compose setup guide](wiki/Run-with-Docker-Compose.md) covers a complete deployment
+and migration from the combined image.
 
 ### 1. Configure the existing gateway
 
@@ -42,11 +44,21 @@ The Compose file can also read `HERMES_GATEWAY_URL` and `HERMES_GATEWAY_NAME`
 from your shell or a local `.env` file. Configure models, profiles and sign-in
 on the existing Hermes server. Set its `dashboard.public_url` (or
 `HERMES_DASHBOARD_PUBLIC_URL`) to Athena's browser-facing URL so sign-in returns
-to Athena and the server admits its browser origin.
+to Athena and the server admits its browser origin. For the local example:
+
+```yaml
+dashboard:
+  public_url: "http://localhost:4174"
+```
+
+Merge this into Hermes's existing config and apply it through that server's
+normal configuration/restart procedure. For HTTPS access, use your actual
+Athena HTTPS URL. See [gateway configuration](wiki/Gateway-Configuration.md).
 
 ### 2. Start Athena
 
 ```bash
+docker compose -f compose.example.yml config --quiet
 docker compose -f compose.example.yml up -d
 ```
 
