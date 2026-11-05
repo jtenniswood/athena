@@ -40,7 +40,9 @@ Use the address reachable from the container, with no `/api` path. The example
 uses a gateway on the Docker host; for another machine, use its HTTP(S) origin.
 The Compose file can also read `HERMES_GATEWAY_URL` and `HERMES_GATEWAY_NAME`
 from your shell or a local `.env` file. Configure models, profiles and sign-in
-on the existing Hermes server.
+on the existing Hermes server. Set its `dashboard.public_url` (or
+`HERMES_DASHBOARD_PUBLIC_URL`) to Athena's browser-facing URL so sign-in returns
+to Athena and the server admits its browser origin.
 
 ### 2. Start Athena
 
@@ -68,7 +70,7 @@ editing an existing plugin.
 To stop Athena:
 
 ```bash
-docker stop athena
+docker compose -f compose.example.yml stop athena
 ```
 
 For microphone access from another device, open Athena over HTTPS (for example,
@@ -85,7 +87,7 @@ restarts or server changes.
 Follow startup and request diagnostics with:
 
 ```bash
-docker logs --follow athena
+docker compose -f compose.example.yml logs --follow athena
 ```
 
 Startup JSON lines report the build revisions, release channel, listening

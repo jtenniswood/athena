@@ -53,6 +53,7 @@ jobs:
             -v "$PWD/scripts/preview/model.mjs:/model.mjs:ro" athena:gateway-review /model.mjs
           docker create --init --name athena-review-gateway --network athena-remote-review \
             --entrypoint hermes -e HERMES_HOME=/opt/data \
+            -e HERMES_DASHBOARD_PUBLIC_URL=http://localhost:4190 \
             -e HERMES_DASHBOARD_BASIC_AUTH_USERNAME=reviewer \
             -e HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=athena-local-review-fixture \
             -e HERMES_DASHBOARD_BASIC_AUTH_SECRET=athena-local-review-session-fixture \
