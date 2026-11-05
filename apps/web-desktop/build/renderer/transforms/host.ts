@@ -1,6 +1,28 @@
 import path from 'node:path'
 import { replaceBrowserContract } from './contract'
 
+/** Keep Athena's picker ownership while the released host stages the selected bytes. */
+export function useBrowserFilePicker(source: string, root: string): string {
+  const start = source.indexOf('function selectBrowserFiles(')
+  const end = source.indexOf('\ninterface BrowserUploadsOptions', start)
+  if (start < 0 || end < start || !source.slice(start, end).includes("input.addEventListener(")) {
+    throw new Error('Official browser file-picker boundary changed')
+  }
+  const picker = JSON.stringify(path.join(root, 'src/platform/files'))
+  const replacement = `async function selectBrowserFiles(
+  bootstrap: BrowserBootstrap,
+  options: HermesSelectPathsOptions | undefined,
+  fallbackProfile: null | string,
+  onStaged: OnStaged
+): Promise<string[]> {
+  const files = await pickBrowserFiles({ ...options, multiple: Boolean(options?.multiple) })
+  const profile = options?.profile?.trim() || fallbackProfile || null
+  return Promise.all(files.map(file => stageBrowserFile(bootstrap, file, profile, onStaged)))
+}
+`
+  return `import { pickBrowserFiles } from ${picker}\n` + source.slice(0, start) + replacement + source.slice(end)
+}
+
 export function useBrowserMessagingPresentation(source: string, root: string): string {
   const owner = JSON.stringify(path.join(root, 'src/experience/messaging'))
   return replaceBrowserContract(source, [

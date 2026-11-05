@@ -4008,5 +4008,35 @@
       }
     ],
     "removal": "Remove when Athena no longer extends the official Webapp browser host."
+  },
+  {
+    "name": "browser-official-file-picker",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "lib/browser-uploads.ts",
+    "reason": "Keep picker cancellation and reload guards while the official host stages files for the captured profile.",
+    "owner": "apps/web-desktop/build/renderer/transforms/host.ts",
+    "tests": [
+      {
+        "file": "scripts/file-picker.test.mjs",
+        "scenario": "a new picker cancels its predecessor and keeps the current operation guarded"
+      },
+      {
+        "file": "scripts/file-picker.test.mjs",
+        "scenario": "cancel and missing-cancel expiry release only their own reload guard"
+      },
+      {
+        "file": "scripts/official-host-adapter.test.mjs",
+        "scenario": "the guarded official picker keeps the request profile through asynchronous selection and staging"
+      }
+    ],
+    "removal": "Remove when the upstream browser picker provides equivalent cancellation, expiry and operation ownership.",
+    "sourceRoot": "renderer",
+    "sourceHash": "c036f9550f3807dca56224b00a1aa7cae10a9962602b97919142ff35abbe4418",
+    "inputHash": "c036f9550f3807dca56224b00a1aa7cae10a9962602b97919142ff35abbe4418",
+    "outputHash": "cfd64da5c662c6abb7c608a90d31460815f29f8c5e1d87db185f91b5eff5b198",
+    "handlers": [
+      "useBrowserFilePicker"
+    ]
   }
 ]

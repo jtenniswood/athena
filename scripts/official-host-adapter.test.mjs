@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs'
 import vm from 'node:vm'
 import { test } from 'node:test'
 import ts from 'typescript'
+import path from 'node:path'
+import { createBuildModuleLoader } from './renderer-adapter.mjs'
 
 const compile = name => ts.transpileModule(readFileSync(`apps/web-desktop/src/${name}.ts`, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -99,4 +101,23 @@ test('composer choice migration preserves existing official choices, draft bytes
   assert.equal(values.get('hermes.desktop.composer.model.remote.http%3A%2F%2Flocalhost.research'), 'old-choice')
   assert.equal(values.get('hermes.desktop.composer.model.registry.web-single.research'), 'old-choice')
   assert.equal(values.get('hermes:composer-drafts:v3'), '{"session":"web-single is part of my draft"}')
+})
+
+test('the guarded official picker keeps the request profile through asynchronous selection and staging', async () => {
+  const root = path.resolve('apps/web-desktop')
+  const { useBrowserFilePicker } = createBuildModuleLoader().load(path.join(root, 'build/renderer/transforms/host.ts'))
+  const adapted = useBrowserFilePicker(readFileSync('apps/desktop/src/lib/browser-uploads.ts', 'utf8'), root)
+  const tree = ts.createSourceFile('uploads.ts', adapted, ts.ScriptTarget.Latest, true)
+  const picker = tree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'selectBrowserFiles')
+  const selected = Promise.withResolvers(), staged = [], options = []
+  const context = vm.createContext({ exports: {},
+    pickBrowserFiles: value => { options.push(value); return selected.promise },
+    stageBrowserFile: async (_bootstrap, file, profile) => { staged.push({ file, profile }); return '/uploads/review.txt' }
+  })
+  vm.runInContext(ts.transpileModule('export ' + picker.getText(tree), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context)
+  const pending = context.exports.selectBrowserFiles({}, { profile: 'research', multiple: false }, 'default', () => {})
+  assert.equal(options[0].multiple, false)
+  selected.resolve([{ name: 'review.txt' }])
+  assert.equal((await pending)[0], '/uploads/review.txt')
+  assert.equal(staged[0].profile, 'research')
 })
