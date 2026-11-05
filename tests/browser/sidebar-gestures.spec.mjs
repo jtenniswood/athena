@@ -13,14 +13,14 @@ test.beforeEach(async ({ page }) => {
 })
 test.afterEach(async ({ page }) => { expect(pageErrors.get(page)).toEqual([]) })
 
-async function openSidebar(page, { combined = false, occupied = false, failMove = false, sourceProfile = 'default', grouped = true } = {}) {
+async function openSidebar(page, { combined = false, occupied = false, failMove = false, sourceProfile = 'default', grouped = true, dateGrouping = false } = {}) {
   const moves = []
   await page.route('**/api/athena/preferences', route => route.abort())
-  await page.addInitScript(({ combined, grouped }) => {
-    localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles', combined ? 'project' : 'none')
+  await page.addInitScript(({ combined, grouped, dateGrouping }) => {
+    localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles', dateGrouping ? 'date' : combined ? 'project' : 'none')
     localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarAgentsGrouped.allProfiles', String(grouped))
     localStorage.setItem('hermes-web.browser.combined-profiles', String(combined))
-  }, { combined, grouped })
+  }, { combined, grouped, dateGrouping })
   const sessions = [...app.gateway.sessions.values()].filter(session => !session.hidden).map(session => ({
     ...session, profile: session.id === 'preview-idea' ? sourceProfile : session.profile
   }))
@@ -177,16 +177,20 @@ for (const change of ['source row', 'destination', 'window focus']) {
   })
 }
 
-async function aimOrder(page) {
+async function aimOrder(page, { handle = false } = {}) {
   const source = page.locator('[data-web-session-id="preview-idea"]').first()
   const target = page.locator('[data-web-session-id="preview-week"]').first()
-  const title = source.locator('.browser-session-title')
+  const title = source.locator(handle ? '[data-reorder-handle]' : '.browser-session-title')
   const start = await title.boundingBox(), end = await target.boundingBox()
   const after = start.y < end.y
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2)
   await page.mouse.down()
+  if (handle) {
+    await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2 + 10, { steps: 3 })
+    await expect(source).toHaveAttribute('data-glass-opaque', '')
+  }
   await page.mouse.move(end.x + end.width / 2, end.y + end.height * (after ? .8 : .2), { steps: 10 })
-  await expect(target).toHaveAttribute('data-session-order-drop', after ? 'after' : 'before')
+  if (!handle) await expect(target).toHaveAttribute('data-session-order-drop', after ? 'after' : 'before')
   return { source, target, after }
 }
 
@@ -237,5 +241,36 @@ for (const cancellation of ['Escape', 'pointercancel', 'outside', 'source remove
     expect(moves).toEqual([])
     await expect(page).toHaveURL(/#\/preview-week$/)
     await expect(editor).toHaveText('Keep the draft through sidebar gestures')
+  })
+}
+
+for (const ordering of ['Updated', 'Created', 'Status', 'Tokens', 'Cost', 'Manual']) for (const handle of [false, true]) {
+  test(`${handle ? 'handle' : 'title'} drops override ${ordering} ordering across dates`, async ({ page }) => {
+    const old = app.gateway.sessions.get('preview-idea')
+    const original = { ...old }
+    Object.assign(old, { started_at: old.started_at - 86400 * 4, last_active: old.last_active - 86400 * 4,
+      input_tokens: 5000, output_tokens: 10000, actual_cost_usd: 2 })
+    try {
+      const { editor } = await openSidebar(page, { grouped: false, dateGrouping: true })
+      await page.getByRole('button', { name: 'Filters', exact: true }).click()
+      await page.getByRole('menuitem', { name: 'Ordering', exact: true }).hover()
+      await page.getByRole('menuitemradio', { name: ordering, exact: true }).click()
+      await page.keyboard.press('Escape')
+      await page.keyboard.press('Escape')
+      const { source, target, after } = await aimOrder(page, { handle })
+      await page.mouse.up()
+      await expect.poll(async () => (await source.boundingBox()).y > (await target.boundingBox()).y).toBe(after)
+      await page.getByRole('button', { name: 'Filters', exact: true }).click()
+      await page.getByRole('menuitem', { name: 'Ordering', exact: true }).hover()
+      await expect(page.getByRole('menuitemradio', { name: 'Manual', exact: true })).toBeChecked()
+      await page.keyboard.press('Escape')
+      await page.keyboard.press('Escape')
+      await expect(editor).toHaveText('Keep the draft through sidebar gestures')
+      await expect(page).toHaveURL(/#\/preview-week$/)
+      await page.reload()
+      await expect(source).toBeVisible()
+      await expect(target).toBeVisible()
+      await expect.poll(async () => (await source.boundingBox()).y > (await target.boundingBox()).y).toBe(after)
+    } finally { app.gateway.sessions.set('preview-idea', original) }
   })
 }
