@@ -178,7 +178,7 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
           <div className="grid min-h-16 place-items-center rounded-lg px-2 text-center text-xs text-(--ui-text-tertiary)">{c.inProject ? s.projectEmpty : c.filtersActive ? s.noFilterMatches : c.pinnedSessions.length ? s.allPinned : s.noSessions}</div>}
         footer={(c.combinedProfiles || c.grouping !== 'project') && !c.showSessionSkeletons && c.hasMoreSessions ? <SidebarLoadMoreRow loading={c.sessionsLoading || c.recentsLoadMorePending} onClick={() => void c.onLoadMoreRecents()} step={0} /> : null}
         forceEmptyState={c.showSessionSkeletons && !c.displayAgentGroups?.length}
-        grouping={(c.combinedProfiles && c.grouping === 'project') || c.grouping === 'profile' || c.grouping === 'none' || c.sessionsMode === 'archived' || c.rankedGlobally ? 'none' : c.grouping === 'status' ? 'status' : 'date'}
+        grouping={c.agentOrderManual || (c.combinedProfiles && c.grouping === 'project') || c.grouping === 'profile' || c.grouping === 'none' || c.sessionsMode === 'archived' || c.rankedGlobally ? 'none' : c.grouping === 'status' ? 'status' : 'date'}
         groups={c.displayAgentGroups} headerAction={controls} labelMeta={c.worktreeGroupingActive && c.reposScanning && !c.projectsSkeletonVisible ? <GlyphSpinner ariaLabel={s.loading} className="text-[0.6875rem] text-(--ui-text-quaternary)" /> : undefined}
         liveSessions={c.inProject ? c.enteredProjectOverlaySessions : undefined} manualOrderIds={c.agentOrderManual ? c.agentOrderIds : c.sortOrderIds}
         onEnterProject={c.onEnterProject} onNewSessionInWorkspace={c.onNewSessionInWorkspace} onNewSessionSplit={c.onNewSessionSplit}
