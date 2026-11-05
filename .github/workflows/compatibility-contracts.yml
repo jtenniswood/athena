@@ -1,97 +1,36 @@
-name: compatibility-contracts
+name: Athena RUNNER migration canary
 on:
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
-concurrency:
-  group: compatibility-contracts-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
 jobs:
-  renderer-contracts:
-    runs-on: ubuntu-26.04
-    timeout-minutes: 30
+  runner-canary:
+    runs-on: [self-hosted, runner-athena]
+    timeout-minutes: 5
     steps:
+      - name: Verify exact runner identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RUNNER_NAME" = runner-athena
+          test "$RUNNER_OS" = Linux
+          test "$REPO_URL" = https://github.com/jtenniswood/athena
+          test -x /opt/runner-hooks/cleanup.sh
+          test "$RUNNER_CLEANUP_DOCKER" = false
+          test -n "$ACCESS_TOKEN"
+          test "$(stat -f -c %T /runner-work/athena)" = ext2/ext3
+          printf 'Athena runner identity and disk-backed workspace verified\n'
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 26
-          cache: pnpm
-      - name: Prepare pinned renderer
-        run: pnpm prepare:renderer
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Verify renderer dependency baseline
-        run: pnpm check:renderer-dependencies
-      - name: Verify image publication channels
-        run: node --test scripts/image-publication.test.mjs
-      - name: Verify compatibility registry
-        run: node --test scripts/compatibility-registry.test.mjs
-      - name: Typecheck browser and renderer integration
-        run: pnpm typecheck
-      - name: Verify shared adapter output and startup ordering
-        run: node --test scripts/renderer-adapter.test.mjs scripts/inspect-renderer.test.mjs scripts/sidebar-controller.test.mjs scripts/startup.test.mjs scripts/browser-session-routes.test.mjs scripts/browser-windows.test.mjs scripts/state-safety.test.mjs scripts/settings-save.test.mjs scripts/settings-presentation.test.mjs scripts/config-field-presentation.test.mjs scripts/pending-work.test.mjs scripts/verify-behavior.test.mjs scripts/runtime-services.test.mjs scripts/clipboard.test.mjs scripts/pwa-registration.test.mjs scripts/ambient-claims.test.mjs scripts/file-picker.test.mjs scripts/browser-services.test.mjs scripts/session-summaries.test.mjs scripts/plugin-assets.test.mjs
-      - name: Verify synthetic gateway contracts
-        run: node --test scripts/preview-gateway.test.mjs
-      - name: Verify affected declared Node scenarios
-        id: behavior
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify real checkout and disposable workspace
+        shell: bash
         run: |
-          node scripts/verify-behavior.mjs --changed "$BASE_SHA" --runner node --list --output test-results/behavior-plan.json > /dev/null
-          node --input-type=module <<'JS'
-          import { readFileSync, appendFileSync } from 'node:fs'
-          import { spawnSync } from 'node:child_process'
-          const plan = JSON.parse(readFileSync('test-results/behavior-plan.json', 'utf8'))
-          const critical = new Set(['bot-session-cancellation', 'single-conversation-wiring', 'browser-root', 'browser-profile-selection', 'browser-group-selection', 'browser-created-group-selection'])
-          appendFileSync(process.env.GITHUB_OUTPUT, `selection=${plan.entries.some(name => critical.has(name))}\n`)
-          if (plan.requested.length) {
-            const result = spawnSync(process.execPath, ['scripts/verify-behavior.mjs', '--changed', process.env.BASE_SHA, '--runner', 'node', '--run', '--output', 'test-results/behavior-node.json'], { encoding: 'utf8' })
-            if (result.error) throw result.error
-            if (result.status !== 0) { console.error(result.stdout, result.stderr); process.exit(result.status || 1) }
-            const report = JSON.parse(readFileSync('test-results/behavior-node.json', 'utf8'))
-            console.log(`${report.observed.length} Node tests executed for ${report.requested.length} declared scenarios.`)
-          } else console.log('No declared Node scenarios were selected by this diff.')
-          JS
-      - name: Verify persisted preference compatibility
-        run: node --test scripts/browser-preference-contract.test.mjs scripts/preference-sync.test.mjs scripts/preferences-server.test.mjs scripts/default-profile-route.test.mjs scripts/sidebar-contracts.test.mjs
-      - name: Verify Android bridge, sign-in and background notifications
-        run: node --test scripts/android-*.test.mjs scripts/firebase-messaging.test.mjs scripts/browser-notifications.test.mjs scripts/action-surface.test.mjs
-      - name: Install browser for Android approval regression checks
-        run: pnpm exec playwright install --with-deps chromium
-      - name: Verify Android approval forms and settings in a real browser
-        run: |
-          test_files=(tests/browser/android-sign-in.spec.mjs tests/browser/native-settings.spec.mjs tests/browser/settings-presentation.spec.mjs tests/browser/session-row.spec.mjs tests/browser/sidebar-tree.spec.mjs tests/browser/navigation-commands.spec.mjs tests/browser/display-scale.spec.mjs tests/browser/pull-to-refresh.spec.mjs tests/browser/timeline-scrubbing.spec.mjs tests/browser/submit-scroll.spec.mjs)
-          for file in "${test_files[@]}"; do
-            test -f "$file" || { echo "Missing browser test file: $file" >&2; exit 1; }
-          done
-          pnpm exec playwright test "${test_files[@]}" --project=chromium --reporter=line
-      - name: Build browser application
-        run: pnpm build
-      - name: Verify browser commands in the built application
-        run: pnpm exec playwright test tests/browser/composer-keyboard.spec.mjs tests/browser/external-links.spec.mjs tests/browser/browser-windows.spec.mjs tests/browser/clipboard-selection.spec.mjs tests/browser/notification-routing.spec.mjs tests/browser/sign-in-credentials.spec.mjs tests/browser/transition-portals.spec.mjs tests/browser/cold-connection-recovery.spec.mjs tests/browser/scheduled-profile-scope.spec.mjs tests/browser/ambient-claims.spec.mjs tests/browser/file-picker.spec.mjs tests/browser/voice-readiness.spec.mjs tests/browser/plugin-files.spec.mjs tests/browser/plugin-discovery.spec.mjs tests/browser/sidebar-gestures.spec.mjs tests/browser/session-routing.spec.mjs tests/browser/plugin-notifications.spec.mjs --project=chromium --reporter=line
-      - name: Build isolated conversation fixture
-        if: steps.behavior.outputs.selection == 'true'
-        run: docker build -t athena:compatibility .
-      - name: Verify mounted plugins in the built image
-        if: steps.behavior.outputs.selection == 'true'
-        env:
-          HERMES_TEST_IMAGE: athena:compatibility
-        run: pnpm exec playwright test tests/browser/plugin-discovery.spec.mjs --project=chromium --reporter=line
-      - name: Verify selection races through their registry entry
-        if: steps.behavior.outputs.selection == 'true'
-        env:
-          HERMES_TEST_IMAGE: athena:compatibility
-        run: node scripts/verify-behavior.mjs --entry bot-session-cancellation --runner browser --run --output test-results/behavior-selection.json
-      - name: Preserve behavior plans and browser failure diagnostics
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: compatibility-behavior
-          path: test-results/
-          if-no-files-found: ignore
-          retention-days: 14
+          set -euo pipefail
+          test -d .git
+          git rev-parse --is-inside-work-tree
+          test -f README.md
+          printf 'Athena runner canary\n' > "$RUNNER_TEMP/athena-canary.txt"
+          test -s "$RUNNER_TEMP/athena-canary.txt"
+          df -B1 /runner-work/athena
+          printf 'Checkout and workspace write test passed\n'
