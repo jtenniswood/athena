@@ -1,18 +1,9 @@
 import { prepareBrowserBridge } from './browser-bootstrap'
-import { usesOfficialWebappHost } from '../platform/official-host'
 
 /** Install the host before evaluating stores that read its desktop compatibility bridge. */
 export async function startBrowserHost(): Promise<void> {
-  if (usesOfficialWebappHost()) {
-    const { bootRenderer } = await import('@/lib/ui-preferences/boot')
-    await bootRenderer(async () => {
-      const { installOfficialBrowserHost } = await import('./official-host')
-      installOfficialBrowserHost()
-    })
-  } else {
-    const { installWebBridge } = await import('../web-bridge/install')
-    installWebBridge()
-  }
+  const { installWebBridge } = await import('../web-bridge/install')
+  installWebBridge()
   const { observeRendererPreferences } = await import('./preference-sync')
   observeRendererPreferences()
   prepareBrowserBridge()

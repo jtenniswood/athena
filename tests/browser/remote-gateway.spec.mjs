@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test'
 
-const origin = process.env.ATHENA_OFFICIAL_TEST_URL
-test.skip(!origin, 'Start the official runtime with disposable data and the local model fixture.')
+const origin = process.env.ATHENA_GATEWAY_TEST_URL
+test.skip(!origin, 'Start the UI with a separate disposable Hermes server and local model fixture.')
 if (origin && !['localhost', '127.0.0.1', '[::1]'].includes(new URL(origin).hostname)) {
-  throw new Error('Official Webapp checks require a disposable localhost installation.')
+  throw new Error('Remote gateway checks require a disposable localhost installation.')
 }
 test.setTimeout(90000)
 
 async function signIn(page) {
-  await page.goto(origin)
+  await page.goto(origin + '/login?next=%2F')
   await page.locator('input[name="username"]').fill('reviewer')
   await page.locator('input[name="password"]').fill('athena-local-review-fixture')
   await page.getByRole('button', { name: /^sign in$/i }).click()
@@ -17,20 +17,20 @@ async function signIn(page) {
   if (await telemetry.isVisible()) await telemetry.click()
 }
 
-test('the official runtime preserves chat, drafts, attachments and server sign-out', async ({ page }) => {
+test('the remote gateway preserves chat, drafts, attachments and server sign-out', async ({ page }) => {
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   await signIn(page)
-  expect(await page.evaluate(() => ({
-    surface: window.__HERMES_UI_SURFACE__, host: document.documentElement.dataset.hermesDesktopHost,
-    athena: window.__HERMES_WEB_BRIDGE__
-  }))).toEqual({ surface: 'webapp', host: 'browser', athena: true })
+  expect(await page.evaluate(async () => {
+    const connection = await window.hermesDesktop.getConnection()
+    return { athena: window.__HERMES_WEB_BRIDGE__, owner: connection.connectionId, mode: connection.mode }
+  })).toEqual({ athena: true, owner: 'web-single', mode: 'remote' })
   const editor = page.getByRole('textbox', { name: 'Message', exact: true })
-  const prompt = `Official runtime check ${Date.now()}`
+  const prompt = `Remote gateway check ${Date.now()}`
   await editor.fill(prompt)
   await page.getByRole('button', { name: 'Send', exact: true }).click()
   await expect(page.locator('p').filter({ hasText: `Local review response: ${prompt}` }).first()).toBeVisible({ timeout: 45000 })
-  const draft = 'Unsent draft retained by the official host'
+  const draft = 'Unsent draft retained across a UI reload'
   await editor.fill(draft)
   await expect.poll(() => page.evaluate(value => Object.values(JSON.parse(localStorage.getItem('hermes:composer-drafts:v3') || '{}')).includes(value), draft)).toBe(true)
   const route = page.url()
@@ -40,24 +40,23 @@ test('the official runtime preserves chat, drafts, attachments and server sign-o
   await page.getByRole('button', { name: 'Add context', exact: true }).click()
   const picker = page.waitForEvent('filechooser')
   await page.getByRole('menuitem', { name: 'Files…', exact: true }).click()
-  await (await picker).setFiles({ name: 'official-review.txt', mimeType: 'text/plain', buffer: Buffer.from('Official host upload bytes') })
-  await expect(page.locator('[data-slot="composer-attachments"]').getByText('official-review.txt', { exact: true })).toBeVisible()
-  // A credential change must refuse while the attachment remains unsent.
-  const refusal = await page.evaluate(async () => {
-    try { await window.hermesDesktop.oauthLogoutConnectionConfig(location.origin); return null }
-    catch (error) { return error.message }
-  })
-  expect(refusal).toMatch(/attachments/)
-  await page.getByRole('button', { name: 'Remove official-review.txt', exact: true }).click()
+  await (await picker).setFiles({ name: 'gateway-review.txt', mimeType: 'text/plain', buffer: Buffer.from('Remote gateway attachment bytes') })
+  await expect(page.locator('[data-slot="composer-attachments"]').getByText('gateway-review.txt', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await page.getByRole('button', { name: 'Gateway', exact: true }).click()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
-  await expect(page.locator('input[name="username"]')).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: /attachments/i })).toBeVisible()
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+  await page.getByRole('button', { name: 'Remove gateway-review.txt', exact: true }).click()
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
+  await page.getByRole('button', { name: 'Gateway', exact: true }).click()
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
   expect((await page.request.get(origin + '/api/athena/preferences')).status()).toBe(401)
   expect(errors).toEqual([])
 })
 
-test('Athena preferences sync across devices through the official authenticated host', async ({ browser }) => {
+test('Athena preferences sync across devices through the configured authenticated gateway', async ({ browser }) => {
   const first = await browser.newContext(), second = await browser.newContext()
   try {
     const writer = await first.newPage()
@@ -73,7 +72,7 @@ test('Athena preferences sync across devices through the official authenticated 
   } finally { await first.close(); await second.close() }
 })
 
-test('creating a chat from a profile group retains its official owner', async ({ page }) => {
+test('creating a chat from a profile group retains its gateway profile owner', async ({ page }) => {
   await signIn(page)
   await page.getByRole('button', { name: 'New session in Research', exact: true }).click()
   const prompt = `Research profile check ${Date.now()}`

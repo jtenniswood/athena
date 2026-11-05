@@ -4,10 +4,8 @@ import type { FirebaseSender } from './firebase-messaging.mjs'
 
 export function createAthenaServices(options: {
   target: string
-  identityTarget?: string
   directory: string
   home?: string
-  pluginAssets?: boolean
   fetch?: typeof fetch
   now?: () => number
   sender?: Pick<FirebaseSender, 'enabled' | 'send'>

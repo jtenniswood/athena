@@ -158,23 +158,11 @@ function hermesDynamicProxy(): Plugin {
   }
 }
 
-/** Development uses the release's cookie-authenticated browser contract. */
-function officialDevelopmentBootstrap(enabled: boolean): Plugin {
-  return {
-    name: 'athena:official-development-bootstrap',
-    transformIndexHtml(_html, context) {
-      if (!enabled || !context.server) return []
-      return [{ tag: 'script', injectTo: 'head', children:
-        'window.__HERMES_UI_SURFACE__="webapp";window.__HERMES_AUTH_REQUIRED__=true;window.__HERMES_BASE_PATH__="";' }]
-    }
-  }
-}
-
 export default defineConfig(({ command, mode }) => {
   // Extra hostnames allowed past Vite's Host check, from apps/web-desktop/.env
   // (WEB_ALLOWED_HOSTS, comma-separated) — e.g. Tailscale names, LAN hostnames.
   const env = loadEnv(mode, __dirname, '')
-  hosting = runtimeConfiguration({ HERMES_GATEWAY_URL: 'http://127.0.0.1:9120', HERMES_HOME: path.join(os.homedir(), '.hermes'), ...env, ...process.env })
+  hosting = runtimeConfiguration({ HERMES_GATEWAY_URL: 'http://127.0.0.1:9119', HERMES_HOME: path.join(os.homedir(), '.hermes'), ...env, ...process.env })
   const envAllowedHosts = (env.WEB_ALLOWED_HOSTS ?? '')
     .split(',')
     .map(s => s.trim())
@@ -189,7 +177,6 @@ export default defineConfig(({ command, mode }) => {
     rendererAdapterPlugin(__dirname),
     buildInfoPlugin(),
     hermesDynamicProxy(),
-    officialDevelopmentBootstrap((process.env.ATHENA_OFFICIAL_WEBAPP || env.ATHENA_OFFICIAL_WEBAPP) !== '0'),
     react(),
     tailwindcss(),
     VitePWA({

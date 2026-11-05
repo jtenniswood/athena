@@ -21,15 +21,11 @@ version tag. Manual feature branch builds publish `dev-latest` and
 `dev-sha-<revision>` instead. The renderer
 revision comes from `flake.lock`.
 
-The default image extends the official Hermes release pinned in
-`hermes-release.json`. Its installation stamp must match the renderer revision.
-The image now runs the gateway and serves Athena on port 4174. Existing
-deployments need the [one-time migration](official-webapp-migration.md), including
-the Hermes data mount, port mapping and preserved preference namespace.
-The **Official Webapp integration** check builds the actual runtime image and
-exercises chat, draft recovery, uploads and account preference sync against a
-local deterministic model. Synthetic compatibility checks use the separate
-`browser-preview` Docker target.
+Athena's image serves the UI and proxies the existing Hermes server configured
+by `HERMES_GATEWAY_URL` in Compose. It does not bundle or supervise Hermes.
+The renderer remains pinned to the official release in `hermes-release.json`.
+The remote-gateway integration check builds Athena and exercises it against a
+separate disposable Hermes server; that server is only a CI fixture.
 
 A manual dispatch on `main` also sends a signed deploy request to the configured
 Komodo stack listener. A manual dispatch on another branch and a version-tag run

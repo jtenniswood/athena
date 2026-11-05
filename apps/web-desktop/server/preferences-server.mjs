@@ -50,7 +50,7 @@ export function createPreferenceStore(directory) {
 function httpError(status, message) { return Object.assign(new Error(message), { status }) }
 
 /** Trust only the configured Hermes server to authenticate and identify users. */
-export function createPreferencesHandler({ target, identityTarget = target, directory, fetch: request = globalThis.fetch }) {
+export function createPreferencesHandler({ target, directory, fetch: request = globalThis.fetch }) {
   const store = createPreferenceStore(directory)
   return async (req, res) => {
     if (new URL(req.url, 'http://local.invalid').pathname !== preferencesPath) return false
@@ -76,7 +76,7 @@ export function createPreferencesHandler({ target, identityTarget = target, dire
       if (cookies.length) res.setHeader('Set-Cookie', cookies)
       if (!identityResponse.ok) throw httpError(identityResponse.status === 401 || identityResponse.status === 403 ? 401 : 503, 'Sign in to sync settings')
       let accountId
-      try { accountId = accountIdentity(identityTarget, await identityResponse.json()) }
+      try { accountId = accountIdentity(target, await identityResponse.json()) }
       catch { throw httpError(503, 'The server could not verify your account') }
       let saved
       if (req.method === 'GET') saved = await store.read(accountId)

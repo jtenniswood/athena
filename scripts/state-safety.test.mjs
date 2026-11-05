@@ -159,40 +159,26 @@ test('media leases keep separate voice and permission owners guarded until each 
   assert.equal(safety.reloadReadiness().ready, true)
 })
 
-function signOutFixture(official = false) {
+function signOutFixture() {
   const root = { inert: false }, body = { inert: false }, store = storage(), connection = state(store)
   connection.update({ authMode: 'token', token: 'synthetic-session-token' })
   const transitions = load('browser-transition', { document: { getElementById: () => root, body } })
   let prepare = async () => ({ ready: true }), logout = async () => ({ ok: true })
   let preparations = 0, logouts = 0, reloads = 0
-  const destinations = []
   const { signOut } = load('sign-out', {
     require: specifier => ({
       './connection-state': { connectionState: () => connection },
-      './official-host': { usesOfficialWebappHost: () => official },
-      './sign-in-target': { browserSignInTarget: next => ({ path: '/login?next=' + encodeURIComponent(next) }) },
       './browser-transition': transitions,
       './reload-safety': { reloadReadinessAfterSaving: () => { preparations++; return prepare() } }
     })[specifier],
-    window: { location: { origin, pathname: '/', search: '?profile=research', hash: '#/saved-chat',
-      assign: target => destinations.push(target), reload: () => { reloads++ } }, hermesDesktop: {
+    window: { location: { origin, reload: () => { reloads++ } }, hermesDesktop: {
       oauthLogoutConnectionConfig: () => { logouts++; return logout() }
     } }
   })
-  return { root, body, store, connection, transitions, signOut, destinations,
+  return { root, body, store, connection, transitions, signOut,
     prepareWith(callback) { prepare = callback }, logoutWith(callback) { logout = callback },
     calls: () => ({ preparations, logouts, reloads }) }
 }
-
-test('official sign-out retains the routed return destination and leaves retired credentials untouched', async () => {
-  const app = signOutFixture(true)
-  await app.signOut()
-  const target = new URL(app.destinations[0], origin)
-  assert.equal(target.pathname, '/login')
-  assert.equal(target.searchParams.get('next'), '/?profile=research#/saved-chat')
-  assert.equal(app.connection.load().token, 'synthetic-session-token')
-  assert.deepEqual(app.calls(), { preparations: 2, logouts: 1, reloads: 0 })
-})
 
 test('page transitions reserve portal interaction and reject foreign or stale ownership', () => {
   const root = { inert: false }, body = { inert: true }

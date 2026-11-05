@@ -2,7 +2,6 @@ export interface BuildInfo {
   wrapperRevision: string
   rendererRevision: string
   hermesRelease: string
-  runtimeImage: string
   dependencyLockHash: string
   builtAt: string
   channel: string

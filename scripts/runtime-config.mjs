@@ -34,17 +34,12 @@ export function runtimeConfiguration(env = process.env) {
   if (!Number.isInteger(port) || port < 1 || port > 65535 || !/^(?:localhost|[0-9a-fA-F:.]+)$/.test(host)) throw new Error('Invalid hosting bind address or port')
   const listen = `${host.includes(':') ? '[' + host + ']' : host}:${port}`
   const target = url.origin
-  const identity = new URL(env.ATHENA_PREFERENCES_IDENTITY_URL || target)
-  if (!['http:', 'https:'].includes(identity.protocol) || identity.username || identity.password || identity.search || identity.hash || identity.pathname !== '/') {
-    throw new Error('ATHENA_PREFERENCES_IDENTITY_URL must be an HTTP(S) origin')
-  }
-  const identityTarget = identity.origin
   return {
-    target, identityTarget, home, staticRoot, stateDir, preferencesDir, listen,
+    target, home, staticRoot, stateDir, preferencesDir, listen,
     publicConfig: {
       version: 1,
       gateway: {
-        id: createHash('sha256').update(identityTarget).digest('hex'),
+        id: createHash('sha256').update(target).digest('hex'),
         name: env.HERMES_GATEWAY_NAME || 'Hermes',
         legacyUrls: [target]
       },

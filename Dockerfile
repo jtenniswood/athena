@@ -17,7 +17,7 @@ FROM dependencies AS build
 COPY apps/web-desktop ./apps/web-desktop
 COPY docs ./docs
 COPY tests ./tests
-COPY hermes-release.json Dockerfile ./
+COPY hermes-release.json ./
 ARG HERMES_WRAPPER_REV=unknown
 ARG HERMES_RELEASE_CHANNEL=local
 ARG SOURCE_DATE_EPOCH
@@ -42,8 +42,8 @@ USER node
 EXPOSE 9129
 CMD ["node", "scripts/preview/gateway.mjs"]
 
-# ---- runtime stage: nginx -------------------------------------------------------
-FROM nginx:alpine AS browser-preview
+# Athena serves its UI and proxies the externally configured gateway.
+FROM nginx:alpine AS runtime
 # Node owns account preference storage; nginx serves the UI and proxies Hermes.
 RUN apk add --no-cache nodejs
 
@@ -70,24 +70,3 @@ EXPOSE 80
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["node", "/opt/hermes/apps/web-desktop/server/main.mjs"]
-
-# The released Hermes runtime owns the gateway, authentication and Webapp server.
-FROM nousresearch/hermes-agent@sha256:e6d81ae52ebf6a43efa529701405509f20054ba818f179ddd748bed4f8af584c AS runtime
-COPY hermes-release.json /opt/athena/hermes-release.json
-RUN /opt/hermes/.venv/bin/python -c "import json; from pathlib import Path; release=json.loads(Path('/opt/athena/hermes-release.json').read_text()); stamp=json.loads(Path('/opt/hermes/install-stamp.json').read_text()); assert stamp['commit'] == release['revision'], 'Official image and renderer release differ'"
-COPY --from=build --chmod=a+rX /app/apps/web-desktop/dist /opt/athena/ui
-COPY --from=dependencies --chmod=a+rX /runtime-ws /opt/athena/node_modules/ws
-COPY --chmod=a+rX apps/web-desktop/server /opt/athena/apps/web-desktop/server
-COPY --chmod=a+rX scripts/runtime-config.mjs scripts/preference-schema.mjs scripts/browser-preference-contract.mjs /opt/athena/scripts/
-COPY --chmod=0755 docker/s6-rc.d/athena/run /etc/s6-overlay/s6-rc.d/athena/run
-COPY docker/s6-rc.d/athena/type /etc/s6-overlay/s6-rc.d/athena/type
-COPY docker/s6-rc.d/athena/dependencies.d/base /etc/s6-overlay/s6-rc.d/athena/dependencies.d/base
-COPY docker/s6-rc.d/user/contents.d/athena /etc/s6-overlay/s6-rc.d/user/contents.d/athena
-ENV HERMES_WEBAPP_DIST=/opt/athena/ui \
-    HERMES_STATIC_ROOT=/opt/athena/ui \
-    HERMES_PREFERENCES_DIR=/data/athena \
-    HERMES_PORT=4174
-RUN mkdir -p /data/athena && chown hermes:hermes /data/athena
-VOLUME /data/athena
-EXPOSE 4174
-CMD ["gateway", "run"]

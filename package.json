@@ -10,7 +10,7 @@
     "legacy:stage-static-artifact": "bash apps/web-desktop/scripts/deploy.sh",
     "prepare:renderer": "node scripts/renderer.mjs",
     "check:renderer": "node scripts/renderer.mjs --check",
-    "check:official-base": "node scripts/official-release.mjs",
+    "check:official-release": "node scripts/official-release.mjs",
     "check:renderer-dependencies": "node scripts/renderer-dependencies.mjs",
     "report:renderer-dependencies": "node scripts/renderer-dependencies.mjs --report",
     "check:upstream": "node scripts/renderer-compatibility-report.mjs",
