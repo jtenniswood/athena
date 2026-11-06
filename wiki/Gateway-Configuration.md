@@ -14,10 +14,10 @@ existing server.
 | Another machine | `https://hermes.example.com` or an HTTP hostname and port reachable over your private network. |
 | Another container on a shared Docker network | That container's network name and listening port. |
 
-Use the port your existing Hermes service exposes. The headless `hermes serve`
-Webapp listener defaults to port 9120. A server bound only to its own loopback interface
-cannot be reached from a separate container; make it reachable through your
-existing private-network or proxy configuration.
+Use the existing Hermes gateway's Webapp listener, which defaults to port 9120.
+A server bound only to its own loopback interface cannot be reached from a
+separate container; make it reachable through your existing private-network or
+proxy configuration.
 
 Leave `/api` off the address. Athena proxies HTTP API calls, sign-in routes and
 WebSockets through its own browser origin, so the browser opens Athena's URL.
@@ -38,6 +38,14 @@ webapp:
 For a local browser on port 4174, use `http://localhost:4174`. Apply the setting
 through the existing Hermes service. This setting governs sign-in redirects and
 browser-origin validation; it is separate from Athena's backend target address.
+
+The running Hermes gateway starts this listener. With the official Docker
+image's default entrypoint, use `command: ["gateway", "run"]` on the existing
+Hermes service. If that service currently overrides its command with `serve`,
+replace that override; `serve` starts the separate dashboard. Keep the existing
+data mount, authentication, model settings and other published ports. Publish
+9120 as well when Athena reaches Hermes through a host port. See the
+[official Webapp Docker setup](https://hermes-agent.nousresearch.com/docs/user-guide/docker#running-the-webapp).
 
 Configure the server's supported sign-in provider there. Athena's welcome screen
 opens Hermes sign-in and resumes chat after a session is established. Existing

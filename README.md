@@ -54,7 +54,9 @@ webapp:
 ```
 
 Merge this into Hermes's existing config and apply it through that server's
-normal configuration/restart procedure. For HTTPS access, use your actual
+normal configuration/restart procedure. With the official Docker image's default
+entrypoint, the existing Hermes service should use `command: ["gateway", "run"]`;
+a `serve` command starts the separate dashboard. For HTTPS access, use your actual
 Athena HTTPS URL. See [gateway configuration](wiki/Gateway-Configuration.md).
 
 ### 2. Start Athena

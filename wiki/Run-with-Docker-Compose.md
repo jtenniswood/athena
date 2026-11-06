@@ -27,7 +27,10 @@ webapp:
 
 For remote access, use the HTTPS address you actually open instead. Apply the
 setting using your existing Hermes service's configuration/restart procedure.
-Keep authentication and model credentials on that server. See
+With the official image's default entrypoint, use `command: ["gateway", "run"]`
+on that service; replace a `serve` override, which starts the separate dashboard.
+Keep its existing volumes, authentication, model credentials and other ports.
+Publish 9120 as well if Athena uses a host address. See
 [Gateway configuration](Gateway-Configuration) for address and sign-in details.
 
 ## 2. Configure Athena in Compose
