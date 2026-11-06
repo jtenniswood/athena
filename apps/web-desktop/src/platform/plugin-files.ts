@@ -14,6 +14,8 @@ export function mountedPluginFiles(current: () => Window['hermesDesktop']) {
   return {
     desktopPluginsRoot: async () => pluginRoots()[0],
     agentPluginsRoot: async () => pluginRoots()[1],
+    watchPreviewFile: (path: string) => /^https?:/i.test(path)
+      ? Promise.resolve({ ok: false as const, error: 'unsupported' }) : current().watchPreviewFile(path),
     readPluginSource: async (path: string) => {
       const result = await readFileText(path)
       if (!('text' in result)) throw new Error(result.error)
