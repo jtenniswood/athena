@@ -43,7 +43,9 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
   }
   function snapshot(id) {
     const session = sessions.get(id) || addSession(id, 'New conversation')
-    return { session_id: id, resumed: id, stored_session_id: id, messages: messages.get(id), message_count: messages.get(id).length, info: { ...info, profile: session.profile }, running: timers.has(id), pending_approval: null, open_requests: [], inflight: inflight.get(id) || null }
+    return { session_id: id, revision: session.revision || 0, execution_generation: 0,
+      resumed: id, stored_session_id: id, messages: messages.get(id), message_count: messages.get(id).length,
+      info: { ...info, profile: session.profile }, running: timers.has(id), pending_approval: null, open_requests: [], inflight: inflight.get(id) || null }
   }
   function complete(id, status = 'complete', text = '') {
     clearInterval(timers.get(id)); timers.delete(id)

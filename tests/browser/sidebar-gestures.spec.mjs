@@ -47,12 +47,15 @@ async function openSidebar(page, { combined = false, occupied = false, failMove 
     const server = socket.connectToServer()
     socket.onMessage(message => {
       const frame = JSON.parse(String(message))
-      if (frame.method === 'session.workspace.move') {
-        moves.push(frame.params)
+      if (frame.method === 'session.mutate' && frame.params.operation === 'workspace') {
+        const move = { cwd: frame.params.payload.cwd, profile: frame.params.profile, session_key: frame.params.session_id }
+        moves.push(move)
         if (failMove) socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, error: { code: 5007, message: 'Move refused by server' } }))
         else {
-          membership.set(frame.params.session_key, frame.params.cwd === '/workspace/destination' ? 'drop-project' : 'other-project')
-          socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, result: { cwd: frame.params.cwd } }))
+          membership.set(move.session_key, move.cwd === '/workspace/destination' ? 'drop-project' : 'other-project')
+          socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, result: {
+            session_id: move.session_key, cwd: move.cwd, revision: frame.params.expected_revision + 1, execution_generation: 0
+          } }))
         }
       } else if (frame.method === 'session.list' && sourceProfile !== 'default') {
         socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, result: sessionPage(sessions) }))
