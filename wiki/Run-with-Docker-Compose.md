@@ -33,8 +33,9 @@ Keep its existing volumes, authentication, model credentials and other ports.
 Publish 9120 as well if Athena uses a host address. See
 [Gateway configuration](Gateway-Configuration) for address and sign-in details.
 
-To keep the server's Webapp configuration inline in Compose, use the
-[Hermes server override](Gateway-Configuration#keep-the-webapp-settings-inside-compose)
+To manage Webapp settings through Compose variables with the companion server
+image, use the
+[Hermes server override](Gateway-Configuration#configure-webapp-through-the-server-image)
 alongside that server's existing Compose file.
 
 ## 2. Configure Athena in Compose

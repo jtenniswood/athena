@@ -1,10 +1,12 @@
 # Update the Hermes release baseline
 
 Athena builds its presentation layer against an exact official Hermes release.
-`hermes-release.json` records the tag, peeled commit and immutable **test-only**
+`hermes-release.json` records the tag, peeled commit and immutable official
 gateway image. `flake.lock` records the same source commit and its Nix fetch hash.
 The production Athena image contains the UI and hosting services; the operator's
-Hermes server remains separate.
+Hermes server remains separate. The optional `athena-hermes` companion layers
+Compose-driven Webapp setup onto that official image; it does not rebuild
+Hermes or add it to Athena's UI image.
 
 ## Prepare an update
 

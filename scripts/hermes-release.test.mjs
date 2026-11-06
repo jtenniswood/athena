@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { applyRelease, resolveRelease, resolveTestGatewayImage, validateRelease } from './hermes-release.mjs'
+import { applyRelease, resolveRelease, resolveGatewayImage, validateRelease } from './hermes-release.mjs'
 
 test('release resolution peels annotated tags and ignores the moving target branch', async () => {
   const revision = 'a'.repeat(40)
@@ -13,17 +13,17 @@ test('release resolution peels annotated tags and ignores the moving target bran
   for (const value of [{ tag_name: 'main' }, { tag_name: 'v1.0.0', prerelease: true }, { tag_name: 'v1.0.0', draft: true }]) assert.throws(() => validateRelease(value))
 })
 
-test('the separate gateway fixture resolves an immutable official image and fails before publication', async () => {
+test('the gateway base resolves an immutable official image and fails before publication', async () => {
   const calls = [], digest = 'sha256:' + 'b'.repeat(64)
   const request = async (url, options) => {
     calls.push({ url, options })
     return url.startsWith('https://auth.docker.io/') ? Response.json({ token: 'public-pull-fixture' })
       : new Response(null, { headers: { 'docker-content-digest': digest } })
   }
-  assert.equal(await resolveTestGatewayImage('v0.23.0', request), 'nousresearch/hermes-agent@' + digest)
+  assert.equal(await resolveGatewayImage('v0.23.0', request), 'nousresearch/hermes-agent@' + digest)
   assert.equal(calls[1].options.method, 'HEAD')
   assert.ok(calls[1].url.endsWith('/manifests/v0.23.0'))
-  await assert.rejects(resolveTestGatewayImage('v0.23.0', async url => url.startsWith('https://auth.docker.io/')
+  await assert.rejects(resolveGatewayImage('v0.23.0', async url => url.startsWith('https://auth.docker.io/')
     ? Response.json({ token: 'public-pull-fixture' }) : new Response(null, { status: 404 })), /not published yet/)
 })
 

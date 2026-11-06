@@ -172,3 +172,21 @@ address. Apply these external settings before the Athena image update. A rollbac
 may also require restoring the previous target; keep the data volumes, identity
 setting and browser storage intact. The earlier combined image's Python setup
 service and `/opt/data` mount are unnecessary for the UI-only image.
+
+
+## Companion Hermes server image
+
+`Dockerfile.hermes` layers the Compose-driven Webapp startup hook onto the
+immutable official `gatewayImage` in `hermes-release.json`. It inherits the
+existing gateway runtime and adds no package installation or renderer build.
+The development and stable publishers build `ghcr.io/jtenniswood/athena-hermes`
+with the same channel/tag policy as the UI package. The images remain separate.
+
+For a listener migration, prepare the companion from the PR branch before the
+UI merge using **Build development image**, selecting `hermes` for its image
+input. That build publishes only the server package and does not trigger the
+main-only Komodo request. Use its immutable `dev-sha-<revision>` tag on the
+existing Hermes service and apply the [Compose settings](../wiki/Gateway-Configuration.md#configure-webapp-through-the-server-image).
+Keep its data volume and credentials, then verify the listener before merging
+the UI change. Every successful main run still requests the existing Athena
+Komodo deployment, including a manually selected server-only main run.

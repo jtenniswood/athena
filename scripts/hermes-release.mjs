@@ -37,10 +37,10 @@ export function applyRelease(lock, release, metadata) {
   return next
 }
 
-export async function resolveTestGatewayImage(version, request = globalThis.fetch) {
+export async function resolveGatewayImage(version, request = globalThis.fetch) {
   const repository = 'nousresearch/hermes-agent'
   const auth = await request(`https://auth.docker.io/token?service=registry.docker.io&scope=repository:${repository}:pull`)
-  if (!auth.ok) throw new Error('Cannot resolve the official gateway fixture registry token.')
+  if (!auth.ok) throw new Error('Cannot resolve the official gateway registry token.')
   const { token } = await auth.json()
   const response = await request(`https://registry-1.docker.io/v2/${repository}/manifests/${version}`, {
     method: 'HEAD', headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.index.v1+json' }
@@ -65,7 +65,7 @@ async function main() {
   }
   console.log(`Review: https://github.com/${repository}/compare/${current.revision}...${release.revision}`)
   if (args.includes('--check') || args.includes('--dry-run')) return
-  release.testGatewayImage = await resolveTestGatewayImage(release.version)
+  release.gatewayImage = await resolveGatewayImage(release.version)
   const metadata = JSON.parse(execFileSync('nix', ['--extra-experimental-features', 'nix-command flakes', 'flake', 'metadata', '--json', '--no-write-lock-file', `github:${repository}/${release.revision}`], { encoding: 'utf8' }))
   const next = applyRelease(lock, release, metadata)
   writeFileSync(path.join(root, 'flake.lock'), JSON.stringify(next, null, 2) + '\n')

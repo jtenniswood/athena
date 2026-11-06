@@ -1,5 +1,5 @@
 {
   "version": "v0.23.0",
   "revision": "2bd378ed1b8d6bf2192cb26e0a55ff3091e6bd19",
-  "testGatewayImage": "nousresearch/hermes-agent@sha256:adb7890916de63245523492be8f68f9d2095fecbec4e2a6dab7960381f0fc002"
+  "gatewayImage": "nousresearch/hermes-agent@sha256:adb7890916de63245523492be8f68f9d2095fecbec4e2a6dab7960381f0fc002"
 }

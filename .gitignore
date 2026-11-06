@@ -38,3 +38,6 @@ apps/android/local.properties
 apps/android/**/google-services.json
 *.jks
 *.keystore
+
+# Companion server helper caches
+docker/__pycache__/

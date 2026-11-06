@@ -72,6 +72,11 @@ on port 9119 does not provide the Webapp socket tickets. Publish port 9120 on th
 Hermes service if it is reached through a host port; keep that service's data
 volume and agent configuration intact.
 
+For Webapp setup built into the server image, use the optional
+[`athena-hermes` companion and Compose override](wiki/Gateway-Configuration.md#configure-webapp-through-the-server-image)
+on that existing Hermes service. Configure its listener through Compose
+environment variables; Athena's own image remains UI-only.
+
 When migrating from the earlier Athena gateway address, set
 `HERMES_GATEWAY_IDENTITY_URL` to that previous address, including its old port.
 This preserves existing browser sign-in storage, synced preferences and Android

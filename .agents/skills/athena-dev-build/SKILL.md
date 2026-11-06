@@ -6,13 +6,13 @@ description: Dispatch and monitor Athena's ad hoc development image workflow whe
 # Athena development image build
 
 Use this skill when the user asks to build and publish an Athena development
-image. It dispatches the existing GitHub Actions workflow. A successful main
+UI image. It dispatches the existing GitHub Actions workflow. A successful main
 build automatically triggers the separate Komodo deployment-request workflow;
 state this effect before dispatch and honor existing session authorization.
 
 ## Choose the source revision
 
-- Always build `main`, even when the user invokes the skill from another
+- For a normal UI development build, always build `main`, even when the user invokes the skill from another
   branch or names a different ref. Dispatch with `--ref main`; GitHub builds
   the code already merged and pushed to `main`. The local checkout and its
   working tree do not affect the build, so do not switch branches or alter
@@ -51,5 +51,21 @@ image references:
 - Moving ad hoc tag: `ghcr.io/jtenniswood/athena:dev-latest`
 - Commit-specific tag: `ghcr.io/jtenniswood/athena:dev-sha-COMMIT`
 
-Each successful ad hoc run updates `dev-latest`. The workflow does not deploy,
-and does not change the release-only `latest` tag.
+Main builds publish the UI and `ghcr.io/jtenniswood/athena-hermes` companion by default. Each image gets its own development tags. A successful main run triggers the signed Athena Komodo deployment request; a feature-branch run publishes without that request. Stable `latest` tags are unchanged.
+
+## Prepare a requested Hermes server change before UI merge
+
+The main-only rule above applies to normal UI builds. When a user requests a
+companion-server image change needed before a UI migration can merge, publish
+only that companion from its committed, pushed feature branch:
+
+```sh
+gh workflow run dev-image.yml --repo jtenniswood/athena --ref FEATURE_BRANCH -f image=hermes
+```
+
+This exception publishes `ghcr.io/jtenniswood/athena-hermes:dev-latest` and
+`dev-sha-COMMIT`, and leaves the UI image unchanged. Use the same exact-run
+identification and monitoring procedure. Verify that the UI publish step was
+skipped. Pull and exercise the immutable server tag before sharing the matching
+Compose file. Keep the existing Hermes data volume and authentication settings.
+Do not use this exception to publish the UI from an unmerged branch.

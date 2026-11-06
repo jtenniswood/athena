@@ -1,29 +1,20 @@
-# Add this file to the EXISTING official Hermes server stack, alongside its Compose file.
+# Add this file to the EXISTING Hermes server stack, alongside its Compose file.
 # Rename the service key if the existing Hermes service is not named "hermes".
 services:
   hermes:
-    # Use the official image's bootstrap, which runs the gateway as the Hermes user.
+    image: ${ATHENA_HERMES_IMAGE:-ghcr.io/jtenniswood/athena-hermes:dev-latest}
+    # The image's upstream bootstrap runs the gateway as the Hermes user.
     user: "0:0"
     init: false
-    entrypoint:
-      - /bin/sh
-      - -ec
-      - |
-        cat > /etc/cont-init.d/02-athena-webapp <<'ATHENA_WEBAPP_INIT'
-        #!/command/with-contenv sh
-        set -eu
-        # Merge Webapp keys after Hermes prepares its existing data volume.
-        s6-setuidgid hermes hermes config set webapp.enabled true
-        s6-setuidgid hermes hermes config set webapp.host 0.0.0.0
-        s6-setuidgid hermes hermes config set webapp.port 9120
-        s6-setuidgid hermes hermes config set webapp.public_url "$$ATHENA_PUBLIC_URL"
-        ATHENA_WEBAPP_INIT
-        chmod 0755 /etc/cont-init.d/02-athena-webapp
-        exec /opt/hermes/docker/entrypoint-dispatch.sh "$$@"
-      - athena-webapp
+    entrypoint: null
     command: ["gateway", "run"]
     ports:
-      - "9120:9120"
+      - "${HERMES_WEBAPP_PORT:-9120}:${HERMES_WEBAPP_PORT:-9120}"
     environment:
-      ATHENA_PUBLIC_URL: ${ATHENA_PUBLIC_URL:?Set ATHENA_PUBLIC_URL to the browser-facing Athena URL}
-      S6_BEHAVIOUR_IF_STAGE2_FAILS: "2"
+      # Keep the previous dashboard available during the listener migration.
+      HERMES_DASHBOARD: ${HERMES_DASHBOARD:-1}
+      HERMES_WEBAPP_ENABLED: ${HERMES_WEBAPP_ENABLED:-true}
+      HERMES_WEBAPP_HOST: ${HERMES_WEBAPP_HOST:-0.0.0.0}
+      HERMES_WEBAPP_PORT: ${HERMES_WEBAPP_PORT:-9120}
+      # Required when enabled. ATHENA_PUBLIC_URL remains an accepted alias.
+      HERMES_WEBAPP_PUBLIC_URL: ${HERMES_WEBAPP_PUBLIC_URL:-${ATHENA_PUBLIC_URL:-}}

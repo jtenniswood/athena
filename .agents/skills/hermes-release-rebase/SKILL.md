@@ -27,7 +27,7 @@ without creating an empty update PR.
 ## Update the release baseline
 
 - Prefer `pnpm update:hermes [vX.Y.Z]` to resolve and update the stable release,
-  including the immutable `testGatewayImage`. Run `pnpm sync:renderer-dependencies`
+  including the immutable `gatewayImage` used by the companion server and CI fixture. Run `pnpm sync:renderer-dependencies`
   after preparing the new sources.
 - Update `flake.lock`'s Hermes `rev`, `narHash` and `lastModified` for the verified
   commit, and update `hermes-release.json`'s version and revision together. Obtain

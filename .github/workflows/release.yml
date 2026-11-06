@@ -47,6 +47,24 @@ jobs:
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
             io.hermes.release.channel=${{ steps.identity.outputs.channel }}
+      - name: Identify Hermes server image
+        id: hermes_identity
+        run: node scripts/image-publication.mjs --github-output --hermes
+      - name: Build and publish Hermes server image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile.hermes
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.hermes_identity.outputs.tags }}
+          build-args: |
+            HERMES_IMAGE=${{ steps.hermes_identity.outputs.upstream_image }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            io.hermes.upstream.revision=${{ steps.hermes_identity.outputs.upstream_revision }}
+            io.hermes.release.channel=${{ steps.hermes_identity.outputs.channel }}
 
   deploy-production:
     if: github.ref == 'refs/heads/main' && needs.build.outputs.deploy == 'true'

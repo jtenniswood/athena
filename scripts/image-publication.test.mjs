@@ -49,6 +49,17 @@ test('unapproved events and malformed or prerelease version tags cannot change s
   assert.throws(() => imagePublication({ ...input, ref: 'refs/heads/main', event: 'pull_request' }))
   assert.throws(() => imagePublication({ ...input, repository: 'owner/repo\ninjected', ref: 'refs/heads/main' }))
 })
+test('the Hermes companion uses its own package with the same channel and revision policy', () => {
+  for (const ref of ['refs/heads/codex/feature', 'refs/heads/main', 'refs/tags/v1.2.3']) {
+    const ui = imagePublication({ ...input, ref })
+    const server = imagePublication({ ...input, ref, component: 'hermes' })
+    assert.equal(server.image, image + '-hermes')
+    assert.deepEqual(server.tags, ui.tags.map(tag => tag.replace(image + ':', image + '-hermes:')))
+    assert.equal(server.channel, ui.channel)
+    assert.equal(server.deploy, ui.deploy)
+  }
+  assert.throws(() => imagePublication({ ...input, ref: 'refs/heads/main', component: 'other' }))
+})
 test('workflow outputs and both actual workflow callers use the same publication policy', t => {
   const directory = mkdtempSync(path.join(tmpdir(), 'athena-publication-'))
   t.after(() => rmSync(directory, { recursive: true, force: true }))

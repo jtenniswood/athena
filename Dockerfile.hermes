@@ -1,0 +1,15 @@
+# The publisher supplies the immutable official image from hermes-release.json.
+ARG HERMES_IMAGE
+FROM ${HERMES_IMAGE}
+
+# Run after upstream data initialization and before its profile gateways start.
+COPY --chmod=0755 docker/hermes-webapp-init.sh /etc/cont-init.d/02-athena-webapp
+COPY docker/configure-hermes-webapp.py /opt/athena/configure-hermes-webapp.py
+
+ENV HERMES_WEBAPP_ENABLED=true \
+    HERMES_WEBAPP_HOST=0.0.0.0 \
+    HERMES_WEBAPP_PORT=9120 \
+    S6_BEHAVIOUR_IF_STAGE2_FAILS=2
+
+EXPOSE 9120
+CMD ["gateway", "run"]

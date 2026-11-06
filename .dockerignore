@@ -27,3 +27,5 @@ android-release
 *.jks
 *.keystore
 **/google-services.json
+**/__pycache__
+**/*.pyc

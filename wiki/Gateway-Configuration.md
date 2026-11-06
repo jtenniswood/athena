@@ -52,26 +52,42 @@ opens Hermes sign-in and resumes chat after a session is established. Existing
 session-token installations can use **Use a session token** on the welcome
 screen. Keep tokens and provider secrets out of the tracked Compose example.
 
-### Keep the Webapp settings inside Compose
+### Configure Webapp through the server image
 
-For the official Hermes v0.23.0 Docker image, add
+The `ghcr.io/jtenniswood/athena-hermes` companion image adds a small startup hook
+to the pinned official Hermes release. It runs on the **existing Hermes service**,
+with its existing data and credentials. Athena's own image stays UI-only. Add
 [`compose.hermes-webapp.override.yml`](../compose.hermes-webapp.override.yml)
 after the existing **Hermes server** Compose file. It inherits the existing
-image, volumes, credentials and other ports. If its service has a name other
+volumes, credentials and other ports, and selects the companion image. If its service has a name other
 than `hermes`, change that service key in the override to match.
 
 ```sh
-ATHENA_PUBLIC_URL=https://athena.example.com docker compose \
+HERMES_WEBAPP_PUBLIC_URL=https://athena.example.com docker compose \
   -f compose.yml -f compose.hermes-webapp.override.yml up -d hermes
 ```
 
-Set `ATHENA_PUBLIC_URL` to the address used to open Athena. In Komodo, include
+Set `HERMES_WEBAPP_PUBLIC_URL` to the address used to open Athena. In Komodo, include
 both Compose files in the existing Hermes stack, with the override second, and
-set that variable in the stack environment. The override embeds its startup
-configuration in Compose, merges only the four Webapp settings through Hermes's
-config CLI, and publishes port 9120. No separate Webapp YAML file is needed.
-The official bootstrap still prepares the data and runs the gateway as the
-Hermes user. Each container start reapplies those Webapp settings.
+set the variables in the stack environment. The setup code is built into the
+companion image. Each start validates these settings, merges the Webapp keys
+through Hermes's config writer, and starts the gateway through its original
+bootstrap. The remaining config stays intact. No shell script or separate
+Webapp YAML file is needed in the stack.
+
+| Compose setting | Default | Purpose |
+| --- | --- | --- |
+| `ATHENA_HERMES_IMAGE` | `ghcr.io/jtenniswood/athena-hermes:dev-latest` | Companion image; an immutable `dev-sha-<revision>` tag can pin it. |
+| `HERMES_WEBAPP_ENABLED` | `true` | Enable the Webapp listener; `false` leaves the gateway running without it. |
+| `HERMES_WEBAPP_HOST` | `0.0.0.0` | Bind address inside the server container. |
+| `HERMES_WEBAPP_PORT` | `9120` | Listener and published port. Match Athena's target to this port. |
+| `HERMES_WEBAPP_PUBLIC_URL` | Required when enabled | Athena's browser-facing HTTP(S) origin. `ATHENA_PUBLIC_URL` remains an alias. |
+| `HERMES_DASHBOARD` | `1` in the migration override | Keep the earlier dashboard available during migration; set `0` when it is no longer needed. |
+
+The companion uses the official image's root initialization, then runs Hermes
+as its own user. Keep its default entrypoint and `init: false` so the startup
+hook runs before profile gateways start. Model and authentication settings remain
+on the existing server and can continue to use its config and environment.
 
 Keep Athena in its existing stack with `HERMES_GATEWAY_URL` targeting that
 listener and the previous origin retained in `HERMES_GATEWAY_IDENTITY_URL`.
@@ -107,10 +123,11 @@ server version. Test connection also checks that the Webapp socket-ticket route
 is available. A dashboard/serve target produces guidance to enable Webapp and
 correct the configured address, rather than an unexplained ticket error.
 
-The release integration check uses the immutable `testGatewayImage` in
+The release integration check uses the immutable `gatewayImage` in
 `hermes-release.json`, and verifies that its installation commit matches the
-renderer pin. This records the tested backend; it does not upgrade the operator's
-server. Other backend versions require their own compatibility verification.
+renderer pin. This pins both the companion server base and the tested backend. The operator's
+running server changes only when its stack is redeployed with that image. Other
+backend versions require their own compatibility verification.
 
 For a listener migration, set `HERMES_GATEWAY_IDENTITY_URL` to the old origin to
 preserve the existing storage namespace. Do not reuse an identity for a different
