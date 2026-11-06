@@ -14,6 +14,7 @@ test('unsupported browser hosts lack app-window capabilities while preinstalled 
     if (athena) {
       const construction = vm.createContext({ exports: {}, window, require: () => ({
         browserCapabilities: () => ({ secureTokenStorage: false }), createWebZoomBridge: () => ({}),
+        mountedPluginFiles: () => ({}),
         resolveToken: () => '', installBrowserDesktopBridge: () => {
           window.hermesDesktop = { profile: {}, openWindow: existing, openSessionWindow: existing, terminal: {} }
           return true

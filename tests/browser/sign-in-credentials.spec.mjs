@@ -124,6 +124,13 @@ test('a confirmed token apply replaces the saved credential and preserves the dr
   await page.getByRole('button', { name: 'Save and reconnect', exact: true }).click()
   await expect.poll(() => credentials(page)).toEqual({ mode: 'token', token: 'synthetic-new-token' })
   await expect(token).toHaveValue('')
+  const fileCredentials = []
+  await page.route('**/api/fs/read-text*', route => {
+    fileCredentials.push(route.request().headers()['x-hermes-session-token'])
+    return route.fulfill({ json: { path: '/workspace/probe.txt', text: 'Updated credential' } })
+  })
+  expect(await page.evaluate(() => window.hermesDesktop.readFileText('/workspace/probe.txt'))).toMatchObject({ text: 'Updated credential' })
+  expect(fileCredentials).toEqual(['synthetic-new-token'])
   await retainedDraft(page)
 })
 

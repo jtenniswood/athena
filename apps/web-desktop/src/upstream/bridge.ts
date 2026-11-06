@@ -10,6 +10,7 @@ import { createWebZoomBridge } from '../platform/display'
 import { webNotify } from '../platform/notifications'
 import { pickBrowserFiles } from '../platform/files'
 import { writeClipboard } from '../platform/clipboard'
+import { mountedPluginFiles } from '../platform/plugin-files'
 import { androidPushGatewayUrl, resumeAndroidPush, stopAndroidPush } from '../platform/android-push'
 import { buildInfo } from '../build-info'
 import { openBrowserExternalLink } from './external-links'
@@ -32,6 +33,10 @@ export function createWebBridge(): Window['hermesDesktop'] {
   if (!installBrowserDesktopBridge()) throw new Error('The official Hermes Webapp bridge could not start.')
   let native = window.hermesDesktop
   let nativeToken = token
+  // Native methods capture their sign-in at installation; resolve them again after a credential change.
+  const inherited = Object.fromEntries(Object.entries(native).map(([name, value]) => [name,
+    typeof value === 'function' ? (...args: unknown[]) => Reflect.apply(Reflect.get(native, name), native, args) : value
+  ])) as typeof native
   window.__HERMES_WEB_BRIDGE__ = true
   const listeners = new Set<() => void | Promise<void>>()
   const upload = async <T>(work: () => Promise<T>): Promise<T> => {
@@ -54,7 +59,8 @@ export function createWebBridge(): Window['hermesDesktop'] {
     }
   }
   const bridge: Window['hermesDesktop'] = {
-    ...native,
+    ...inherited,
+    ...mountedPluginFiles(() => native),
     glassSupported: false,
     translucencySupported: false,
     zoom: createWebZoomBridge(),
