@@ -52,6 +52,37 @@ opens Hermes sign-in and resumes chat after a session is established. Existing
 session-token installations can use **Use a session token** on the welcome
 screen. Keep tokens and provider secrets out of the tracked Compose example.
 
+### Configure a direct Hermes installation
+
+For Hermes installed directly on another machine, run these commands on that
+machine using the same OS account, profile, `HERMES_HOME` and credential
+environment as the existing Hermes process. Replace the public URL with the
+address used to open Athena:
+
+```sh
+hermes config set webapp.enabled true
+hermes config set webapp.host 0.0.0.0
+hermes config set webapp.port 9120
+hermes config set webapp.public_url https://athena.example.com
+hermes gateway restart
+hermes webapp --no-open
+hermes webapp --status
+```
+
+The config commands update the Webapp settings in the existing Hermes home.
+The gateway reads them at startup. `hermes webapp --no-open` builds the Webapp
+bundle if needed and starts the gateway if it is not running; `--status`
+reports whether the listener is available. Sign-in uses that installation's
+configured dashboard provider. See the
+[official Webapp commands](https://hermes-agent.nousresearch.com/docs/reference/cli-commands#hermes-webapp).
+
+Keep Athena's Compose file UI-only and point `HERMES_GATEWAY_URL` at this
+machine's reachable Webapp listener. The optional container override below is
+for an existing Docker-based Hermes service; a direct installation does not
+need a Hermes container added to Athena's stack. During migration, keep the
+working UI image and previous listener until the Webapp listener is ready,
+then retain the previous origin in `HERMES_GATEWAY_IDENTITY_URL`.
+
 ### Configure Webapp through the server image
 
 The `ghcr.io/jtenniswood/athena-hermes` companion image adds a small startup hook
