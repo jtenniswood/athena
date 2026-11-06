@@ -29,7 +29,7 @@ for (const mode of ['standalone', 'middleware']) {
     const server = createServer((req, res) => { void services.handle(req, res).then(handled => { if (!handled) fallback(req, res) }) })
     services.attach(server)
     services.attach(server)
-    assert.equal(server.listenerCount('upgrade'), 1)
+    assert.equal(server.listenerCount('upgrade'), 2)
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
     t.after(async () => { services.close(); services.close(); await services.drain(); await new Promise(resolve => server.close(resolve)) })
     const origin = `http://127.0.0.1:${server.address().port}`

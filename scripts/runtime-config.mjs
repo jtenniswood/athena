@@ -18,7 +18,7 @@ export function matchesGatewayRoute(url) {
 }
 
 export function runtimeConfiguration(env = process.env) {
-  const url = new URL(env.HERMES_GATEWAY_URL || 'http://127.0.0.1:9120')
+  const url = new URL(env.HERMES_GATEWAY_URL || 'http://127.0.0.1:9119')
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash || url.pathname !== '/') {
     throw new Error('HERMES_GATEWAY_URL must be an HTTP(S) origin without credentials, a path, query, or fragment')
   }

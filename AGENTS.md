@@ -12,9 +12,10 @@ Athena — a customised **Hermes Agent chat UI** as a web app / PWA
 the pinned `hermes-agent` at build time.
 The renderer uses the formal release pinned in `hermes-release.json` and
 `flake.lock`. The UI-only image connects to an existing Hermes server configured
-by `HERMES_GATEWAY_URL` in Compose. Target its enabled Webapp listener (normally
-port 9120); retain the previous origin in `HERMES_GATEWAY_IDENTITY_URL` during a
-listener migration.
+by `HERMES_GATEWAY_URL` in Compose. Standard serve/dashboard listeners (normally
+port 9119) work through the image's compatibility adapter. Existing Webapp
+listeners also work; retain the previous origin in `HERMES_GATEWAY_IDENTITY_URL`
+during a deliberate listener migration.
 
 ## Non‑negotiable rules
 
@@ -64,7 +65,7 @@ git push origin <branch>
   serves the UI and proxies the configured external Hermes gateway. Real image
   builds run in GitHub Actions.
 - **Dev loop:** `pnpm prepare:renderer` → `pnpm install --frozen-lockfile` →
-  `HERMES_GATEWAY_URL=http://127.0.0.1:9120 pnpm dev`
+  `HERMES_GATEWAY_URL=http://127.0.0.1:9119 pnpm dev`
   (port 5174, against an existing Hermes server).
   `nix develop` is an optional development environment;
   do not run Nix builds on the VPS.

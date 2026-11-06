@@ -1,5 +1,6 @@
 import { installBrowserDesktopBridge } from '@/lib/browser-desktop-bridge'
 import { webappSessionKey } from '@/lib/browser-launch-session'
+import { BROWSER_UPLOAD_MAX_BYTES } from '@/lib/browser-uploads'
 import { tagRegistrySessionResponse } from '../../../desktop/electron/profile-session-routing'
 import { assertSafeConnectionChange, beginOperation, setActiveWork } from '../platform/reload-safety'
 import { beginBrowserTransition } from '../platform/browser-transition'
@@ -8,12 +9,13 @@ import { browserSignInTarget } from '../platform/sign-in-target'
 import { browserDefaultProfile } from '../platform/browser-default-profile'
 import { createWebZoomBridge } from '../platform/display'
 import { webNotify } from '../platform/notifications'
-import { pickBrowserFiles } from '../platform/files'
+import { pickBrowserFiles, isWebFileHandle, registerWebFile, webFileAsDataUrl } from '../platform/files'
 import { writeClipboard } from '../platform/clipboard'
 import { mountedPluginFiles } from '../platform/plugin-files'
 import { androidPushGatewayUrl, resumeAndroidPush, stopAndroidPush } from '../platform/android-push'
 import { buildInfo } from '../build-info'
 import { openBrowserExternalLink } from './external-links'
+import { standardGatewaySocket, type StandardSocket } from '../platform/standard-gateway'
 import type { HermesApiRequest } from './types'
 import { baseUrl, WEB_CONNECTION_ID, resolveToken, openOauthLoginPopup, fetchStatus, apiFetch,
   waitForRemoteRestart, loadStoredConnection, persistConnection, toConnectionConfig } from '../platform/connection'
@@ -33,6 +35,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
   if (!installBrowserDesktopBridge()) throw new Error('The official Hermes Webapp bridge could not start.')
   let native = window.hermesDesktop
   let nativeToken = token
+  let standardServer = false
   // Native methods capture their sign-in at installation; resolve them again after a credential change.
   const inherited = Object.fromEntries(Object.entries(native).map(([name, value]) => [name,
     typeof value === 'function' ? (...args: unknown[]) => Reflect.apply(Reflect.get(native, name), native, args) : value
@@ -43,17 +46,24 @@ export function createWebBridge(): Window['hermesDesktop'] {
     const finish = beginOperation()
     try { return await work() } finally { finish() }
   }
+  const stageFile = (file: File) => upload(async () => {
+    if (!standardServer) return native.stageFileForAttach!(file)
+    if (file.size > BROWSER_UPLOAD_MAX_BYTES) throw new Error(`The file is larger than ${BROWSER_UPLOAD_MAX_BYTES / (1024 * 1024)} MiB, the largest file the browser can attach.`)
+    return registerWebFile(file, file.name)
+  })
   const ownedConnection = (connection: Awaited<ReturnType<typeof native.getConnection>>) => ({
     ...connection, connectionId: WEB_CONNECTION_ID, registryScoped: true, sharedRemote: true
   })
-  const nativeSocket = async (dial: () => ReturnType<typeof native.getGatewayWsUrl>) => {
+  const nativeSocket = async (dial: () => ReturnType<typeof native.getGatewayWsUrl>, profile?: string | null) => {
     try {
       const result = await dial()
       if (typeof result === 'string') return androidPushGatewayUrl(result)
       return result.ok ? { ...result, wsUrl: await androidPushGatewayUrl(result.wsUrl) } : result
     } catch (error) {
-      if (/404|tickets are unavailable on this surface/i.test(String(error))) {
-        throw new Error('This Hermes server does not expose the Webapp connection. Enable Webapp on the existing server and point Athena at its Webapp address (usually port 9120).')
+      if (/^404:/.test(error instanceof Error ? error.message : String(error))) {
+        const url = await standardGatewaySocket('gateway', profile)
+        standardServer = true
+        return androidPushGatewayUrl(url)
       }
       throw error
     }
@@ -80,14 +90,24 @@ export function createWebBridge(): Window['hermesDesktop'] {
         agents: roster.agents.map(agent => ({ ...agent, connectionId: WEB_CONNECTION_ID })),
         sources: roster.sources.map(source => ({ ...source, connectionId: WEB_CONNECTION_ID })) }
     },
-    getGatewayWsUrl: profile => nativeSocket(() => native.getGatewayWsUrl(profile)),
-    getGatewayWsUrlFor: payload => nativeSocket(() => native.getGatewayWsUrlFor!({ ...payload, connectionId: nativeOwner(payload.connectionId) })),
-    getAudioWsUrl: payload => native.getAudioWsUrl!({ ...payload, connectionId: nativeOwner(payload.connectionId) }),
+    getGatewayWsUrl: profile => nativeSocket(() => native.getGatewayWsUrl(profile), profile),
+    getGatewayWsUrlFor: payload => nativeSocket(() => native.getGatewayWsUrlFor!({ ...payload, connectionId: nativeOwner(payload.connectionId) }), payload.profile),
+    getAudioWsUrl: async payload => {
+      try { return await native.getAudioWsUrl!({ ...payload, connectionId: nativeOwner(payload.connectionId) }) }
+      catch (error) {
+        if (!/^404:/.test(error instanceof Error ? error.message : String(error))) throw error
+        const socket = payload.path.endsWith('/speak-stream') ? 'speak-stream' : 'transcribe-stream'
+        return standardGatewaySocket(socket as StandardSocket, payload.profile)
+      }
+    },
     getGatewayFileStreamUrl: payload => native.getGatewayFileStreamUrl!({ ...payload, connectionId: nativeOwner(payload.connectionId) }),
     saveGatewayFile: payload => native.saveGatewayFile!({ ...payload, connectionId: nativeOwner(payload.connectionId) }),
-    // Athena's picker owns refusal, supersession and update blocking; Hermes owns upload staging.
-    stageFileForAttach: file => upload(() => native.stageFileForAttach!(file)),
-    savePastedText: text => upload(() => native.savePastedText(text)),
+    // Athena's picker owns refusal, supersession and update blocking on both server surfaces.
+    stageFileForAttach: stageFile,
+    savePastedText: text => standardServer ? stageFile(new File([text], 'pasted.txt', { type: 'text/plain' })) : upload(() => native.savePastedText(text)),
+    getStagedFileDisplayName: path => isWebFileHandle(path) ? path.split('/').at(-1) : native.getStagedFileDisplayName!(path),
+    readFileDataUrl: path => isWebFileHandle(path) ? webFileAsDataUrl(path) : native.readFileDataUrl(path),
+    readFileDataUrlForAttach: path => isWebFileHandle(path) ? webFileAsDataUrl(path) : native.readFileDataUrlForAttach!(path),
     saveImageBuffer: (data, ext) => upload(() => native.saveImageBuffer(data, ext)),
     saveClipboardImage: () => upload(() => native.saveClipboardImage()),
     selectPaths: async options => Promise.all((await pickBrowserFiles(options)).map(file => bridge.stageFileForAttach!(file))),

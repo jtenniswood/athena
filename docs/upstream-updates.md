@@ -4,9 +4,9 @@ Athena builds its presentation layer against an exact official Hermes release.
 `hermes-release.json` records the tag, peeled commit and immutable official
 gateway image. `flake.lock` records the same source commit and its Nix fetch hash.
 The production Athena image contains the UI and hosting services; the operator's
-Hermes server remains separate. The optional `athena-hermes` companion layers
-Compose-driven Webapp setup onto that official image; it does not rebuild
-Hermes or add it to Athena's UI image.
+Hermes server remains separate. The official gateway image is used only as a
+disposable integration-test fixture; production builds publish Athena's UI
+image without a Hermes runtime.
 
 ## Prepare an update
 
@@ -61,8 +61,9 @@ renderer SDK.
 Athena retains small host adapters for its stable owner identity, guarded file
 picker and uploads, sign-in recovery, clipboard selection fallback, notifications,
 app windows, account-scoped preferences and mounted UI plugin files. The official
-bridge owns server file access and Webapp transport, including one-use socket
-tickets.
+bridge owns server file access and native Webapp transport. Athena's standard
+server adapter uses Hermes's existing authenticated tickets and the released
+renderer's standard-server wire support when Webapp endpoints are absent.
 
 ## Review and repair
 
@@ -75,8 +76,8 @@ all production guards and meaningful behavior checks.
 
 Run the affected workflows, including real sign-in, chat, draft reload, file
 staging, sign-out and profile ownership. The separate fixture in
-`.github/workflows/remote-gateway.yml` enables the official Webapp listener and
-checks its installation stamp against the release commit. Real Athena image
+`.github/workflows/remote-gateway.yml` starts the official standard serve listener
+with Webapp disabled and checks its installation stamp against the release commit. Real Athena image
 builds run in GitHub Actions.
 
 Commit and push meaningful changes, then open a PR on `origin`. Include the old
@@ -86,9 +87,9 @@ is insufficient evidence for merging an update.
 
 ## Deployment boundary
 
-Use the existing server's Webapp listener, normally port 9120, as Athena's target.
-Keep `webapp.public_url` set to Athena's browser-facing URL. When changing the
-listener address, retain the prior origin in `HERMES_GATEWAY_IDENTITY_URL` to
+Keep the existing standard serve/dashboard target, normally port 9119. The image
+adapts its connection automatically; an enabled Webapp listener also works.
+When deliberately changing the listener address, retain the prior origin in `HERMES_GATEWAY_IDENTITY_URL` to
 preserve browser and account namespaces. See [gateway configuration](../wiki/Gateway-Configuration.md).
 
 The moving-main scheduled updater and its automatic merge machinery have been

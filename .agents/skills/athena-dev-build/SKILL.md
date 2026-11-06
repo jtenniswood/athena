@@ -12,7 +12,7 @@ state this effect before dispatch and honor existing session authorization.
 
 ## Choose the source revision
 
-- For a normal UI development build, always build `main`, even when the user invokes the skill from another
+- Always build `main`, even when the user invokes the skill from another
   branch or names a different ref. Dispatch with `--ref main`; GitHub builds
   the code already merged and pushed to `main`. The local checkout and its
   working tree do not affect the build, so do not switch branches or alter
@@ -51,21 +51,7 @@ image references:
 - Moving ad hoc tag: `ghcr.io/jtenniswood/athena:dev-latest`
 - Commit-specific tag: `ghcr.io/jtenniswood/athena:dev-sha-COMMIT`
 
-Main builds publish the UI and `ghcr.io/jtenniswood/athena-hermes` companion by default. Each image gets its own development tags. A successful main run triggers the signed Athena Komodo deployment request; a feature-branch run publishes without that request. Stable `latest` tags are unchanged.
-
-## Prepare a requested Hermes server change before UI merge
-
-The main-only rule above applies to normal UI builds. When a user requests a
-companion-server image change needed before a UI migration can merge, publish
-only that companion from its committed, pushed feature branch:
-
-```sh
-gh workflow run dev-image.yml --repo jtenniswood/athena --ref FEATURE_BRANCH -f image=hermes
-```
-
-This exception publishes `ghcr.io/jtenniswood/athena-hermes:dev-latest` and
-`dev-sha-COMMIT`, and leaves the UI image unchanged. Use the same exact-run
-identification and monitoring procedure. Verify that the UI publish step was
-skipped. Pull and exercise the immutable server tag before sharing the matching
-Compose file. Keep the existing Hermes data volume and authentication settings.
-Do not use this exception to publish the UI from an unmerged branch.
+Main builds publish Athena's UI image and trigger the signed Komodo deployment
+request. The image connects to an existing standard Hermes server using the
+Compose target; it does not build or deploy a separate Hermes server image.
+Stable `latest` tags are unchanged by development builds.

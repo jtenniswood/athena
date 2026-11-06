@@ -99,7 +99,7 @@ The workflow checks that these values are present and that the listener URL is
 HTTPS with the expected route shape. The actual Komodo stack definition and its
 runtime configuration are outside this repository. Verify the configured stack
 uses the intended Athena image and preserves the existing preference volume,
-Webapp target, stable gateway identity, published port, and reverse-proxy
+gateway target, stable gateway identity, published port, and reverse-proxy
 connection before changing deployment configuration. Hermes data stays on the
 separate server.
 
@@ -159,34 +159,16 @@ command and PR workflow in the [updater reference](upstream-updates.md). Neither
 `HERMES_RENDERER_UPDATES_ENABLED` nor `HERMES_PROMOTION_ENABLED` controls the normal
 image publisher or deployment.
 
-## Native Webapp connection migration
+## Released renderer and standard Hermes connections
 
-Athena's v0.23.0 renderer integration uses Hermes's official browser services.
-Enable `webapp` on the existing Hermes server and point `HERMES_GATEWAY_URL` at
-its listener, normally port 9120. Set `webapp.public_url` to Athena's public URL.
-Keep `4174:80`, the Cloudflare host-port target and the preference volume.
+The image connects to an existing standard Hermes serve/dashboard listener,
+normally port 9119. Its compatibility service supplies the authenticated socket
+boundary while the released renderer retains its native standard-server wire
+support. An already enabled Webapp listener is also supported automatically.
+The image update does not require a server-image replacement, a new Hermes
+process, or changes to the existing server's Webapp settings.
 
-Retain the previous gateway origin in `HERMES_GATEWAY_IDENTITY_URL` when changing
-listeners; it preserves storage identity without routing requests to that old
-address. Apply these external settings before the Athena image update. A rollback
-may also require restoring the previous target; keep the data volumes, identity
-setting and browser storage intact. The earlier combined image's Python setup
-service and `/opt/data` mount are unnecessary for the UI-only image.
-
-
-## Companion Hermes server image
-
-`Dockerfile.hermes` layers the Compose-driven Webapp startup hook onto the
-immutable official `gatewayImage` in `hermes-release.json`. It inherits the
-existing gateway runtime and adds no package installation or renderer build.
-The development and stable publishers build `ghcr.io/jtenniswood/athena-hermes`
-with the same channel/tag policy as the UI package. The images remain separate.
-
-For a listener migration, prepare the companion from the PR branch before the
-UI merge using **Build development image**, selecting `hermes` for its image
-input. That build publishes only the server package and does not trigger the
-main-only Komodo request. Use its immutable `dev-sha-<revision>` tag on the
-existing Hermes service and apply the [Compose settings](../wiki/Gateway-Configuration.md#configure-webapp-through-the-server-image).
-Keep its data volume and credentials, then verify the listener before merging
-the UI change. Every successful main run still requests the existing Athena
-Komodo deployment, including a manually selected server-only main run.
+Keep the working `HERMES_GATEWAY_URL`, tunnel port and preference volume when
+updating. If you deliberately change the target listener, retain the old origin
+in `HERMES_GATEWAY_IDENTITY_URL`. The earlier combined image's Python setup
+service and Hermes data mount are unnecessary for the UI-only image.

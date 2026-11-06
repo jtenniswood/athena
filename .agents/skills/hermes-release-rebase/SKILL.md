@@ -27,7 +27,7 @@ without creating an empty update PR.
 ## Update the release baseline
 
 - Prefer `pnpm update:hermes [vX.Y.Z]` to resolve and update the stable release,
-  including the immutable `gatewayImage` used by the companion server and CI fixture. Run `pnpm sync:renderer-dependencies`
+  including the immutable `gatewayImage` used by the official backend CI fixture. Run `pnpm sync:renderer-dependencies`
   after preparing the new sources.
 - Update `flake.lock`'s Hermes `rev`, `narHash` and `lastModified` for the verified
   commit, and update `hermes-release.json`'s version and revision together. Obtain
@@ -81,8 +81,9 @@ The moving-main scheduled updater has been removed. Use the manual release
 command and normal PR flow. Keep future recurring proposals disabled unless
 explicitly requested; do not change repository settings.
 
-The native bridge requires the existing gateway's enabled Webapp listener,
-normally port 9120. Preserve the previous backend origin in
+Keep the existing standard serve/dashboard listener, normally port 9119. Verify
+the image's ticket and socket compatibility against an unmodified Hermes server
+with Webapp disabled; an enabled Webapp listener remains supported. Preserve the previous backend origin in
 `HERMES_GATEWAY_IDENTITY_URL` when changing listeners, and keep the browser
 connection owner `web-single` so drafts and profile routes retain their scope.
 Merging to `main` builds the development image and automatically requests a

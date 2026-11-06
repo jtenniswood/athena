@@ -27,7 +27,7 @@ The local loop is:
 pnpm prepare:renderer
 pnpm install --frozen-lockfile
 pnpm check:renderer-dependencies
-HERMES_GATEWAY_URL=http://127.0.0.1:9120 pnpm dev
+HERMES_GATEWAY_URL=http://127.0.0.1:9119 pnpm dev
 ```
 
 The backend must already be running. Open `http://localhost:5174` and configure

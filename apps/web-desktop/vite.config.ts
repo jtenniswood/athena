@@ -142,7 +142,7 @@ function attachDynamicProxy(server: ProxyServerLike): void {
   })().catch(next) })
 
   server.httpServer?.on('upgrade', (req, socket, head) => {
-    if (req.url?.split('?')[0] === '/api/athena/android/ws') return
+    if (['/api/athena/android/ws', '/api/athena/gateway/ws'].includes(req.url?.split('?')[0] || '')) return
     if (!matchesGatewayRoute(req.url)) return
     proxy.ws(req, socket, head, { target: hosting.target })
   })
@@ -164,7 +164,7 @@ export default defineConfig(({ command, mode }) => {
   // Extra hostnames allowed past Vite's Host check, from apps/web-desktop/.env
   // (WEB_ALLOWED_HOSTS, comma-separated) — e.g. Tailscale names, LAN hostnames.
   const env = loadEnv(mode, __dirname, '')
-  hosting = runtimeConfiguration({ HERMES_GATEWAY_URL: 'http://127.0.0.1:9120', HERMES_HOME: path.join(os.homedir(), '.hermes'), ...env, ...process.env })
+  hosting = runtimeConfiguration({ HERMES_GATEWAY_URL: 'http://127.0.0.1:9119', HERMES_HOME: path.join(os.homedir(), '.hermes'), ...env, ...process.env })
   const envAllowedHosts = (env.WEB_ALLOWED_HOSTS ?? '')
     .split(',')
     .map(s => s.trim())

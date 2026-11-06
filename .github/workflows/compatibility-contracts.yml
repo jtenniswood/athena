@@ -34,7 +34,7 @@ jobs:
       - name: Typecheck browser and renderer integration
         run: pnpm typecheck
       - name: Verify shared adapter output and startup ordering
-        run: node --test scripts/renderer-adapter.test.mjs scripts/inspect-renderer.test.mjs scripts/sidebar-controller.test.mjs scripts/startup.test.mjs scripts/browser-session-routes.test.mjs scripts/browser-windows.test.mjs scripts/state-safety.test.mjs scripts/settings-save.test.mjs scripts/settings-presentation.test.mjs scripts/config-field-presentation.test.mjs scripts/pending-work.test.mjs scripts/verify-behavior.test.mjs scripts/runtime-services.test.mjs scripts/clipboard.test.mjs scripts/pwa-registration.test.mjs scripts/ambient-claims.test.mjs scripts/file-picker.test.mjs scripts/browser-services.test.mjs scripts/session-summaries.test.mjs scripts/plugin-assets.test.mjs
+        run: node --test scripts/renderer-adapter.test.mjs scripts/inspect-renderer.test.mjs scripts/sidebar-controller.test.mjs scripts/startup.test.mjs scripts/browser-session-routes.test.mjs scripts/browser-windows.test.mjs scripts/state-safety.test.mjs scripts/settings-save.test.mjs scripts/settings-presentation.test.mjs scripts/config-field-presentation.test.mjs scripts/pending-work.test.mjs scripts/verify-behavior.test.mjs scripts/runtime-services.test.mjs scripts/gateway-compatibility.test.mjs scripts/clipboard.test.mjs scripts/pwa-registration.test.mjs scripts/ambient-claims.test.mjs scripts/file-picker.test.mjs scripts/browser-services.test.mjs scripts/session-summaries.test.mjs scripts/plugin-assets.test.mjs
       - name: Verify synthetic gateway contracts
         run: node --test scripts/preview-gateway.test.mjs
       - name: Verify affected declared Node scenarios

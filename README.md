@@ -34,7 +34,7 @@ Edit the Athena service's environment in `compose.example.yml`:
 
 ```yaml
 environment:
-  HERMES_GATEWAY_URL: http://host.docker.internal:9120
+  HERMES_GATEWAY_URL: http://host.docker.internal:9119
   HERMES_GATEWAY_NAME: Hermes
 ```
 
@@ -42,22 +42,11 @@ Use the address reachable from the container, with no `/api` path. The example
 uses a gateway on the Docker host; for another machine, use its HTTP(S) origin.
 The Compose file can also read `HERMES_GATEWAY_URL` and `HERMES_GATEWAY_NAME`
 from your shell or a local `.env` file. Configure models, profiles and sign-in
-on the existing Hermes server. Set its `webapp.public_url` to Athena's browser-facing URL so sign-in returns
-to Athena and the server admits its browser origin. For the local example:
-
-```yaml
-webapp:
-  enabled: true
-  host: 0.0.0.0
-  port: 9120
-  public_url: "http://localhost:4174"
-```
-
-Merge this into Hermes's existing config and apply it through that server's
-normal configuration/restart procedure. With the official Docker image's default
-entrypoint, the existing Hermes service should use `command: ["gateway", "run"]`;
-a `serve` command starts the separate dashboard. For HTTPS access, use your actual
-Athena HTTPS URL. See [gateway configuration](wiki/Gateway-Configuration.md).
+on the existing Hermes server. A standard `hermes serve` listener (normally port
+9119) works with its existing sign-in and data. Athena's image handles the
+browser connection compatibility; no Webapp listener, server-image replacement
+or additional Hermes container is required. See
+[gateway configuration](wiki/Gateway-Configuration.md).
 
 ### 2. Start Athena
 
@@ -66,16 +55,10 @@ docker compose -f compose.example.yml config --quiet
 docker compose -f compose.example.yml up -d
 ```
 
-Athena requires the existing server's **Webapp listener**, normally port 9120,
-with a configured Hermes sign-in provider. The dashboard/`hermes serve` listener
-on port 9119 does not provide the Webapp socket tickets. Publish port 9120 on the
-Hermes service if it is reached through a host port; keep that service's data
-volume and agent configuration intact.
-
-For Webapp setup built into the server image, use the optional
-[`athena-hermes` companion and Compose override](wiki/Gateway-Configuration.md#configure-webapp-through-the-server-image)
-on that existing Hermes service. Configure its listener through Compose
-environment variables; Athena's own image remains UI-only.
+Athena uses the configured server's existing login. It supports the standard
+serve/dashboard connection and automatically uses the native Webapp connection
+when that endpoint is available. Models, profiles and conversations stay on your
+existing Hermes machine.
 
 When migrating from the earlier Athena gateway address, set
 `HERMES_GATEWAY_IDENTITY_URL` to that previous address, including its old port.

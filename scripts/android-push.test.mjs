@@ -18,8 +18,10 @@ async function fixture(t, options = {}) {
   const upstream = new WebSocketServer({ server: gateway })
   let peer
   upstream.on('connection', (socket, req) => {
-    assert.equal(req.url, '/api/ws?ticket=one-use')
+    assert.equal(req.url, options.protocols ? '/api/ws?native_dial=browser' : '/api/ws?ticket=one-use')
     assert.equal(req.headers.cookie, 'session=A')
+    assert.equal(req.headers.origin, `http://127.0.0.1:${gateway.address().port}`)
+    if (options.protocols) assert.equal(req.headers['sec-websocket-protocol'], options.protocols.join(','))
     peer = socket
     socket.on('message', raw => {
       const frame = JSON.parse(raw)
@@ -50,7 +52,7 @@ async function fixture(t, options = {}) {
     method, headers: { Origin: origin, Cookie: `session=${account}`, 'Content-Type': 'application/json', 'X-Forwarded-Proto': 'http' },
     body: JSON.stringify({ deviceId, bindingId, tokenVersion: 0, token: 'fake-device-token-for-testing-only', enabled: true, foreground: false, ...changes })
   })
-  const connect = () => new WebSocket(origin.replace('http:', 'ws:') + `/api/athena/android/ws?ticket=one-use&device=${deviceId}`,
+  const connect = () => new WebSocket(origin.replace('http:', 'ws:') + `/api/athena/android/ws?${options.protocols ? 'native_dial=browser' : 'ticket=one-use'}&device=${deviceId}`, options.protocols || [],
     { headers: { Origin: origin, Cookie: 'session=A', 'X-Forwarded-Proto': 'http' } })
   const emit = (seq, status) => peer.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: {
     type: 'message.complete', session_id: 'runtime-1', seq, payload: { status, text: 'Private chat content must not reach Firebase' }
@@ -106,6 +108,15 @@ test('response completion reaches Firebase after the Android WebView disconnects
   await final
   assert.equal(sent.length, 2, 'duplicates and interrupted responses produce no additional alerts')
   assert.equal(sent[1][1].kind, 'turnError')
+})
+
+test('Android retained sockets preserve native ticket protocols without reflecting the credential', async t => {
+  const app = await fixture(t, { protocols: ['hermes-gateway-v1', 'hermes-gateway-ticket.one-use'] })
+  await app.register()
+  const client = app.connect()
+  await once(client, 'open')
+  assert.equal(client.protocol, 'hermes-gateway-v1')
+  client.close(); await once(client, 'close')
 })
 
 test('device registration requires authentication and sign-out removes its retained connection', { timeout: 10000 }, async t => {

@@ -36,7 +36,7 @@ test('production and development routes have exact path boundaries', () => {
   const config = runtimeConfiguration({ HERMES_HOME: '/tmp/plugin files' })
   const rendered = renderNginx(readFileSync(new URL('../nginx.conf.template', import.meta.url), 'utf8'), config)
   assert.ok(!rendered.includes('${HERMES_'))
-  assert.ok(rendered.includes('proxy_pass http://127.0.0.1:9120;'))
+  assert.ok(rendered.includes('proxy_pass http://127.0.0.1:9119;'))
   assert.throws(() => runtimeConfiguration({ HERMES_HOME: '/tmp/"; include arbitrary;' }), /Hosting paths/)
 })
 

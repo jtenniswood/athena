@@ -178,7 +178,8 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
         const upstreamUrl = new URL(target + '/api/ws')
         upstreamUrl.protocol = upstreamUrl.protocol === 'https:' ? 'wss:' : 'ws:'
         upstreamUrl.search = url.search
-        const upstream = new WebSocket(upstreamUrl, { headers: { Cookie: req.headers.cookie || '', Origin: requestOrigin(req),
+        const protocols = String(req.headers['sec-websocket-protocol'] || '').split(',').map(value => value.trim()).filter(Boolean)
+        const upstream = new WebSocket(upstreamUrl, protocols, { headers: { Cookie: req.headers.cookie || '', Origin: target,
           'X-Forwarded-Host': req.headers['x-forwarded-host'] || req.headers.host,
           'X-Forwarded-Proto': req.headers['x-forwarded-proto'] || (req.socket.encrypted ? 'https' : 'http') },
           handshakeTimeout: 10000, maxPayload: 8 * 1024 * 1024 })
