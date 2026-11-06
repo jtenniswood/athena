@@ -30,6 +30,25 @@ export function verifyApkMetadata({ badging, certificates, expectedFingerprint, 
   return fingerprints[0]
 }
 
+/** Review the final merged APK, including permissions contributed by libraries. */
+export function verifyApkCapabilities(badging) {
+  const allowed = new Set([
+    'android.permission.INTERNET', 'android.permission.REQUEST_INSTALL_PACKAGES',
+    'android.permission.POST_NOTIFICATIONS', 'android.permission.RECORD_AUDIO',
+    'android.permission.MODIFY_AUDIO_SETTINGS', 'android.permission.ACCESS_NETWORK_STATE',
+    'android.permission.WAKE_LOCK', 'com.google.android.c2dm.permission.RECEIVE',
+    'com.athena.android.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'
+  ])
+  const targetSdk = Number(badging.match(/^targetSdkVersion:'(\d+)'/m)?.[1])
+  if (!Number.isInteger(targetSdk) || targetSdk < 36) throw new Error('The published APK must target Android API 36 or newer')
+  const permissions = [...new Set([...badging.matchAll(/^uses-permission(?:-sdk-\d+)?: name='([^']+)'/gm)].map(match => match[1]))].sort()
+  if (!permissions.includes('android.permission.INTERNET')) throw new Error('APK permission inventory is missing')
+  const unexpected = permissions.filter(name => !allowed.has(name))
+  if (unexpected.length) throw new Error(`Review unexpected APK permissions: ${unexpected.join(', ')}`)
+  if (/^application-debuggable/m.test(badging)) throw new Error('A published APK must not be debuggable')
+  return { targetSdk, permissions, debuggable: false }
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim()
@@ -55,13 +74,17 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
         throw new Error('The release APK is missing Firebase configuration')
       const signingCertificateSha256 = verifyApkMetadata({ badging, certificates, version, code,
         expectedFingerprint: readFileSync('apps/android/release-signing.sha256', 'utf8') })
+      const capabilities = verifyApkCapabilities(badging)
       const revision = process.env.ATHENA_ANDROID_BUILD_REVISION
       if (!/^[a-f0-9]{40}$/.test(revision) || git('rev-parse', 'HEAD') !== revision)
         throw new Error('A release must identify its checked-out source commit')
       git('diff', '--quiet', 'HEAD', '--', 'apps/android', 'scripts/android-release.mjs')
+      const sha256 = createHash('sha256').update(readFileSync(apk)).digest('hex')
+      writeFileSync(path.join(path.dirname(output), 'apk-security.json'), JSON.stringify({ schemaVersion: 1,
+        version, versionCode: code, packageName: 'com.athena.android', signingCertificateSha256, sha256, ...capabilities }, null, 2) + '\n')
       writeFileSync(output, JSON.stringify({ schemaVersion: 1, version, versionCode: code,
         packageName: 'com.athena.android', firebaseConfigured: true, revision, bridgeProtocol: 1, minimumServerProtocol: 1,
-        signingCertificateSha256, sha256: createHash('sha256').update(readFileSync(apk)).digest('hex') }, null, 2) + '\n')
+        signingCertificateSha256, sha256 }, null, 2) + '\n')
     } else throw new Error('Use identify or manifest')
   } catch (error) { console.error(error.message); process.exitCode = 1 }
 }

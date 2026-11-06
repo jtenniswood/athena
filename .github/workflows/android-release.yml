@@ -76,7 +76,7 @@ jobs:
           mkdir -p android-release
           cp apps/android/app/build/outputs/apk/release/app-release.apk "android-release/$APK_NAME"
           node scripts/android-release.mjs manifest "android-release/$APK_NAME" android-release/build-info.json
-          (cd android-release && sha256sum "$APK_NAME" build-info.json > SHA256SUMS)
+          (cd android-release && sha256sum "$APK_NAME" build-info.json apk-security.json > SHA256SUMS)
       - uses: actions/upload-artifact@v7
         with:
           name: android-signed-release
