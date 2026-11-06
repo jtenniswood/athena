@@ -162,6 +162,12 @@ test('a postponed update cannot unlock a pending preference application', async 
 
 test('a prepared update refuses preference application until abort and preserves its draft on reload', async ({ page }) => {
   const theme = await offerRemotePreferences(page)
+  const machineRequests = []
+  await page.route('**/api/ui-preferences', route => {
+    machineRequests.push(route.request().method())
+    return route.fulfill({ json: { exists: true, generation: 'another-machine-store', revision: 100,
+      values: { 'hermes-desktop-theme-v2': theme === 'dark' ? 'light' : 'dark' } } })
+  })
   let requests = 0
   await page.route('**/api/athena/preferences', async request => { requests++; await request.continue() })
   expect((await sendFromWorker(page, { type: 'HERMES_FLUSH_UPDATE', transaction: 'update-first' })).ready).toBe(true)
@@ -178,6 +184,7 @@ test('a prepared update refuses preference application until abort and preserves
   await expect(page.getByRole('heading', { name: 'Sync across devices', exact: true })).toBeVisible()
   expect(await page.evaluate(() => window.notificationDocument)).toBeUndefined()
   expect(await page.evaluate(() => localStorage.getItem('hermes-desktop-theme-v2'))).toBe(theme)
+  expect(machineRequests).toEqual([])
   await page.evaluate(() => { window.location.hash = '/preview-research' })
   await expect(composer(page)).toHaveText('Keep this notification-tab draft')
 })

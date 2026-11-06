@@ -163,5 +163,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
   delete (bridge as Partial<Window['hermesDesktop']>).openWindow
   delete (bridge as Partial<Window['hermesDesktop']>).openSessionWindow
   delete (bridge as Partial<Window['hermesDesktop']>).terminal
+  // Athena's account-scoped store owns preference hydration and guarded application.
+  delete (bridge as Partial<Window['hermesDesktop']>).uiPreferences
   return bridge
 }

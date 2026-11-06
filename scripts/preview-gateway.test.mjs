@@ -26,21 +26,6 @@ async function fixture(t) {
   return { ...gateway, origin, socket, request }
 }
 
-test('native browser preference hydration retains a peer value during seeding and supports deletion', async t => {
-  const gateway = await fixture(t)
-  const endpoint = `${gateway.origin}/api/ui-preferences`
-  assert.equal((await (await fetch(endpoint)).json()).exists, false)
-  const write = async body => (await fetch(endpoint, { method: 'PATCH',
-    headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })).json()
-  await write({ values: { theme: 'dark', temporary: 'kept' } })
-  const seeded = await write({ seed: true, values: { theme: 'light', density: 'compact' } })
-  assert.deepEqual(seeded.values, { theme: 'dark', temporary: 'kept', density: 'compact' })
-  const removed = await write({ values: { temporary: null } })
-  assert.equal(removed.exists, true)
-  assert.deepEqual(removed.values, { theme: 'dark', density: 'compact' })
-  gateway.controls.assertExpected()
-})
-
 test('synthetic redirect accepts an active correction and rejects an idle session', async t => {
   const gateway = await fixture(t)
   const params = { session_id: 'preview-week', text: 'Change direction' }

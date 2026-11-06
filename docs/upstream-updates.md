@@ -58,8 +58,9 @@ renderer SDK.
 
 Athena retains small host adapters for its stable owner identity, guarded file
 picker and uploads, sign-in recovery, clipboard selection fallback, notifications,
-app windows and mounted UI plugin files. The official bridge owns server file
-access and Webapp transport, including one-use socket tickets.
+app windows, account-scoped preferences and mounted UI plugin files. The official
+bridge owns server file access and Webapp transport, including one-use socket
+tickets.
 
 ## Review and repair
 
