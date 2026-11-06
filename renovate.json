@@ -101,6 +101,11 @@
         "npm"
       ],
       "minimumReleaseAge": "1 day"
+    },
+    {
+      "description": "Hold the previous Android compiler while the scanner warning is investigated.",
+      "matchPackageNames": ["com.android.application"],
+      "enabled": false
     }
   ]
 }
