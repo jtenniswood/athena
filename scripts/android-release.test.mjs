@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { androidVersion, releaseIdentity, verifyApkMetadata } from './android-release.mjs'
+import { androidVersion, releaseIdentity, verifyApkMetadata, verifyApkCapabilities } from './android-release.mjs'
 
 const source = 'versionCode = 5\nversionName = "0.2.0"'
 const identity = { tag: 'android-v0.2.0', event: 'push', ref: 'refs/tags/android-v0.2.0', source, commit: 'a'.repeat(40), onMain: true }
@@ -12,6 +12,17 @@ test('Android releases require a matching version tag already reviewed on main',
   }
   assert.equal(releaseIdentity({ ...identity, event: 'workflow_dispatch', ref: 'refs/heads/main' }).code, 5)
   assert.throws(() => androidVersion('versionName = "dev"'))
+})
+
+test('release capabilities reject injected sensitive permissions, old targets and debuggable APKs', () => {
+  const badging = "targetSdkVersion:'36'\nuses-permission: name='android.permission.INTERNET'\nuses-permission: name='android.permission.RECORD_AUDIO'"
+  assert.equal(verifyApkCapabilities(badging).targetSdk, 36)
+  for (const name of ['android.permission.READ_SMS', 'android.permission.BIND_ACCESSIBILITY_SERVICE', 'android.permission.QUERY_ALL_PACKAGES', 'unexpected.library.permission']) {
+    assert.throws(() => verifyApkCapabilities(badging + `\nuses-permission: name='${name}'`), /unexpected APK permissions/)
+  }
+  assert.throws(() => verifyApkCapabilities(badging.replace("'36'", "'28'")), /API 36/)
+  assert.throws(() => verifyApkCapabilities(badging + '\napplication-debuggable'), /debuggable/)
+  assert.throws(() => verifyApkCapabilities("targetSdkVersion:'36'"), /inventory/)
 })
 test('release verification rejects an APK with a different package, version or signing key', () => {
   const apk = { badging: "package: name='com.athena.android' versionCode='5' versionName='0.2.0'", version: '0.2.0', code: 5,

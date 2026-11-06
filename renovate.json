@@ -20,6 +20,11 @@
       "description": "Align npm updates with pnpm's one-day release-age policy.",
       "matchDatasources": ["npm"],
       "minimumReleaseAge": "1 day"
+    },
+    {
+      "description": "Hold the previous Android compiler while the scanner warning is investigated.",
+      "matchPackageNames": ["com.android.application"],
+      "enabled": false
     }
   ]
 }
