@@ -8,9 +8,9 @@ import { createPreviewGateway } from '../../scripts/preview/gateway.mjs'
 const root = fileURLToPath(new URL('../../', import.meta.url))
 
 /** One isolated gateway, preference directory and production preview per worker. */
-export async function createBuiltApplication({ prepareHome } = {}) {
+export async function createBuiltApplication({ prepareHome, strict = false } = {}) {
   const temporary = mkdtempSync(path.join(tmpdir(), 'athena-built-browser-'))
-  const gateway = createPreviewGateway({ delay: 1 }), previous = new Map()
+  const gateway = createPreviewGateway({ delay: 1, strict }), previous = new Map()
   let server
   const close = async () => {
     try { await server?.close() }

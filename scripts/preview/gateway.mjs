@@ -21,6 +21,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
   const toolsets = [{ name: 'preview', label: 'Preview tools', description: 'Synthetic tools; no external services are called.', enabled: true, configured: true, tools: ['preview_note'] }]
   const platforms = [{ id: 'discord', name: 'Discord', description: 'Synthetic preview only. No external messages are sent.', docs_url: '', enabled: false, configured: true, env_vars: [], gateway_running: true, state: 'disabled' }]
   const config = createPreviewConfig(profiles, info.model)
+  const uiPreferences = { exists: false, generation: 'preview-ui-preferences', revision: 0, values: {} }
   const sessions = new Map(), messages = new Map(), timers = new Map(), inflight = new Map(), clients = new Set()
   let count = 0
   function addSession(id, title, profile = 'default', text = '') {
@@ -178,6 +179,21 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     try {
       await controls.before({ transport: 'http', method: req.method, path: pathname, query: Object.fromEntries(url.searchParams), body: parsed })
       if (pathname === '/api/status') return send({ status: 'ok', auth_required: false, version: info.version, profile: 'default', desktop_contract: info.desktop_contract })
+      if (req.method === 'GET' && pathname === '/api/ui-preferences') return send(uiPreferences)
+      if (req.method === 'PATCH' && pathname === '/api/ui-preferences') {
+        if (!parsed.values || typeof parsed.values !== 'object' || Array.isArray(parsed.values) ||
+            Object.values(parsed.values).some(value => value !== null && typeof value !== 'string')) return send({ error: 'Invalid UI preferences' }, 400)
+        const values = new Map(Object.entries(uiPreferences.values))
+        for (const [key, value] of Object.entries(parsed.values)) {
+          if (parsed.seed && values.has(key)) continue
+          if (value === null) values.delete(key)
+          else values.set(key, value)
+        }
+        uiPreferences.values = Object.fromEntries(values)
+        uiPreferences.exists = true
+        uiPreferences.revision++
+        return send(uiPreferences)
+      }
       if (pathname === '/api/hermes/update/check') return send({ install_method: 'synthetic', current_version: info.version, behind: 0, update_available: false, can_apply: false, update_command: null, message: null, commits: [] })
       if (req.method === 'GET' && pathname === '/api/config/defaults') return send(config.defaults())
       if (req.method === 'GET' && pathname === '/api/config/schema') return send(config.schema())
