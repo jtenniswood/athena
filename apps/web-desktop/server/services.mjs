@@ -11,7 +11,7 @@ export function createAthenaServices({ target, identityUrl = target, directory, 
   const preferences = createPreferencesHandler({ target, identityUrl, directory, fetch })
   const androidAuth = createAndroidAuthHandler({ target, fetch, now })
   const gateway = createGatewayCompatibility({ target, now, fetch })
-  const push = createAndroidPush({ target, identityUrl, directory, fetch, now, sender })
+  const push = createAndroidPush({ target, identityUrl, directory, fetch, now, sender, consumeTokenTicket: gateway.consumeTokenTicket })
   let closed = false
   const attached = new WeakSet()
   const close = () => {

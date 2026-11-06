@@ -9,6 +9,7 @@ export function createAndroidPush(options: {
   fetch?: typeof fetch
   now?: () => number
   directory?: string
+  consumeTokenTicket?: (url: URL, origin: string) => string | undefined
 }): {
   handle(req: IncomingMessage, res: ServerResponse): Promise<boolean>
   attach(server: Server | Http2SecureServer): void

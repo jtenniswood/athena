@@ -8,7 +8,7 @@ const retentionMs = 24 * 60 * 60 * 1000
 
 /** Retain the authenticated gateway transport while Android suspends its WebView.
  * This forwards Hermes's own RPC protocol and stores no conversation history. */
-export function createAndroidPush({ target, identityUrl = target, sender, fetch: request = globalThis.fetch, now = Date.now, directory }) {
+export function createAndroidPush({ target, identityUrl = target, sender, fetch: request = globalThis.fetch, now = Date.now, directory, consumeTokenTicket }) {
   const store = createAndroidPushStore(directory), relays = new Set()
   let closed = false, pumping
   const removeDevice = (state, key) => {
@@ -167,6 +167,17 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
       if (closed) { socket.destroy(); return }
       if (req.headers.origin !== requestOrigin(req) || !sender.enabled) { socket.destroy(); return }
       try {
+        // A standard-server handle is shared with the foreground relay and consumed
+        // once, before verifying this device's Hermes account as usual.
+        if (url.searchParams.has('athena_token_ticket')) {
+          if ((url.searchParams.get('socket') || 'gateway') !== 'gateway') throw new Error('Invalid socket scope')
+          const token = consumeTokenTicket?.(url, requestOrigin(req))
+          if (!token) throw new Error('Invalid ticket')
+          req.headers['x-hermes-session-token'] = token
+          url.searchParams.delete('athena_token_ticket')
+          url.searchParams.delete('ticket')
+          url.searchParams.set('token', token)
+        }
         const authenticated = await identity(req), account = authenticated.id, deviceId = url.searchParams.get('device')
         if (closed) { socket.destroy(); return }
         req[refreshedCookies] = authenticated.cookies
@@ -175,6 +186,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
         if (!device || device.origin !== requestOrigin(req)) throw new Error('Register device first')
         if ([...relays].filter(relay => relay.key === key).length >= 8) throw new Error('Too many connections')
         url.searchParams.delete('device')
+        url.searchParams.delete('socket')
         const upstreamUrl = new URL(target + '/api/ws')
         upstreamUrl.protocol = upstreamUrl.protocol === 'https:' ? 'wss:' : 'ws:'
         upstreamUrl.search = url.search

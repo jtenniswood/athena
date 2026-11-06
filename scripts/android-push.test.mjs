@@ -18,8 +18,8 @@ async function fixture(t, options = {}) {
   const upstream = new WebSocketServer({ server: gateway })
   let peer
   upstream.on('connection', (socket, req) => {
-    assert.equal(req.url, options.protocols ? '/api/ws?native_dial=browser' : '/api/ws?ticket=one-use')
-    assert.equal(req.headers.cookie, 'session=A')
+    assert.equal(req.url, options.tokenTicket ? '/api/ws?token=private-existing-token' : options.protocols ? '/api/ws?native_dial=browser' : '/api/ws?ticket=one-use')
+    assert.equal(req.headers.cookie || '', options.tokenTicket ? '' : 'session=A')
     assert.equal(req.headers.origin, `http://127.0.0.1:${gateway.address().port}`)
     if (options.protocols) assert.equal(req.headers['sec-websocket-protocol'], options.protocols.join(','))
     peer = socket
@@ -32,7 +32,9 @@ async function fixture(t, options = {}) {
   await new Promise(resolve => gateway.listen(0, '127.0.0.1', resolve))
   const createRelay = () => createAthenaServices({ directory, now: () => clock, target: `http://127.0.0.1:${gateway.address().port}`,
     sender: { enabled: true, send: async (...args) => { attempts.push(args); if (failures-- > 0) throw new Error("Temporary sender outage"); sent.push(args); waiters.shift()?.() } },
-    fetch: async (_url, { headers }) => headers.cookie === 'session=A' || headers.cookie === 'session=B'
+    fetch: async (_url, { headers }) => options.tokenTicket && (headers['X-Hermes-Session-Token'] || headers['x-hermes-session-token']) === 'private-existing-token'
+      ? Response.json({ user_id: 'static-token-account', provider: 'test' })
+      : headers.cookie === 'session=A' || headers.cookie === 'session=B'
       ? Response.json({ user_id: headers.cookie, provider: 'test' }) : Response.json({}, { status: 401 })
   })
   let relay = createRelay()
@@ -49,11 +51,14 @@ async function fixture(t, options = {}) {
   })
   const origin = `http://127.0.0.1:${server.address().port}`
   const register = (changes = {}, account = 'A', method = 'POST') => fetch(origin + '/api/athena/android/push', {
-    method, headers: { Origin: origin, Cookie: `session=${account}`, 'Content-Type': 'application/json', 'X-Forwarded-Proto': 'http' },
+    method, headers: { Origin: origin, ...(options.tokenTicket ? { 'X-Hermes-Session-Token': 'private-existing-token' } : { Cookie: `session=${account}` }), 'Content-Type': 'application/json', 'X-Forwarded-Proto': 'http' },
     body: JSON.stringify({ deviceId, bindingId, tokenVersion: 0, token: 'fake-device-token-for-testing-only', enabled: true, foreground: false, ...changes })
   })
-  const connect = () => new WebSocket(origin.replace('http:', 'ws:') + `/api/athena/android/ws?${options.protocols ? 'native_dial=browser' : 'ticket=one-use'}&device=${deviceId}`, options.protocols || [],
-    { headers: { Origin: origin, Cookie: 'session=A', 'X-Forwarded-Proto': 'http' } })
+  const connect = handle => new WebSocket(origin.replace('http:', 'ws:') + `/api/athena/android/ws?${options.tokenTicket ? 'socket=gateway&athena_token_ticket=' + handle : options.protocols ? 'native_dial=browser' : 'ticket=one-use'}&device=${deviceId}`, options.protocols || [],
+    { headers: { Origin: origin, ...(options.tokenTicket ? {} : { Cookie: 'session=A' }), 'X-Forwarded-Proto': 'http' } })
+  const mint = async () => (await (await fetch(origin + '/api/athena/gateway/token-ticket?socket=gateway', {
+    method: 'POST', headers: { Origin: origin, 'X-Hermes-Session-Token': 'private-existing-token' }
+  })).json()).ticket
   const emit = (seq, status) => peer.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: {
     type: 'message.complete', session_id: 'runtime-1', seq, payload: { status, text: 'Private chat content must not reach Firebase' }
   } }))
@@ -68,7 +73,7 @@ async function fixture(t, options = {}) {
     relay = createRelay(); relay.attach(server)
     await relay.drain()
   }
-  return { sent, attempts, register, connect, emit, status, rotate, restart, directory,
+  return { sent, attempts, register, connect, mint, emit, status, rotate, restart, directory,
     advance: milliseconds => { clock += milliseconds }, drain: () => relay.drain(),
     nextPush: () => new Promise(resolve => waiters.push(resolve)) }
 }
@@ -117,6 +122,23 @@ test('Android retained sockets preserve native ticket protocols without reflecti
   await once(client, 'open')
   assert.equal(client.protocol, 'hermes-gateway-v1')
   client.close(); await once(client, 'close')
+})
+
+test('Android background connections consume standard token handles once and retain authenticated delivery', { timeout: 10000 }, async t => {
+  const app = await fixture(t, { tokenTicket: true })
+  assert.equal((await app.register()).status, 200)
+  const handle = await app.mint()
+  assert.ok(handle && !handle.includes('private-existing-token'))
+  const client = app.connect(handle)
+  await once(client, 'open')
+  client.close(); await once(client, 'close')
+  const pending = app.nextPush()
+  app.emit(1, 'ok')
+  await pending
+  assert.equal(app.sent.length, 1)
+  const replay = app.connect(handle)
+  await new Promise(resolve => replay.once('error', resolve))
+  assert.equal(app.sent.length, 1)
 })
 
 test('device registration requires authentication and sign-out removes its retained connection', { timeout: 10000 }, async t => {

@@ -20,7 +20,18 @@ export function createGatewayCompatibility({ target, now = Date.now, fetch: requ
   const prune = () => { for (const [key, value] of tickets) if (value.expires <= now()) tickets.delete(key) }
   const cleanup = setInterval(prune, 30000)
   cleanup.unref()
+  const consumeTokenTicket = (url, origin) => {
+    const handle = url.searchParams.get('athena_token_ticket')
+    if (!handle) return undefined
+    const selected = scope(url)
+    prune()
+    const saved = tickets.get(handle)
+    tickets.delete(handle)
+    if (closed || !saved || saved.origin !== origin || saved.socket !== selected.socket || saved.profile !== selected.profile) throw new Error('Invalid ticket')
+    return saved.token
+  }
   return {
+    consumeTokenTicket,
     async handle(req, res) {
       const url = new URL(req.url, 'http://local.invalid')
       if (url.pathname !== root + 'token-ticket') return false
@@ -66,13 +77,9 @@ export function createGatewayCompatibility({ target, now = Date.now, fetch: requ
           const upstreamUrl = new URL(target + paths[selected.socket])
           upstreamUrl.protocol = upstreamUrl.protocol === 'https:' ? 'wss:' : 'ws:'
           if (selected.profile) upstreamUrl.searchParams.set('profile', selected.profile)
-          const handle = url.searchParams.get('athena_token_ticket')
-          if (handle) {
-            prune()
-            const saved = tickets.get(handle)
-            tickets.delete(handle)
-            if (!saved || saved.origin !== requestOrigin(req) || saved.socket !== selected.socket || saved.profile !== selected.profile) throw new Error('Invalid ticket')
-            upstreamUrl.searchParams.set('token', saved.token)
+          const token = consumeTokenTicket(url, requestOrigin(req))
+          if (token) {
+            upstreamUrl.searchParams.set('token', token)
           } else {
             const ticket = url.searchParams.get('ticket')
             if (!ticket || ticket.length > 8192) throw new Error('Missing ticket')
