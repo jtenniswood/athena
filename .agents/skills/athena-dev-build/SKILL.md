@@ -6,8 +6,9 @@ description: Dispatch and monitor Athena's ad hoc development image workflow whe
 # Athena development image build
 
 Use this skill when the user asks to build and publish an Athena development
-image. It dispatches the existing GitHub Actions workflow; it does not deploy
-the image.
+image. It dispatches the existing GitHub Actions workflow. A successful main
+build automatically triggers the separate Komodo deployment-request workflow;
+state this effect before dispatch and honor existing session authorization.
 
 ## Choose the source revision
 

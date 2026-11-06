@@ -20,6 +20,8 @@ export type { QuickEntryStatus, QuickEntrySubmitPayload } from '@/store/quick-en
 declare global {
   interface Window {
     __HERMES_SESSION_TOKEN__?: string
+    __HERMES_AUTH_REQUIRED__?: boolean
+    __HERMES_UI_SURFACE__?: string
     __HERMES_BASE_PATH__?: string
     __HERMES_WEB_BRIDGE__?: boolean
     __HERMES_WEB_ACTIVE_PROFILE__?: string | null

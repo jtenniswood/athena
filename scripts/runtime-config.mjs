@@ -18,7 +18,7 @@ export function matchesGatewayRoute(url) {
 }
 
 export function runtimeConfiguration(env = process.env) {
-  const url = new URL(env.HERMES_GATEWAY_URL || 'http://127.0.0.1:9119')
+  const url = new URL(env.HERMES_GATEWAY_URL || 'http://127.0.0.1:9120')
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash || url.pathname !== '/') {
     throw new Error('HERMES_GATEWAY_URL must be an HTTP(S) origin without credentials, a path, query, or fragment')
   }
@@ -34,14 +34,20 @@ export function runtimeConfiguration(env = process.env) {
   if (!Number.isInteger(port) || port < 1 || port > 65535 || !/^(?:localhost|[0-9a-fA-F:.]+)$/.test(host)) throw new Error('Invalid hosting bind address or port')
   const listen = `${host.includes(':') ? '[' + host + ']' : host}:${port}`
   const target = url.origin
+  // Explicitly retain the same server's account namespace when its listener address changes.
+  const identity = new URL(env.HERMES_GATEWAY_IDENTITY_URL || env.ATHENA_PREFERENCES_IDENTITY_URL || target)
+  if (!['http:', 'https:'].includes(identity.protocol) || identity.username || identity.password || identity.search || identity.hash || identity.pathname !== '/') {
+    throw new Error('HERMES_GATEWAY_IDENTITY_URL must be an HTTP(S) origin without credentials, a path, query, or fragment')
+  }
+  const identityUrl = identity.origin
   return {
-    target, home, staticRoot, stateDir, preferencesDir, listen,
+    target, identityUrl, home, staticRoot, stateDir, preferencesDir, listen,
     publicConfig: {
       version: 1,
       gateway: {
-        id: createHash('sha256').update(target).digest('hex'),
+        id: createHash('sha256').update(identityUrl).digest('hex'),
         name: env.HERMES_GATEWAY_NAME || 'Hermes',
-        legacyUrls: [target]
+        legacyUrls: [...new Set([target, identityUrl])]
       },
       capabilities: { gatewaySelection: false, pluginAssets: true }
     }

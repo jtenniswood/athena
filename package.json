@@ -2,7 +2,7 @@
   "name": "athena",
   "private": true,
   "version": "0.1.1",
-  "description": "Athena for Hermes Agent — web and mobile chat UI (PWA) with a nix-free Docker build.",
+  "description": "Athena for Hermes Agent \u2014 web and mobile chat UI (PWA) with a nix-free Docker build.",
   "scripts": {
     "dev": "pnpm --filter web-desktop run dev",
     "build": "pnpm --filter web-desktop run build",
@@ -15,11 +15,12 @@
     "report:renderer-dependencies": "node scripts/renderer-dependencies.mjs --report",
     "check:upstream": "node scripts/renderer-compatibility-report.mjs",
     "inspect:renderer": "node scripts/inspect-renderer.mjs",
-    "check:update-setup": "node scripts/check-update-setup.mjs",
     "test:foundation": "node --test scripts/*.test.mjs",
     "check:compatibility-registry": "node scripts/compatibility-registry.mjs",
     "verify:behavior": "node scripts/verify-behavior.mjs",
-    "docs:compatibility": "node scripts/compatibility-registry.mjs --write"
+    "docs:compatibility": "node scripts/compatibility-registry.mjs --write",
+    "update:hermes": "node scripts/hermes-release.mjs",
+    "sync:renderer-dependencies": "node scripts/renderer-dependencies.mjs --sync"
   },
   "packageManager": "pnpm@12.16.1",
   "devDependencies": {

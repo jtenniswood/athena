@@ -18,12 +18,10 @@ onlyBuiltDependencies:
 # the repo-root node_modules (same shape as npm).
 nodeLinker: hoisted
 
-# Keep the renderer and shared UI on one store runtime. Athena adapts the
-# pinned renderer's read-only plugin view to Nanostores 1.5's equality API.
-overrides:
-  nanostores: 1.5.5
-
 allowBuilds:
   get-windows: false
   node-pty: false
   unicode-animations: false
+
+# Official renderer transitive baseline
+overrides: {"@shikijs/core":"4.5.0","@shikijs/engine-javascript":"4.5.0","@shikijs/engine-oniguruma":"4.5.0","@shikijs/langs":"4.5.0","@shikijs/primitive":"4.5.0","@shikijs/themes":"4.5.0","@shikijs/types":"4.5.0","@shikijs/vscode-textmate":"10.0.2"}

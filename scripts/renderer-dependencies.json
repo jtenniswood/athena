@@ -3,26 +3,93 @@
     "@assistant-ui/core",
     "@assistant-ui/react",
     "@assistant-ui/react-streamdown",
+    "@audiowave/react",
+    "@chenglou/pretext",
+    "@codemirror/commands",
+    "@codemirror/language",
+    "@codemirror/language-data",
+    "@codemirror/state",
+    "@codemirror/view",
+    "@dnd-kit/core",
+    "@dnd-kit/sortable",
+    "@dnd-kit/utilities",
+    "@icons-pack/react-simple-icons",
+    "@lezer/highlight",
     "@nanostores/react",
-    "nanostores",
-    "react",
-    "react-dom",
-    "react-router",
-    "radix-ui",
     "@nous-research/ui",
-    "@tanstack/react-virtual",
-    "react-arborist",
-    "streamdown",
+    "@novnc/novnc",
     "@streamdown/code",
     "@streamdown/math",
+    "@tabler/icons-react",
+    "@tailwindcss/typography",
+    "@tailwindcss/vite",
+    "@tanstack/react-query",
+    "@tanstack/react-virtual",
+    "@types/d3-force",
+    "@types/hast",
+    "@types/node",
+    "@types/qrcode",
+    "@types/react",
+    "@types/react-dom",
+    "@vitejs/plugin-react",
+    "@vscode/codicons",
+    "@xterm/addon-fit",
+    "@xterm/addon-serialize",
+    "@xterm/addon-unicode11",
+    "@xterm/addon-web-links",
+    "@xterm/addon-webgl",
+    "@xterm/xterm",
+    "blobatar",
+    "class-variance-authority",
+    "clsx",
+    "cmdk",
+    "d3-force",
+    "dnd-core",
+    "dompurify",
+    "driver.js",
+    "emojibase-data",
+    "fflate",
+    "frimousse",
+    "hast-util-from-html-isomorphic",
+    "hast-util-to-text",
+    "ignore",
+    "katex",
+    "lucide-react",
+    "motion",
+    "nanostores",
+    "node-pty",
+    "pele",
+    "qrcode",
+    "radix-ui",
+    "react",
+    "react-arborist",
+    "react-dnd-html5-backend",
+    "react-dom",
+    "react-router",
     "react-shiki",
+    "remark-math",
+    "remend",
     "shiki",
-    "use-stick-to-bottom",
+    "simple-git",
+    "streamdown",
+    "tailwind-merge",
+    "tailwindcss",
+    "tw-shimmer",
     "typescript",
+    "unicode-animations",
+    "unified",
+    "unist-util-visit-parents",
+    "use-stick-to-bottom",
+    "vfile",
     "vite",
-    "@vitejs/plugin-react"
+    "web-haptics"
   ],
   "overrides": {
+    "typescript": {
+      "upstream": "6.0.3",
+      "version": "npm:@typescript/typescript6@6.0.2",
+      "reason": "Retain the TypeScript 6 compiler API for diagnostics and transform tests while the separate native TypeScript 7 package supplies tsc; verify both typecheck paths."
+    },
     "@assistant-ui/core": {
       "upstream": "0.2.23",
       "version": "0.3.32",
@@ -37,81 +104,6 @@
       "upstream": "0.3.7",
       "version": "0.3.21",
       "reason": "Use the matching assistant-ui React 0.15 integration; verify highlighted code, math and transcript rendering."
-    },
-    "@nanostores/react": {
-      "upstream": "1.1.0",
-      "version": "2.0.1",
-      "reason": "Use the updated React bindings with Nanostores 1.5; verify production state writes, plugin visibility and conversation selection."
-    },
-    "react": {
-      "upstream": "19.3.0",
-      "version": "19.3.1",
-      "reason": "Update React and React DOM together; verify singleton fingerprints, chat submission, settings saves and draft retention."
-    },
-    "react-dom": {
-      "upstream": "19.3.0",
-      "version": "19.3.1",
-      "reason": "Use the same React DOM release as React; verify singleton fingerprints, the production build and browser workflows."
-    },
-    "streamdown": {
-      "upstream": "2.7.0",
-      "version": "2.7.1",
-      "reason": "Update with the renderer-compatible assistant-ui integration; verify highlighted code, Mermaid rendering and transcript output."
-    },
-    "typescript": {
-      "upstream": "6.0.3",
-      "version": "npm:@typescript/typescript6@6.0.2",
-      "reason": "Retain the TypeScript 6 compiler API for diagnostics and transform tests while the separate native TypeScript 7 package supplies tsc; verify both typecheck paths."
-    },
-    "nanostores": {
-      "upstream": "1.4.2",
-      "version": "1.5.5",
-      "reason": "Use upstream-corrected batch side effects and the 1.5 equality API; verify plugin stores and production state writes without the old batch transform."
-    },
-    "react-router": {
-      "upstream": "8.4.0",
-      "version": "8.5.1",
-      "reason": "Retain Athena's current routing version; verify conversation, profile and settings navigation against the pinned renderer."
-    },
-    "radix-ui": {
-      "upstream": "1.7.0",
-      "version": "1.8.1",
-      "reason": "Use the updated menu primitives; verify browser menus and dialog focus."
-    },
-    "@nous-research/ui": {
-      "upstream": "0.19.1",
-      "version": "1.5.2",
-      "reason": "Update the shared UI with React 19.3 while retaining Motion 12 to satisfy its peer; verify browser settings, menus and dialog focus."
-    },
-    "@tanstack/react-virtual": {
-      "upstream": "3.14.14",
-      "version": "3.14.26",
-      "reason": "Keep a full viewport of virtual rows when a list shrinks at its scroll end; verify conversation selection, sidebar rendering and the production build."
-    },
-    "react-arborist": {
-      "upstream": "3.16.0",
-      "version": "4.0.1",
-      "reason": "Update the project tree together with React DnD and dnd-core 16; verify sidebar disclosure and session navigation against the pinned renderer."
-    },
-    "@streamdown/code": {
-      "upstream": "1.1.1",
-      "version": "2.0.0",
-      "reason": "Retain the code plugin API used by the pinned renderer while aligning its Shiki 4 types with the reviewed transcript stack; verify highlighted code, typechecking and the production build."
-    },
-    "vite": {
-      "upstream": "8.3.4",
-      "version": "8.3.5",
-      "reason": "Athena owns the browser build and compatibility plugin pipeline; verify the registry and production build."
-    },
-    "@vitejs/plugin-react": {
-      "upstream": "6.0.3",
-      "version": "6.2.1",
-      "reason": "Use the React plugin's refresh filtering fixes with Athena's reviewed Vite version; verify typechecking, browser startup and the production build."
-    },
-    "shiki": {
-      "upstream": "4.5.0",
-      "version": "4.6.0",
-      "reason": "Use corrected grammar injection and token offsets with the existing Shiki 4 transcript integration; verify syntax highlighting, typechecking and the production build."
     }
   }
 }

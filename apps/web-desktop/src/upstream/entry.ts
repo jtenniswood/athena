@@ -1,7 +1,11 @@
 import { prepareBrowserBridge } from './browser-bootstrap'
+import { resolveToken } from '../platform/connection'
 
 /** Install the host before evaluating stores that read its desktop compatibility bridge. */
 export async function startBrowserHost(): Promise<void> {
+  // Public host flags must precede evaluation of upstream stores.
+  window.__HERMES_AUTH_REQUIRED__ = !resolveToken()
+  window.__HERMES_UI_SURFACE__ = 'webapp'
   const { installWebBridge } = await import('../web-bridge/install')
   installWebBridge()
   const { observeRendererPreferences } = await import('./preference-sync')

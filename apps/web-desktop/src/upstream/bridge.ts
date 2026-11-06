@@ -1,168 +1,101 @@
-import { assertSafeConnectionChange, setActiveWork } from '../platform/reload-safety'
+import { installBrowserDesktopBridge } from '@/lib/browser-desktop-bridge'
+import { webappSessionKey } from '@/lib/browser-launch-session'
+import { tagRegistrySessionResponse } from '../../../desktop/electron/profile-session-routing'
+import { assertSafeConnectionChange, beginOperation, setActiveWork } from '../platform/reload-safety'
 import { beginBrowserTransition } from '../platform/browser-transition'
-import { browserCapabilities } from '../platform/capabilities'
 import { claimBrowserAmbientCue } from '../platform/ambient-claims'
 import { browserSignInTarget } from '../platform/sign-in-target'
-import type { DesktopBootProgress, DesktopCloudAgentSignInResult, DesktopCloudDiscoverResult, DesktopCloudStatus, QuickEntryStatus, QuickEntrySubmitPayload } from '../upstream/types'
-import {
-  activeUpstreamOrigin,
-  classifyGatewayReach,
-  getActiveGateway,
-  normalizeBase,
-  servingBase,
-  syncDevGatewayCookie,
-  updateGateway,
-  upstreamOriginFor,
-  withGatewayRoute
-} from '../web-bridge/gateways'
-
+import { browserDefaultProfile } from '../platform/browser-default-profile'
+import { createWebZoomBridge } from '../platform/display'
+import { webNotify } from '../platform/notifications'
+import { pickBrowserFiles } from '../platform/files'
+import { writeClipboard } from '../platform/clipboard'
+import { androidPushGatewayUrl, resumeAndroidPush, stopAndroidPush } from '../platform/android-push'
 import { buildInfo } from '../build-info'
 import { openBrowserExternalLink } from './external-links'
-import { browserDefaultProfile as defaultProfileRoute } from '../platform/browser-default-profile'
-import { createWebZoomBridge } from '../platform/display'
-import { clipboardImageAsFile, readClipboard, writeClipboard } from '../platform/clipboard'
-import { isUnderPluginRoot, isWebFileHandle, registerWebFile, webFileAsDataUrl, pickBrowserFiles } from '../platform/files'
-import { webNotify } from '../platform/notifications'
-import { androidPushGatewayUrl, resumeAndroidPush, stopAndroidPush } from '../platform/android-push'
-import { WEB_CONNECTION_ID, wsBaseUrl, connection, connectionForProfile, resolveToken, buildTokenWsUrl, mintWsTicket, apiFetch, waitForRemoteRestart, loadStoredConnection, persistConnection, toConnectionConfig, fetchStatus, baseUrl, isSameOrigin, openOauthLoginPopup } from '../platform/connection'
-const noop = (): void => {}
-const unsubscribed = (): (() => void) => noop
+import type { HermesApiRequest } from './types'
+import { baseUrl, WEB_CONNECTION_ID, resolveToken, openOauthLoginPopup, fetchStatus, apiFetch,
+  waitForRemoteRestart, loadStoredConnection, persistConnection, toConnectionConfig } from '../platform/connection'
+import { activeUpstreamOrigin, normalizeBase, servingBase, syncDevGatewayCookie, withGatewayRoute } from '../web-bridge/gateways'
 
-function readyBootProgress(): DesktopBootProgress {
-  return {
-    error: null,
-    fakeMode: false,
-    message: 'Ready',
-    phase: 'backend.ready',
-    progress: 100,
-    running: false,
-    timestamp: Date.now()
-  }
+/** Translate only Athena's persisted owner identity; Hermes owns browser transport and services. */
+function nativeOwner(connectionId?: string | null): 'local' {
+  if (connectionId && ![WEB_CONNECTION_ID, 'local'].includes(connectionId)) throw new Error(`Unknown web connection: ${connectionId}`)
+  return 'local'
 }
 
-/**
- * Everything the web build supports. `terminal` and `git` are
- * intentionally absent: their consumers probe for bridge presence and
- * self-disable (terminal), or never reach the native path in remote mode
- * (git). The browser provides its own zoom implementation below.
- */
-type WebBridge = Omit<Window['hermesDesktop'], 'terminal' | 'git' | 'openWindow' | 'openSessionWindow'> & { agentPluginsRoot: () => Promise<string> }
-
 export function createWebBridge(): Window['hermesDesktop'] {
+  // Keep drafts and the recovery screen mounted; Athena offers sign-in in its settings.
+  window.addEventListener('hermes:browser-reauth-required', event => event.preventDefault())
+  const token = resolveToken()
+  if (token) sessionStorage.setItem(webappSessionKey(''), token)
+  if (!installBrowserDesktopBridge()) throw new Error('The official Hermes Webapp bridge could not start.')
+  let native = window.hermesDesktop
+  let nativeToken = token
   window.__HERMES_WEB_BRIDGE__ = true
-  const capabilities = browserCapabilities()
-
-  const connectionListeners = new Set<() => void | Promise<void>>()
-  const bridge: WebBridge = {
-    // The browser has no native translucent window backing. Reporting this
-    // explicitly also prevents the renderer's platform fallback from enabling
-    // its glass-only transparent page surfaces on macOS and Windows browsers.
+  const listeners = new Set<() => void | Promise<void>>()
+  const upload = async <T>(work: () => Promise<T>): Promise<T> => {
+    const finish = beginOperation()
+    try { return await work() } finally { finish() }
+  }
+  const ownedConnection = (connection: Awaited<ReturnType<typeof native.getConnection>>) => ({
+    ...connection, connectionId: WEB_CONNECTION_ID, registryScoped: true, sharedRemote: true
+  })
+  const nativeSocket = async (dial: () => ReturnType<typeof native.getGatewayWsUrl>) => {
+    try {
+      const result = await dial()
+      if (typeof result === 'string') return androidPushGatewayUrl(result)
+      return result.ok ? { ...result, wsUrl: await androidPushGatewayUrl(result.wsUrl) } : result
+    } catch (error) {
+      if (/404|tickets are unavailable on this surface/i.test(String(error))) {
+        throw new Error('This Hermes server does not expose the Webapp connection. Enable Webapp on the existing server and point Athena at its Webapp address (usually port 9120).')
+      }
+      throw error
+    }
+  }
+  const bridge: Window['hermesDesktop'] = {
+    ...native,
     glassSupported: false,
     translucencySupported: false,
     zoom: createWebZoomBridge(),
-    getConnection: async profile => connection(profile),
-    getConnectionFor: async ({ connectionId, profile }) => connectionForProfile(connectionId, profile),
-    // Single-gateway web: every profile is served by the live connection.
-    getProfileRoutes: async profiles =>
-      profiles.map(name => ({
-        connectionId: WEB_CONNECTION_ID,
-        mode: 'remote',
-        profile: name,
-        targetProfile: name
-      })),
-    openBrowserWindow: async () => ({ ok: false, error: 'no browser pop-out in the web app' }),
-    onBrowserPopoutClosed: unsubscribed,
-    // No OS keychain in the browser; secrets encryption stays off.
-    getSecretStorageEncryption: async () => ({ on: capabilities.secureTokenStorage }),
-    setSecretStorageEncryption: async () => ({ on: capabilities.secureTokenStorage }),
-    revalidateConnection: async () => ({ ok: true, rebuilt: false }),
     claimAmbientCue: claimBrowserAmbientCue,
-    getGatewayWsUrl: async () => {
-      // One origin for both the ticket mint and the socket connect, so the dev
-      // proxy routes them to the same gateway (a mismatch would 4403).
-      const origin = activeUpstreamOrigin()
-      const token = resolveToken()
-
-      if (token) {return androidPushGatewayUrl(withGatewayRoute(buildTokenWsUrl(token), origin))}
-      const ticket = await mintWsTicket(origin)
-
-      return androidPushGatewayUrl(withGatewayRoute(`${wsBaseUrl()}/api/ws?ticket=${encodeURIComponent(ticket)}`, origin))
+    setActiveWork,
+    notify: webNotify,
+    openExternal: openBrowserExternalLink,
+    openPreviewInBrowser: openBrowserExternalLink,
+    // Preserve selection and dialog focus when the browser denies clipboard access.
+    writeClipboard,
+    getConnection: async profile => ownedConnection(await native.getConnection(profile)),
+    getConnectionFor: async payload => ownedConnection(await native.getConnectionFor!({ ...payload, connectionId: nativeOwner(payload.connectionId) })),
+    getProfileRoutes: async profiles => (await native.getProfileRoutes(profiles)).map(route => ({ ...route, connectionId: WEB_CONNECTION_ID, mode: 'remote' as const })),
+    getAgentRoster: async () => {
+      const roster = await native.getAgentRoster!()
+      return { ...roster, primaryConnectionId: WEB_CONNECTION_ID,
+        agents: roster.agents.map(agent => ({ ...agent, connectionId: WEB_CONNECTION_ID })),
+        sources: roster.sources.map(source => ({ ...source, connectionId: WEB_CONNECTION_ID })) }
     },
-    getGatewayWsUrlFor: async ({ connectionId }) => {
-      // Bot Mode routes profiles through the web-single registry source. It is
-      // still this same gateway, so mint the same fresh ticket used by the
-      // primary path rather than making the renderer fall back to its stale
-      // connection URL.
-      if (connectionId && connectionId !== WEB_CONNECTION_ID) {
-        throw new Error(`Unknown web connection: ${connectionId}`)
-      }
-
-      return bridge.getGatewayWsUrl()
+    getGatewayWsUrl: profile => nativeSocket(() => native.getGatewayWsUrl(profile)),
+    getGatewayWsUrlFor: payload => nativeSocket(() => native.getGatewayWsUrlFor!({ ...payload, connectionId: nativeOwner(payload.connectionId) })),
+    getAudioWsUrl: payload => native.getAudioWsUrl!({ ...payload, connectionId: nativeOwner(payload.connectionId) }),
+    getGatewayFileStreamUrl: payload => native.getGatewayFileStreamUrl!({ ...payload, connectionId: nativeOwner(payload.connectionId) }),
+    saveGatewayFile: payload => native.saveGatewayFile!({ ...payload, connectionId: nativeOwner(payload.connectionId) }),
+    // Athena's picker owns refusal, supersession and update blocking; Hermes owns upload staging.
+    stageFileForAttach: file => upload(() => native.stageFileForAttach!(file)),
+    savePastedText: text => upload(() => native.savePastedText(text)),
+    saveImageBuffer: (data, ext) => upload(() => native.saveImageBuffer(data, ext)),
+    saveClipboardImage: () => upload(() => native.saveClipboardImage()),
+    selectPaths: async options => Promise.all((await pickBrowserFiles(options)).map(file => bridge.stageFileForAttach!(file))),
+    api: async <T>(request: HermesApiRequest): Promise<T> => {
+      const finish = (request.method || 'GET').toUpperCase() === 'GET' ? () => {} : beginOperation()
+      try {
+        const response = await native.api<T>(request)
+        return tagRegistrySessionResponse(request.path, response, WEB_CONNECTION_ID) as T
+      } finally { finish() }
     },
-    // No external terminal in a browser — resume-in-terminal is unavailable.
-    openSessionInTerminal: async () => ({ ok: false, error: 'terminal is unavailable in the web app' }),
-    windowControls: {
-      custom: false,
-      minimize: noop,
-      toggleMaximize: noop,
-      close: noop
-    },
-    // v2 connection registry is desktop-main-process state; the web app rides
-    // the gateway connection it was served from, so the registry is read-only
-    // empty (mutation attempts fail cleanly instead of pretending to persist).
-    connections: {
-      list: async () => ({ version: 1, primary: '', secureTokenStorage: capabilities.secureTokenStorage, connections: [] }),
-      save: async payload => ({
-        ok: false,
-        connection: {
-          id: payload.id ?? '',
-          kind: payload.kind,
-          label: payload.label,
-          url: payload.url,
-          authMode: payload.authMode,
-          org: payload.org,
-          host: payload.host,
-          user: payload.user,
-          port: payload.port ?? undefined,
-          keyPath: payload.keyPath,
-          remoteHermesPath: payload.remoteHermesPath,
-          remoteProfile: payload.remoteProfile,
-          tokenSet: false,
-          tokenPreview: null
-        },
-        registry: { version: 1, primary: '', secureTokenStorage: capabilities.secureTokenStorage, connections: [] }
-      }),
-      remove: async () => ({ ok: false, registry: { version: 1, primary: '', secureTokenStorage: capabilities.secureTokenStorage, connections: [] } }),
-      setPrimary: async () => ({ ok: false, registry: { version: 1, primary: '', secureTokenStorage: capabilities.secureTokenStorage, connections: [] } }),
-      test: async () => ({ ok: false, error: 'connections are managed by the desktop app' }),
-      updateAll: async () => ({ ok: false, results: [] })
-    },
-    petOverlay: {
-      open: async () => ({ ok: false }),
-      close: async () => ({ ok: true }),
-      setBounds: noop,
-      setIgnoreMouse: noop,
-      setFocusable: noop,
-      pushState: noop,
-      control: noop,
-      onState: unsubscribed,
-      onControl: unsubscribed
-    },
-    getBootProgress: async () => readyBootProgress(),
-    // The browser has no Desktop-owned child process to recycle. Ask the
-    // connected gateway to restart itself, then wait for the replacement so
-    // ModelSettings does not immediately retry against the stale process.
-    recycleBackend: async profile => {
-      await apiFetch<{ ok: boolean }>({
-        method: 'POST',
-        path: '/api/gateway/restart',
-        profile: profile ?? undefined,
-        timeoutMs: 10_000
-      })
-      await waitForRemoteRestart()
-
-      return { ok: true }
-    },
+    // Keep synced preferences and draft ownership through the transport migration.
+    profile: { ...native.profile, getDefault: browserDefaultProfile.getDefault,
+      setDefault: browserDefaultProfile.setDefault, onDefaultChanged: browserDefaultProfile.onDefaultChanged,
+      get: async () => ({ profile: null }), remember: async profile => ({ profile }), set: async profile => ({ profile }) },
     getConnectionConfig: async () => toConnectionConfig(loadStoredConnection()),
     saveConnectionConfig: async input => toConnectionConfig(persistConnection(input)),
     applyConnectionConfig: async input => {
@@ -171,359 +104,58 @@ export function createWebBridge(): Window['hermesDesktop'] {
       try {
         await assertSafeConnectionChange()
         const next = persistConnection(input)
-        await Promise.all([...connectionListeners].map(callback => callback()))
+        const nextToken = resolveToken()
+        if (nextToken !== nativeToken) {
+          const host = window.hermesDesktop
+          try {
+            window.__HERMES_AUTH_REQUIRED__ = !nextToken
+            if (nextToken) sessionStorage.setItem(webappSessionKey(''), nextToken)
+            else sessionStorage.removeItem(webappSessionKey(''))
+            Reflect.deleteProperty(window, 'hermesDesktop')
+            if (!installBrowserDesktopBridge()) throw new Error('The Hermes Webapp sign-in could not be updated.')
+            native = window.hermesDesktop
+            nativeToken = nextToken
+          } finally { window.hermesDesktop = host }
+        }
+        await native.revalidateConnection()
+        await Promise.all([...listeners].map(callback => callback()))
         return await toConnectionConfig(next)
       } finally { release() }
     },
-    testConnectionConfig: async input => {
-      const remoteUrl = input?.remoteUrl ?? loadStoredConnection().remoteUrl
-      const base = normalizeBase(remoteUrl)
-      // Route by the gateway being tested (not the active one).
-      const status = await fetchStatus(base, upstreamOriginFor(remoteUrl))
-
-      return { baseUrl: base, ok: true, version: status?.version ?? null }
-    },
-    probeConnectionConfig: async remoteUrl => {
-      const base = normalizeBase(remoteUrl)
-
-      // A different-origin gateway is blocked by the browser (mixed content +
-      // localhost-only CORS) before the fetch is meaningful. Report the real
-      // reason via `error` so the UI explains it, instead of firing a doomed
-      // request that surfaces as a generic "could not reach".
-      const block = classifyGatewayReach(remoteUrl)
-
-      if (block) {
-        return { baseUrl: base, reachable: false, authMode: 'unknown', providers: [], version: null, error: block }
-      }
-
-      try {
-        const status = await fetchStatus(base, upstreamOriginFor(remoteUrl))
-
-        return {
-          baseUrl: base,
-          reachable: true,
-          authMode: status?.auth_required ? 'oauth' : 'token',
-          providers: (status?.auth_providers ?? []).map(name => ({ name, displayName: name })),
-          version: status?.version ?? null,
-          error: null
-        }
-      } catch (error) {
-        return {
-          baseUrl: base,
-          reachable: false,
-          authMode: 'unknown',
-          providers: [],
-          version: null,
-          error: error instanceof Error ? error.message : String(error)
-        }
-      }
-    },
-    oauthLoginConnectionConfig: async remoteUrl => {
-      const base = remoteUrl ? normalizeBase(remoteUrl) : baseUrl()
-      const origin = remoteUrl ? upstreamOriginFor(remoteUrl) : activeUpstreamOrigin()
-
-      // A cross-origin absolute URL can never hold a login session in the
-      // browser (see isSameOrigin). A whitelisted gateway folds to the serving
-      // origin (proxied), so it passes; a genuinely cross-origin one fails loudly
-      // with guidance instead of stranding the user on the gateway's dashboard.
-      if (!isSameOrigin(base)) {
-        throw new Error(
-          `This gateway (${base}) is on a different origin than the app, so the browser ` +
-            'will not keep its login session after sign-in. Reach it on the same origin ' +
-            'instead: whitelist it (HERMES_GATEWAY_URL or config.json) so the dev proxy ' +
-            "folds it same-origin, or use a session token. Desktop can use an absolute URL; the browser can't."
-        )
-      }
-
-      // Same-origin (incl. a whitelisted gateway folded through the dev proxy):
-      // mirror the desktop popup so the app stays mounted. Sync the routing
-      // cookie first so the IDP callback navigation reaches this gateway.
+    onConnectionApplied: callback => { listeners.add(callback); return () => { listeners.delete(callback) } },
+    oauthLoginConnectionConfig: async () => {
       syncDevGatewayCookie()
-
-      return openOauthLoginPopup(base, origin, browserSignInTarget().path)
+      return openOauthLoginPopup(baseUrl(), activeUpstreamOrigin(), browserSignInTarget().path)
     },
-    oauthLogoutConnectionConfig: async remoteUrl => {
+    oauthLogoutConnectionConfig: async () => {
       await stopAndroidPush()
-      const base = remoteUrl ? normalizeBase(remoteUrl) : baseUrl()
-      const origin = remoteUrl ? upstreamOriginFor(remoteUrl) : activeUpstreamOrigin()
       try {
-        const response = await fetch(withGatewayRoute(`${base}/auth/logout`, origin), {
-          method: 'POST', credentials: 'same-origin', signal: AbortSignal.timeout(10_000)
-        })
+        const response = await fetch(withGatewayRoute(`${baseUrl()}/auth/logout`, activeUpstreamOrigin()), { method: 'POST', credentials: 'same-origin', signal: AbortSignal.timeout(10_000) })
         if (!response.ok) throw new Error(`Sign-out failed (${response.status}). Try again.`)
-
+        sessionStorage.removeItem(webappSessionKey(''))
         return { ok: true, connected: false }
       } catch (error) { await resumeAndroidPush(); throw error }
     },
-    profile: {
-      getDefault: defaultProfileRoute.getDefault,
-      setDefault: defaultProfileRoute.setDefault,
-      onDefaultChanged: defaultProfileRoute.onDefaultChanged,
-      get: async () => ({ profile: null }),
-      // Web has no persistent "next-launch" profile; echo the current (null) one.
-      remember: async name => ({ profile: name }),
-      set: async name => ({ profile: name })
+    testConnectionConfig: async () => {
+      const status = await fetchStatus(baseUrl())
+      const result = await nativeSocket(() => native.getGatewayWsUrl())
+      if (typeof result !== 'string' && !result.ok) throw new Error(result.error)
+      return { baseUrl: baseUrl(), ok: true, version: status?.version ?? null }
     },
-    sshConfigHosts: async () => ({ hosts: [] }),
-    sshResolveHost: async host => ({ hostname: host, identityFile: null, port: null, user: null }),
-    // Hermes Cloud: no portal session exists in the browser; report signed-out.
-    cloud: {
-      status: async (): Promise<DesktopCloudStatus> => ({ portalBaseUrl: '', signedIn: false }),
-      login: async (): Promise<DesktopCloudStatus & { ok: boolean }> => ({ portalBaseUrl: '', signedIn: false, ok: false }),
-      logout: async (): Promise<DesktopCloudStatus & { ok: boolean }> => ({ portalBaseUrl: '', signedIn: false, ok: false }),
-      discover: async (): Promise<DesktopCloudDiscoverResult> => ({ agents: [], needsOrgSelection: false }),
-      agentSignIn: async (dashboardUrl: string): Promise<DesktopCloudAgentSignInResult> => ({ baseUrl: dashboardUrl, connected: false })
+    recycleBackend: async profile => {
+      await apiFetch({ method: 'POST', path: '/api/gateway/restart', profile: profile ?? undefined, timeoutMs: 10_000 })
+      await waitForRemoteRestart()
+      return { ok: true }
     },
-    api: apiFetch,
-    notify: webNotify,
-    requestMicrophoneAccess: async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        stream.getTracks().forEach(track => track.stop())
-
-        return true
-      } catch {
-        return false
-      }
-    },
-    readFileDataUrl: async filePath => {
-      if (isWebFileHandle(filePath)) {
-        return webFileAsDataUrl(filePath)
-      }
-
-      throw new Error('local file access is unavailable in the web app')
-    },
-    readFileDataUrlForAttach: async filePath => {
-      if (isWebFileHandle(filePath)) {
-        return webFileAsDataUrl(filePath)
-      }
-
-      throw new Error('local file access is unavailable in the web app')
-    },
-    dataUrlReadMax: {
-      get: async () => ({ defaultMaxMb: 25, maxBytes: 0, maxMb: 0 }),
-      set: async maxMb => ({ defaultMaxMb: 25, maxBytes: maxMb * 1024 * 1024, maxMb })
-    },
-    readFileText: async filePath => {
-      if (!isUnderPluginRoot(filePath)) {
-        throw new Error('local file access is unavailable in the web app')
-      }
-
-      const res = await fetch(filePath)
-
-      if (!res.ok) {throw new Error(`${res.status}: ${res.statusText}`)}
-
-      const text = await res.text()
-
-      return { path: filePath, text }
-    },
-    selectPaths: async options => {
-      const files = await pickBrowserFiles(options)
-
-      return files.map(file => registerWebFile(file, file.name))
-    },
-    selectSavePath: async () => null,
-    readClipboard,
-    writeClipboard,
-    saveImageFromUrl: async url => {
-      // A browser can't hand bytes to the OS save dialog the way Electron's
-      // main process does, so trigger a native anchor download instead. The
-      // naive `window.open(url, '_blank', ...)` shipped before got popup
-      // blocked (async bridge hop + cross-origin URL) and the browser landed
-      // on about:blank#blocked — worse, it never actually saved the file.
-      try {
-        const response = await fetch(url)
-
-        if (!response.ok) {
-          return false
-        }
-
-        const blob = await response.blob()
-        const objectUrl = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = objectUrl
-        link.download = url.split('?')[0].split('/').filter(Boolean).pop() || 'image'
-        link.rel = 'noopener noreferrer'
-        document.body.appendChild(link)
-        link.click()
-        link.remove()
-        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000)
-
-        return true
-      } catch {
-        return false
-      }
-    },
-    saveImageBuffer: async (data, ext) => {
-      const bytes = data instanceof Uint8Array ? (data as Uint8Array<ArrayBuffer>) : new Uint8Array(data)
-      const extClean = ext.replace(/^\./, '').toLowerCase()
-      const mime = extClean === 'jpg' ? 'image/jpeg' : `image/${extClean}`
-
-      return registerWebFile(new Blob([bytes], { type: mime }), `image.${extClean}`)
-    },
-    saveClipboardImage: async () => {
-      const blob = await clipboardImageAsFile()
-
-      return blob ? registerWebFile(blob) : ''
-    },
-    savePastedText: async text => registerWebFile(new Blob([text], { type: 'text/plain' }), 'pasted-text.txt'),
-    getPathForFile: file => registerWebFile(file, file.name),
-    normalizePreviewTarget: async () => null,
-    watchPreviewFile: async url => ({ ok: false, error: 'unsupported', message: 'File watching is unavailable in the browser', path: url }),
-    stopPreviewFileWatch: async () => true,
-    setTitleBarTheme: noop,
-    setNativeTheme: noop,
-    setTranslucency: noop,
-    setPreviewShortcutActive: noop,
-    setActiveWork,
-    setKeepAwake: noop,
-    openExternal: openBrowserExternalLink,
-    openPreviewInBrowser: openBrowserExternalLink,
-    fetchLinkTitle: async url => url,
-    sanitizeWorkspaceCwd: async cwd => ({ cwd: cwd ?? '', sanitized: false }),
-    settings: {
-      getDefaultProjectDir: async () => ({ defaultLabel: '', dir: null, resolvedCwd: '' }),
-      pickDefaultProjectDir: async () => ({ canceled: true, dir: null }),
-      setDefaultProjectDir: async () => { throw new Error('A default local project directory is unavailable in the browser') }
-    },
-    revealLogs: async () => ({ ok: false, path: '' }),
-    getRecentLogs: async () => ({ path: '', lines: [] }),
-    reportRendererError: noop,
-    gitRoot: async () => null,
-    revealPath: async () => false,
-    openDir: async () => ({ ok: false, error: 'local file access is unavailable in the web app' }),
-    desktopPluginsRoot: async () => `${servingBase()}/desktop-plugins`,
-    agentPluginsRoot: async () => `${servingBase()}/plugins`,
-    renamePath: async () => {
-      throw new Error('local file access is unavailable in the web app')
-    },
-    writeTextFile: async () => {
-      throw new Error('local file access is unavailable in the web app')
-    },
-    trashPath: async () => false,
-    readDir: async dir => {
-      if (!isUnderPluginRoot(dir)) {
-        return { entries: [], error: 'local file access is unavailable in the web app' }
-      }
-
-      const res = await fetch(`${dir}/.listing`)
-
-      if (!res.ok) {return { entries: [], error: `${res.status}: ${res.statusText}` }}
-
-      const raw: unknown = await res.json()
-      if (!Array.isArray(raw)) return { entries: [], error: 'Invalid plugin directory listing' }
-      const entries = raw.filter((entry): entry is { name: string; type: 'file' | 'directory' } =>
-        entry && typeof entry.name === 'string' && entry.name !== '' && entry.name !== '.' && entry.name !== '..' &&
-        !/[\\/\0]/.test(entry.name) && (entry.type === 'file' || entry.type === 'directory'))
-      return { entries: entries.map(entry => ({ name: entry.name, path: `${dir.replace(/\/$/, '')}/${encodeURIComponent(entry.name)}`,
-        isDirectory: entry.type === 'directory' })) }
-    },
-    onClosePreviewRequested: unsubscribed,
-    onOpenFolderRequested: unsubscribed,
-    onOpenUpdatesRequested: unsubscribed,
-    onOpenFindBarRequested: unsubscribed,
-    onDeepLink: unsubscribed,
-    signalDeepLinkReady: async () => ({ ok: true }),
-    onWindowStateChanged: unsubscribed,
-    onFocusSession: unsubscribed,
-    onNotificationAction: unsubscribed,
-    onPreviewFileChanged: unsubscribed,
-    onBackendExit: unsubscribed,
-    onPowerResume: unsubscribed,
-    onConnectionApplied: callback => { connectionListeners.add(callback); return () => { connectionListeners.delete(callback) } },
-    getOnBattery: async () => false,
-    onBatteryChanged: unsubscribed,
-    onBootProgress: unsubscribed,
-    getBootstrapState: async () => ({
-      active: false,
-      manifest: null,
-      stages: {},
-      error: null,
-      log: [],
-      startedAt: null,
-      completedAt: null,
-      setupChoice: null,
-      unsupportedPlatform: null,
-      bundled: false
-    }),
-    updateHold: {
-      recheck: async () => ({ ok: false }),
-      quit: async () => ({ ok: false }),
-      startAnyway: async () => ({ ok: false })
-    },
-    getSyncStatus: async () => null,
-    resetBootstrap: async () => ({ ok: true }),
-    repairBootstrap: async () => ({ ok: true }),
-    cancelBootstrap: async () => ({ ok: true, cancelled: true }),
-    continueBootstrapLocal: async () => ({ ok: true }),
-    onBootstrapEvent: unsubscribed,
     getVersion: async () => {
-      // Frontend and backend versions have independent release lifecycles.
-      let backendVersion = ''
-      try {
-        const status = await fetchStatus(baseUrl(), activeUpstreamOrigin())
-        if (status?.version) {
-          backendVersion = status.version
-        }
-      } catch {
-        // Gateway unreachable → leave blank; the UI falls back to the
-        // "version unavailable" state.
-      }
-      return {
-        appVersion: `web-${buildInfo.wrapperRevision.slice(0, 12)}`,
-        backendVersion,
-        rendererRevision: buildInfo.rendererRevision,
-        electronVersion: '',
-        nodeVersion: '',
-        platform: 'web',
-        hermesRoot: ''
-      }
-    },
-    getRemoteDisplayReason: async () => null,
-    updates: {
-      check: async () => ({ supported: false }),
-      apply: async () => ({ ok: false }),
-      onProgress: unsubscribed
-    },
-    uninstall: {
-      summary: async () => {
-        throw new Error('uninstall is unavailable in the web app')
-      },
-      run: async () => {
-        throw new Error('uninstall is unavailable in the web app')
-      },
-      openAppsSettings: async () => {
-        throw new Error('native app settings are unavailable in the web app')
-      }
-    },
-    themes: {
-      fetchMarketplace: async () => {
-        throw new Error('marketplace themes are unavailable in the web app')
-      },
-      searchMarketplace: async () => []
-    },
-    // Quick Entry needs an OS-level global hotkey, which a browser tab cannot
-    // own; report it as disabled so Settings shows the toggle truthfully.
-    quickEntry: {
-      getSettings: async (): Promise<QuickEntryStatus> => ({ enabled: false, error: null, registered: false, shortcut: '' }),
-      setSettings: async (): Promise<QuickEntryStatus> => ({ enabled: false, error: null, registered: false, shortcut: '' }),
-      submit: async (_payload: QuickEntrySubmitPayload) => ({ ok: false, code: 'unavailable', message: 'Quick Entry is unavailable in the web app' }),
-      ackSubmit: noop,
-      dismiss: noop,
-      pushState: noop,
-      onState: unsubscribed,
-      onSubmit: unsubscribed,
-      onShown: unsubscribed,
-      onLateResult: unsubscribed
-    },
-    findInPage: async () => ({ count: 0 }),
-    stopFindInPage: async () => {},
-    onFoundInPage: unsubscribed
+      const status = await fetchStatus(normalizeBase(servingBase())).catch(() => null)
+      return { appVersion: `web-${buildInfo.wrapperRevision.slice(0, 12)}`, backendVersion: status?.version || '',
+        rendererRevision: buildInfo.rendererRevision, electronVersion: '', nodeVersion: '', platform: 'web', hermesRoot: '' }
+    }
   }
-
-  // Desktop declares terminal as required, but browser consumers probe for it.
-  // Keep native APIs absent. The host installs browser window commands after
-  // engine registration; Android retains a single app window. Consumers probe
-  // these capabilities when used. The checked type covers the remaining members.
-  return bridge as unknown as Window['hermesDesktop']
+  // Athena installs window commands after engine registration, including Android's single-window policy.
+  delete (bridge as Partial<Window['hermesDesktop']>).openWindow
+  delete (bridge as Partial<Window['hermesDesktop']>).openSessionWindow
+  delete (bridge as Partial<Window['hermesDesktop']>).terminal
+  return bridge
 }

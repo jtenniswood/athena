@@ -1,109 +1,94 @@
-# Optional renderer-update tooling
+# Update the Hermes release baseline
 
-Automatic renderer proposals are parked during personal development. No GitHub
-App, automation enablement checklist, or release evidence package is needed for
-ordinary changes. See [releases and rollback](releases.md) for the active workflow.
+Athena builds its presentation layer against an exact official Hermes release.
+`hermes-release.json` records the tag, peeled commit and immutable **test-only**
+gateway image. `flake.lock` records the same source commit and its Nix fetch hash.
+The production Athena image contains the UI and hosting services; the operator's
+Hermes server remains separate.
 
-## Manual renderer changes
+## Prepare an update
 
-Use the repository's
-[`hermes-release-rebase` skill](../.agents/skills/hermes-release-rebase/SKILL.md)
-to update Athena against the latest published stable Hermes release, or a
-specific released version. It advances the upstream baseline with normal commits
-and preserves Athena's UI-only image and Compose-configured external gateway.
-The outcome is a tested PR; backend upgrades, merge and deployment follow their
-own user authorization.
+Use the [hermes-release-rebase skill](../.agents/skills/hermes-release-rebase/SKILL.md)
+for the full repair, verification and PR workflow. The manual command resolves a
+published stable release, peels annotated tags, obtains verified Nix metadata,
+and updates the source pins and separate test fixture together:
 
-`flake.lock` pins the exact `NousResearch/hermes-agent` revision supplying both
-`apps/desktop` and `apps/shared`. Keep upgrades separate from unrelated UI work
-where practical. Resolve lock metadata for the verified release commit with
-Nix locking/fetch tooling. Metadata evaluation does not build Nix locally.
+```sh
+pnpm update:hermes --check
+pnpm update:hermes
+# Or select a specific published stable release:
+pnpm update:hermes v0.23.0
+```
 
-### Update and repair loop
+The command needs GitHub CLI authentication, network access and Nix metadata
+support. Nix runs only a metadata fetch, never a local image build. If Nix is not
+installed locally, run its metadata tooling in a disposable container or use a
+GitHub Actions development environment. Do not guess or reuse fetch hashes.
 
-Check for upstream changes after each official stable Hermes release. Pin its
-exact commit in `flake.lock` and record the tag and commit in
-`hermes-release.json`. The remote Hermes server is managed separately; a renderer
-upgrade does not replace or restart it. Treat each renderer change as a candidate
-until the browser build and affected workflows pass.
-
-1. Start a `codex/hermes-release-*` branch from current `main`. Update the
-   Hermes lock metadata and `hermes-release.json` together. Keep pin changes
-   easy to distinguish from adapter repairs in the review.
-2. Run the preparation and checks below. Review the upstream compare link for
-   changes to renderer entry points, bridges, settings, session selection,
-   composer behavior, and dependencies. Use the compatibility report to locate
-   changed or missing source contracts.
-3. Fix each failure in Athena-owned code. Keep upstream files read-only. For a
-   changed upstream contract, update the owning adapter or transform and its
-   focused checks. If an upstream behavior was removed or redesigned, adapt the
-   browser integration to the new contract rather than weakening the guard or
-   copying the old upstream implementation into Athena.
-4. Rerun the failed check after each repair, then rerun the full preparation,
-   compatibility, typecheck, and build sequence. Try the affected browser flows
-   in the built app. At minimum, cover the workflow named by each changed
-   contract; also check sending a message and switching conversations when
-   renderer selection or composer contracts changed.
-5. Review the final diff for accidental source changes, unreviewed fingerprint
-   refreshes, and unrelated work. Include the starting and resulting renderer
-   revisions, failures found, repairs made, checks run, and any known limitation
-   in the PR. Merge only after the repair commit and all required checks pass.
-
-If an update has a broad or unclear failure, keep the candidate PR open and
-revert only the renderer pin while diagnosing in a separate repair branch. Do
-not merge a pin that needs an unreviewed adapter change. Once repaired, bring
-the repair into the candidate and repeat the checks above. If the update cannot
-be made compatible, close the candidate with the failing contract and evidence;
-the current pin remains the working version until a later candidate resolves it.
-
-After changing the pin, prepare the renderer and inspect compatibility:
+Start from a clean `codex/hermes-release-*` branch based on current `origin/main`.
+Resolve the candidate in a fresh checkout: renderer preparation refuses to
+replace older or modified source paths. The update command does not merge,
+upgrade a running Hermes server, change repository settings or deploy anything.
+If the selected stable release is already pinned, it makes no changes.
 
 ```sh
 pnpm prepare:renderer
-pnpm install --frozen-lockfile
-pnpm report:renderer-dependencies
+pnpm sync:renderer-dependencies
+pnpm install --no-frozen-lockfile
+pnpm check:official-release
 pnpm check:renderer-dependencies
 pnpm check:upstream
-pnpm check:official-release
 pnpm typecheck
 pnpm build
 ```
 
-Renderer preparation refuses to overwrite mismatched or modified source paths.
-Resolve that mismatch before proceeding; never edit fetched renderer files.
-Review changed contracts in `apps/web-desktop/build/renderer/compatibility-registry.json`.
-Review version overrides in `scripts/renderer-dependencies.json` against the new
-renderer manifest; do not accept dependency differences without focused checks.
-Do not blindly refresh fingerprints to make an upgrade pass. Adjust wrapper-owned
-adapters only where the reviewed upstream change requires it, then manually try
-the affected chat workflows. Use an existing focused test if it helps diagnose a
-selection, storage, or connection regression.
+Dependency synchronization inherits the upstream manifest and locked Shiki
+family. Explicit exceptions remain in `scripts/renderer-dependencies.json` and
+must be reviewed when the release changes their upstream versions. Independent
+Renovate updates for those renderer packages are disabled; Athena-only tooling
+can still update normally. Never remove an exception until its regression check
+passes with the official version. The assistant-ui snapshot fixes remain because
+the official v0.23.0 baseline reproduces an infinite render loop in Athena.
 
-## Retained automation
+Athena inherits the official Vite configuration's pure build, CSS and dependency
+optimization options. Its own plugins retain browser hosting, UI adapters, assets
+and PWA behavior. Fetched sources stay untouched. Upstream's internal composition
+interfaces can change; this is a smaller integration surface, not a stable public
+renderer SDK.
 
-The optional `renderer-update.yml` workflow and updater scripts remain available.
-When configured, the workflow can propose an exact renderer pin every six hours,
-after main changes, or on manual dispatch. It requires a repository-scoped GitHub
-App and repository checks expected by the updater. Those checks are not currently
-provided by the quick image publishing workflow; inspect the configuration before
-choosing to restore automatic updates.
+## Review and repair
 
-`node scripts/check-update-setup.mjs` audits the retained automation setup. Missing
-App credentials or disabled switches are expected while it is parked and do not
-block ordinary development. Do not apply `configure-repository.mjs` as routine
-project setup; it changes repository rules for the older automation design.
+Review the upstream compare link printed by the update command. Inspect changes
+to the registered modules, browser bridge, profiles, composer and dependencies.
+The source-contract report locates changed integration points; a changed hash is
+not itself proof of broken behavior. Fix owned adapters, inspect transformed
+output, and update fingerprints only after reviewing their new behavior. Keep
+all production guards and meaningful behavior checks.
 
-The updater restricts proposals to renderer lock metadata and refreshes branches
-with merge commits. It cannot repair adapters or bypass repository protection.
-`HERMES_RENDERER_UPDATES_ENABLED` controls recurring proposals. The updater also
-checks `HERMES_PROMOTION_ENABLED` as a readiness flag; neither variable disables
-normal publication or deployment after a push to `main`.
+Run the affected workflows, including real sign-in, chat, draft reload, file
+staging, sign-out and profile ownership. The separate fixture in
+`.github/workflows/remote-gateway.yml` enables the official Webapp listener and
+checks its installation stamp against the release commit. Real Athena image
+builds run in GitHub Actions.
 
-To stop recurring proposals if they were previously enabled:
+Commit and push meaningful changes, then open a PR on `origin`. Include the old
+and new releases, retained exceptions, tested gateway version, repair summary,
+checks and any operator configuration changes. A passing source preflight alone
+is insufficient evidence for merging an update.
 
-```sh
-gh variable set HERMES_RENDERER_UPDATES_ENABLED --body false
-```
+## Deployment boundary
 
-An existing proposal may still have auto-merge enabled and needs separate
-attention. Changing this variable does not roll back a deployed image.
+Use the existing server's Webapp listener, normally port 9120, as Athena's target.
+Keep `webapp.public_url` set to Athena's browser-facing URL. When changing the
+listener address, retain the prior origin in `HERMES_GATEWAY_IDENTITY_URL` to
+preserve browser and account namespaces. See [gateway configuration](../wiki/Gateway-Configuration.md).
+
+The moving-main scheduled updater and its automatic merge machinery have been
+removed. Updates use the manual command and normal PR review. Existing GitHub
+App credentials and repository variables are unnecessary for this path; no
+repository settings are changed by this migration.
+
+Merging to `main` builds `dev-latest`; a successful build automatically triggers
+the existing Komodo update request. Coordinate required Hermes/Compose changes
+before merging. A successful webhook is acceptance of the request, not proof of
+completed deployment. See [releases and rollback](releases.md).

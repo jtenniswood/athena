@@ -60,7 +60,7 @@ RUN chmod +x /docker-entrypoint.sh
 COPY --from=build /app/apps/web-desktop/dist /usr/share/nginx/html
 
 # Defaults — override with -e at runtime.
-ENV HERMES_GATEWAY_URL=http://127.0.0.1:9119 \
+ENV HERMES_GATEWAY_URL=http://127.0.0.1:9120 \
     HERMES_HOME=/data/hermes \
     HERMES_PREFERENCES_DIR=/data/athena
 

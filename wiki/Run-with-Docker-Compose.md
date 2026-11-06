@@ -11,14 +11,17 @@ Choose the two addresses before starting Athena:
 
 | Setting | Where to configure it | Meaning |
 | --- | --- | --- |
-| `HERMES_GATEWAY_URL` | Athena's Compose service | Hermes HTTP(S) origin reachable from the Athena container, such as `http://host.docker.internal:9119`. |
-| `dashboard.public_url` or `HERMES_DASHBOARD_PUBLIC_URL` | Existing Hermes server | Athena's browser-facing URL, such as `http://localhost:4174` or `https://athena.example.com`. |
+| `HERMES_GATEWAY_URL` | Athena's Compose service | Hermes HTTP(S) origin reachable from the Athena container, such as `http://host.docker.internal:9120`. |
+| `webapp.public_url` | Existing Hermes server | Athena's browser-facing URL, such as `http://localhost:4174` or `https://athena.example.com`. |
 
 For a local browser setup, merge this into the existing Hermes `config.yaml`,
 preserving its other settings:
 
 ```yaml
-dashboard:
+webapp:
+  enabled: true
+  host: 0.0.0.0
+  port: 9120
   public_url: "http://localhost:4174"
 ```
 
@@ -45,7 +48,9 @@ services:
       - athena-preferences:/data/athena
     # Set the existing Hermes server origin here, or in a local .env file.
     environment:
-      HERMES_GATEWAY_URL: ${HERMES_GATEWAY_URL:-http://host.docker.internal:9119}
+      HERMES_GATEWAY_URL: ${HERMES_GATEWAY_URL:-http://host.docker.internal:9120}
+      # On migration, retain the previous gateway URL as its stable storage identity.
+      HERMES_GATEWAY_IDENTITY_URL: ${HERMES_GATEWAY_IDENTITY_URL:-}
       HERMES_GATEWAY_NAME: ${HERMES_GATEWAY_NAME:-Hermes}
 
 volumes:
@@ -61,7 +66,7 @@ You can set the address directly in Compose, or supply the two interpolated
 values in a local `.env` file beside it:
 
 ```dotenv
-HERMES_GATEWAY_URL=http://hermes.example.com:9119
+HERMES_GATEWAY_URL=http://hermes.example.com:9120
 HERMES_GATEWAY_NAME=Hermes
 ```
 
@@ -130,3 +135,18 @@ to `4174:80`.
 Reuse the existing Athena preference volume and the same browser origin. Keep
 browser storage and the Hermes data intact. Once Hermes owns its data again,
 Athena's Compose service needs only its preference volume.
+
+## Move from the dashboard connection
+
+Enable the Webapp listener on the existing Hermes service and publish its port
+if Athena reaches it through a host address. Set Athena's `HERMES_GATEWAY_URL`
+to that listener, normally port 9120, and `HERMES_GATEWAY_IDENTITY_URL` to the
+previous gateway origin (normally the same host on port 9119). Keep the identity
+setting on subsequent updates. It identifies existing storage; requests and
+credentials are sent only to the new target. The earlier
+`ATHENA_PREFERENCES_IDENTITY_URL` name remains supported.
+
+Set `webapp.public_url` on Hermes to Athena's public browser URL. Redeploy the
+Hermes configuration before the new Athena image. Keep Athena's `4174:80` mapping,
+Cloudflare's host-port target and the existing preference volume. No Python
+configuration service or Hermes data mount belongs in Athena's UI-only service.

@@ -10,12 +10,12 @@ existing server.
 
 | Existing Hermes location | Example target |
 | --- | --- |
-| Docker host, listening on a container-reachable interface | `http://host.docker.internal:9119` with the supplied `extra_hosts` entry. |
+| Docker host, listening on a container-reachable interface | `http://host.docker.internal:9120` with the supplied `extra_hosts` entry. |
 | Another machine | `https://hermes.example.com` or an HTTP hostname and port reachable over your private network. |
 | Another container on a shared Docker network | That container's network name and listening port. |
 
 Use the port your existing Hermes service exposes. The headless `hermes serve`
-backend defaults to port 9119. A server bound only to its own loopback interface
+Webapp listener defaults to port 9120. A server bound only to its own loopback interface
 cannot be reached from a separate container; make it reachable through your
 existing private-network or proxy configuration.
 
@@ -24,12 +24,14 @@ WebSockets through its own browser origin, so the browser opens Athena's URL.
 
 ## Browser address and sign-in
 
-Set `dashboard.public_url` in the existing Hermes `config.yaml`, or set that
-service's `HERMES_DASHBOARD_PUBLIC_URL` environment variable, to the URL used to
-open Athena. For example:
+Enable `webapp` in the existing Hermes `config.yaml` and set its public URL to
+the address used to open Athena. For example:
 
 ```yaml
-dashboard:
+webapp:
+  enabled: true
+  host: 0.0.0.0
+  port: 9120
   public_url: "https://athena.example.com"
 ```
 
@@ -65,3 +67,19 @@ loads, check Hermes's public URL and ensure the reverse proxy forwards `/api`,
 
 Keep the preference volume and browser storage while fixing connectivity.
 Return to [Docker Compose setup](Run-with-Docker-Compose) for start/update commands.
+
+## Version and mode diagnostics
+
+Settings → Gateway shows the interface's pinned Hermes release and the running
+server version. Test connection also checks that the Webapp socket-ticket route
+is available. A dashboard/serve target produces guidance to enable Webapp and
+correct the configured address, rather than an unexplained ticket error.
+
+The release integration check uses the immutable `testGatewayImage` in
+`hermes-release.json`, and verifies that its installation commit matches the
+renderer pin. This records the tested backend; it does not upgrade the operator's
+server. Other backend versions require their own compatibility verification.
+
+For a listener migration, set `HERMES_GATEWAY_IDENTITY_URL` to the old origin to
+preserve the existing storage namespace. Do not reuse an identity for a different
+Hermes installation or account authority.

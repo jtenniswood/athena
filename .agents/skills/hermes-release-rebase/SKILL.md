@@ -26,13 +26,17 @@ without creating an empty update PR.
 
 ## Update the release baseline
 
+- Prefer `pnpm update:hermes [vX.Y.Z]` to resolve and update the stable release,
+  including the immutable `testGatewayImage`. Run `pnpm sync:renderer-dependencies`
+  after preparing the new sources.
 - Update `flake.lock`'s Hermes `rev`, `narHash` and `lastModified` for the verified
   commit, and update `hermes-release.json`'s version and revision together. Obtain
   lock metadata with Nix locking/fetch tooling or an equivalent verified fetch;
   never guess a hash or reuse metadata from another commit. Preserve the original
   flake input and unrelated lock entries. Follow the repository's Nix build rule.
 - Prepare with `pnpm prepare:renderer` and install with
-  `pnpm install --frozen-lockfile`. Existing fetched trees belonging to the old
+  `pnpm sync:renderer-dependencies`, then `pnpm install --no-frozen-lockfile` when
+  updating the dependency lock; verify a frozen install afterward. Existing fetched trees belonging to the old
   revision cause preparation to refuse: prepare the candidate in a fresh
   checkout rather than modifying upstream files or overwriting the old checkout.
 - Run `pnpm check:upstream` and `pnpm report:renderer-dependencies`. Inspect changes
@@ -73,7 +77,13 @@ previous and target release/commit, repairs, tested backend version, validation
 and remaining compatibility limitations. Follow existing session authorization
 for any subsequent merge or deployment.
 
-The parked `renderer-update.yml` workflow can propose moving-main pins and enable
-auto-merge; it is separate from this release-based workflow. Use the manual PR
-path for this skill. Leave recurring-update switches and repository settings
-unchanged unless the user requests those operations separately.
+The moving-main scheduled updater has been removed. Use the manual release
+command and normal PR flow. Keep future recurring proposals disabled unless
+explicitly requested; do not change repository settings.
+
+The native bridge requires the existing gateway's enabled Webapp listener,
+normally port 9120. Preserve the previous backend origin in
+`HERMES_GATEWAY_IDENTITY_URL` when changing listeners, and keep the browser
+connection owner `web-single` so drafts and profile routes retain their scope.
+Merging to `main` builds the development image and automatically requests a
+Komodo deployment; report required external configuration changes before merging.

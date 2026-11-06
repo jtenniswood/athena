@@ -34,7 +34,7 @@ async function checkBytes(page, request, name, text) {
     const [path] = window.pickerResults[id].paths
     return { path, bytes: await window.hermesDesktop.readFileDataUrlForAttach(path) }
   }, request)
-  expect(result.path).toMatch(new RegExp(`^web-file://\\d+/${name.replaceAll('.', '\\.')}$`))
+  expect(result.path).toBe(`/workspace/uploads/${name}`)
   expect(Buffer.from(result.bytes.split(',')[1], 'base64').toString()).toBe(text)
   await expect(composer(page)).toHaveText('Keep this draft while choosing files')
 }

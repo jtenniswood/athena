@@ -12,7 +12,9 @@ Athena — a customised **Hermes Agent chat UI** as a web app / PWA
 the pinned `hermes-agent` at build time.
 The renderer uses the formal release pinned in `hermes-release.json` and
 `flake.lock`. The UI-only image connects to an existing Hermes server configured
-by `HERMES_GATEWAY_URL` in Compose.
+by `HERMES_GATEWAY_URL` in Compose. Target its enabled Webapp listener (normally
+port 9120); retain the previous origin in `HERMES_GATEWAY_IDENTITY_URL` during a
+listener migration.
 
 ## Non‑negotiable rules
 
@@ -62,7 +64,7 @@ git push origin <branch>
   serves the UI and proxies the configured external Hermes gateway. Real image
   builds run in GitHub Actions.
 - **Dev loop:** `pnpm prepare:renderer` → `pnpm install --frozen-lockfile` →
-  `HERMES_GATEWAY_URL=http://127.0.0.1:9119 pnpm dev`
+  `HERMES_GATEWAY_URL=http://127.0.0.1:9120 pnpm dev`
   (port 5174, against an existing Hermes server).
   `nix develop` is an optional development environment;
   do not run Nix builds on the VPS.
@@ -87,15 +89,16 @@ draft, recording, selection, and safe-update behavior while simplifying code.
 
 `docs/releases.md` describes the current build/deploy/rollback process. Earlier
 reset/evolution plans and renderer automation checklists are historical, not
-additional acceptance gates. Keep automated renderer activation parked unless
-explicitly requested. Do not alter repository settings as part of routine work.
+additional acceptance gates. Use the manual release-update command and normal PR review; scheduled moving-main
+renderer activation has been removed. Do not alter repository settings as part of routine work.
 
 ## Fixing problems
 
 Diagnose the reported symptom, make the smallest useful fix, and check the
-affected workflow. Images build in GitHub Actions. A manual dispatch on `main`
-publishes an image and sends a signed deployment request to Komodo; version-tag
-builds publish without deploying. The active Komodo health-check and rollback
+affected workflow. Images build in GitHub Actions. Every push to `main` builds a
+development image; success triggers the separate signed Komodo deployment request.
+A manual release dispatch on `main` also requests deployment; version-tag builds
+publish without deploying. The active Komodo health-check and rollback
 configuration is external to this repository. Keep feature work on a branch and
 open a PR on `origin`. Do not merge or deploy unless requested.
 

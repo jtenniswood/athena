@@ -42,7 +42,7 @@ jobs:
           import { writeFileSync } from 'node:fs'
           const model = { default: 'athena-test-model', provider: 'custom', base_url: 'http://athena-review-model:4191/v1', api_key: 'local-review-fixture', api_mode: 'chat_completions' }
           writeFileSync('test-results/remote/home/config.yaml', JSON.stringify({
-            model
+            model, webapp: { enabled: true, host: "0.0.0.0", port: 9120, public_url: "http://localhost:4190" }
           }))
           writeFileSync('test-results/remote/home/profiles/research/config.yaml', JSON.stringify({ model, webapp: { enabled: false } }))
           writeFileSync('test-results/remote/home/profiles/research/SOUL.md', 'You are a local review profile.\n')
@@ -53,19 +53,20 @@ jobs:
             -v "$PWD/scripts/preview/model.mjs:/model.mjs:ro" athena:gateway-review /model.mjs
           docker create --init --name athena-review-gateway --network athena-remote-review \
             --entrypoint hermes -e HERMES_HOME=/opt/data \
-            -e HERMES_DASHBOARD_PUBLIC_URL=http://localhost:4190 \
             -e HERMES_DASHBOARD_BASIC_AUTH_USERNAME=reviewer \
             -e HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=athena-local-review-fixture \
             -e HERMES_DASHBOARD_BASIC_AUTH_SECRET=athena-local-review-session-fixture \
-            nousresearch/hermes-agent@sha256:e6d81ae52ebf6a43efa529701405509f20054ba818f179ddd748bed4f8af584c \
-            serve --host 0.0.0.0 --port 9119
+            "$(node -p 'require("./hermes-release.json").testGatewayImage')" \
+            gateway run --no-supervise
           docker cp test-results/remote/home/. athena-review-gateway:/opt/data/
           docker start athena-review-gateway
+          docker exec athena-review-gateway cat /opt/hermes/install-stamp.json > test-results/remote/install-stamp.json
+          node -e 'const fs=require("fs"); if(JSON.parse(fs.readFileSync("test-results/remote/install-stamp.json")).commit !== require("./hermes-release.json").revision) throw new Error("Gateway fixture revision differs from the release pin")'
           # docker cp creates root-owned profiles; the test server runs as hermes.
           docker exec --user 0 athena-review-gateway chown -R hermes:hermes /opt/data
           docker run -d --name athena-review-ui --network athena-remote-review \
             -p 127.0.0.1:4190:80 \
-            -e HERMES_GATEWAY_URL=http://athena-review-gateway:9119 \
+            -e HERMES_GATEWAY_URL=http://athena-review-gateway:9120 \
             athena:gateway-review
           for attempt in $(seq 1 60); do
             if curl --fail --silent http://localhost:4190/login > /dev/null; then exit 0; fi
