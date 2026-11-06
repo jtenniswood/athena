@@ -52,6 +52,30 @@ opens Hermes sign-in and resumes chat after a session is established. Existing
 session-token installations can use **Use a session token** on the welcome
 screen. Keep tokens and provider secrets out of the tracked Compose example.
 
+### Keep the Webapp settings inside Compose
+
+For the official Hermes v0.23.0 Docker image, add
+[`compose.hermes-webapp.override.yml`](../compose.hermes-webapp.override.yml)
+after the existing **Hermes server** Compose file. It inherits the existing
+image, volumes, credentials and other ports. If its service has a name other
+than `hermes`, change that service key in the override to match.
+
+```sh
+ATHENA_PUBLIC_URL=https://athena.example.com docker compose \
+  -f compose.yml -f compose.hermes-webapp.override.yml up -d hermes
+```
+
+Set `ATHENA_PUBLIC_URL` to the address used to open Athena. In Komodo, include
+both Compose files in the existing Hermes stack, with the override second, and
+set that variable in the stack environment. The override embeds its startup
+configuration in Compose, merges only the four Webapp settings through Hermes's
+config CLI, and publishes port 9120. No separate Webapp YAML file is needed.
+The official bootstrap still prepares the data and runs the gateway as the
+Hermes user. Each container start reapplies those Webapp settings.
+
+Keep Athena in its existing stack with `HERMES_GATEWAY_URL` targeting that
+listener and the previous origin retained in `HERMES_GATEWAY_IDENTITY_URL`.
+
 ## Check a connection
 
 Start with Athena's logs:
