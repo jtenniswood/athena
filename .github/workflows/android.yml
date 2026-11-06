@@ -49,7 +49,7 @@ jobs:
       - name: Install Android platform
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - name: Verify Gradle wrapper
-        run: echo '81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f  gradle/wrapper/gradle-wrapper.jar' | sha256sum --check
+        run: echo '621008afc4f5d59357fcf06ffa644dd5aade5e091bdc363742710445f73cdaf8  gradle/wrapper/gradle-wrapper.jar' | sha256sum --check
       - name: Test, lint and build APK
         run: ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug --no-daemon --console=plain
       - name: Enable emulator acceleration

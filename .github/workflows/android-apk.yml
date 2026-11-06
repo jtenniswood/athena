@@ -32,7 +32,7 @@ jobs:
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - name: Verify Gradle wrapper
         working-directory: apps/android
-        run: echo '81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f  gradle/wrapper/gradle-wrapper.jar' | sha256sum --check
+        run: echo '621008afc4f5d59357fcf06ffa644dd5aade5e091bdc363742710445f73cdaf8  gradle/wrapper/gradle-wrapper.jar' | sha256sum --check
       - name: Assign an increasing APK version code
         run: echo "ATHENA_ANDROID_VERSION_CODE=$((1000 + $(git rev-list --count HEAD)))" >> "$GITHUB_ENV"
       - name: Build, sign and verify the APK
