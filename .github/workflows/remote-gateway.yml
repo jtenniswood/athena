@@ -72,7 +72,7 @@ jobs:
             athena:gateway-review
           for attempt in $(seq 1 60); do
             if curl --fail --silent http://localhost:4190/login > /dev/null; then
-              docker exec athena-review-gateway /opt/hermes/.venv/bin/python -c 'import yaml; c=yaml.safe_load(open("/opt/data/config.yaml")); assert c["model"]["api_key"] == "local-review-fixture"; assert c["webapp"]["enabled"] is True; assert c["webapp"]["trusted_proxies"] == ["127.0.0.1"]'
+              docker exec --user hermes athena-review-gateway /opt/hermes/.venv/bin/python -c 'from hermes_cli.config import load_config; c=load_config(); assert c["model"]["api_key"] == "local-review-fixture"; assert c["webapp"]["enabled"] is True; assert c["webapp"]["trusted_proxies"] == ["127.0.0.1"]'
               exit 0
             fi
             sleep 2
