@@ -99,7 +99,7 @@ test('returning to a Bot while its previous activation is pending honors the lat
   await page.getByRole('button', { name: /Research · @/ }).click()
   await finishHeldResponse(opening)
   await expect(page).toHaveURL(/#\/preview-research$/)
-  await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'legacy::research')
+  await expect(page.locator('[data-browser-conversation-id]')).toHaveAttribute('data-browser-conversation-id', 'web-single::research')
   await expect(page.getByText('I can help you investigate a question, compare approaches, and organize your findings.', { exact: false }).first()).toBeVisible()
   await page.getByRole('button', { name: /Writer · @/ }).click()
   await expect(editor(page)).toHaveText('Keep Writer draft when returning to Research')

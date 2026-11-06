@@ -1,3 +1,4 @@
+import { officialRendererBuildOptions } from '../../scripts/hermes-vite-config.mjs'
 import { rendererAdapterPlugin, adapterAliases } from '../../scripts/renderer-adapter.mjs'
 import { runtimeConfiguration, runtimeScripts, matchesGatewayRoute, navigationFallbackDenylist, type HostingConfiguration } from '../../scripts/runtime-config.mjs'
 import { compatibilitySingletons } from '../../scripts/aliases.mjs'
@@ -93,6 +94,7 @@ interface ProxyServerLike {
 function attachDynamicProxy(server: ProxyServerLike): void {
   const services = createAthenaServices({
     target: hosting.target,
+    identityUrl: hosting.identityUrl,
     home: hosting.home,
     directory: process.env.HERMES_PREFERENCES_DIR || path.resolve(__dirname, '../../.athena/preferences')
   })
@@ -140,7 +142,7 @@ function attachDynamicProxy(server: ProxyServerLike): void {
   })().catch(next) })
 
   server.httpServer?.on('upgrade', (req, socket, head) => {
-    if (req.url?.split('?')[0] === '/api/athena/android/ws') return
+    if (['/api/athena/android/ws', '/api/athena/gateway/ws'].includes(req.url?.split('?')[0] || '')) return
     if (!matchesGatewayRoute(req.url)) return
     proxy.ws(req, socket, head, { target: hosting.target })
   })
@@ -232,38 +234,7 @@ export default defineConfig(({ command, mode }) => {
     }),
     emojibaseAssets()
   ],
-  css: {
-    postcss: { plugins: [] }
-  },
-  build: {
-    chunkSizeWarningLimit: 25000,
-    rolldownOptions: {
-      output: {
-        advancedChunks: {
-          groups: [
-            { name: 'vendor-react', test: /node_modules[\\/](react|react-dom|scheduler|react-router)[\\/]/ },
-            {
-              name: 'vendor-md',
-              test: /node_modules[\\/](property-information|hast-util-[^\\/]+|mdast-util-[^\\/]+|micromark[^\\/]*|unist-util-[^\\/]+|vfile[^\\/]*|unified|stringify-entities|space-separated-tokens|comma-separated-tokens|zwitch|html-void-elements|devlop|style-to-js|style-to-object|clsx)[\\/]/
-            },
-            {
-              name: 'vendor-util',
-              test: /node_modules[\\/](lodash-es|es-toolkit|uuid|dayjs|d3-array|d3-color|d3-force|d3-interpolate|d3-time[^\\/]*|dompurify|stylis)[\\/]/
-            },
-            {
-              name: 'mermaid',
-              test: /node_modules[\\/](mermaid|cytoscape|dagre|khroma|elkjs|d3|d3-[^\\/]+|@mermaid-js)[\\/]/
-            },
-            {
-              name: 'shiki',
-              test: /node_modules[\\/](shiki|@shikijs|react-shiki|@streamdown[\\/]code|oniguruma-to-es|oniguruma-parser|regex(-[^\\/]+)?)[\\/]/
-            },
-            { name: 'katex', test: /node_modules[\\/]katex[\\/]/ }
-          ]
-        }
-      }
-    }
-  },
+  ...officialRendererBuildOptions(),
   resolve: {
     // The renderer sources are SYMLINKED from the pinned nix input in dev
     // (nix develop); realpathing them would make Vite look for node_modules

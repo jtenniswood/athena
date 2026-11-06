@@ -6,8 +6,9 @@ description: Dispatch and monitor Athena's ad hoc development image workflow whe
 # Athena development image build
 
 Use this skill when the user asks to build and publish an Athena development
-image. It dispatches the existing GitHub Actions workflow; it does not deploy
-the image.
+UI image. It dispatches the existing GitHub Actions workflow. A successful main
+build automatically triggers the separate Komodo deployment-request workflow;
+state this effect before dispatch and honor existing session authorization.
 
 ## Choose the source revision
 
@@ -50,5 +51,7 @@ image references:
 - Moving ad hoc tag: `ghcr.io/jtenniswood/athena:dev-latest`
 - Commit-specific tag: `ghcr.io/jtenniswood/athena:dev-sha-COMMIT`
 
-Each successful ad hoc run updates `dev-latest`. The workflow does not deploy,
-and does not change the release-only `latest` tag.
+Main builds publish Athena's UI image and trigger the signed Komodo deployment
+request. The image connects to an existing standard Hermes server using the
+Compose target; it does not build or deploy a separate Hermes server image.
+Stable `latest` tags are unchanged by development builds.

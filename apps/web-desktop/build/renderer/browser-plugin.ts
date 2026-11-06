@@ -84,7 +84,6 @@ import {
   useBrowserSectionActionSurface,
   removeBrowserNewBotChatAction,
   removeBrowserOpenBotChatAction,
-  removeBrowserGatewayGroupsRefresh,
   useBrowserBotsPullRefresh,
   showHiddenBotsInBrowserRoster,
   useBrowserRosterSelection
@@ -97,7 +96,6 @@ export {
   useBrowserSectionActionSurface,
   removeBrowserNewBotChatAction,
   removeBrowserOpenBotChatAction,
-  removeBrowserGatewayGroupsRefresh,
   useBrowserBotsPullRefresh,
   showHiddenBotsInBrowserRoster,
   useBrowserRosterSelection
@@ -323,7 +321,6 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserProjectCreateOwner, useBrowserProjectDialogOwner,
     exportBrowserStatusbarItem, filterBrowserActivityToasts,
     removeBrowserNewBotChatAction, removeBrowserOpenBotChatAction,
-    removeBrowserGatewayGroupsRefresh: source => removeBrowserGatewayGroupsRefresh(source, root),
     useBrowserBotsPullRefresh: source => useBrowserBotsPullRefresh(source, root),
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth,
     guardBrowserVoiceLifetime: source => guardBrowserVoiceLifetime(source, root),

@@ -45,17 +45,11 @@ export function exposeGoalResumeAction(code: string): string {
 function rewrite(code: string, id: string): { code: string; map: null } | null {
 
     const normalizedId = id.replaceAll('\\', '/').split('?')[0]
-    if (normalizedId.endsWith('/desktop/src/components/assistant-ui/thread/assistant-message.tsx') ||
-        normalizedId.endsWith('/desktop/src/components/assistant-ui/thread/use-message-reactions.ts')) {
+    if (normalizedId.endsWith('/desktop/src/components/assistant-ui/thread/assistant-message.tsx') || normalizedId.endsWith('/desktop/src/components/assistant-ui/thread/use-message-reactions.ts')) {
       return { code: redirectAssistantRuntimeHooks(code), map: null }
     }
     if (normalizedId.endsWith('/desktop/src/app/chat/composer/status-stack/session-control-goal.tsx')) {
       return { code: exposeGoalResumeAction(code), map: null }
-    }
-    if (normalizedId.endsWith('/desktop/src/sdk/bridge.ts')) {
-      const target = 'export const pluginDecisions: ReadableAtom<Record<string, boolean>> = {'
-      if (code.split(target).length !== 2) throw new Error('Readonly plugin decisions changed')
-      return { code: code.replace(target, target + '\n  eq: Object.is,'), map: null }
     }
     if (normalizedId.endsWith('/desktop/src/lib/markdown-preprocess.ts')) {
       // HTML attributes already own their URLs. Keep bare-URL autolinking
@@ -89,6 +83,12 @@ export async function reconnectGatewayAfterPending(options?: GatewayReconnectOpt
       // becoming ready must not replace an explicit user choice.
       const target = `onActiveRouteChanged: profile => {
         const key = normalizeProfileKey(profile)`
+      const primary = '    function primaryProfileOverride(connection: HermesConnection): null | string | undefined {'
+      if (code.split(primary).length !== 2) throw new Error('Browser primary profile contract changed')
+      code = code.replace(primary, primary + `
+      // Athena tabs may start on any served profile; their native socket ticket binds that profile.
+      if (window.__HERMES_WEB_BRIDGE__) return windowProfileOverride() ?? connection.profile
+`)
       let patched = code.replace(target, `${target}
         if (window.__HERMES_WEB_BRIDGE__ && window.__HERMES_WEB_ACTIVE_PROFILE__) {
           return

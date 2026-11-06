@@ -29,7 +29,7 @@ for (const mode of ['standalone', 'middleware']) {
     const server = createServer((req, res) => { void services.handle(req, res).then(handled => { if (!handled) fallback(req, res) }) })
     services.attach(server)
     services.attach(server)
-    assert.equal(server.listenerCount('upgrade'), 1)
+    assert.equal(server.listenerCount('upgrade'), 2)
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
     t.after(async () => { services.close(); services.close(); await services.drain(); await new Promise(resolve => server.close(resolve)) })
     const origin = `http://127.0.0.1:${server.address().port}`
@@ -68,4 +68,21 @@ test('account identity rejects ambiguous ownership and keeps deployment, provide
   for (const malformed of [null, {}, { ...a, provider: '' }, { ...a, org_id: {} }, { ...a, user_id: '' }]) {
     assert.throws(() => accountIdentity(target, malformed), /verify/)
   }
+})
+
+test('a Webapp listener migration reads the existing preference account and authenticates only at the new target', async t => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'athena-listener-migration-'))
+  t.after(() => rm(directory, { recursive: true, force: true }))
+  const identityUrl = 'http://gateway.test:9119', next = 'http://gateway.test:9120'
+  const urls = []
+  const services = createAthenaServices({ target: next, identityUrl, directory,
+    sender: { enabled: false, send: async () => {} },
+    fetch: async url => { urls.push(url); return Response.json({ user_id: 'A', provider: 'test', org_id: '' }) }
+  })
+  const server = createServer((req, res) => { void services.handle(req, res) })
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
+  t.after(async () => { services.close(); await new Promise(resolve => server.close(resolve)) })
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/api/athena/preferences`, { headers: { Cookie: 'session=A' } })
+  assert.equal((await response.json()).accountId, accountIdentity(identityUrl, { user_id: 'A', provider: 'test' }))
+  assert.deepEqual(urls, [next + '/api/auth/me'])
 })

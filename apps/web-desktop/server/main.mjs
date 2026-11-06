@@ -4,7 +4,7 @@ import { runtimeConfiguration } from '../../../scripts/runtime-config.mjs'
 import { createAthenaServices } from './services.mjs'
 
 const config = runtimeConfiguration()
-const services = createAthenaServices({ target: config.target, directory: config.preferencesDir, home: config.home })
+const services = createAthenaServices({ target: config.target, identityUrl: config.identityUrl, directory: config.preferencesDir, home: config.home })
 const server = createServer((req, res) => { void services.handle(req, res).then(handled => { if (!handled) { res.writeHead(404); res.end() } }) })
 services.attach(server)
 server.requestTimeout = 15000

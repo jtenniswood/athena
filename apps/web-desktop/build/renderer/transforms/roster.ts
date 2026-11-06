@@ -85,29 +85,6 @@ export function removeBrowserNewBotChatAction(source: string): string {
   return output
 }
 
-export function removeBrowserGatewayGroupsRefresh(source: string, root: string): string {
-  const changes: [string, string][] = [
-    ['  const gateway = useValue(host.state.gateway)\n', `  const gatewayState = useValue(host.state.gateway)
-  const gateway = useValue($gateway)
-`],
-    ['  const [refresh, setRefresh] = useState(0)\n', '  const [refresh, finishRefresh] = useBotsRefreshSignal()\n'],
-    ["    setError('')\n", `    setError('')
-    // The open state may publish before the socket. Retry when both are ready.
-    if (gatewayState !== 'open' || !gateway) {
-      finishRefresh()
-      return
-    }
-`],
-    ['[connectionId, gateway, profile, refresh, revision]', '[connectionId, profile, gatewayState, gateway, refresh, revision, finishRefresh]'],
-    ["if (!cancelled && host.state.gateway.get() === 'open') {setError(e instanceof Error ? e.message : String(e))}\n    })", "if (!cancelled && host.state.gateway.get() === 'open') {setError(e instanceof Error ? e.message : String(e))}\n    }).finally(finishRefresh)"],
-    ['    <Button onClick={() => setRefresh(value => value + 1)} variant="ghost">{labels.refreshGroups}</Button>\n', '']
-  ]
-  for (const [before] of changes) {
-    if (source.split(before).length !== 2) throw new Error('Browser gateway groups refresh target changed')
-  }
-  return `import { $gateway } from '@/store/gateway'\nimport { useBotsRefreshSignal } from ${JSON.stringify(path.join(root, 'src/experience/browser-bots-refresh'))}\n` +
-    changes.reduce((output, [before, after]) => output.replace(before, after), source)
-}
 
 export function useBrowserBotsPullRefresh(source: string, root: string): string {
   const opening = '    <div className="flex h-full flex-col">'
@@ -151,7 +128,7 @@ export function useBrowserRosterSelection(source: string, root: string, surface:
     ],
     group: [
       ["import { GroupChatWorkspace, openGroupChat } from './group-chat-view'", "import { GroupChatWorkspace } from './group-chat-view'"],
-      ['onOpen={openGroupChat}', 'onOpen={selectBrowserGroup}'],
+      ['onOpen={() => openGroupChat(bindGatewayGroupRoom(gateway), \'key\')}', 'onOpen={() => selectBrowserGroup(bindGatewayGroupRoom(gateway), \'key\')}'],
       ["onOpen={group => openGroupChat(group, 'name')}", "onOpen={group => selectBrowserGroup(group, 'name')}"]
     ],
     'created-group': [

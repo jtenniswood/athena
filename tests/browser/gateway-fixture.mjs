@@ -2,7 +2,8 @@ import { waitForBrowserNetwork } from './network-readiness.mjs'
 import { test as base, expect } from '@playwright/test'
 import { execFileSync } from 'node:child_process'
 import { createPreviewGateway } from '../../scripts/preview/gateway.mjs'
-import { requireBrowserImage } from './test-target.mjs'
+import { getBrowserTarget } from './test-target.mjs'
+import { createBuiltApplication } from './built-application.mjs'
 
 export const test = base.extend({
   // Docker changes network interfaces between tests. Launch a fresh browser
@@ -29,22 +30,26 @@ export const test = base.extend({
     expect(errors, 'Unhandled browser exceptions').toEqual([])
   },
   gatewayApp: async ({}, use, testInfo) => {
-    const image = requireBrowserImage()
-    if (!image) throw new Error('An nginx image is required for interruption tests')
-    const gateway = createPreviewGateway({ strict: true })
-    let container
+    const { image, url } = getBrowserTarget()
+    if (url) throw new Error('Interruption tests require their own isolated gateway.')
+    const application = image ? null : await createBuiltApplication({ strict: true })
+    const gateway = application?.gateway || createPreviewGateway({ strict: true })
+    let container, origin = application?.origin
     try {
-      await new Promise(resolve => gateway.server.listen(0, '0.0.0.0', resolve))
-      container = execFileSync('docker', ['run', '-d', '--rm', '--add-host', 'host.docker.internal:host-gateway', '-p', '127.0.0.1::80', '-e', `HERMES_GATEWAY_URL=http://host.docker.internal:${gateway.server.address().port}`, image], { encoding: 'utf8' }).trim()
-      const port = execFileSync('docker', ['port', container, '80/tcp'], { encoding: 'utf8' }).trim().split(':').at(-1)
-      const origin = `http://127.0.0.1:${port}`
-      await expect.poll(async () => { try { return (await fetch(origin)).status } catch { return 0 } }).toBe(200)
+      if (image) {
+        await new Promise(resolve => gateway.server.listen(0, '0.0.0.0', resolve))
+        container = execFileSync('docker', ['run', '-d', '--rm', '--add-host', 'host.docker.internal:host-gateway', '-p', '127.0.0.1::80', '-e', `HERMES_GATEWAY_URL=http://host.docker.internal:${gateway.server.address().port}`, image], { encoding: 'utf8' }).trim()
+        const port = execFileSync('docker', ['port', container, '80/tcp'], { encoding: 'utf8' }).trim().split(':').at(-1)
+        origin = `http://127.0.0.1:${port}`
+        await expect.poll(async () => { try { return (await fetch(origin)).status } catch { return 0 } }).toBe(200)
+      }
       await use({ ...gateway, origin })
     } finally {
       gateway.controls.releaseAll()
       await testInfo.attach('gateway-operations', { body: JSON.stringify({ calls: gateway.controls.calls, unexpected: gateway.controls.unexpected }, (_key, value) => typeof value === 'string' && value.length > 1000 ? `${value.slice(0, 200)}… (${value.length} characters)` : value, 2), contentType: 'application/json' })
       if (container) execFileSync('docker', ['stop', container], { stdio: 'ignore' })
-      await gateway.close()
+      if (application) await application.close()
+      else await gateway.close()
     }
     gateway.controls.assertExpected()
   }

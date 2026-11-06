@@ -34,6 +34,7 @@ function startupHarness({ configurationError, rendererError, existingBridge, sig
     } },
     'platform/reload-safety.ts': { trackMediaRequests() { state.tracking = true } },
     'platform/connection-state.ts': { consumeConnectionToken() { state.tokenConsumed = true } },
+    'platform/connection.ts': { resolveToken: () => '' },
     'platform/sign-in.ts': { async waitForSignIn() { await signInReady; state.signedIn = true } },
     'platform/preference-sync.ts': { async initializePreferenceSync() {
       assert.equal(state.signedIn, true)

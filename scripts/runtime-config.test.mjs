@@ -4,6 +4,17 @@ import { test } from 'node:test'
 import vm from 'node:vm'
 import { matchesGatewayRoute, runtimeConfiguration, runtimeScripts, renderNginx, navigationFallbackDenylist } from './runtime-config.mjs'
 
+test('an explicit listener migration preserves identity while routing only to the new server', () => {
+  const previous = runtimeConfiguration({ HERMES_GATEWAY_URL: 'http://gateway.test:9119' })
+  const next = runtimeConfiguration({ HERMES_GATEWAY_URL: 'http://gateway.test:9120', HERMES_GATEWAY_IDENTITY_URL: previous.target })
+  assert.equal(next.publicConfig.gateway.id, previous.publicConfig.gateway.id)
+  assert.equal(next.identityUrl, previous.target)
+  assert.equal(next.target, 'http://gateway.test:9120')
+  assert.deepEqual(next.publicConfig.gateway.legacyUrls, [next.target, previous.target])
+  assert.equal(runtimeConfiguration({ HERMES_GATEWAY_URL: next.target, ATHENA_PREFERENCES_IDENTITY_URL: previous.target }).identityUrl, previous.target)
+  assert.throws(() => runtimeConfiguration({ HERMES_GATEWAY_IDENTITY_URL: 'https://user:secret@gateway.test' }), /HTTP\(S\) origin/)
+})
+
 test('runtime identity changes with the backend and excludes credentials', () => {
   const a = runtimeConfiguration({ HERMES_GATEWAY_URL: 'http://gateway.example.test:9119' })
   const b = runtimeConfiguration({ HERMES_GATEWAY_URL: 'http://other.example.test:9119' })

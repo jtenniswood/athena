@@ -1,12 +1,12 @@
 # Releases and rollback
 
-Hermes Web is a personal project in early development. The normal loop is:
+Athena is a personal project in early development. The normal loop is:
 make a small change, typecheck and build, try the affected workflow, then merge.
 A full browser suite, staged image promotion, and release evidence records are
 not required for routine changes.
 
 The [tooling index](tooling.md) separates active commands, optional diagnostics,
-parked automation and historical executables. The old staged publisher and its
+release update tooling and historical executables. The old staged publisher and its
 evidence recorder are retained under `scripts/legacy/`; no current workflow calls
 them. `pnpm legacy:stage-static-artifact` names the earlier static-artifact helper
 explicitly and does not deploy the current Docker/Komodo stack.
@@ -29,7 +29,9 @@ separate disposable Hermes server; that server is only a CI fixture.
 
 A manual dispatch on `main` also sends a signed deploy request to the configured
 Komodo stack listener. A manual dispatch on another branch and a version-tag run
-only build and publish. Merges to `main` do not trigger this workflow. GitHub
+only build and publish. Separately, every push to `main` builds a development
+image, and `.github/workflows/komodo-update.yml` requests deployment after that
+build succeeds. Merging a PR therefore also requests a Komodo deployment. GitHub
 Actions records whether the listener accepted the request; acceptance does not
 prove that the stack finished deploying or that the application workflow works.
 
@@ -63,7 +65,7 @@ also runs **Build latest Android APK**, producing the signed development APK
 for downloads and the opt-in latest-main update channel. Each commit has its own
 concurrency group so another push cannot replace its pending build.
 
-To build a test image manually without moving a release tag or deploying it, open
+To build a development image without moving a stable release tag, open
 **Actions → Build development image → Run workflow** and select the branch to
 build. The workflow publishes `ghcr.io/jtenniswood/athena:dev-latest` and the
 immutable `dev-sha-<revision>` tag. Each completed run updates `dev-latest`;
@@ -79,8 +81,9 @@ docker pull ghcr.io/jtenniswood/athena:dev-latest
 ```
 
 Configure your test system to use `ghcr.io/jtenniswood/athena:dev-latest` as its
-image reference. The development workflow only builds and publishes the image;
-it does not trigger a deployment. For a private GHCR package, sign in on the
+image reference. A successful main-branch development build triggers the separate Komodo update
+workflow. A feature-branch development build publishes without that automatic
+deployment request. For a private GHCR package, sign in on the
 host before pulling.
 
 ## Deployment setup
@@ -95,9 +98,10 @@ Cloudflare Access protected Komodo request:
 The workflow checks that these values are present and that the listener URL is
 HTTPS with the expected route shape. The actual Komodo stack definition and its
 runtime configuration are outside this repository. Verify the configured stack
-uses the intended Athena image and preserves the existing Hermes data mount,
-gateway settings, published port, and reverse-proxy connection before changing
-deployment configuration.
+uses the intended Athena image and preserves the existing preference volume,
+gateway target, stable gateway identity, published port, and reverse-proxy
+connection before changing deployment configuration. Hermes data stays on the
+separate server.
 
 The older SSH/Compose assets remain in `deploy/production/`. Their presence
 does not mean the current GitHub workflow uses them. Confirm the active Komodo
@@ -150,8 +154,21 @@ Keep renderer upgrades separate from unrelated UI changes when practical. Review
 changed compatibility assumptions, typecheck and build, then try the affected
 chat workflows. Keep source fingerprints and draft/update protections intact.
 
-Automatic renderer proposals are parked. They are not required to develop,
-publish, or deploy this app. The [updater reference](upstream-updates.md) describes
-the retained automation tooling; its historical activation checklist is not the
-current development policy. Neither `HERMES_RENDERER_UPDATES_ENABLED` nor
-`HERMES_PROMOTION_ENABLED` controls the normal image publisher or deployment.
+Automatic renderer proposals have been removed. Use the manual stable-release
+command and PR workflow in the [updater reference](upstream-updates.md). Neither
+`HERMES_RENDERER_UPDATES_ENABLED` nor `HERMES_PROMOTION_ENABLED` controls the normal
+image publisher or deployment.
+
+## Released renderer and standard Hermes connections
+
+The image connects to an existing standard Hermes serve/dashboard listener,
+normally port 9119. Its compatibility service supplies the authenticated socket
+boundary while the released renderer retains its native standard-server wire
+support. An already enabled Webapp listener is also supported automatically.
+The image update does not require a server-image replacement, a new Hermes
+process, or changes to the existing server's Webapp settings.
+
+Keep the working `HERMES_GATEWAY_URL`, tunnel port and preference volume when
+updating. If you deliberately change the target listener, retain the old origin
+in `HERMES_GATEWAY_IDENTITY_URL`. The earlier combined image's Python setup
+service and Hermes data mount are unnecessary for the UI-only image.

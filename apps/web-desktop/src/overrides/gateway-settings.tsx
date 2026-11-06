@@ -8,6 +8,7 @@ import { useEffect, useId, useState } from 'react'
 import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SettingsContent } from '../upstream/ui'
 import { runtimeConfig } from '../platform/runtime'
 import { getActiveGateway } from '../web-bridge/gateways'
+import { buildInfo } from '../build-info'
 import './gateway-settings.css'
 
 export function GatewaySettings({ embedded = false }: { embedded?: boolean; subpage?: string } = {}) {
@@ -19,6 +20,14 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean; subp
   const [token, setToken] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [serverVersion, setServerVersion] = useState('Checking…')
+  useEffect(() => {
+    let current = true
+    void window.hermesDesktop.getVersion().then(version => {
+      if (current) setServerVersion(version.backendVersion || 'Unavailable')
+    }).catch(() => { if (current) setServerVersion('Unavailable') })
+    return () => { current = false }
+  }, [])
   useEffect(() => { setMode(getActiveGateway().authMode) }, [])
 
   async function run(action: () => Promise<void>) {
@@ -31,6 +40,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean; subp
       <p className="browser-settings-page-description">Check gateway status and connection settings.</p></div>
     <section className="browser-settings-gateway-status" aria-label="Gateway status">
       <h3>Connection status</h3>
+      <p>Interface: Hermes {buildInfo.hermesRelease} · Server: {serverVersion}</p>
       <BrowserGatewayPanel status={status} onClose={() => {}} onOpenSystem={() => navigate('/settings?tab=config:command-center&section=system', { replace: true })} />
     </section>
     <div className="browser-gateway-settings-intro"><h3>Sign-in</h3>

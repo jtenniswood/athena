@@ -10,10 +10,15 @@ const compile = file => ts.transpileModule(readFileSync(file, 'utf8'), { compile
 test('unsupported browser hosts lack app-window capabilities while preinstalled hosts retain theirs', () => {
   for (const [android, athena, channel] of [[true, true, true], [false, false, true], [false, true, false]]) {
     const existing = () => Promise.resolve({ ok: true })
-    const window = { __HERMES_WEB_BRIDGE__: athena, hermesDesktop: athena ? {} : { openWindow: existing, openSessionWindow: existing } }
+    const window = { addEventListener() {}, __HERMES_WEB_BRIDGE__: athena, hermesDesktop: athena ? {} : { openWindow: existing, openSessionWindow: existing } }
     if (athena) {
       const construction = vm.createContext({ exports: {}, window, require: () => ({
         browserCapabilities: () => ({ secureTokenStorage: false }), createWebZoomBridge: () => ({}),
+        mountedPluginFiles: () => ({}),
+        resolveToken: () => '', installBrowserDesktopBridge: () => {
+          window.hermesDesktop = { profile: {}, openWindow: existing, openSessionWindow: existing, terminal: {} }
+          return true
+        },
         browserDefaultProfile: { getDefault() {}, setDefault() {}, onDefaultChanged() {} }
       }) })
       vm.runInContext(compile('apps/web-desktop/src/upstream/bridge.ts'), construction)

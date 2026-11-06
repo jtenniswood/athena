@@ -18,7 +18,7 @@ Historical plans do not add acceptance gates to ordinary changes.
 | Hosting configuration | `scripts/runtime-config.mjs`; Docker entrypoint and Vite | Validate hosting settings and generate runtime scripts and nginx configuration. |
 | Runtime services | `apps/web-desktop/server/services.mjs`; Vite, preview and `apps/web-desktop/server/main.mjs` | Assemble shared preferences, Android sign-in and push services with one HTTP/WebSocket lifecycle. |
 | Build identity | `scripts/build-info.mjs`; Vite | Record wrapper revision, renderer revision and dependency lock identity. |
-| Versioned and manual image builds | `.github/workflows/release.yml`; version tag or manual dispatch | Publish the image; only a dispatch on `main` requests Komodo deployment. |
+| Versioned and manual image builds | `.github/workflows/release.yml`; version tag or manual dispatch | Publish the image; a dispatch on `main` requests Komodo deployment; successful main development builds also trigger the separate Komodo workflow. |
 | Development images | `.github/workflows/dev-image.yml`; manual branch dispatch | Publish `dev-latest` and `dev-sha-<revision>` for testing, without deployment. |
 
 The local loop is:
@@ -31,7 +31,7 @@ HERMES_GATEWAY_URL=http://127.0.0.1:9119 pnpm dev
 ```
 
 The backend must already be running. Open `http://localhost:5174` and configure
-the Hermes server's `dashboard.public_url` or `HERMES_DASHBOARD_PUBLIC_URL` to that
+the Hermes server's `webapp.public_url` to that
 browser URL for sign-in and origin validation. The local `.env.example` belongs
 to Vite; production sets its gateway address in Compose. See the
 [setup guide](../wiki/Run-with-Docker-Compose.md).
@@ -119,11 +119,10 @@ change the deployment process.
 | Previous-image upgrade baseline | `scripts/prepare-upgrade-baseline.mjs`, `tests/fixtures/upgrade-baseline.json` | Optional real-composer upgrade/rollback diagnosis. |
 | Compatibility report | `pnpm check:upstream`, `scripts/renderer-compatibility-report.mjs` | Useful when reviewing a renderer pin change. |
 | Adapted renderer inspection | `pnpm inspect:renderer`, `scripts/inspect-renderer.mjs` | Export original and adapted modules, replacement policies and input hashes for local inspection. |
-| Renderer proposal tooling | `renderer-update.yml`, `scripts/propose-renderer-update.mjs`, update-state and policy helpers | Retained automation; keep activation parked unless explicitly requested. |
-| Automation setup audit | `pnpm check:update-setup` | Read-only check of the optional updater setup; missing parked setup does not block development. |
+| Renderer proposal tooling | `pnpm update:hermes`, `pnpm sync:renderer-dependencies` | Manual stable-release pin/dependency updates; normal PR review. Moving-main automation is removed. |
 | Repository rules configurator | `scripts/configure-repository.mjs` | Retained for the old automation design. Its apply mode changes repository settings; it is not routine setup. |
 
-The retained updater is described in [upstream updates](upstream-updates.md).
+The manual updater is described in [upstream updates](upstream-updates.md).
 It does not replace the active image publisher or the externally maintained
 Komodo deployment configuration.
 

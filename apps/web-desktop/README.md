@@ -14,11 +14,10 @@ Run an existing Hermes server, then prepare the UI from the repository root:
 ```sh
 pnpm prepare:renderer
 pnpm install --frozen-lockfile
-HERMES_GATEWAY_URL=http://127.0.0.1:9119 pnpm dev
+HERMES_GATEWAY_URL=http://127.0.0.1:9120 pnpm dev
 ```
 
-Open `http://localhost:5174`. Set the Hermes server's `dashboard.public_url` (or
-`HERMES_DASHBOARD_PUBLIC_URL`) to that development URL for browser sign-in and
+Open `http://localhost:5174`. Enable the existing Hermes server's Webapp listener and set `webapp.public_url` to that development URL for browser sign-in and
 origin validation. If you open Vite with another hostname, use that browser URL.
 `apps/web-desktop/.env` can hold local overrides; its `.env.example` is a
 development template. Docker selects its server through the Compose service's

@@ -42,18 +42,11 @@ Use the address reachable from the container, with no `/api` path. The example
 uses a gateway on the Docker host; for another machine, use its HTTP(S) origin.
 The Compose file can also read `HERMES_GATEWAY_URL` and `HERMES_GATEWAY_NAME`
 from your shell or a local `.env` file. Configure models, profiles and sign-in
-on the existing Hermes server. Set its `dashboard.public_url` (or
-`HERMES_DASHBOARD_PUBLIC_URL`) to Athena's browser-facing URL so sign-in returns
-to Athena and the server admits its browser origin. For the local example:
-
-```yaml
-dashboard:
-  public_url: "http://localhost:4174"
-```
-
-Merge this into Hermes's existing config and apply it through that server's
-normal configuration/restart procedure. For HTTPS access, use your actual
-Athena HTTPS URL. See [gateway configuration](wiki/Gateway-Configuration.md).
+on the existing Hermes server. A standard `hermes serve` listener (normally port
+9119) works with its existing sign-in and data. Athena's image handles the
+browser connection compatibility; no Webapp listener, server-image replacement
+or additional Hermes container is required. See
+[gateway configuration](wiki/Gateway-Configuration.md).
 
 ### 2. Start Athena
 
@@ -61,6 +54,17 @@ Athena HTTPS URL. See [gateway configuration](wiki/Gateway-Configuration.md).
 docker compose -f compose.example.yml config --quiet
 docker compose -f compose.example.yml up -d
 ```
+
+Athena uses the configured server's existing login. It supports the standard
+serve/dashboard connection and automatically uses the native Webapp connection
+when that endpoint is available. Models, profiles and conversations stay on your
+existing Hermes machine.
+
+When migrating from the earlier Athena gateway address, set
+`HERMES_GATEWAY_IDENTITY_URL` to that previous address, including its old port.
+This preserves existing browser sign-in storage, synced preferences and Android
+account ownership while requests go only to `HERMES_GATEWAY_URL`.
+`ATHENA_PREFERENCES_IDENTITY_URL` remains accepted for existing stacks.
 
 Open <http://localhost:4174/> and sign in to the configured Hermes server.
 Compose publishes Athena's port 80 as 4174 and preserves preferences in the

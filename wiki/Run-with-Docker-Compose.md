@@ -7,25 +7,14 @@ The UI renderer is pinned to the official release recorded in the repository's
 
 ## 1. Configure the existing Hermes server
 
-Choose the two addresses before starting Athena:
+Use the HTTP(S) address of your existing Hermes server, normally its standard
+serve/dashboard listener on port 9119. Keep that server's current sign-in,
+profiles, data and model configuration. Athena's image supplies browser socket
+compatibility; no Webapp listener or additional Hermes service is required.
 
-| Setting | Where to configure it | Meaning |
-| --- | --- | --- |
-| `HERMES_GATEWAY_URL` | Athena's Compose service | Hermes HTTP(S) origin reachable from the Athena container, such as `http://host.docker.internal:9119`. |
-| `dashboard.public_url` or `HERMES_DASHBOARD_PUBLIC_URL` | Existing Hermes server | Athena's browser-facing URL, such as `http://localhost:4174` or `https://athena.example.com`. |
-
-For a local browser setup, merge this into the existing Hermes `config.yaml`,
-preserving its other settings:
-
-```yaml
-dashboard:
-  public_url: "http://localhost:4174"
-```
-
-For remote access, use the HTTPS address you actually open instead. Apply the
-setting using your existing Hermes service's configuration/restart procedure.
-Keep authentication and model credentials on that server. See
-[Gateway configuration](Gateway-Configuration) for address and sign-in details.
+For a server on the Docker host, the example uses
+`http://host.docker.internal:9119`. For another machine, use its reachable
+hostname and port. See [Gateway configuration](Gateway-Configuration).
 
 ## 2. Configure Athena in Compose
 
@@ -46,6 +35,8 @@ services:
     # Set the existing Hermes server origin here, or in a local .env file.
     environment:
       HERMES_GATEWAY_URL: ${HERMES_GATEWAY_URL:-http://host.docker.internal:9119}
+      # On migration, retain the previous gateway URL as its stable storage identity.
+      HERMES_GATEWAY_IDENTITY_URL: ${HERMES_GATEWAY_IDENTITY_URL:-}
       HERMES_GATEWAY_NAME: ${HERMES_GATEWAY_NAME:-Hermes}
 
 volumes:
@@ -86,10 +77,11 @@ docker compose logs --follow athena
 From a repository checkout using the supplied example, use
 `docker compose -f compose.example.yml` in place of `docker compose`.
 
-Open <http://localhost:4174/> and sign in. If you change the host port, update
-the left side of `4174:80` and Hermes's public URL to match. For microphone
-access from another device, expose Athena over HTTPS and use that same HTTPS
-URL in the browser and Hermes public-URL setting.
+Open <http://localhost:4174/> and sign in with your existing Hermes account.
+If you change the host port, update the left side of `4174:80`. For microphone
+access from another device, expose Athena over HTTPS. If an existing tunnel
+uses Athena's container port 4174, set `HERMES_PORT: '4174'`, map `4174:4174`,
+and update its health-check URL to that port.
 
 Check that profiles and existing conversations appear, send a message, and
 reload with an unsent text draft to confirm it is restored.
@@ -130,3 +122,15 @@ to `4174:80`.
 Reuse the existing Athena preference volume and the same browser origin. Keep
 browser storage and the Hermes data intact. Once Hermes owns its data again,
 Athena's Compose service needs only its preference volume.
+
+## Optional listener migration
+
+The existing dashboard/serve connection can stay on port 9119. If you choose to
+use an already enabled Webapp listener instead, change `HERMES_GATEWAY_URL` and
+retain the previous origin in `HERMES_GATEWAY_IDENTITY_URL`. That identity keeps
+browser storage, preferences and Android account ownership stable; requests
+still go only to the configured target. The earlier
+`ATHENA_PREFERENCES_IDENTITY_URL` name remains supported.
+
+Keep the existing preference volume and tunnel target. No Python configuration
+service or Hermes data mount belongs in Athena's UI-only service.

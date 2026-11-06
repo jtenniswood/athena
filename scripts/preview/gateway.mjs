@@ -43,7 +43,9 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
   }
   function snapshot(id) {
     const session = sessions.get(id) || addSession(id, 'New conversation')
-    return { session_id: id, resumed: id, stored_session_id: id, messages: messages.get(id), message_count: messages.get(id).length, info: { ...info, profile: session.profile }, running: timers.has(id), pending_approval: null, open_requests: [], inflight: inflight.get(id) || null }
+    return { session_id: id, revision: session.revision || 0, execution_generation: 0,
+      resumed: id, stored_session_id: id, messages: messages.get(id), message_count: messages.get(id).length,
+      info: { ...info, profile: session.profile }, running: timers.has(id), pending_approval: null, open_requests: [], inflight: inflight.get(id) || null }
   }
   function complete(id, status = 'complete', text = '') {
     clearInterval(timers.get(id)); timers.delete(id)
@@ -120,7 +122,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'session.usage') return { calls: 1, input: 48, output: 120, total: 168 }
     if (method === 'projects.tree') return { projects: [], active_id: null, scoped_session_ids: [] }
     if (method === 'session.create') {
-      const session = addSession(`preview-new-${++count}`, params.title || 'New conversation', params.profile || 'default')
+      const session = addSession(`preview-new-${++count}`, params.title || 'New conversation', params.profile || profile)
       event('sessions.changed', null, {})
       return { session_id: session.id, stored_session_id: session.id, info, ...session, messages: [] }
     }
@@ -128,7 +130,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'profiles.get') return { ...profiles.find(p => p.name === params.name), config: config.read(params.name) }
     if (method === 'pet.gallery') return { enabled: false, active: '', pets: [] }
     if (method === 'prompt.submit') {
-      if (!sessions.has(id)) addSession(id, 'New conversation')
+      if (!sessions.has(id)) addSession(id, 'New conversation', profile)
       messages.get(id).push({ id: `${id}-${Date.now()}`, role: 'user', content: params.text || '', timestamp: now() })
       const session = sessions.get(id); session.is_active = true; session.last_active = now()
       if (session.title === 'New conversation') session.title = (params.text || 'New conversation').slice(0, 48)
@@ -143,7 +145,9 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
         const piece = parts[index++]; sent += piece; turn.assistant = sent; event('message.delta', id, { text: piece })
       }, delay)
       timers.set(id, timer)
-      return { status: 'started', session_id: id, submission_id: params.submission_id }
+      return { status: 'started', session_id: id, submission_id: params.submission_id,
+        admission_id: params.input_id || params.submission_id || `preview-admission-${id}`,
+        ref: { session_id: id, profile: sessions.get(id).profile } }
     }
     if (method === 'session.redirect') {
       if (!timers.has(id)) return { status: 'rejected', text: params.text }
@@ -163,10 +167,12 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method.includes('list')) return { items: [], sessions: [], skills: [], jobs: [], tools: [] }
     return { ok: true }
   }
+  const uploads = new Map()
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://fixture'), pathname = url.pathname
     log(req.method, pathname)
-    let body = ''; for await (const part of req) body += part
+    const parts = []; for await (const part of req) parts.push(part)
+    const bytes = Buffer.concat(parts), body = bytes.toString('utf8')
     let parsed = {}; try { parsed = JSON.parse(body || '{}') } catch { /* Text/multipart attachments are accepted by this fixture. */ }
     const send = (data, status = 200) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)) }
     try {
@@ -188,7 +194,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       if (req.method === 'GET' && pathname === '/api/git/review/rev-parse') return send({ sha: null })
       if (/^\/api\/sessions\/[^/]+\/timeline$/.test(pathname)) return send({ events: [], has_more: false })
       if (pathname === '/auth/me' || pathname === '/api/auth/me') return send({ authenticated: true, user_id: 'preview-user', provider: 'preview', org_id: '' })
-      if (pathname === '/auth/ws-ticket' || pathname === '/api/auth/ws-ticket') return send({ ticket: `preview-${Date.now()}` })
+      if (pathname === '/api/webapp/socket-ticket' || pathname === '/auth/ws-ticket' || pathname === '/api/auth/ws-ticket') return send({ ticket: `preview-${Date.now()}` })
       if (pathname === '/auth/logout') return send({ ok: true })
       if (pathname === '/login') { res.writeHead(200, { 'Content-Type': 'text/html' }); return res.end('<p>Synthetic gateway: signed in. You can close this window.</p>') }
       if (pathname === '/api/profiles/sessions/sidebar') return send({ recents: page(url.searchParams.get('recents_profile') || 'all'), cron: page('none'), messaging: page('none') })
@@ -233,6 +239,18 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
       if (pathname.includes('soul')) return send({ content: 'A helpful synthetic assistant for interface review.', exists: true })
       if (pathname.includes('files') || pathname.includes('browse')) return send({ entries: [], files: [], path: '/workspace' })
       if (pathname.includes('toolsets')) return send({ toolsets: [], enabled: [] })
+      if (pathname === '/api/chat/file-upload') {
+        const form = await new Request('http://fixture', { method: 'POST', headers: { 'content-type': req.headers['content-type'] }, body: bytes }).formData()
+        const file = form.get('file')
+        if (!file || typeof file === 'string') return send({ detail: 'Missing file' }, 400)
+        const path = '/workspace/uploads/' + file.name.replace(/[\\/]/g, '_')
+        uploads.set(path, { name: file.name, type: file.type, bytes: Buffer.from(await file.arrayBuffer()) })
+        return send({ path })
+      }
+      if (pathname === '/api/fs/read-data-url') {
+        const file = uploads.get(url.searchParams.get('path'))
+        return file ? send({ dataUrl: `data:${file.type || 'application/octet-stream'};base64,${file.bytes.toString('base64')}` }) : send({ detail: 'Missing file' }, 404)
+      }
       if (pathname.includes('upload') || pathname.includes('attach')) return send({ ok: true, path: '/workspace/preview-attachment.txt' })
       if (pathname.includes('onboarding')) return send({ complete: true, completed: true, required: false, enabled: false, stage: 'completed' })
       return send({ ok: true, items: [], entries: [], tools: [], providers: [], channels: [], jobs: [], models: [], configured: true })
@@ -242,7 +260,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
   sockets.on('connection', (client, request) => {
     const profile = new URL(request.url, 'http://fixture').searchParams.get('profile') || 'default'
     clients.add(client)
-    client.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: { type: 'gateway.ready', payload: { version: info.version, profile: 'default', cwd: '/workspace', skin: {}, change_events: true, replay_epoch: 'preview', ...info } } }))
+    client.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: { type: 'gateway.ready', payload: { version: info.version, profile, cwd: '/workspace', skin: {}, change_events: true, replay_epoch: 'preview', ...info } } }))
     client.on('close', () => clients.delete(client))
     client.on('message', async data => {
       let message

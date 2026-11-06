@@ -35,7 +35,7 @@ async function holdFirstCredentialDial(page) {
     window.hermesDesktop.getGatewayWsUrlFor = async scope => {
       const result = await mint(scope)
       if (!scope.profile || scope.profile === 'default') {
-        window.credentialMints.push(result)
+        window.credentialMints.push(typeof result === 'string' ? result : result.wsUrl)
         if (first) { first = false; await new Promise(resolve => { window.releaseCredentialDial = resolve }) }
       }
       return result
@@ -124,12 +124,21 @@ test('a confirmed token apply replaces the saved credential and preserves the dr
   await page.getByRole('button', { name: 'Save and reconnect', exact: true }).click()
   await expect.poll(() => credentials(page)).toEqual({ mode: 'token', token: 'synthetic-new-token' })
   await expect(token).toHaveValue('')
+  const fileCredentials = []
+  await page.route('**/api/fs/read-text*', route => {
+    fileCredentials.push(route.request().headers()['x-hermes-session-token'])
+    return route.fulfill({ json: { path: '/workspace/probe.txt', text: 'Updated credential' } })
+  })
+  expect(await page.evaluate(() => window.hermesDesktop.readFileText('/workspace/probe.txt'))).toMatchObject({ text: 'Updated credential' })
+  expect(fileCredentials).toEqual(['synthetic-new-token'])
   await retainedDraft(page)
 })
 
 test('connection apply stays exclusive until the engine reconnect completes', async ({ page }) => {
-  const dials = []
-  page.on('websocket', socket => dials.push(new URL(socket.url()).searchParams.get('token')))
+  const mintedCredentials = []
+  page.on('request', request => {
+    if (request.url().includes('/api/webapp/socket-ticket')) mintedCredentials.push(request.headers()['x-hermes-session-token'])
+  })
   const held = await holdFirstCredentialDial(page)
   const token = page.getByLabel('Session token', { exact: true })
   const save = page.getByRole('button', { name: 'Save and reconnect', exact: true })
@@ -149,11 +158,11 @@ test('connection apply stays exclusive until the engine reconnect completes', as
   } finally { await held.release() }
   await expect(page.locator('#root')).toHaveJSProperty('inert', false)
   await expect(save).toBeEnabled()
-  expect(dials.at(-1)).toBe('synthetic-first-token')
+  expect(mintedCredentials.at(-1)).toBe('synthetic-first-token')
   await token.fill('synthetic-second-token')
   await save.click()
   await expect(save).toBeEnabled()
-  expect(dials.at(-1)).toBe('synthetic-second-token')
+  expect(mintedCredentials.at(-1)).toBe('synthetic-second-token')
   await retainedDraft(page)
 })
 
@@ -180,8 +189,8 @@ for (const auth of ['token', 'oauth']) {
     await expect(page.locator('#root')).toHaveJSProperty('inert', false)
     const mints = (await held.mints()).map(url => new URL(url))
     expect(mints).toHaveLength(2)
-    if (auth === 'token') expect(mints.map(url => url.searchParams.get('token'))).toEqual(['synthetic-existing-token', 'synthetic-new-token'])
-    else expect(mints[0].searchParams.get('ticket')).not.toBe(mints[1].searchParams.get('ticket'))
+    expect(mints.every(url => url.searchParams.has('ticket') && !url.searchParams.has('token'))).toBe(true)
+    expect(mints[0].searchParams.get('ticket')).not.toBe(mints[1].searchParams.get('ticket'))
     await retainedDraft(page)
   })
 }

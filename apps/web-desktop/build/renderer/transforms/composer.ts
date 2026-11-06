@@ -36,6 +36,7 @@ export function keepBrowserMessageBubblesSolid(source: string): string {
 export function useBrowserMicrophoneCapture(source: string): string {
   const support = "    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {"
   const permission = `    const permitted = await window.hermesDesktop?.requestMicrophoneAccess?.()
+    checkCurrent()
 
     if (permitted === false) {
       throw new Error(copy.microphoneAccessDenied)

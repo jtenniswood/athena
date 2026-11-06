@@ -16,7 +16,9 @@ async function expireCookie(page) {
     startup = false
     return route.fulfill({ status: allowed ? 200 : 401, json: allowed ? { user_id: 'preview-user', provider: 'basic' } : {} })
   })
-  await page.route('**/api/auth/ws-ticket', route => route.fulfill({ status: 401, body: 'Synthetic expired session' }))
+  await page.route('**/api/webapp/socket-ticket*', route => route.request().headers()['x-hermes-session-token']
+    ? route.continue()
+    : route.fulfill({ status: 401, json: { error: 'unauthenticated', detail: 'Synthetic expired session', login_url: '/login' } }))
 }
 
 async function openRecovery(page, route = '/#/preview-week') {
