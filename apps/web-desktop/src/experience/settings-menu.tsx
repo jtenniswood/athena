@@ -1,5 +1,5 @@
-import { useEffect, useState, type RefObject } from 'react'
-import { androidAppSettingsMenu, androidOpenAppSettings, isAndroidApp } from '../platform/android'
+import { useEffect, useSyncExternalStore, type RefObject } from 'react'
+import { androidAppSettingsMenu, isAndroidApp } from '../platform/android'
 import { Codicon } from '../upstream/browser-api'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 
@@ -17,24 +17,35 @@ export function SettingsLink({ triggerRef, onOpenRoute, triggerClassName, trigge
   </BrowserToolbarButton>
 }
 
-export function AppSettingsLink() {
-  const [appSettingsAvailable, setAppSettingsAvailable] = useState(false)
+let appSettingsAvailable = false
+const availabilityListeners = new Set<() => void>()
+function publishAvailability(available: boolean) {
+  appSettingsAvailable = available
+  availabilityListeners.forEach(listener => listener())
+}
+
+export function useAppSettingsAvailable() {
+  return useSyncExternalStore(listener => {
+    availabilityListeners.add(listener)
+    return () => { availabilityListeners.delete(listener) }
+  }, () => appSettingsAvailable, () => false)
+}
+
+/** The Settings entry is mounted before the native toolbar hands over navigation. */
+export function AppSettingsRegistration() {
   useEffect(() => {
     if (!isAndroidApp()) return
     let mounted = true
-    void androidAppSettingsMenu(true).then(available => { if (mounted) setAppSettingsAvailable(available) })
-    return () => { mounted = false; void androidAppSettingsMenu(false) }
-  }, [])
-  useEffect(() => {
-    if (!appSettingsAvailable) return
-    let mounted = true
-    void androidAppSettingsMenu(true, true).then(available => {
-      if (mounted && !available) setAppSettingsAvailable(false)
+    void androidAppSettingsMenu(true).then(async available => {
+      if (!mounted || !available) return
+      const ready = await androidAppSettingsMenu(true, true)
+      if (mounted) publishAvailability(ready)
     })
-    return () => { mounted = false }
-  }, [appSettingsAvailable])
-  if (!appSettingsAvailable) return null
-  return <BrowserToolbarButton tooltip="App settings" className="browser-navigation-settings-link" aria-label="App" onClick={() => { void androidOpenAppSettings() }}>
-    <Codicon name="device-mobile" /><span>App</span>
-  </BrowserToolbarButton>
+    return () => {
+      mounted = false
+      publishAvailability(false)
+      void androidAppSettingsMenu(false)
+    }
+  }, [])
+  return null
 }

@@ -12,13 +12,6 @@
         android:paddingEnd="16dp"
         android:paddingTop="8dp"
         android:paddingBottom="24dp">
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:text="@string/settings_description"
-            android:textAppearance="?attr/textAppearanceBodyMedium"
-            android:textColor="?attr/colorOnSurfaceVariant" />
         <LinearLayout
             android:id="@+id/settings_rows"
             android:layout_width="match_parent"
