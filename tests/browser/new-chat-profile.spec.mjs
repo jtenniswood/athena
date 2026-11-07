@@ -37,10 +37,31 @@ for (const width of [1440, 390]) {
       const selector = page.getByRole('button', { name: /^Chat profile:/ })
       await expect(editor).toBeVisible({ timeout: 30000 })
       await expect(selector).toHaveCount(0)
-      const newChatShortcut = await page.evaluate(() => /Mac/i.test(navigator.platform) ? 'Meta+Control+n' : 'Alt+n')
-      await page.keyboard.press(newChatShortcut)
+      const originalDraft = `Keep the existing chat draft at ${width}px`
+      if (width === 390) {
+        await editor.fill(originalDraft)
+        await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+        const newChat = page.getByRole('button', { name: 'New chat', exact: true })
+        const settings = page.getByRole('button', { name: 'Settings', exact: true })
+        await expect(newChat).toBeVisible()
+        const bounds = await newChat.boundingBox(), settingsBounds = await settings.boundingBox()
+        expect(bounds.y + bounds.height).toBeLessThanOrEqual(settingsBounds.y)
+        expect(bounds.height).toBeGreaterThanOrEqual(44)
+        await page.screenshot({ path: testInfo.outputPath('new-chat-button.png') })
+        await newChat.tap()
+      } else {
+        const newChatShortcut = await page.evaluate(() => /Mac/i.test(navigator.platform) ? 'Meta+Control+n' : 'Alt+n')
+        await page.keyboard.press(newChatShortcut)
+      }
       await expect(selector).toBeVisible()
       await expect(selector).toHaveAccessibleName('Chat profile: Hermes')
+      await expect(editor).toBeEmpty()
+      if (width === 390) {
+        await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+        await page.getByRole('button', { name: 'New chat', exact: true }).tap()
+        await expect(selector).toBeVisible()
+        await expect(editor).toBeEmpty()
+      }
       const text = `Keep my draft while choosing its profile at ${width}px`
       await editor.fill(text)
       for (const profile of ['Writer', 'Research']) {
@@ -66,6 +87,11 @@ for (const width of [1440, 390]) {
       if (width === 390) await page.getByRole('button', { name: text.slice(0, 48), exact: true }).first().click()
       await expect(editor).toBeVisible({ timeout: 30000 })
       await expect(selector).toHaveCount(0)
+      if (width === 390) {
+        await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+        await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().click()
+        await expect(editor).toHaveText(originalDraft)
+      }
       expect(errors).toEqual([])
     })
   })
