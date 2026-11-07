@@ -269,6 +269,9 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
 .browser-shell [data-slot="aui_thread-viewport"] [data-sticky-prompt-clip] { clip-path:none; }
 .browser-upstream-workspace [data-tree-group] header[class*="h-(--titlebar-height)"] { display:none; }
 .browser-upstream-workspace [data-zone-tabstrip]:has([data-tree-tab="workspace"]) { display:none; }
+/* The mobile picker has no workspace tab marker. Hide its whole header so
+   the chat-name row does not leave an empty band above the conversation. */
+.browser-upstream-workspace [data-panel-header]:has([data-slot="compact-tab-picker"]) { display:none !important; }
 /* Chat title and profile ownership are already represented by the browser
    toolbar. Keep the upstream title header out of the chat surface even when
    the renderer moves it outside the tree-group wrapper. */
