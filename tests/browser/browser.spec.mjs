@@ -3615,7 +3615,7 @@ test.describe('semantic mobile controls', () => {
 for (const mode of ['android', 'older-android', 'browser', 'android-phone']) {
   test.describe(`Android app settings (${mode})`, () => {
     test.use({ viewport: { width: mode === 'android-phone' ? 390 : 1280, height: 900 }, hasTouch: mode === 'android-phone' })
-    test('App below Settings opens native app settings only when the APK supports it', async ({ page, context }) => {
+    test('App settings at the bottom of Settings opens native settings only when supported', async ({ page, context }) => {
       const calls = []
       if (mode !== 'browser') {
         await page.exposeBinding('testNativeSettingsCall', (_source, request) => calls.push(request))
@@ -3636,18 +3636,26 @@ for (const mode of ['android', 'older-android', 'browser', 'android-phone']) {
       if (mode !== 'browser') await expect.poll(() => calls.some(call => call.method === 'appSettingsMenu' && call.payload.mounted)).toBe(true)
       const navigation = page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ })
       if (await navigation.isVisible()) await navigation.click()
-      const settings = page.getByRole('button', { name: 'App', exact: true })
-      if (mode === 'browser' || mode === 'older-android') await expect(settings).toHaveCount(0)
-      else {
-        const settingsRow = page.getByRole('button', { name: 'Settings', exact: true })
-        expect((await settings.boundingBox()).y).toBeGreaterThan((await settingsRow.boundingBox()).y)
+      await expect(page.getByRole('button', { name: 'App', exact: true })).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'App settings', exact: true })).toHaveCount(0)
+      await page.getByRole('button', { name: 'Settings', exact: true }).click()
+      const settingsNavigation = page.getByRole('navigation', { name: 'Settings categories' })
+      const settings = settingsNavigation.getByRole('button', { name: 'App settings', exact: true })
+      if (mode === 'browser' || mode === 'older-android') {
+        await expect(settings).toHaveCount(0)
+        await expect(settingsNavigation.getByRole('region', { name: 'App', exact: true })).toHaveCount(0)
+      } else {
+        const section = settingsNavigation.getByRole('region', { name: 'App', exact: true })
+        await expect(section).toBeVisible()
+        expect(await settingsNavigation.locator('.browser-settings-nav-group').last().getAttribute('aria-labelledby')).toBe('settings-group-app')
+        await expect(settings.locator('.codicon-link-external')).toHaveCount(1)
         await settings.click()
         await expect.poll(() => calls.some(call => call.method === 'appSettings')).toBe(true)
-        await expect(page.locator('[data-browser-settings-frame]')).toHaveCount(0)
-        if (mode === 'android-phone') await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
-        await expect(editor(page)).toBeVisible()
-        expect(page.url()).toBe(`${origin}/#/preview-week`)
+        await expect(settingsNavigation).toBeVisible()
       }
+      await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+      await expect(editor(page)).toBeVisible()
+      expect(page.url()).toBe(`${origin}/#/preview-week`)
     })
   })
 }

@@ -185,8 +185,9 @@ ready. You can share up to 10 files, with a limit of 16 MiB per file and 32 MiB 
 total. Files wait in the app's private cache while you connect or sign in; pending
 shares expire after 24 hours. This needs an APK and hosted web interface that both
 support incoming file sharing.
-On supported APKs, open **Navigation tabs → App settings** for these Android
-controls. The separate Android header is hidden once that menu is ready and
+
+On supported APKs, open **Settings → App → App settings** at the bottom of Settings
+for these Android controls. The separate Android header is hidden once Settings is ready and
 returns during page loading or sign-in. Older APKs and older server versions
 retain their native App settings button.
 

@@ -10,6 +10,8 @@ import { SettingsFrameSurface, useSettingsFrame } from './frame-behavior'
 import { useSettingsFramePresentation, useSettingsPresentation } from './presentation'
 import type { SettingsControl, SettingsFrameDescriptor } from '../contracts/settings-presentation'
 import { BROWSER_TOOL_ROUTES } from '../tool-routes'
+import { useAppSettingsAvailable } from '../settings-menu'
+import { androidOpenAppSettings } from '../../platform/android'
 import './settings.css'
 
 const PluginManager = lazy(async () => ({ default: (await import('./plugin-manager')).BrowserPluginManager }))
@@ -42,6 +44,8 @@ type Props = {
 }
 
 export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel, groups, onClose, onOpenPanel, search, searchCommand, scopeProfile, title, children }: Props) {
+  const appSettingsAvailable = useAppSettingsAvailable()
+  const openAppSettings = () => { void androidOpenAppSettings() }
   const location = useLocation()
   const params = new URLSearchParams(location.search)
   const managingPlugins = activeView === 'plugins' && params.get('manage') === '1'
@@ -79,7 +83,12 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
     ...BROWSER_TOOL_ROUTES.map(route => ({
       id: `panel:${route.path}`, kind: 'action' as const, presentation: 'navigation' as const,
       label: route.label, description: 'Opens another panel', run: () => onOpenPanel(route.path)
-    }))
+    })),
+    ...(appSettingsAvailable ? [
+      { kind: 'heading' as const, label: 'App' },
+      { id: 'app:settings', kind: 'action' as const, presentation: 'navigation' as const,
+        label: 'App settings', description: 'Opens Android app settings', icon: 'device-mobile', run: openAppSettings }
+    ] : [])
   ]
   useSettingsPresentation(navigationControls, navigation)
   return <SettingsFrameSurface variant="fullscreen" title={title}
@@ -147,6 +156,16 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
                 </button>
               </div>)}
             </section>
+            {appSettingsAvailable && <section className="browser-settings-nav-group" aria-labelledby="settings-group-app">
+              <h2 className="browser-settings-group-heading" id="settings-group-app">App</h2>
+              <div className="browser-settings-category">
+                <button type="button" className="browser-settings-category-button" onClick={openAppSettings} aria-description="Opens Android app settings">
+                  <Codicon name="device-mobile" className="browser-settings-category-icon" aria-hidden />
+                  <span>App settings</span>
+                  <Codicon name="link-external" className="browser-settings-panel-icon" aria-hidden />
+                </button>
+              </div>
+            </section>}
           </div>
         </nav>
         <main className="browser-settings-detail" aria-label={activeGroup?.label ?? title}>
