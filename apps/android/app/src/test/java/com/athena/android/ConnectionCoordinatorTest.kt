@@ -47,4 +47,36 @@ class ConnectionCoordinatorTest {
         assertEquals(ConnectionCoordinator.Stage.ACCESS_SIGN_IN, host.state.stage)
     }
 
+    @Test fun aSlowConnectionKeepsLoadingUntilTheSessionConnects() {
+        val host = ConnectionCoordinator()
+        host.loading(); host.handshake(1); host.settings(true, true)
+        host.waitingLonger()
+        assertEquals(ConnectionCoordinator.Stage.LOADING, host.state.stage)
+        assertTrue(host.state.slowConnection)
+        assertNull(host.state.code)
+        assertTrue(host.settingsReady)
+        val slow = host.state
+        host.waitingLonger()
+        assertSame(slow, host.state)
+        host.sessionConnected(true)
+        assertEquals(ConnectionCoordinator.Stage.READY, host.state.stage)
+        assertFalse(host.state.slowConnection)
+    }
+
+    @Test fun aLateLoadingDeadlineCannotReplaceSignInOrAnActualFailure() {
+        val host = ConnectionCoordinator()
+        host.authenticate(true)
+        host.waitingLonger()
+        assertEquals(ConnectionCoordinator.Stage.ACCESS_SIGN_IN, host.state.stage)
+        host.recover("web-unreachable", "Server unavailable")
+        host.waitingLonger()
+        assertEquals(ConnectionCoordinator.Stage.RECOVERY, host.state.stage)
+        assertFalse(host.state.slowConnection)
+        host.loading()
+        assertFalse(host.state.slowConnection)
+        host.ready()
+        host.waitingLonger()
+        assertEquals(ConnectionCoordinator.Stage.READY, host.state.stage)
+    }
+
 }

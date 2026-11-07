@@ -177,6 +177,14 @@ updates continue to come from that server. Android supplies notifications,
 file selection, microphone permission, and back navigation. External links open
 in the browser. App settings can change the server or reload after Athena has
 confirmed that drafts are saved and recordings and active replies have finished.
+
+To share files from another Android app, choose **Share → Athena**, then select an
+existing chat or **New chat**. Search by chat title or profile. Shared images and
+documents are appended to the chosen chat's draft; review them and tap Send when
+ready. You can share up to 10 files, with a limit of 16 MiB per file and 32 MiB in
+total. Files wait in the app's private cache while you connect or sign in; pending
+shares expire after 24 hours. This needs an APK and hosted web interface that both
+support incoming file sharing.
 On supported APKs, open **Navigation tabs → App settings** for these Android
 controls. The separate Android header is hidden once that menu is ready and
 returns during page loading or sign-in. Older APKs and older server versions
