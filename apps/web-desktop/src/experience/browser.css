@@ -204,6 +204,8 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
 .browser-empty { padding:var(--web-space-4); font-size:var(--web-text-body); color:var(--web-text-subtle); }
 .browser-scrim { display:none; }
 @media (width < 48rem), (pointer:coarse) and (max-height:27rem) {
+ /* Let mobile conversations use the left gutter reserved by the desktop layout. */
+ .browser-shell [data-slot="aui_thread-content"]:not(:has([data-slot="aui_intro"])) { --message-text-indent:0px; padding-left:0; }
  .browser-sessions-pane .browser-session-archive { display:none; }
  .browser-sessions-pane [data-web-session-id]:is(:hover,:focus-within,:has([data-state="open"])) [data-row-actions]:has(> [data-browser-session-actions]) { min-width:var(--web-control-compact); }
  .browser-chat-toolbar { position:relative; z-index:2; grid-template-columns:max-content minmax(0,1fr); gap:var(--web-space-1); height:auto; min-height:var(--web-toolbar-height); }
@@ -334,3 +336,6 @@ html[data-experience="browser"] span:has(> img[src*="nous-girl.jpg"]) { display:
 .browser-navigation .browser-navigation-settings-link { width:100%; height:var(--browser-session-control-height); min-height:var(--browser-session-control-height); display:flex; justify-content:flex-start; gap:var(--web-space-2); margin:0; padding:0 var(--web-space-2); border:1px solid transparent; border-radius:var(--web-radius-control); color:var(--web-text-muted); background:transparent; font:inherit; font-size:var(--web-text-body); font-weight:500; text-align:left; }
 .browser-navigation-settings-link > .codicon { width:1rem; flex:0 0 1rem; font-size:1rem; color:color-mix(in srgb,currentColor 72%,transparent); }
 @media (pointer:coarse) { .browser-navigation .browser-navigation-settings-link { min-height:var(--web-touch-min); height:auto; } }
+
+.browser-chat-toolbar .browser-new-chat-profile { width:auto; max-width:min(16rem,50vw); min-width:0; gap:var(--web-space-2); padding:0 var(--web-space-2); color:var(--web-text-muted); font-size:var(--web-text-label); }
+.browser-new-chat-profile > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
