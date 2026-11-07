@@ -82,3 +82,14 @@ export async function assertSafeConnectionChange(): Promise<void> {
   const state = await reloadReadinessAfterSaving()
   if (!state.ready) throw new Error(state.reason)
 }
+
+/** Chat selection preserves attachment drafts, but cannot interrupt media or queue edits. */
+export function sharedFileSelectionReadiness(): { ready: boolean; reason?: string } {
+  if (operations) return { ready: false, reason: 'Finish selecting or uploading files first.' }
+  for (const track of tracks) if (track.readyState === 'ended') tracks.delete(track)
+  if (pendingMedia || tracks.size) return { ready: false, reason: 'Finish recording or transcribing first.' }
+  const drafts = browserDraftSnapshot()
+  if (!drafts) return { ready: false, reason: 'Wait for Athena to finish connecting.' }
+  if (drafts.blocked) return { ready: false, reason: drafts.reason || 'Finish editing the queued message or leave message history first.' }
+  return { ready: true }
+}

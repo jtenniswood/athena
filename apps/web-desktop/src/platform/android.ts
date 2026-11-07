@@ -179,3 +179,39 @@ export async function androidDismissSettingsPage(id: string): Promise<void> {
 export async function androidSettingsFiles(multiple: boolean): Promise<{ name: string; type: string; data: string }[]> {
   return await call('settingsFiles', { multiple }) as { name: string; type: string; data: string }[]
 }
+
+export interface AndroidSharedFiles {
+  id: string
+  files: { name: string; type: string; size: number }[]
+}
+
+export async function androidPendingShare(): Promise<AndroidSharedFiles | null> {
+  return await call('pendingShare') as AndroidSharedFiles | null
+}
+
+/** Bound each bridge message rather than base64-encoding a whole shared file. */
+export async function androidReadShare(share: AndroidSharedFiles): Promise<File[]> {
+  if (!share.files.length || share.files.length > 10 || share.files.reduce((total, file) => total + file.size, 0) > 32 * 1024 * 1024) {
+    throw new Error('Share up to 10 files and 32 MiB in total.')
+  }
+  const files: File[] = []
+  for (const [index, file] of share.files.entries()) {
+    if (!Number.isSafeInteger(file.size) || file.size < 0 || file.size > 16 * 1024 * 1024) throw new Error('Shared files must be 16 MiB or less.')
+    const parts: Uint8Array<ArrayBuffer>[] = []
+    let offset = 0
+    while (offset < file.size) {
+      const data = await call('readShareFile', { id: share.id, index, offset })
+      if (typeof data !== 'string') throw new Error('Could not read the shared file. Share it again from the source app.')
+      const part = Uint8Array.from(atob(data), character => character.charCodeAt(0))
+      if (!part.length || part.length > 64 * 1024 || offset + part.length > file.size) throw new Error('The shared file is incomplete.')
+      parts.push(part)
+      offset += part.length
+    }
+    files.push(new File(parts, file.name, { type: file.type }))
+  }
+  return files
+}
+
+export async function androidFinishShare(id: string): Promise<void> {
+  if (await call('finishShare', { id }) !== true) throw new Error('Could not clear the shared files.')
+}

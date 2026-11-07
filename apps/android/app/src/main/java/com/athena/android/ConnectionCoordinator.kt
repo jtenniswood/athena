@@ -3,7 +3,7 @@ package com.athena.android
 /** Connection state belongs to the host; chat and draft state stay in the web app. */
 class ConnectionCoordinator(private val changed: (State) -> Unit = {}) {
     enum class Stage { SETUP, LOADING, ACCESS_SIGN_IN, ATHENA_SIGN_IN, READY, RECOVERY }
-    data class State(val stage: Stage, val message: String, val code: String? = null)
+    data class State(val stage: Stage, val message: String, val code: String? = null, val slowConnection: Boolean = false)
     var state = State(Stage.SETUP, "Enter your Athena server address.")
         private set
     var settingsReady = false
@@ -25,6 +25,12 @@ class ConnectionCoordinator(private val changed: (State) -> Unit = {}) {
     fun pending(access: Boolean) = authenticate(access)
     fun ready() = update(Stage.READY, "Connected to Athena")
     fun waitingForSession() = update(Stage.LOADING, "Reconnecting to your Athena session…")
+    fun waitingLonger() {
+        // Elapsed time alone is not a failure: WebView and the gateway may still be connecting.
+        if (state.stage == Stage.LOADING && !state.slowConnection) {
+            update(Stage.LOADING, "Still connecting to Athena…", slowConnection = true)
+        }
+    }
     fun sessionConnected(connected: Boolean) {
         if (connected && (state.stage == Stage.LOADING ||
                 (state.stage == Stage.RECOVERY && state.code == "web-timeout"))) ready()
@@ -44,8 +50,8 @@ class ConnectionCoordinator(private val changed: (State) -> Unit = {}) {
         settingsReady = mounted && rendered && protocol == 1
         return settingsReady
     }
-    private fun update(stage: Stage, message: String, code: String? = null) {
-        state = State(stage, message, code)
+    private fun update(stage: Stage, message: String, code: String? = null, slowConnection: Boolean = false) {
+        state = State(stage, message, code, slowConnection)
         changed(state)
     }
 }
