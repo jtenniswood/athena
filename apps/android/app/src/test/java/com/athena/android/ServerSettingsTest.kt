@@ -167,12 +167,33 @@ class ServerSettingsTest {
         assertEquals(android.view.View.GONE, screen.visibility)
         host.sessionConnected(false)
         assertEquals(android.view.View.VISIBLE, screen.visibility)
+        assertEquals(android.view.View.VISIBLE, activity.findViewById<android.view.View>(R.id.connection_progress).visibility)
+        assertEquals(android.view.View.GONE, activity.findViewById<android.view.View>(R.id.reconnect).visibility)
+        assertEquals(android.view.View.GONE, activity.findViewById<android.view.View>(R.id.review_settings).visibility)
         shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(21))
-        assertEquals(ConnectionCoordinator.Stage.RECOVERY, host.state.stage)
+        assertEquals(ConnectionCoordinator.Stage.LOADING, host.state.stage)
+        assertTrue(host.state.slowConnection)
+        assertEquals("Still connecting to Athena…", status.text.toString())
+        assertEquals(android.view.View.VISIBLE, activity.findViewById<android.view.View>(R.id.connection_progress).visibility)
+        assertEquals(android.view.View.GONE, activity.findViewById<android.view.View>(R.id.reconnect).visibility)
+        assertEquals(android.view.View.VISIBLE, activity.findViewById<android.view.View>(R.id.review_settings).visibility)
+        val slow = host.state
+        shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(40))
+        assertSame(slow, host.state)
         assertSame(status, activity.findViewById(R.id.recovery_message))
         host.sessionConnected(true)
         assertEquals(ConnectionCoordinator.Stage.READY, host.state.stage)
         assertEquals(android.view.View.GONE, screen.visibility)
+    }
+
+    @Test fun aSlowUnloadedStartupCanStillEditTheServer() {
+        val (activity, page) = fixture(guarded = false)
+        val host = connection(activity)
+        host.loading(); host.waitingLonger()
+        activity.findViewById<android.view.View>(R.id.review_settings).performClick()
+        choose(activity, R.string.change_server, openSettings = false)
+        assertTrue(page.destroyed)
+        assertNotNull(activity.findViewById<EditText>(R.id.server_address))
     }
 
     private fun <T : android.view.View> android.view.View.findViewByPredicate(predicate: (android.view.View) -> Boolean): T? {
