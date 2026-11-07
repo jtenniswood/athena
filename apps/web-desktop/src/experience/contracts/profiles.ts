@@ -13,3 +13,9 @@ export interface BrowserProfiles {
   select(profile: string | null): void
   reorder(source: string, target: string, after: boolean): void
 }
+
+export interface BrowserNewChatProfile {
+  profile: string
+  editable: boolean
+  select(profile: string): void
+}

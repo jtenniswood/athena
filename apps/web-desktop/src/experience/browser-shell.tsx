@@ -1,6 +1,7 @@
 import { useSidebarGestures } from './sidebar-gestures'
 import { useBrowserEngine } from './engine'
 import { useChatPanelSettings } from './settings/chat-panel-page'
+import { BrowserNewChatProfileSelector } from './new-chat-profile-selector'
 import { BrowserProfileNavigation } from './profile-navigation'
 import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
@@ -83,6 +84,7 @@ function BrowserLayout() {
             <Codicon name={navigation.mobile ? 'arrow-left' : 'layout-sidebar-left'} />
           </BrowserToolbarButton>
           <div className="browser-actions">
+            {location.pathname === '/' && <BrowserNewChatProfileSelector />}
             <BrowserChatActionsMenu actions={sessionActions} title={chatTitle} panels={panels} main={main} />
           </div>
         </div>
