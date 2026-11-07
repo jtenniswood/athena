@@ -5,7 +5,7 @@ import type { BrowserSessionActions } from './contracts/actions'
 import type { BrowserHostPanel } from './contracts/host'
 import { BrowserActionSurface, type BrowserActionAnchor, type BrowserActionGroup } from './ui/action-surface'
 import { BrowserToolbarButton } from './ui/toolbar-button'
-import { useMobileBrowser } from './ui/use-compact-browser'
+import { useCompactBrowser, useMobileBrowser } from './ui/use-compact-browser'
 import { useBrowserDialogReturnFocus } from './ui/dialog-focus'
 import { browserSessionActionLabel, useBrowserSessionShortcuts } from './session-shortcuts'
 
@@ -19,6 +19,7 @@ export function BrowserChatActionsMenu({ actions, title, panels, main }: {
   const { t } = useI18n()
   const r = t.sidebar.row
   const compact = useMobileBrowser()
+  const compactViewport = useCompactBrowser()
   const trigger = useRef<HTMLButtonElement>(null)
   const [anchor, setAnchor] = useState<BrowserActionAnchor | null>(null)
   const [dialog, setDialog] = useState<{ kind: 'rename' | 'delete'; actions: BrowserSessionActions; title: string } | null>(null)
@@ -60,6 +61,9 @@ export function BrowserChatActionsMenu({ actions, title, panels, main }: {
     files: panelShortcut('files'), review: panelShortcut('review')
   })
   return <>
+    {actions.sessionId && compactViewport && <BrowserToolbarButton tooltip={r.archive} aria-label={r.archive} onClick={() => void actions.archive()}>
+      <Codicon name="archive" />
+    </BrowserToolbarButton>}
     {actions.sessionId && <BrowserToolbarButton tooltip="Chat actions" ref={trigger} className="browser-chat-actions" aria-label="Chat actions" aria-haspopup={compact ? 'dialog' : 'menu'} aria-expanded={Boolean(anchor)} onClick={event => {
       const bounds = event.currentTarget.getBoundingClientRect()
       const returnFocus = event.currentTarget
