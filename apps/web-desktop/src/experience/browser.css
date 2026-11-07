@@ -204,8 +204,8 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
 .browser-empty { padding:var(--web-space-4); font-size:var(--web-text-body); color:var(--web-text-subtle); }
 .browser-scrim { display:none; }
 @media (width < 48rem), (pointer:coarse) and (max-height:27rem) {
- /* Let mobile conversations use the left gutter reserved by the desktop layout. */
- .browser-shell [data-slot="aui_thread-content"]:not(:has([data-slot="aui_intro"])) { --message-text-indent:0px; padding-left:0; }
+ /* Match the composer's one-rem side gutters without adding a second prose indent. */
+ .browser-shell [data-slot="aui_thread-content"]:not(:has([data-slot="aui_intro"])) { --message-text-indent:0px; padding-inline:1rem; }
  .browser-sessions-pane .browser-session-archive { display:none; }
  .browser-sessions-pane [data-web-session-id]:is(:hover,:focus-within,:has([data-state="open"])) [data-row-actions]:has(> [data-browser-session-actions]) { min-width:var(--web-control-compact); }
  .browser-chat-toolbar { position:relative; z-index:2; grid-template-columns:max-content minmax(0,1fr); gap:var(--web-space-1); height:auto; min-height:var(--web-toolbar-height); }
