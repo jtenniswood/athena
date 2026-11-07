@@ -3,6 +3,7 @@ package com.athena.android
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -103,6 +104,15 @@ class NativeAppSettings(private val activity: Activity) {
         val content = activity.layoutInflater.inflate(R.layout.screen_app_settings, body, true)
         content.findViewById<TextView>(R.id.app_version).text = activity.getString(R.string.version, BuildConfig.VERSION_NAME)
         val rows = content.findViewById<LinearLayout>(R.id.settings_rows)
+        val sectionRows = mutableListOf<View>()
+        fun finishSection() {
+            sectionRows.forEachIndexed { index, item ->
+                val top = (if (index == 0) 20 else 4).dp().toFloat()
+                val bottom = (if (index == sectionRows.lastIndex) 20 else 4).dp().toFloat()
+                (item.background.mutate() as GradientDrawable).cornerRadii = floatArrayOf(top, top, top, top, bottom, bottom, bottom, bottom)
+            }
+            sectionRows.clear()
+        }
         fun row(title: Int, description: Int, icon: Int, action: () -> Unit) {
             val item = activity.layoutInflater.inflate(R.layout.app_settings_row, rows, false)
             item.findViewById<TextView>(R.id.row_title).setText(title)
@@ -117,13 +127,15 @@ class NativeAppSettings(private val activity: Activity) {
             })
             item.setOnClickListener { action() }
             rows.addView(item, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 2.dp() })
+            sectionRows.add(item)
         }
         fun section(title: Int) {
+            finishSection()
             rows.addView(TextView(activity).apply {
                 setText(title)
                 setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleSmall)
                 setTextColor(MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary))
-                setPadding(16.dp(), 24.dp(), 16.dp(), 8.dp())
+                setPadding(16.dp(), (if (rows.childCount == 0) 8 else 24).dp(), 16.dp(), 8.dp())
                 ViewCompat.setAccessibilityHeading(this, true)
             })
         }
@@ -138,6 +150,7 @@ class NativeAppSettings(private val activity: Activity) {
         section(R.string.settings_section_diagnostics)
         row(R.string.connection_testing, R.string.connection_testing_description, R.drawable.ic_server, actions.connectionTesting)
         row(R.string.connection_details, R.string.connection_details_description, R.drawable.ic_server) { showDetails(diagnostics()) }
+        finishSection()
     }
 
     fun showDetails(snapshot: AppDiagnostics) {

@@ -32,7 +32,8 @@ settings and recovery controls. APK and server versions can be updated separatel
 no retirement cutoff is introduced by this ownership boundary.
 
 `appSettingsMenu({ mounted, rendered })` hides the native toolbar only after a
-successful handshake and the web menu has rendered its App settings entry.
+successful handshake and the web menu has rendered its Settings entry. App settings
+is linked from its own App section at the bottom of Settings.
 Discovery alone must never hide native controls. Unmounting, page navigation,
 or recovery restores the native toolbar. Old web clients keep the native toolbar.
 
