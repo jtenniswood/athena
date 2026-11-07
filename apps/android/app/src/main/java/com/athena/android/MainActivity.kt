@@ -37,6 +37,8 @@ import com.google.firebase.messaging.FirebaseMessaging
 class MainActivity : AppCompatActivity() {
     companion object { @Volatile var foreground = false; val visibility = WebVisibility() }
     private val prefs by lazy { getSharedPreferences("athena", MODE_PRIVATE) }
+    private val shareInbox by lazy { ShareInbox(this) }
+    private val shareWorker = java.util.concurrent.Executors.newSingleThreadExecutor()
     private val pushRegistration by lazy { NativePushRegistration(this) }
     private val notifications by lazy { NativeNotifications(this) }
     private val legacyUi = LegacyNativePresentation(this, { web }, { foreground }) { visibility.clear() }
@@ -140,6 +142,7 @@ class MainActivity : AppCompatActivity() {
         origin = prefs.getString("origin", "") ?: ""
         if (origin.isEmpty()) setup() else openServer(savedInstanceState)
         authentication.receive(intent?.data, origin)
+        if (savedInstanceState == null) receiveShare(intent)
     }
 
     private fun setup() {
@@ -382,7 +385,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 respond(JSONObject().put("protocol", 1)
                     .put("appVersion", packageManager.getPackageInfo(packageName, 0).versionName)
-                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state", "web-visibility", "push-token-refresh", "push-diagnostics") + LegacyNativePresentation.capabilities))
+                    .put("capabilities", org.json.JSONArray(listOf("settings-menu", "navigation-request-id", "web-state", "web-visibility", "push-token-refresh", "push-diagnostics", "share-files") + LegacyNativePresentation.capabilities))
                     .put("insets", "native").put("typography", "platform"))
             }
             "webState" -> {
@@ -394,6 +397,19 @@ class MainActivity : AppCompatActivity() {
                     detectAccess(connection.state)
                 }
                 respond(true)
+            }
+            "pendingShare", "readShareFile", "finishShare" -> {
+                if (connectionTest != null) { respond(JSONObject.NULL); return }
+                shareWorker.execute {
+                    val result = try {
+                        when (method) {
+                            "pendingShare" -> shareInbox.pending()
+                            "readShareFile" -> shareInbox.read(payload)
+                            else -> shareInbox.finish(payload.getString("id"))
+                        }
+                    } catch (_: Exception) { JSONObject.NULL }
+                    runOnUiThread { respond(result) }
+                }
             }
             "settingsFiles" -> {
                 if (!legacyUi.settingsShowing || !foreground) respond(org.json.JSONArray())
@@ -711,7 +727,24 @@ class MainActivity : AppCompatActivity() {
         super.onWindowFocusChanged(hasFocus)
         if (!hasFocus) visibility.clear()
     }
-    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); if (authentication.receive(intent.data, origin)) intent.data = null else openNotification(intent) }
+    private fun receiveShare(incoming: Intent?) {
+        if (!ShareInbox.accepts(incoming)) return
+        // Snapshot the intent before consuming it so recreation cannot import it twice.
+        val shared = Intent(incoming)
+        incoming?.action = Intent.ACTION_MAIN
+        shareWorker.execute {
+            try { shareInbox.receive(shared) }
+            catch (error: Exception) {
+                runOnUiThread { Toast.makeText(this, error.message ?: "Could not read shared files.", Toast.LENGTH_LONG).show() }
+            }
+        }
+    }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent); setIntent(intent)
+        if (ShareInbox.accepts(intent)) receiveShare(intent)
+        else if (authentication.receive(intent.data, origin)) intent.data = null
+        else openNotification(intent)
+    }
     override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); if (connectionTest == null) web?.saveState(outState) }
     override fun onResume() { super.onResume(); foreground = true; appUpdates.check(); pushRegistration.schedule(); nativeSettings.refreshNotifications(); web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) { authentication.resume(origin) } }
     override fun onPause() { legacyUi.dismissActions(); foreground = false; visibility.clear(); CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
@@ -721,6 +754,6 @@ class MainActivity : AppCompatActivity() {
         if (editingServer) { openServer(null); return }
         if (web?.canGoBack() == true) web?.goBack() else moveTaskToBack(true)
     }
-    override fun onDestroy() { connectionTestDialog?.dismiss(); appUpdates.close(); settingsFilesReply?.invoke(org.json.JSONArray()); settingsFilesReply = null; legacyUi.dismiss(); nativeSettings.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); authentication.close(); web?.destroy(); super.onDestroy() }
+    override fun onDestroy() { shareWorker.shutdown(); connectionTestDialog?.dismiss(); appUpdates.close(); settingsFilesReply?.invoke(org.json.JSONArray()); settingsFilesReply = null; legacyUi.dismiss(); nativeSettings.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); authentication.close(); web?.destroy(); super.onDestroy() }
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
 }
