@@ -111,7 +111,7 @@ function SidebarSessionRowAdapter({ session, branchStem, isPinned, isSelected, u
     actions: <span data-browser-session-actions=""><SessionActionsMenu {...menu}><Button aria-label={r.sessionActions} size="icon" variant="ghost"
       className="size-5 rounded-[4px] bg-transparent text-transparent transition-colors duration-100 hover:bg-(--ui-control-active-background) hover:text-foreground focus-visible:bg-(--ui-control-active-background) focus-visible:text-foreground focus-visible:ring-0 data-[state=open]:bg-(--ui-control-active-background) data-[state=open]:text-foreground group-hover:text-(--ui-text-tertiary) [&_svg]:size-3.5!">
       <Codicon name="ellipsis" size="0.875rem" /></Button></SessionActionsMenu>
-      {!session.archived && <Tip label={r.archive} placement="toolbar"><Button type="button" aria-label={r.archive} size="icon" variant="ghost" onClick={onArchive}>
+      {!session.archived && <Tip label={r.archive} placement="toolbar"><Button type="button" className="browser-session-archive" aria-label={r.archive} size="icon" variant="ghost" onClick={onArchive}>
         <Codicon name="archive" size="0.875rem" />
       </Button></Tip>}
     </span>,
