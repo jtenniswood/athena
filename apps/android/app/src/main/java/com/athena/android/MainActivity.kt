@@ -579,7 +579,7 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Wait for the current navigation check to finish.", Toast.LENGTH_SHORT).show()
             return
         }
-        if (allowUnloaded && ((!documentReady && connection.state.stage == ConnectionCoordinator.Stage.RECOVERY) ||
+        if (allowUnloaded && ((!documentReady && (connection.state.stage == ConnectionCoordinator.Stage.RECOVERY || connection.state.slowConnection)) ||
                 view.url.isNullOrBlank() || view.url == "about:blank")) {
             navigationAction = null
             action()
@@ -662,7 +662,7 @@ class MainActivity : AppCompatActivity() {
         connectionScreen?.apply {
             visibility = if (ready) View.GONE else View.VISIBLE
             findViewById<View>(R.id.connection_progress).visibility = if (state.stage == ConnectionCoordinator.Stage.LOADING) View.VISIBLE else View.GONE
-            findViewById<View>(R.id.review_settings).visibility = if (recovery) View.VISIBLE else View.GONE
+            findViewById<View>(R.id.review_settings).visibility = if (recovery || state.slowConnection) View.VISIBLE else View.GONE
         }
         connectionStatus?.text = state.message
         connectionAction?.apply {
@@ -673,10 +673,10 @@ class MainActivity : AppCompatActivity() {
                 else -> R.string.reconnect
             })
         }
-        if (state.stage == ConnectionCoordinator.Stage.LOADING) {
+        if (state.stage == ConnectionCoordinator.Stage.LOADING && !state.slowConnection) {
             container.postDelayed({
                 if (connection.state === state) {
-                    connection.recover("web-timeout", "Athena has not finished connecting. Try again or review settings.")
+                    connection.waitingLonger()
                     detectAccess(connection.state)
                 }
             }, 20000)
