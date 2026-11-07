@@ -2,7 +2,7 @@ import type { ComponentType, ReactNode } from 'react'
 import type { BrowserApproval, BrowserApprovalRequester, BrowserSessionActions } from './actions'
 import type { BrowserConversationModel } from './conversation'
 import type { BrowserHostPanel } from './host'
-import type { BrowserProfiles } from './profiles'
+import type { BrowserNewChatProfile, BrowserProfiles } from './profiles'
 import type { BrowserNavigate, BrowserSessionSelection } from './selection'
 import type { BrowserSettingsController, BrowserSettingsPageProps } from './settings'
 
@@ -25,6 +25,7 @@ export interface BrowserEngine {
   }
   readonly profiles: {
     useProfiles(): BrowserProfiles
+    useNewChat(): BrowserNewChatProfile
     useActive(): string
     useGrouping(): boolean
   }
