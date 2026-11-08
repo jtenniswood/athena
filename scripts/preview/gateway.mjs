@@ -120,6 +120,7 @@ export function createPreviewGateway({ log = () => {}, delay = 95, strict = fals
     if (method === 'session.list') return page(params.profile || 'all', true)
     if (method === 'session.resume' || method === 'session.activate') return snapshot(id)
     if (method === 'session.usage') return { calls: 1, input: 48, output: 120, total: 168 }
+    if (method === 'session.context_breakdown') return { context_used: 168, context_max: 128000, context_estimated: true, categories: [] }
     if (method === 'projects.tree') return { projects: [], active_id: null, scoped_session_ids: [] }
     if (method === 'session.create') {
       const session = addSession(`preview-new-${++count}`, params.title || 'New conversation', params.profile || profile)

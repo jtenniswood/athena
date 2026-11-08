@@ -50,6 +50,15 @@ test('RPC holds allow later selections to complete first without timing guesses'
   gateway.controls.assertExpected()
 })
 
+test('context occupancy requests are supported by the strict synthetic gateway', async t => {
+  const gateway = await fixture(t)
+  for (const session_id of ['preview-week', 'preview-research']) {
+    const reply = await gateway.request('session.context_breakdown', { session_id })
+    assert.deepEqual(reply.result, { context_used: 168, context_max: 128000, context_estimated: true, categories: [] })
+  }
+  gateway.controls.assertExpected()
+})
+
 test('the released MCP health sweep sees an empty synthetic server roster', async t => {
   const gateway = await fixture(t)
   assert.deepEqual((await gateway.request('mcp.servers.status')).result, { servers: [] })
