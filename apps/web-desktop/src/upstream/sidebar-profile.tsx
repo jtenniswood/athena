@@ -80,20 +80,6 @@ export function BrowserProfileGroupControllerSurface({ model }: { model: Profile
   const figures = useBrowserSidebarFigures(model.usage ? { tokens: model.usage.tokens, costUsd: model.usage.cost_usd } : undefined)
   const toggle = () => toggleGatewayGroup(group.id)
   const actions = <div className="flex items-center">
-    {browserProfile && group.profile && !model.embedded && grouping === 'project' && <Button
-      aria-label={`${s.projects.newButton} in ${label}`} title={`${s.projects.newButton} in ${label}`} size="icon-xs" variant="ghost"
-      onClick={() => void openBrowserProfileProjectCreate(group.profile!, model.route)}
-      onPointerDown={event => startNewProjectDrag(placement => $newProjectDropPlacement.set(placement), event,
-        { onTap: () => void openBrowserProfileProjectCreate(group.profile!, model.route) })}>
-      <Codicon name="new-folder" size="0.75rem" />
-    </Button>}
-    {group.profile && !model.embedded && grouping !== 'project' && <Button aria-label={s.newSessionIn(label)} title={s.newSessionIn(label)} size="icon-xs" variant="ghost"
-      onClick={model.startSession} onPointerDown={model.onNewSessionSplit ? event => startNewSessionDrag(placement => {
-        if (!model.open) toggle()
-        model.onNewSessionSplit?.(placement.dir, { anchor: placement.anchor, before: placement.before, profile: group.profile, route: model.route })
-      }, event, { label: s.newSessionIn(label), profile: group.profile, route: model.route }) : undefined}>
-      <Codicon name="add" size="0.75rem" />
-    </Button>}
     <DropdownMenu><DropdownMenuTrigger asChild><Button aria-label={`${copy.actions}: ${label}`} size="icon-xs" variant="ghost"><Codicon name="ellipsis" /></Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {browserProfile && group.profile && !model.embedded && <BrowserHideProfileItem profile={group.profile} />}
@@ -102,6 +88,20 @@ export function BrowserProfileGroupControllerSurface({ model }: { model: Profile
         <DropdownMenuItem disabled={model.last} onSelect={() => model.onMove(1)}>{copy.moveDown}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    {browserProfile && group.profile && !model.embedded && grouping === 'project' && <Button
+      data-browser-profile-create="" aria-label={`${s.projects.newButton} in ${label}`} title={`${s.projects.newButton} in ${label}`} size="icon-xs" variant="ghost"
+      onClick={() => void openBrowserProfileProjectCreate(group.profile!, model.route)}
+      onPointerDown={event => startNewProjectDrag(placement => $newProjectDropPlacement.set(placement), event,
+        { onTap: () => void openBrowserProfileProjectCreate(group.profile!, model.route) })}>
+      <Codicon name="new-folder" size="0.75rem" />
+    </Button>}
+    {group.profile && !model.embedded && grouping !== 'project' && <Button data-browser-profile-create="" aria-label={s.newSessionIn(label)} title={s.newSessionIn(label)} size="icon-xs" variant="ghost"
+      onClick={model.startSession} onPointerDown={model.onNewSessionSplit ? event => startNewSessionDrag(placement => {
+        if (!model.open) toggle()
+        model.onNewSessionSplit?.(placement.dir, { anchor: placement.anchor, before: placement.before, profile: group.profile, route: model.route })
+      }, event, { label: s.newSessionIn(label), profile: group.profile, route: model.route }) : undefined}>
+      <Codicon name="add" size="0.75rem" />
+    </Button>}
   </div>
   const dialog = <Dialog onOpenChange={model.setRenaming} open={model.renaming}><DialogContent>
     <form className="grid gap-4" onSubmit={event => { event.preventDefault(); renameGatewayGroup(group.id, model.draft); model.setRenaming(false) }}>
