@@ -17,6 +17,7 @@ import { BrowserSessionsPane } from './sidebar-sections'
 import { BrowserBotsFallback } from './browser-bots-fallback'
 import { installTranscriptPreferences } from './transcript-preferences'
 import { Codicon, SidebarProvider } from '../upstream/browser-api'
+import { BrowserContextUsageIndicator } from './context-usage-indicator'
 import { BrowserChatActionsMenu } from './chat-actions-menu'
 import { currentPwaUpdate, subscribePwaUpdate, type PwaUpdateNotice } from '../pwa/register'
 
@@ -85,6 +86,7 @@ function BrowserLayout() {
           </BrowserToolbarButton>
           <div className="browser-actions">
             {location.pathname === '/' && <BrowserNewChatProfileSelector />}
+            <BrowserContextUsageIndicator key={conversation.selectionKey} conversation={conversation} />
             <BrowserChatActionsMenu actions={sessionActions} title={chatTitle} panels={panels} main={main} />
           </div>
         </div>
