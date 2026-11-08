@@ -45,6 +45,19 @@ export function exposeGoalResumeAction(code: string): string {
 function rewrite(code: string, id: string): { code: string; map: null } | null {
 
     const normalizedId = id.replaceAll('\\', '/').split('?')[0]
+    if (normalizedId.endsWith('/desktop/src/lib/clipboard.ts')) {
+      // Browser copy controls share the bridge's native API and selection fallback.
+      const target = '  const clipboard = navigator.clipboard'
+      const start = code.indexOf(target)
+      if (start < 0) throw new Error('Browser clipboard routing no longer matches the renderer source')
+      const route = `  if (window.__HERMES_WEB_BRIDGE__ && window.hermesDesktop?.writeClipboard) {
+    if (!await window.hermesDesktop.writeClipboard(text)) throw new Error('Could not copy text to the clipboard')
+    return
+  }
+
+`
+      return { code: code.slice(0, start) + route + code.slice(start), map: null }
+    }
     if (normalizedId.endsWith('/desktop/src/components/assistant-ui/thread/assistant-message.tsx') || normalizedId.endsWith('/desktop/src/components/assistant-ui/thread/use-message-reactions.ts')) {
       return { code: redirectAssistantRuntimeHooks(code), map: null }
     }

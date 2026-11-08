@@ -3922,5 +3922,24 @@
     "replacement": "./src/upstream/assistant-ui-runtime.ts",
     "aliasGroup": "renderer",
     "fingerprintPolicy": "The wrapper hook adapter is exercised by draft, message-action and conversation-switch browser checks."
+  },
+  {
+    "name": "browser-clipboard-routing",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "lib/clipboard.ts",
+    "sourceRoot": "renderer",
+    "reason": "Route browser copy controls through the clipboard bridge so denied native writes use the selection fallback.",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/clipboard-selection.spec.mjs",
+        "scenario": "code copy controls use the browser fallback and report failures"
+      }
+    ],
+    "removal": "Remove when upstream browser clipboard writes fall back after a denied native API call.",
+    "sourceHash": "5606f31e9091409d16e1994d50a419a3585b9b76449a5bc4c1f5bb56f6202a54",
+    "outputHash": "fd5fa8411871c7aa26b3bc8ec9d56eaa33550a60c47b9f3a41d961ce74e6130e",
+    "handler": "browser-clipboard-routing"
   }
 ]
