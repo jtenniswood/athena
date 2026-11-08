@@ -65,7 +65,7 @@
 .browser-profile-choice > :is(img,span) { box-sizing:border-box; width:2.25rem !important; height:2.25rem !important; aspect-ratio:1; flex:0 0 auto; }
 .browser-profile-choice > img { object-fit:cover; }
 .browser-profile-all { color:var(--web-text-subtle); }
-.browser-update-panel { flex-shrink:0; margin:var(--web-space-2) var(--web-space-3) 0; padding:var(--web-space-2); border:1px solid var(--web-border); border-radius:var(--web-radius-panel); background:var(--web-bg); color:var(--web-text); box-shadow:0 .25rem .8rem #0002; }
+.browser-update-panel { flex-shrink:0; margin:var(--web-space-2) var(--web-space-3) var(--web-space-3); padding:var(--web-space-2); border:1px solid var(--web-border); border-radius:var(--web-radius-panel); background:var(--web-bg); color:var(--web-text); box-shadow:0 .25rem .8rem #0002; }
 .browser-update-panel-heading { display:flex; align-items:center; justify-content:space-between; gap:var(--web-space-2); font-size:var(--web-text-caption); }
 .browser-update-panel-heading strong { font-weight:600; }
 .browser-update-panel-heading button { width:1.35rem; height:1.35rem; display:inline-flex; align-items:center; justify-content:center; border:0; border-radius:var(--web-radius-control); color:var(--web-text-subtle); background:transparent; font-size:1rem; line-height:1; cursor:pointer; }
