@@ -41,14 +41,11 @@ for (const width of [1440, 390]) {
       if (width === 390) {
         await editor.fill(originalDraft)
         await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
-        const newChat = page.getByRole('button', { name: 'New chat', exact: true })
-        const settings = page.getByRole('button', { name: 'Settings', exact: true })
-        await expect(newChat).toBeVisible()
-        const bounds = await newChat.boundingBox(), settingsBounds = await settings.boundingBox()
-        expect(bounds.y + bounds.height).toBeLessThanOrEqual(settingsBounds.y)
-        expect(bounds.height).toBeGreaterThanOrEqual(44)
-        await page.screenshot({ path: testInfo.outputPath('new-chat-button.png') })
-        await newChat.tap()
+        const footer = page.locator('[data-slot="sidebar-footer"]')
+        await expect(footer.getByRole('button', { name: 'Settings', exact: true })).toBeVisible()
+        await expect(footer.getByRole('textbox', { name: 'Search', exact: true })).toBeVisible()
+        await expect(footer.getByRole('button', { name: 'New chat', exact: true })).toHaveCount(0)
+        await page.getByRole('button', { name: 'New session in Hermes', exact: true }).tap()
       } else {
         const newChatShortcut = await page.evaluate(() => /Mac/i.test(navigator.platform) ? 'Meta+Control+n' : 'Alt+n')
         await page.keyboard.press(newChatShortcut)
@@ -56,12 +53,6 @@ for (const width of [1440, 390]) {
       await expect(selector).toBeVisible()
       await expect(selector).toHaveAccessibleName('Chat profile: Hermes')
       await expect(editor).toBeEmpty()
-      if (width === 390) {
-        await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
-        await page.getByRole('button', { name: 'New chat', exact: true }).tap()
-        await expect(selector).toBeVisible()
-        await expect(editor).toBeEmpty()
-      }
       const text = `Keep my draft while choosing its profile at ${width}px`
       await editor.fill(text)
       for (const profile of ['Writer', 'Research']) {

@@ -34,7 +34,6 @@ import { $newProjectDropPlacement, openProjectCreate } from '@/store/projects'
 import { markAllSessionsRead } from '@/store/session'
 import { ackAllSessionsRead } from '@/store/session-unread'
 import { BrowserSidebar, type BrowserSidebarModel } from '../experience/sidebar'
-import { notifyConversationOpen } from '../experience/conversation-navigation'
 
 interface MessagingSection { sourceId: string; label: string; sessions: SessionInfo[]; total: number; hasMore: boolean }
 interface SidebarController extends Pick<ChatSidebarProps, 'onNavigate' | 'onResumeSession' | 'onDeleteSession' | 'onArchiveSession' | 'onBranchSession' | 'onNewSessionInWorkspace' | 'onNewSessionSplit' | 'onRetrySessions' | 'onManageCronJob' | 'onTriggerCronJob'> {
@@ -131,13 +130,6 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
     run: () => { if (item.keybindActionId) recordAction(item.keybindActionId, 'click'); c.onNavigate(item) }
   }))
   const model: BrowserSidebarModel = {
-    newChat() {
-      const item = c.navItems.find(item => item.action === 'new-session')
-      if (!item) return
-      if (item.keybindActionId) recordAction(item.keybindActionId, 'click')
-      c.onNavigate(item)
-      notifyConversationOpen()
-    },
     navigation, flipped: c.panesFlipped, showSections: c.showSessionSections,
     search: { value: c.searchQuery, change: c.setSearchQuery, input: c.searchInputRef }, mode: c.sessionsMode,
     project: c.inProject ? c.enteredProjectId : undefined, notice: <SidebarStorageCorruptNotice />,
