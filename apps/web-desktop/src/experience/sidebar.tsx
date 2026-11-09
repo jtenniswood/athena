@@ -1,12 +1,9 @@
 import type { ReactNode, RefObject } from 'react'
-import { Codicon, SearchField } from '../upstream/browser-api'
+import { SearchField } from '../upstream/browser-api'
 import { BrowserSidebarSettings } from './sidebar-extras'
 import { browserClassNames as cn } from './ui/classnames'
-import { BrowserToolbarButton } from './ui/toolbar-button'
-import { useMobileBrowser } from './ui/use-compact-browser'
 
 export interface BrowserSidebarModel {
-  newChat(): void
   navigation: { id: string; label: string; icon: ReactNode; active: boolean; disabled: boolean; run(): void }[]
   flipped: boolean
   showSections: boolean
@@ -21,7 +18,6 @@ export interface BrowserSidebarModel {
 
 /** Athena's navigation layout consumes projections, never mutable engine stores. */
 export function BrowserSidebar({ model, children }: { model: BrowserSidebarModel; children: ReactNode }) {
-  const mobile = useMobileBrowser()
   return <div data-slot="sidebar" data-tour="sessions-sidebar" data-tip-region="" className={cn(
     'relative flex h-full w-(--sidebar-width) min-w-0 flex-col overflow-hidden border-t-0 border-b-0 border-(--sidebar-edge-border) bg-(--ui-sidebar-surface-background) text-foreground opacity-100 transition-none',
     model.flipped ? 'border-l border-r-0' : 'border-r border-l-0')}>
@@ -43,9 +39,6 @@ export function BrowserSidebar({ model, children }: { model: BrowserSidebarModel
       {model.showSections ? <div data-sessions-mode={model.mode} data-sessions-project={model.project}
         className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain pb-1.75 [scrollbar-gutter:stable] scrollbar-fade">{children}</div> : model.empty}
       <div data-slot="sidebar-footer" className="mt-auto min-h-0 shrink overflow-y-auto overflow-x-hidden overscroll-contain pb-1 pt-1 scrollbar-fade">
-        {mobile && <BrowserToolbarButton className="browser-navigation-settings-link" aria-label="New chat" onClick={model.newChat}>
-          <Codicon name="add" /><span>New chat</span>
-        </BrowserToolbarButton>}
         <BrowserSidebarSettings />
         {model.showSections && <div className="browser-session-search-section px-2 pt-1">
           <SearchField containerClassName="browser-session-search" aria-label="Search" placeholder="Search" inputRef={model.search.input} value={model.search.value} onChange={model.search.change} />
