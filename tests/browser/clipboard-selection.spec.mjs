@@ -2,7 +2,10 @@ import { test, expect } from '@playwright/test'
 import { createBuiltApplication } from './built-application.mjs'
 
 let application, origin
-test.beforeAll(async () => { application = await createBuiltApplication(); origin = application.origin })
+test.beforeAll(async () => {
+  application = await createBuiltApplication(); origin = application.origin
+  application.gateway.messages.get('preview-week').at(-1).content = '```sh\n' + payload + '```'
+})
 test.afterAll(async () => { await application?.close() })
 const composer = page => page.locator('[data-slot="composer-rich-input"]:visible').first()
 const payload = 'Exact copied text\n  with spacing and 世界\n'
@@ -28,6 +31,18 @@ for (const mode of ['denied', 'unavailable']) {
       }, mode)
       await page.goto(`${origin}/#/preview-week`)
       await expect(composer(page)).toBeVisible({ timeout: 30000 })
+    })
+
+    test('code copy controls use the browser fallback and report failures', async ({ page }) => {
+      const button = page.locator('[data-slot="code-card"] > button').first()
+      await button.click()
+      await expect(button).toHaveAttribute('aria-label', 'Copied')
+      expect(await page.evaluate(() => window.fallbackCopies.at(-1)?.text)).toBe(payload)
+      expect(await page.evaluate(() => window.nativeWriteAttempts ?? 0)).toBe(mode === 'denied' ? 1 : 0)
+      await expect(button).toHaveAttribute('aria-label', 'Copy code')
+      await page.evaluate(() => { window.copyAllowed = false })
+      await button.click()
+      await expect(button).toHaveAttribute('aria-label', /copy.*fail|fail.*copy/i)
     })
 
     test('fallback copy restores the composer selection on success and failure', async ({ page }) => {
@@ -76,5 +91,25 @@ for (const mode of ['denied', 'unavailable']) {
       await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
       await expect(composer(page)).toHaveText('Keep the original conversation draft')
     })
+  })
+}
+
+for (const mode of ['native', 'denied', 'unavailable']) {
+  test(`code copy writes the real clipboard with ${mode} API`, async ({ page, context, browserName }) => {
+    test.skip(browserName !== 'chromium', 'Clipboard read permission is supported by Chromium')
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin })
+    await page.addInitScript(mode => {
+      window.readCopiedText = navigator.clipboard.readText.bind(navigator.clipboard)
+      if (mode === 'denied') {
+        navigator.clipboard.writeText = async () => { throw new Error('Permission denied') }
+      } else if (mode === 'unavailable') {
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined })
+      }
+    }, mode)
+    await page.goto(`${origin}/#/preview-week`)
+    const button = page.locator('[data-slot="code-card"] > button').first()
+    await button.click()
+    await expect(button).toHaveAttribute('aria-label', 'Copied')
+    expect(await page.evaluate(() => window.readCopiedText())).toBe(payload)
   })
 }
