@@ -234,8 +234,8 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-sessions-pane [data-web-session-id] > :first-child { padding-block:0; }
  .browser-sessions-pane [data-row-actions] { gap:var(--web-space-1); }
  .browser-sessions-pane [data-row-actions] button { position:relative; box-sizing:border-box; min-width:var(--web-touch-min); width:var(--web-touch-min); min-height:var(--web-touch-min); height:var(--web-touch-min); flex-shrink:0; color:var(--web-text-subtle) !important; }
- /* Keep row creation and overflow controls out of the mobile chat list. */
- .browser-sessions-pane :is([data-browser-group-actions], [data-row-actions]) button:has(:is(.codicon-add, .codicon-ellipsis, .codicon-kebab-vertical)) { display:none; }
+ /* Keep profile creation visible while hiding other row creation and overflow controls. */
+ .browser-sessions-pane :is([data-browser-group-actions], [data-row-actions]) button:not([data-browser-profile-create]):has(:is(.codicon-add, .codicon-ellipsis, .codicon-kebab-vertical)) { display:none; }
  /* Match the profile header inset instead of adding a second row gutter. */
  .browser-sessions-pane [data-gateway-group] [data-web-session-id] { padding-inline-start:0; }
  .browser-sessions-pane [data-browser-session-actions] { position:relative; opacity:1; pointer-events:auto; }
