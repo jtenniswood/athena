@@ -3593,7 +3593,7 @@ for (const width of [390, 1440]) {
 
 test.describe('semantic mobile controls', () => {
   test.use({ hasTouch: true })
-  test('running chat spinner stays visible on touch with focus and crowded metadata', async ({ page }) => {
+  test.extend({ serviceWorkers: 'block' })('mobile sidebar shares the status slot for chat ages, unread dots, and spinners', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 720 })
     await page.route('**/api/athena/preferences', route => route.abort())
     await page.addInitScript(() => {
@@ -3601,6 +3601,17 @@ test.describe('semantic mobile controls', () => {
       localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles', 'none')
       localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarCardRows', 'true')
       localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarRowMeta', '["tokens","updated"]')
+    })
+    await page.route(/\/api\/(?:sessions|profiles\/sessions(?:\/sidebar)?)(?:\?|$)/, async route => {
+      const response = await route.fetch()
+      const body = await response.json()
+      const list = body.recents ?? body
+      const idle = list.sessions?.find(session => session.id === 'preview-idea')
+      if (idle) {
+        list.sessions.push({ ...idle, id: 'preview-unread', title: 'Unread preview chat', unread: true })
+        list.total++
+      }
+      await route.fulfill({ response, json: body })
     })
     let finishTurn
     await page.routeWebSocket(/\/api\/ws/, socket => {
@@ -3629,9 +3640,22 @@ test.describe('semantic mobile controls', () => {
     await expect(title).toBeFocused()
     await expect(spinner).toBeVisible()
     await expect(spinner).toHaveCSS('animation-name', 'browser-session-spinner')
+    const idleRow = page.locator('[data-web-session-id="preview-idea"]').first()
+    const age = idleRow.locator('time')
+    await expect(age).toBeVisible()
+    const statusRight = async status => {
+      const { x, width } = await status.boundingBox()
+      return x + width
+    }
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    await expect(spinner).toBeVisible()
     await expect(spinner).toHaveCSS('animation-name', 'none')
+    const ageRight = await statusRight(age)
+    await expect.poll(async () => Math.abs(await statusRight(spinner) - ageRight)).toBeLessThan(1)
+    const unreadRow = page.locator('[data-web-session-id="preview-unread"]').first()
+    const unread = unreadRow.locator('[data-session-unread]')
+    await expect(unread).toBeVisible()
+    expect(Math.abs(await statusRight(unread) - ageRight)).toBeLessThan(1)
+    await expect(unreadRow.locator('time')).toHaveCount(0)
 
     await expect(row).toContainText('168')
     await page.evaluate(() => window.hermesDesktop.zoom.setPercent(500))
@@ -3645,7 +3669,6 @@ test.describe('semantic mobile controls', () => {
 
     finishTurn()
     await expect(spinner).toHaveCount(0)
-    await expect(row.locator('time')).toBeHidden()
   })
 
   test('browser touch hooks survive control label and icon changes', async ({ page }) => {
