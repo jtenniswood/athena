@@ -3668,6 +3668,84 @@ for (const width of [390, 1440]) {
 
 test.describe('semantic mobile controls', () => {
   test.use({ hasTouch: true })
+  test.extend({ serviceWorkers: 'block' })('mobile sidebar shares the status slot for chat ages, unread dots, and spinners', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 720 })
+    await page.route('**/api/athena/preferences', route => route.abort())
+    await page.addInitScript(() => {
+      localStorage.setItem('hermes.desktop.interfaceMode.v1', 'advanced')
+      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles', 'none')
+      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarCardRows', 'true')
+      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarRowMeta', '["tokens","updated"]')
+    })
+    await page.route(/\/api\/(?:sessions|profiles\/sessions(?:\/sidebar)?)(?:\?|$)/, async route => {
+      const response = await route.fetch()
+      const body = await response.json()
+      const list = body.recents ?? body
+      const idle = list.sessions?.find(session => session.id === 'preview-idea')
+      if (idle) {
+        list.sessions.push({ ...idle, id: 'preview-unread', title: 'Unread preview chat', unread: true })
+        list.total++
+      }
+      await route.fulfill({ response, json: body })
+    })
+    let finishTurn
+    await page.routeWebSocket(/\/api\/ws/, socket => {
+      const server = socket.connectToServer()
+      server.onMessage(message => {
+        const frame = JSON.parse(String(message))
+        if (frame.params?.type === 'message.complete' && frame.params.session_id === 'preview-week') {
+          finishTurn = () => socket.send(message)
+          return
+        }
+        socket.send(message)
+      })
+    })
+    await page.goto(`${origin}/#/preview-week`)
+    await page.locator('#browser-navigation').getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().click()
+    await editor(page).fill('Keep the running indicator visible')
+    await editor(page).press('Enter')
+    await expect.poll(() => Boolean(finishTurn)).toBe(true)
+
+    await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
+    const row = page.locator('[data-web-session-id="preview-week"]').first()
+    const spinner = row.getByRole('status', { name: 'Session running', exact: true })
+    const title = row.getByRole('button', { name: 'Plan a calmer working week', exact: true })
+    await title.focus()
+    await expect(title).toBeFocused()
+    await expect(spinner).toBeVisible()
+    await expect(spinner).toHaveCSS('animation-name', 'browser-session-spinner')
+    const idleRow = page.locator('[data-web-session-id="preview-idea"]').first()
+    const age = idleRow.locator('time')
+    await expect(age).toBeVisible()
+    const statusRight = async status => {
+      const { x, width } = await status.boundingBox()
+      return x + width
+    }
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await expect(spinner).toHaveCSS('animation-name', 'none')
+    const ageRight = await statusRight(age)
+    await expect.poll(async () => Math.abs(await statusRight(spinner) - ageRight)).toBeLessThan(1)
+    const unreadRow = page.locator('[data-web-session-id="preview-unread"]').first()
+    const unread = unreadRow.locator('[data-session-unread]')
+    await expect(unread).toBeVisible()
+    expect(Math.abs(await statusRight(unread) - ageRight)).toBeLessThan(1)
+    await expect(unreadRow.locator('time')).toHaveCount(0)
+
+    await expect(row).toContainText('168')
+    await page.evaluate(() => window.hermesDesktop.zoom.setPercent(500))
+    await expect.poll(() => page.evaluate(() => window.hermesDesktop.zoom.factor())).toBe(5)
+    await expect.poll(() => spinner.evaluate(element => {
+      const spinnerRight = element.getBoundingClientRect().right
+      const rowRight = element.closest('[data-web-session-id]').getBoundingClientRect().right
+      const navigationRight = element.closest('.browser-navigation').getBoundingClientRect().right
+      return Math.min(rowRight, navigationRight) - spinnerRight
+    })).toBeGreaterThanOrEqual(4)
+
+    finishTurn()
+    await expect(spinner).toHaveCount(0)
+  })
+
   test('browser touch hooks survive control label and icon changes', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await open(page)
