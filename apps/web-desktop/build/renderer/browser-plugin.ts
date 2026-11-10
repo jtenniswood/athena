@@ -267,7 +267,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserSelectedSessionOwner, keepBrowserRenameProfile, scopeBrowserSessionTitles, scopeBrowserProjectTitles,
     useBrowserOwnedSessionRpc: source => useBrowserOwnedSessionRpc(source, root),
     exposeBrowserTimelineHistoryOwner,
-    useBrowserTimelineOwner,
+    useBrowserTimelineOwner: source => useBrowserTimelineOwner(source, root),
     useBrowserComposerLineBreak,
     useBrowserThreadSubmitScroll: source => useBrowserThreadSubmitScroll(source, root),
     useBrowserTimelineScrubbing: source => useBrowserTimelineScrubbing(source, root),
