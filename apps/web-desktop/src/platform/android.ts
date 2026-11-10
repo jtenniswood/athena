@@ -65,7 +65,11 @@ export async function refreshAndroidNotificationPermission(request = false): Pro
 }
 
 export async function androidNotify(payload: HermesNotification): Promise<boolean> {
-  if (pushActive && (payload.kind === 'turnDone' || payload.kind === 'turnError')) return true
+  if (pushActive && (payload.focusSessionId || payload.sessionId) && (payload.kind === 'turnDone' || payload.kind === 'turnError')) return true
+  return showAndroidNotification(payload)
+}
+
+export async function showAndroidNotification(payload: HermesNotification): Promise<boolean> {
   try { return await call('notify', payload) === true }
   catch { return false }
 }

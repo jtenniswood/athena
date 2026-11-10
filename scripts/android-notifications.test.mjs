@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import vm from 'node:vm'
 import ts from 'typescript'
+import { atom } from 'nanostores'
 
 const compile = file => ts.transpileModule(readFileSync(new URL(file, import.meta.url), 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS }
@@ -145,4 +146,60 @@ test('asynchronous navigation approvals retain the originating request ID', asyn
   await Promise.resolve(); await Promise.resolve()
   assert.deepEqual(replies.map(reply => reply.requestId), ['second', 'first'])
   stop()
+})
+
+test('a local test still reaches Android when Firebase handles chat completions', async () => {
+  const { api, calls } = native()
+  await api.refreshAndroidNotificationPermission(true)
+  await api.setAndroidPushActive(true, 'binding')
+  assert.equal(await api.androidNotify({ kind: 'turnDone', focusSessionId: 'chat-1' }), true)
+  assert.equal(calls.at(-1).method, 'pushEnabled')
+  assert.equal(await api.androidNotify({ kind: 'turnDone', body: 'Local test' }), true)
+  assert.equal(calls.at(-1).method, 'notify')
+})
+
+test('Android alerts on new unread activity and skips existing, manual and visible unread state', async () => {
+  const source = compile('../apps/web-desktop/src/upstream/android-unread-notifications.ts')
+  const sessions = atom([]), cron = atom([]), messaging = atom([]), finished = atom([])
+  const prefs = atom({ enabled: true, kinds: { turnDone: true } }), muted = atom(false)
+  const shown = []
+  let visible = 'visible'
+  const row = (id, count, unread = true) => ({ id, message_count: count, unread, last_active: 1 })
+  const context = vm.createContext({ exports: {}, queueMicrotask, document: { visibilityState: 'visible', hasFocus: () => true },
+    require: name => ({
+      '@/store/session': { $sessions: sessions, $cronSessions: cron, $messagingSessions: messaging, $unreadFinishedSessionIds: finished,
+        sessionPinId: row => row.id, sessionMatchesStoredId: (row, id) => row.id === id },
+      '@/store/native-notifications': { $nativeNotifyPrefs: prefs },
+      '@/store/haptics': { $hapticsMuted: muted },
+      '../platform/android': { androidVisibleSession: () => visible, showAndroidNotification: notification => shown.push(notification) }
+    })[name]
+  })
+  vm.runInContext(source, context)
+  const stop = context.exports.installAndroidUnreadNotifications()
+  sessions.set([row('old', 3), row('manual', 1, false), row('visible', 1)])
+  await Promise.resolve()
+  assert.equal(shown.length, 0)
+  sessions.set([row('old', 4), row('manual', 1), row('visible', 2)])
+  await Promise.resolve()
+  assert.deepEqual(shown.map(item => item.focusSessionId), ['old'])
+  finished.set(['manual'])
+  muted.set(true)
+  await Promise.resolve()
+  assert.deepEqual(shown.map(item => item.focusSessionId), ['old', 'manual'])
+  assert.equal(shown[1].silent, true)
+  sessions.set([row('visible', 2)])
+  await Promise.resolve()
+  sessions.set([row('old', 4), row('manual', 1), row('visible', 2)])
+  await Promise.resolve()
+  assert.equal(shown.length, 2, 'returning to a profile does not replay the same alert')
+  prefs.set({ enabled: true, kinds: { turnDone: false } })
+  visible = null
+  sessions.set([row('old', 5), row('manual', 2), row('visible', 3)])
+  await Promise.resolve()
+  assert.equal(shown.length, 2)
+  stop()
+  prefs.set({ enabled: true, kinds: { turnDone: true } })
+  finished.set(['visible'])
+  await Promise.resolve()
+  assert.equal(shown.length, 2, 'watcher stops with the renderer')
 })

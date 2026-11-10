@@ -3,12 +3,13 @@ import { clearPluginNotifyHandlers, invokePluginNotifyAction, invokePluginNotify
 import { installBrowserNotificationCallbacks } from '../platform/notification-navigation'
 import { knownOwnerForSession } from '@/store/session-states'
 import { isAndroidApp } from '../platform/android'
+import { installAndroidUnreadNotifications } from './android-unread-notifications'
 import { WEB_CONNECTION_ID } from '../platform/connection'
 import { webNotify } from '../platform/notifications'
 
 /** Capture the engine owner before delivery waits or later selection changes. */
 export function installBrowserNotificationCommands(): () => void {
-  if (isAndroidApp()) return () => {}
+  if (isAndroidApp()) return installAndroidUnreadNotifications()
   const stopCallbacks = installBrowserNotificationCallbacks((notifyId, actionId, dismiss) => {
     try {
       if (!dismiss) {
