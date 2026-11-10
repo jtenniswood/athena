@@ -1,5 +1,5 @@
 import { createAndroidPushStore } from './android-push-store.mjs'
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { WebSocket, WebSocketServer } from 'ws'
 import { accountIdentity, probeIdentity, requestOrigin } from './identity.mjs'
 
@@ -84,7 +84,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
 
   async function handle(req, res) {
     const url = new URL(req.url, 'http://local.invalid')
-    if (![root + 'push', root + 'push/token'].includes(url.pathname)) return false
+    if (![root + 'push', root + 'push/token', root + 'push/test'].includes(url.pathname)) return false
     const json = (status, data) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)) }
     if (!sender.enabled) return json(503, { error: 'Firebase push is not configured' }), true
     if (req.method !== 'GET' && (!['POST', 'DELETE'].includes(req.method) || req.headers.origin !== requestOrigin(req) || !req.headers['content-type']?.startsWith('application/json'))) return json(403, { error: 'Same-origin JSON request required' }), true
@@ -115,6 +115,26 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
       const authenticated = await identity(req)
       const account = authenticated.id
       if (authenticated.cookies.length) res.setHeader('Set-Cookie', authenticated.cookies)
+      if (url.pathname === root + 'push/test') {
+        const key = keyFor(account, body.deviceId)
+        const device = store.devices.get(key)
+        if (req.method !== 'POST' || !device?.enabled || device.origin !== requestOrigin(req) || now() - device.updated > retentionMs) {
+          return json(409, { error: 'Enable background delivery on this device first.' }), true
+        }
+        if (device.lastTest != null && now() - device.lastTest < 15000) {
+          return json(429, { error: 'Wait 15 seconds before testing again.' }), true
+        }
+        store.update(state => { state.devices.get(key).lastTest = now() })
+        try {
+          await sender.send(device.token, {
+            eventId: randomUUID(), expiresAt: String(now() + 60000), kind: 'test',
+            origin: device.origin, bindingId: device.bindingId, tag: 'android:push-test',
+            title: 'Athena · Push test', body: 'Your Athena server sent this notification through Firebase.'
+          }, 'HIGH')
+          json(200, { ok: true })
+        } catch { json(502, { error: 'Firebase could not accept the test notification.' }) }
+        return true
+      }
       if (req.method === 'GET') {
         const key = keyFor(account, url.searchParams.get('device'))
         const device = store.devices.get(key)
@@ -152,6 +172,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
             tokenVersion: keepToken ? old.tokenVersion : tokenVersion, bindingId: body.bindingId, enabled: body.enabled === true, kinds,
             refreshHash: body.tokenVersion != null && typeof body.refreshKey === 'string' && /^[A-Za-z0-9_-]{43}$/.test(body.refreshKey)
               ? createHash('sha256').update(body.refreshKey).digest('hex') : null,
+            lastTest: old?.lastTest,
             origin: requestOrigin(req), activeUntil: body.foreground === true ? now() + 45000 : 0, updated: now() })
         })
       }

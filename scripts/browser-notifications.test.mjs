@@ -51,6 +51,7 @@ function notifications({ permission = 'granted', supported = true, secure = true
         if (name === '../platform/notification-navigation') return routing.exports
         if (name === '@/store/session-states') return { knownOwnerForSession }
         if (name === '../platform/android') return { isAndroidApp: () => android }
+        if (name === './android-unread-notifications') return { installAndroidUnreadNotifications: () => () => {} }
         if (name === '../platform/connection') return { WEB_CONNECTION_ID: 'web-single' }
         if (name === '../platform/notifications') return context.exports
         throw new Error(`Unexpected adapter import: ${name}`)
