@@ -19,6 +19,36 @@ With Project grouping, drag a chat by its title onto another project to move it.
 The destination highlights before you drop; press Escape
 to cancel. Destinations need a working folder, so Home is not a drop target.
 
+## Deliver scheduled results to a dedicated chat
+
+With the optional gateway extension installed, choose **Create dedicated chat**
+under **Cron Jobs → Deliver to** when creating or editing a job. The first text
+delivery creates a regular chat named after the job in its profile. Later runs
+append to the same chat, where you can reply with the reports in context. The
+gateway delivers results while Athena is closed. Attachments stay in run
+history, and `[SILENT]` runs skip delivery as usual.
+
+Install the extension on the **Hermes gateway**, using the v0.23.0 release. For a
+Docker gateway, build the extended image from the Athena repository:
+
+```sh
+docker build -t hermes-with-cron-chats integrations/hermes-cron-chat
+```
+
+Use `hermes-with-cron-chats` for the gateway container with its existing
+configuration and data volume. For a source installation, run these commands
+from the Athena repository with `HERMES_CHECKOUT` set to the path of the
+Hermes v0.23.0 checkout:
+
+```sh
+git -C "$HERMES_CHECKOUT" apply --check "$PWD/integrations/hermes-cron-chat/cron-delivery.patch"
+cp integrations/hermes-cron-chat/athena_cron_chat.py "$HERMES_CHECKOUT/gateway/"
+git -C "$HERMES_CHECKOUT" apply "$PWD/integrations/hermes-cron-chat/cron-delivery.patch"
+```
+
+Restart Hermes to load the extension. The Athena UI image can connect to the
+same gateway URL. For CLI-created jobs, use `--deliver dedicated-chat`.
+
 ## Docker self-hosting
 
 The image contains Athena's UI, nginx and its small preferences/Android service.
