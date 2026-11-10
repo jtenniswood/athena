@@ -276,6 +276,11 @@ the session through a one-use PKCE exchange lasting five minutes. This moves
 the browser's Athena session into the app so rotating refresh tokens are not
 shared between two clients. Session-token sign-in remains available.
 
+Athena alerts you on Android when new messages make a chat unread while the
+web app is running. Open **Athena Settings → Notifications** to choose which
+alerts to receive, control background delivery on this device, or send an Android
+push test through Firebase.
+
 Native alerts work without Firebase while the web app is running. In Android **App settings → Test notification**, send a local test alert to check notification permission and on-device display. This test does not contact Firebase or verify background push delivery. To receive
 response-completion and response-error alerts after Android suspends or closes
 the app:
