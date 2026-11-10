@@ -128,3 +128,40 @@ test('cold recovery restores the saved draft for its routed conversation', async
   await recovered(page, 'preview-week')
   await expect(editor(page)).toHaveText('Keep this draft through expired-cookie recovery')
 })
+
+test('a provider readiness mismatch on restart leaves the restored chat usable', async ({ page }) => {
+  let runtimeReady = true
+  let failedChecks = 0
+  await page.routeWebSocket(/\/api\/ws/, socket => {
+    const server = socket.connectToServer()
+    socket.onMessage(message => {
+      const frame = JSON.parse(String(message))
+      if (runtimeReady || frame.method !== 'setup.runtime_check') {
+        server.send(message)
+        return
+      }
+
+      failedChecks++
+      socket.send(JSON.stringify({
+        jsonrpc: '2.0', id: frame.id,
+        result: { ok: false, provider: 'opencode-go', error: "No usable credentials found for provider 'opencode-go'." }
+      }))
+    })
+  })
+
+  const transcript = page.getByText('A little more room to think', { exact: true })
+  const setup = page.getByRole('button', { name: "I'll choose a provider later", exact: true })
+
+  await page.goto(app.origin + '/#/preview-week')
+  await expect(transcript).toBeVisible()
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('hermes-desktop-onboarded-v1'))).toBe('1')
+
+  runtimeReady = false
+  await page.reload()
+  await expect.poll(() => failedChecks).toBeGreaterThan(0)
+  await expect(transcript).toBeVisible()
+  await editor(page).click({ timeout: 10000 })
+  await editor(page).fill('Draft after restarting')
+  await expect(setup).toHaveCount(0)
+  await expect(editor(page)).toHaveText('Draft after restarting')
+})
