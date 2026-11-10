@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useId, useState, type ReactNode } from 'react'
-import { BrowserActionSurface, type BrowserActionAnchor, type BrowserAction } from './ui/action-surface'
+import type { BrowserAction } from './ui/action-surface'
 import { useMobileBrowser } from './ui/use-compact-browser'
 import { Codicon } from '../upstream/browser-api'
 import { useConfiguredSidebarChannels } from '../upstream/sidebar-channels'
@@ -71,18 +71,7 @@ export function useBrowserSidebarSections() {
 
 export function BrowserSessionsPane({ hidden, sections, children }: { hidden: boolean; sections: ReturnType<typeof useBrowserSidebarSections>; children: ReactNode }) {
   const compact = useMobileBrowser()
-  const [anchor, setAnchor] = useState<BrowserActionAnchor | null>(null)
-  const fallback = { current: document.querySelector<HTMLButtonElement>('.browser-navigation-actions-trigger') }
-  useEffect(() => { if (hidden) setAnchor(null) }, [hidden])
-  // Let the upstream context-menu coordinator leave this browser surface alone.
-  return <SidebarSectionsContext.Provider value={sections}><div data-hermes-context-menu-trigger="" hidden={hidden} className="browser-pane browser-sessions-pane" onContextMenu={event => {
-    // Session-row menus own their actions and must not open the section surface.
-    if (event.defaultPrevented || (event.target instanceof Element && event.target.closest('[data-row-actions]'))) return
-    event.preventDefault()
-    event.stopPropagation()
-    const target = event.target instanceof Element ? event.target.closest<HTMLElement>('button,a,input,[tabindex]') : null
-    setAnchor({ x: event.clientX, y: event.clientY, returnFocus: target || event.currentTarget })
-  }} onClickCapture={event => {
+  return <SidebarSectionsContext.Provider value={sections}><div hidden={hidden} className="browser-pane browser-sessions-pane" onClickCapture={event => {
     if (!compact || !(event.target instanceof Element)) return
     const button = event.target.closest('button')
     if (!button) return
@@ -93,6 +82,5 @@ export function BrowserSessionsPane({ hidden, sections, children }: { hidden: bo
     if (/^New session(?:\s|$)/i.test(label)) notifyConversationOpen()
   }}>
     {children}
-    <BrowserActionSurface title="Sidebar sections" actions={sections.actions} anchor={anchor} compact={compact} fallbackFocus={fallback} onClose={() => setAnchor(null)} />
   </div></SidebarSectionsContext.Provider>
 }
