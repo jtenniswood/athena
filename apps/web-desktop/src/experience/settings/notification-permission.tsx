@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useStore } from '@nanostores/react'
+import { $nativeNotifyPrefs } from '@/store/native-notifications'
 import { Button } from '../../upstream/ui'
 import { browserNotificationPermission, requestBrowserNotificationPermission } from '../../platform/notifications'
 import { androidPushActive, isAndroidApp, refreshAndroidNotificationPermission } from '../../platform/android'
+import { androidBackgroundAlerts, setAndroidBackgroundAlerts, testAndroidPush } from '../../platform/android-push'
 import { useSettingsPresentation } from './presentation'
 
 export function BrowserNotificationPermissionSetting() {
@@ -9,6 +12,38 @@ export function BrowserNotificationPermissionSetting() {
   const [permission, setPermission] = useState(browserNotificationPermission)
   const [requesting, setRequesting] = useState(false)
   const [pushEnabled, setPushEnabled] = useState(androidPushActive)
+  const [background, setBackground] = useState(androidBackgroundAlerts)
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [deliveryMessage, setDeliveryMessage] = useState('')
+  const alertsEnabled = useStore($nativeNotifyPrefs).enabled
+
+  const changeBackground = async (enabled: boolean) => {
+    setBackground(enabled)
+    setSaving(true)
+    setDeliveryMessage('')
+    try {
+      if (!await setAndroidBackgroundAlerts(enabled)) {
+        setDeliveryMessage('Could not update background delivery. Reopen Athena and try again.')
+      }
+    } finally { setSaving(false) }
+  }
+
+  const sendTest = async () => {
+    setTesting(true)
+    setDeliveryMessage('')
+    try {
+      await testAndroidPush()
+      setDeliveryMessage('Firebase accepted the test. Check your Android notifications.')
+    } catch (error) {
+      const response = error instanceof Error ? error.message.match(/^\d+: (.+)$/)?.[1] : undefined
+      let message = 'Could not send a push test. Check the Android push status in App settings.'
+      if (response) {
+        try { message = (JSON.parse(response) as { error?: string }).error || message } catch { /* Use the default message for proxy errors. */ }
+      }
+      setDeliveryMessage(message)
+    } finally { setTesting(false) }
+  }
 
   useEffect(() => {
     const update = () => { setPermission(browserNotificationPermission()); setPushEnabled(androidPushActive()) }
@@ -46,12 +81,22 @@ export function BrowserNotificationPermissionSetting() {
     }
   }
   const title = native ? 'Android notifications' : 'Browser notifications'
-  const hint = native && pushEnabled ? 'Response alerts can arrive while the app is closed.' : 'Alerts pause when Athena is closed or suspended.'
+  const hint = native && pushEnabled ? 'The server can deliver replies from its retained chat connection while the app is closed.' : 'Alerts pause when Athena is closed or suspended.'
+  const backgroundLabel = 'Background delivery on this device'
+  const backgroundDescription = 'Use Firebase for reply alerts while the app is closed.'
+  const testLabel = testing ? 'Sending push test…' : 'Send Android push test'
+  const testDisabled = testing || saving || !background || !alertsEnabled || permission !== 'granted'
   const presentation = useSettingsPresentation([
     { kind: 'heading', label: title }, { kind: 'text', label: description },
     ...(permission === 'default' ? [{ id: 'permission', kind: 'action' as const,
       label: requesting ? 'Waiting for permission…' : 'Allow notifications', disabled: requesting, run: requestPermission }] : []),
-    ...(['default', 'granted'].includes(permission) ? [{ kind: 'text' as const, label: hint }] : [])
+    ...(['default', 'granted'].includes(permission) ? [{ kind: 'text' as const, label: hint }] : []),
+    ...(native ? [
+      { id: 'background-delivery', kind: 'toggle' as const, label: backgroundLabel, description: backgroundDescription,
+        checked: background, disabled: saving, run: () => changeBackground(!background) },
+      { id: 'push-test', kind: 'action' as const, label: testLabel, disabled: testDisabled, run: sendTest },
+      ...(deliveryMessage ? [{ kind: 'text' as const, label: deliveryMessage }] : [])
+    ] : [])
   ])
 
   return <section ref={presentation} className="browser-notification-permission" aria-label="Notification permission">
@@ -63,5 +108,14 @@ export function BrowserNotificationPermissionSetting() {
       {requesting ? 'Waiting for permission…' : 'Allow notifications'}
     </Button>}
     {(permission === 'default' || permission === 'granted') && <p className="browser-settings-page-description browser-notification-permission-hint">{hint}</p>}
+    {native && <div className="browser-notification-permission-hint grid justify-items-start gap-2">
+      <label className="flex items-center gap-2">
+        <input type="checkbox" checked={background} disabled={saving} onChange={event => void changeBackground(event.currentTarget.checked)} />
+        {backgroundLabel}
+      </label>
+      <p className="browser-settings-page-description">{backgroundDescription}</p>
+      <Button type="button" variant="outline" size="sm" disabled={testDisabled} onClick={() => void sendTest()}>{testLabel}</Button>
+      {deliveryMessage && <p className="browser-settings-page-description" role="status">{deliveryMessage}</p>}
+    </div>}
   </section>
 }
