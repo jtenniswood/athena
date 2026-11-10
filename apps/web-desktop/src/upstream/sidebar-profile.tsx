@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { ProfileGlyph } from '@/components/ui/profile-glyph'
 import type { SessionInfo } from '@/hermes'
 import { useI18n } from '@/i18n'
-import { $sidebarGrouping, $sidebarRowMeta } from '@/store/layout'
+import { $sidebarCardRows, $sidebarGrouping, $sidebarRowMeta } from '@/store/layout'
 import { $newProjectDropPlacement } from '@/store/projects'
 import { BrowserProfileGroup, BrowserProfileNesting } from '../experience/sidebar-profile'
 import { BrowserHideProfileItem } from '../experience/profile-list-visibility'
@@ -80,6 +80,7 @@ export function BrowserProfileGroupControllerSurface({ model }: { model: Profile
   const hasOverflow = Boolean(group.profile) && !model.embedded && sessions.length > PROFILE_CHAT_LIMIT
   const visibleSessions = hasOverflow && !showAllChats ? sessions.slice(0, PROFILE_CHAT_LIMIT) : sessions
   const grouping = useStore($sidebarGrouping)
+  const cardRows = useStore($sidebarCardRows)
   const renameLabel = group.profile ? 'Rename profile' : copy.rename
   const browserProfile = useBrowserProfileSection(group.profile)
   const label = model.alias || browserProfile?.label || model.label
@@ -127,9 +128,9 @@ export function BrowserProfileGroupControllerSurface({ model }: { model: Profile
       reorder: { label: `${copy.reorder}: ${label}`, dragging: sortable.dragging, bindings: sortable.dragHandleProps },
       icon: group.profile ? browserProfile?.picture ?? <ProfileGlyph className="size-full" color={group.color ?? null} isDefault={group.profile === 'default'} name={group.profile} /> : <Codicon name="remote" /> }}>
     {model.children}{model.contribution}{model.open && model.renderRows(visibleSessions)}
-    {hasOverflow && <button type="button" aria-expanded={showAllChats} onClick={() => setShowAllChats(!showAllChats)}
-      className="ml-2 inline-flex min-h-7 w-fit items-center gap-1 rounded-sm bg-transparent px-2 text-xs text-(--ui-text-tertiary) underline-offset-4 hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:underline">
-      {showAllChats ? 'Show less' : 'Show more'}
+    {hasOverflow && <button type="button" data-card-rows={cardRows || undefined} aria-expanded={showAllChats} onClick={() => setShowAllChats(!showAllChats)}
+      className="browser-profile-chat-overflow inline-flex min-h-7 w-fit items-center gap-1 rounded-sm bg-transparent pe-2 text-xs text-(--ui-text-tertiary) underline-offset-4 hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:underline">
+      <span>{showAllChats ? 'Less' : 'More'}</span>
       <Codicon name={showAllChats ? 'chevron-up' : 'chevron-down'} size="0.75rem" />
     </button>}
   </BrowserProfileGroup>
