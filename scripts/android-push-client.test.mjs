@@ -60,3 +60,16 @@ test('an unavailable optional push service falls back to the ordinary gateway', 
   assert.equal(await app.api.androidPushGatewayUrl(target), target)
   assert.equal(app.native.at(-1)[0], false)
 })
+
+test('changing delivery settings syncs immediately, and the push test uses the registered device', async () => {
+  const app = fixture()
+  await app.api.androidPushGatewayUrl('wss://athena.example/api/ws')
+  assert.equal(await app.api.setAndroidBackgroundAlerts(false), true)
+  assert.equal(app.requests.filter(request => request.method === 'POST').at(-1).body.enabled, false)
+  assert.equal(app.native.at(-1)[0], false)
+  assert.equal(app.storage.get('athena:android-background-alerts'), 'off')
+  await app.api.setAndroidBackgroundAlerts(true)
+  await app.api.testAndroidPush()
+  assert.equal(app.requests.at(-1).path, '/api/athena/android/push/test')
+  assert.equal(app.requests.at(-1).body.deviceId, 'installation')
+})

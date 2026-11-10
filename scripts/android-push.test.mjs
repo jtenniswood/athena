@@ -67,13 +67,17 @@ async function fixture(t, options = {}) {
     method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' },
     body: JSON.stringify({ deviceId, bindingId, refreshKey: 'k'.repeat(43), token: 'rotated-device-token-for-testing-only', ...changes })
   })
+  const testPush = (account = 'A') => fetch(origin + '/api/athena/android/push/test', {
+    method: 'POST', headers: { Origin: origin, Cookie: `session=${account}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deviceId })
+  })
   const restart = async () => {
     relay.close(); await relay.drain()
     server.removeAllListeners('upgrade')
     relay = createRelay(); relay.attach(server)
     await relay.drain()
   }
-  return { sent, attempts, register, connect, mint, emit, status, rotate, restart, directory,
+  return { sent, attempts, register, connect, mint, emit, status, rotate, testPush, restart, directory,
     advance: milliseconds => { clock += milliseconds }, drain: () => relay.drain(),
     nextPush: () => new Promise(resolve => waiters.push(resolve)) }
 }
@@ -252,4 +256,20 @@ test('an unversioned older web client still updates its token but revokes incomp
   const client = app.connect(); await once(client, 'open')
   const pending = app.nextPush(); app.emit(21, 'ok'); await pending
   assert.equal(app.sent[0][0], 'legacy-current-token-for-testing')
+})
+
+test('push tests use the signed-in device, bypass category filters and are rate limited', async t => {
+  const app = await fixture(t)
+  await app.register({ kinds: { turnDone: false, turnError: false } })
+  assert.equal((await app.testPush('B')).status, 409)
+  assert.equal(app.sent.length, 0)
+  assert.equal((await app.testPush()).status, 200)
+  assert.equal(app.sent[0][1].kind, 'test')
+  assert.equal(app.sent[0][1].bindingId, bindingId)
+  assert.equal(app.sent[0][1].focusSessionId, undefined)
+  await app.register()
+  assert.equal((await app.testPush()).status, 429, 'registration heartbeats preserve the limit')
+  assert.equal(app.sent.length, 1)
+  await app.register({ enabled: false })
+  assert.equal((await app.testPush()).status, 409)
 })
