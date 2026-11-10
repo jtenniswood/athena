@@ -2,7 +2,7 @@ import type { ComponentType, ReactNode } from 'react'
 import type { BrowserApproval, BrowserApprovalRequester, BrowserSessionActions } from './actions'
 import type { BrowserContextUsage } from './context-usage'
 import type { BrowserConversationModel } from './conversation'
-import type { BrowserHostPanel } from './host'
+import type { BrowserHostPanel, BrowserSidebarCommands } from './host'
 import type { BrowserNewChatProfile, BrowserProfiles } from './profiles'
 import type { BrowserNavigate, BrowserSessionSelection } from './selection'
 import type { BrowserSettingsController, BrowserSettingsPageProps } from './settings'
@@ -33,6 +33,7 @@ export interface BrowserEngine {
   }
   readonly navigation: {
     usePanels(): readonly BrowserHostPanel[]
+    useSidebar(commands: BrowserSidebarCommands): { open: boolean; setOpen(open: boolean): void }
     openPage(navigate: BrowserNavigate, path: string): void
     coversWorkspace(pathname: string): boolean
   }

@@ -150,6 +150,48 @@ gateway's local account. Backend profile configuration continues to be saved by
 Hermes. Drafts, credentials, browser permissions, transcript caches, and the
 currently selected conversation stay local.
 
+### Keyboard shortcuts
+
+Open **Settings → Keyboard Shortcuts** to see the current bindings and change or
+reset configurable shortcuts. The defaults below use **Mod** for **Command** on
+macOS and **Ctrl** on Windows and Linux.
+
+| Action | Default shortcut |
+| --- | --- |
+| Start a new chat | **Control+Command+N** on macOS. **Alt+N** in a Windows or Linux browser tab, or **Ctrl+N** in an installed Chromium app window. |
+| Open the command palette | **Mod+K** |
+| Show or hide the sidebar | **Mod+B** |
+| Open the sidebar and focus chat search | **Mod+Shift+F** |
+| Open Settings | **Mod+,** |
+| Open Keyboard Shortcuts | **Mod+/** |
+| Open the model picker | **Mod+Shift+M** |
+| Focus the composer from the chat background | **Enter** |
+| Open slash commands | **/** |
+| Send a message | **Enter** in the composer |
+| Insert a line break | **Shift+Enter** in the composer |
+| Increase or decrease the interface scale | **Mod+=** or **Mod+-** |
+| Reset the interface scale | **Mod+0** |
+
+Athena also shows these fixed shortcuts in the chat action and sidebar filter
+menus. Use them with focus outside text fields and with menus and dialogs closed.
+Chat actions apply to the current chat.
+
+| Action | Shortcut |
+| --- | --- |
+| Rename chat | **Mod+Shift+R** |
+| Regenerate the chat title | **Mod+Shift+X** |
+| Pin or unpin chat | **Mod+Shift+P** |
+| Mark chat read or unread | **Mod+Shift+U** |
+| Toggle Files or Review, when available | **Mod+Shift+E** or **Mod+Shift+G** |
+| Archive chat | **Mod+Shift+A** |
+| Open the delete confirmation | **Mod+Shift+Backspace** |
+| Toggle the archived chats filter | **Mod+Alt+A** |
+| Mark all chats read | **Mod+Alt+R** |
+
+Use **Option** for **Alt** on macOS. If your browser or operating system takes
+a shortcut first, use the corresponding menu action or rebind it in Settings
+where available.
+
 ### Chat previews
 
 Hover or keyboard-focus a chat to see a short summary of its purpose. Athena
