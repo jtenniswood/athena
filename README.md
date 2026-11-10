@@ -107,10 +107,10 @@ Use an API key from the subscribed workspace in the OpenCode Console. With
 with `docker compose --env-file`. For `docker run`, add it to `.env.hermes-web`
 alongside the gateway settings.
 
-The row shows the percentage remaining in the current subscription month. Hover,
-focus, or tap it to see the percentage remaining and time until reset for the
-5-hour, weekly, and monthly windows. Athena keeps the key on the server and
-shares the configured subscription's usage with signed-in users of this instance.
+The row shows the percentage remaining in the current subscription month. Hover
+over it or focus it with the keyboard to see the percentage remaining and time
+until reset for the 5-hour, weekly, and monthly windows. Athena keeps the key on
+the server and shares the configured subscription's usage with signed-in users.
 
 ### Container logs
 

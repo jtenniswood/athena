@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Codicon, Popover, PopoverContent, PopoverTrigger, Tip } from '../upstream/browser-api'
+import { Codicon, Tip } from '../upstream/browser-api'
 import { resolveToken } from '../platform/connection'
 import { runtimeConfig } from '../platform/runtime'
 
@@ -41,7 +41,6 @@ function UsageDetails({ usage }: { usage: Usage | null | undefined }) {
 
 function ConfiguredOpenCodeGoUsage() {
   const [usage, setUsage] = useState<Usage | null>()
-  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     const lifetime = new AbortController()
@@ -78,21 +77,15 @@ function ConfiguredOpenCodeGoUsage() {
     }
   }, [])
 
-  return <Popover open={open} onOpenChange={setOpen}>
-    <Tip label={<UsageDetails usage={usage} />} side="top" align="start" boundary="viewport" hidden={open}>
-      <PopoverTrigger type="button" className="flex h-(--browser-session-control-height) w-full items-center gap-2 rounded-md px-2 text-left text-[0.8125rem] font-medium text-(--web-text-muted) hover:bg-(--ui-control-hover-background) hover:text-foreground pointer-coarse:min-h-(--web-touch-min)">
-        <Codicon name="graph" className="size-4 shrink-0 text-[color-mix(in_srgb,currentColor_72%,transparent)]" />
-        <span className="min-w-0 flex-1 truncate">OpenCode Go</span>
-        <span className="shrink-0 text-xs tabular-nums">
-          {usage ? formatRemaining(usage.monthly.percent) : usage === null ? 'Unavailable' : 'Loading…'}
-        </span>
-      </PopoverTrigger>
-    </Tip>
-    {/* The portaled details must sit above the mobile sidebar drawer. */}
-    <PopoverContent side="top" align="start" aria-label="OpenCode Go usage" className="z-70 w-auto min-w-48 text-xs">
-      <UsageDetails usage={usage} />
-    </PopoverContent>
-  </Popover>
+  return <Tip label={<UsageDetails usage={usage} />} side="top" align="start" boundary="viewport">
+    <div tabIndex={0} className="flex h-(--browser-session-control-height) w-full items-center gap-2 rounded-md px-2 text-left text-[0.8125rem] font-medium text-(--web-text-muted) hover:bg-(--ui-control-hover-background) hover:text-foreground pointer-coarse:min-h-(--web-touch-min)">
+      <Codicon name="graph" className="size-4 shrink-0 text-[color-mix(in_srgb,currentColor_72%,transparent)]" />
+      <span className="min-w-0 flex-1 truncate">OpenCode Go</span>
+      <span className="shrink-0 text-xs tabular-nums">
+        {usage ? formatRemaining(usage.monthly.percent) : usage === null ? 'Unavailable' : 'Loading…'}
+      </span>
+    </div>
+  </Tip>
 }
 
 export function OpenCodeGoUsage() {
