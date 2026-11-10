@@ -3808,12 +3808,17 @@ for (const width of [1440, 390]) {
     }
     const research = page.locator('[data-gateway-group]').filter({ has: page.locator('[data-browser-profile-picture="research"]') })
     const researchChats = research.locator('[data-web-session-id]')
-    const more = research.getByRole('button', { name: 'Show more', exact: true })
-    const less = research.getByRole('button', { name: 'Show less', exact: true })
+    const more = research.getByRole('button', { name: 'More', exact: true })
+    const less = research.getByRole('button', { name: 'Less', exact: true })
     await expect(researchChats).toHaveCount(7)
     await expect(more).toHaveAttribute('aria-expanded', 'false')
     await expect(more.locator('.codicon-chevron-down')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Show more', exact: true })).toHaveCount(1)
+    const title = researchChats.first().locator('.browser-session-title')
+    await expect.poll(async () => {
+      const [labelBox, titleBox] = await Promise.all([more.getByText('More').boundingBox(), title.boundingBox()])
+      return labelBox && titleBox ? Math.abs(labelBox.x - titleBox.x) : Infinity
+    }).toBeLessThan(1)
+    await expect(page.getByRole('button', { name: 'More', exact: true })).toHaveCount(1)
     await more.click()
     await expect(research.getByRole('button', { name: /^Older research chat/ })).toHaveCount(8)
     await expect(less).toHaveAttribute('aria-expanded', 'true')
