@@ -5,7 +5,6 @@ export { Button, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, Dropdo
 export { SidebarProvider } from '@/components/ui/sidebar'
 export { Codicon } from '@/components/ui/codicon'
 export { Tip } from '@/components/ui/tooltip'
-export { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 export { ActionsMenu, ActionsContextMenu } from '@/components/ui/actions-menu'
 export type { ActionItemSpec, MenuKit } from '@/components/ui/actions-menu'
 export { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'

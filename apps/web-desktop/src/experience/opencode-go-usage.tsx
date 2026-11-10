@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Codicon, Popover, PopoverContent, PopoverTrigger, Tip } from '../upstream/browser-api'
+import { Codicon, Tip } from '../upstream/browser-api'
 import { resolveToken } from '../platform/connection'
 import { runtimeConfig } from '../platform/runtime'
 
@@ -7,19 +7,33 @@ const windows = { rolling: '5-hour', weekly: 'Weekly', monthly: 'Monthly' } as c
 type Usage = Record<keyof typeof windows, { percent: number; resetsAt: string }>
 
 const percent = new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 1 })
-const resetTime = new Intl.DateTimeFormat(undefined, {
-  month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
-})
+const relativeTime = new Intl.RelativeTimeFormat('en')
+
+function formatRemaining(used: number) {
+  return `${percent.format((100 - used) / 100)} left`
+}
+
+function formatReset(resetsAt: string, now: number) {
+  const remaining = Date.parse(resetsAt) - now
+  if (remaining <= 0) return 'now'
+  const minutes = Math.floor(remaining / 60_000)
+  const hours = Math.floor(minutes / 60)
+  if (hours >= 24) return relativeTime.format(Math.floor(hours / 24), 'day')
+  if (hours >= 1) return relativeTime.format(hours, 'hour')
+  if (minutes >= 1) return relativeTime.format(minutes, 'minute')
+  return 'in less than a minute'
+}
 
 function UsageDetails({ usage }: { usage: Usage | null | undefined }) {
   if (usage === undefined) return <p>Checking OpenCode Go usage…</p>
   if (!usage) return <p>OpenCode Go usage is temporarily unavailable.</p>
+  const now = Date.now()
   return <ul className="flex flex-col gap-2">
     {(Object.keys(windows) as (keyof typeof windows)[]).map(window => {
       const { percent: used, resetsAt } = usage[window]
       return <li key={window}>
-        <div className="flex justify-between gap-3"><span>{windows[window]}</span><span>{percent.format(used / 100)} used</span></div>
-        <div className="opacity-80">Resets <time dateTime={resetsAt}>{resetTime.format(new Date(resetsAt))}</time></div>
+        <div className="flex justify-between gap-3"><span>{windows[window]}</span><span>{formatRemaining(used)}</span></div>
+        <div className="opacity-80">Resets <time dateTime={resetsAt}>{formatReset(resetsAt, now)}</time></div>
       </li>
     })}
   </ul>
@@ -27,7 +41,6 @@ function UsageDetails({ usage }: { usage: Usage | null | undefined }) {
 
 function ConfiguredOpenCodeGoUsage() {
   const [usage, setUsage] = useState<Usage | null>()
-  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     const lifetime = new AbortController()
@@ -64,24 +77,15 @@ function ConfiguredOpenCodeGoUsage() {
     }
   }, [])
 
-  return <Popover open={open} onOpenChange={setOpen}>
-    <Tip label={<UsageDetails usage={usage} />} side="top" align="start" boundary="viewport" hidden={open}>
-      <PopoverTrigger type="button" className="flex h-(--browser-session-control-height) w-full items-center gap-2 rounded-md px-2 text-left text-[0.8125rem] font-medium text-(--web-text-muted) hover:bg-(--ui-control-hover-background) hover:text-foreground pointer-coarse:min-h-(--web-touch-min)">
-        <Codicon name="graph" className="size-4 shrink-0 text-[color-mix(in_srgb,currentColor_72%,transparent)]" />
-        <span className="min-w-0 flex-1 truncate">Usage</span>
-        {usage !== null && <span className="flex shrink-0 flex-col items-end text-xs leading-tight tabular-nums">
-          {usage ? <>
-            <span>{percent.format((100 - usage.monthly.percent) / 100)} left</span>
-            <span className="text-[0.625rem] opacity-80">This month</span>
-          </> : 'Loading…'}
-        </span>}
-      </PopoverTrigger>
-    </Tip>
-    {/* The portaled details must sit above the mobile sidebar drawer. */}
-    <PopoverContent side="top" align="start" aria-label="OpenCode Go usage" className="z-70 w-auto min-w-48 text-xs">
-      <UsageDetails usage={usage} />
-    </PopoverContent>
-  </Popover>
+  return <Tip label={<UsageDetails usage={usage} />} side="top" align="start" boundary="viewport">
+    <div tabIndex={0} className="flex h-(--browser-session-control-height) w-full items-center gap-2 rounded-md px-2 text-left text-[0.8125rem] font-medium text-(--web-text-muted) hover:bg-(--ui-control-hover-background) hover:text-foreground pointer-coarse:min-h-(--web-touch-min)">
+      <Codicon name="graph" className="size-4 shrink-0 text-[color-mix(in_srgb,currentColor_72%,transparent)]" />
+      <span className="min-w-0 flex-1 truncate">Usage</span>
+      {usage !== null && <span className="shrink-0 text-xs tabular-nums">
+        {usage ? formatRemaining(usage.monthly.percent) : 'Loading…'}
+      </span>}
+    </div>
+  </Tip>
 }
 
 export function OpenCodeGoUsage() {
