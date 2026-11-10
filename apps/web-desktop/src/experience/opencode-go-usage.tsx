@@ -78,8 +78,8 @@ function ConfiguredOpenCodeGoUsage() {
   }, [])
 
   return <Tip label={<UsageDetails usage={usage} />} side="top" align="start" boundary="viewport">
-    <div tabIndex={0} className="flex h-(--browser-session-control-height) w-full items-center gap-2 rounded-md px-2 text-left text-[0.8125rem] font-medium text-(--web-text-muted) hover:bg-(--ui-control-hover-background) hover:text-foreground pointer-coarse:min-h-(--web-touch-min)">
-      <Codicon name="graph" className="size-4 shrink-0 text-[color-mix(in_srgb,currentColor_72%,transparent)]" />
+    <div tabIndex={0} className="browser-sidebar-footer-row">
+      <Codicon name="graph" />
       <span className="min-w-0 flex-1 truncate">Usage</span>
       {usage !== null && <span className="shrink-0 text-xs tabular-nums">
         {usage ? formatRemaining(usage.monthly.percent) : 'Loading…'}
