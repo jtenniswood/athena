@@ -37,7 +37,7 @@ test('profile sections reuse configured pictures and keep exact owner routes', (
     useContributions: () => contributions, SIDEBAR_PROFILE_GROUP_HEADER_AREA: 'sidebar.profileGroup.header'
   })), [contributions[1]])
   assert.match(output, /BrowserProfileGroupControllerSurface/)
-  assert.match(output, /rows: renderRows\(sessions\)/)
+  assert.match(output, /sessions, renderRows, children,/)
   assert.match(output, /newSessionInAgent\(\{ connectionId: group.connectionId, profile \}\)/)
   assert.match(output, /!owner \|\| presentationMode/)
   assert.equal(ts.createSourceFile(module, output, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX).parseDiagnostics.length, 0)

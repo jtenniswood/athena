@@ -1,7 +1,7 @@
 import { arrayMove } from '@dnd-kit/sortable'
 import { compactNumber } from '@hermes/shared'
 import { useStore } from '@nanostores/react'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { startNewProjectDrag, startNewSessionDrag, type NewSessionSplitHandler } from '@/app/chat/new-session-drag'
 import { renameGatewayGroup, reorderGatewayGroups, toggleGatewayGroup } from '@/app/chat/sidebar/gateway-group-preferences'
 import { ReorderableList, useSortableBindings } from '@/app/chat/sidebar/reorderable-list'
@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { ProfileGlyph } from '@/components/ui/profile-glyph'
+import type { SessionInfo } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { $sidebarGrouping, $sidebarRowMeta } from '@/store/layout'
 import { $newProjectDropPlacement } from '@/store/projects'
@@ -19,6 +20,8 @@ import { BrowserProfileGroup, BrowserProfileNesting } from '../experience/sideba
 import { BrowserHideProfileItem } from '../experience/profile-list-visibility'
 import { useBrowserProfileSection } from './profile-section'
 import { openBrowserProfileProjectCreate } from './project-create'
+
+const PROFILE_CHAT_LIMIT = 7
 
 export function useBrowserSidebarFigures(totals?: { tokens: number; costUsd: number }) {
   const meta = useStore($sidebarRowMeta)
@@ -64,15 +67,18 @@ interface ProfileGroupController {
   startSession(): void
   onNewSessionSplit?: NewSessionSplitHandler
   route?: { connectionId: string; profile: string }
-  empty: boolean
-  rows: ReactNode
+  sessions: SessionInfo[]
+  renderRows(sessions: SessionInfo[]): ReactNode
   contribution: ReactNode
   children: ReactNode
 }
 
 export function BrowserProfileGroupControllerSurface({ model }: { model: ProfileGroupController }) {
   const { t } = useI18n(), s = t.sidebar, copy = s.gatewayGroups
-  const { group, sortable } = model
+  const { group, sessions, sortable } = model
+  const [showAllChats, setShowAllChats] = useState(false)
+  const hasOverflow = Boolean(group.profile) && !model.embedded && sessions.length > PROFILE_CHAT_LIMIT
+  const visibleSessions = hasOverflow && !showAllChats ? sessions.slice(0, PROFILE_CHAT_LIMIT) : sessions
   const grouping = useStore($sidebarGrouping)
   const renameLabel = group.profile ? 'Rename profile' : copy.rename
   const browserProfile = useBrowserProfileSection(group.profile)
@@ -116,10 +122,15 @@ export function BrowserProfileGroupControllerSurface({ model }: { model: Profile
   </DialogContent></Dialog>
   return <BrowserProfileGroup ref={sortable.ref} style={sortable.style}
     data-gateway-group={group.profile ? group.id : undefined} data-gateway-section={!group.profile ? group.id : undefined}
-    empty={Boolean(group.profile) && model.empty} emptyLabel={s.noSessions} dialog={dialog}
+    empty={Boolean(group.profile) && sessions.length === 0} emptyLabel={s.noSessions} dialog={dialog}
     model={{ label, open: model.open, toggle, activate: toggle, toggleLabel: s.projects.toggle(label, !model.open), figures, actions,
       reorder: { label: `${copy.reorder}: ${label}`, dragging: sortable.dragging, bindings: sortable.dragHandleProps },
       icon: group.profile ? browserProfile?.picture ?? <ProfileGlyph className="size-full" color={group.color ?? null} isDefault={group.profile === 'default'} name={group.profile} /> : <Codicon name="remote" /> }}>
-    {model.children}{model.contribution}{model.rows}
+    {model.children}{model.contribution}{model.open && model.renderRows(visibleSessions)}
+    {hasOverflow && <button type="button" aria-expanded={showAllChats} onClick={() => setShowAllChats(!showAllChats)}
+      className="ml-2 inline-flex min-h-7 w-fit items-center gap-1 rounded-sm bg-transparent px-2 text-xs text-(--ui-text-tertiary) underline-offset-4 hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:underline">
+      {showAllChats ? 'Show less' : 'Show more'}
+      <Codicon name={showAllChats ? 'chevron-up' : 'chevron-down'} size="0.75rem" />
+    </button>}
   </BrowserProfileGroup>
 }
