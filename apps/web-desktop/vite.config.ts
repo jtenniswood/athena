@@ -96,6 +96,7 @@ function attachDynamicProxy(server: ProxyServerLike): void {
     target: hosting.target,
     identityUrl: hosting.identityUrl,
     home: hosting.home,
+    openCodeGoApiKey: hosting.openCodeGoApiKey,
     directory: process.env.HERMES_PREFERENCES_DIR || path.resolve(__dirname, '../../.athena/preferences')
   })
   if (server.httpServer) {

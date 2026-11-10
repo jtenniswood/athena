@@ -7,6 +7,7 @@ export function createAthenaServices(options: {
   identityUrl?: string
   directory: string
   home?: string
+  openCodeGoApiKey?: string
   fetch?: typeof fetch
   now?: () => number
   sender?: Pick<FirebaseSender, 'enabled' | 'send'>

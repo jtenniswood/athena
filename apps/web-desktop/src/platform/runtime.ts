@@ -1,7 +1,7 @@
 export interface RuntimeConfigV1 {
   version: 1
   gateway: { id: string; name: string; legacyUrls: string[] }
-  capabilities: { gatewaySelection: false; pluginAssets: true }
+  capabilities: { gatewaySelection: false; pluginAssets: true; openCodeGoUsage?: boolean }
 }
 
 declare global {

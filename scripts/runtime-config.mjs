@@ -40,8 +40,9 @@ export function runtimeConfiguration(env = process.env) {
     throw new Error('HERMES_GATEWAY_IDENTITY_URL must be an HTTP(S) origin without credentials, a path, query, or fragment')
   }
   const identityUrl = identity.origin
+  const openCodeGoApiKey = env.OPENCODE_GO_API_KEY?.trim() || ''
   return {
-    target, identityUrl, home, staticRoot, stateDir, preferencesDir, listen,
+    target, identityUrl, home, staticRoot, stateDir, preferencesDir, listen, openCodeGoApiKey,
     publicConfig: {
       version: 1,
       gateway: {
@@ -49,7 +50,7 @@ export function runtimeConfiguration(env = process.env) {
         name: env.HERMES_GATEWAY_NAME || 'Hermes',
         legacyUrls: [...new Set([target, identityUrl])]
       },
-      capabilities: { gatewaySelection: false, pluginAssets: true }
+      capabilities: { gatewaySelection: false, pluginAssets: true, openCodeGoUsage: Boolean(openCodeGoApiKey) }
     }
   }
 }
