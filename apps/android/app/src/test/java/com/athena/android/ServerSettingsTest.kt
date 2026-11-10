@@ -127,7 +127,8 @@ class ServerSettingsTest {
         @Suppress("UNCHECKED_CAST")
         (pending as () -> Unit).invoke()
         assertNull(page.loadedUrl)
-        assertTrue(page.evaluatedScript!!.contains("#/chat-2?profile=research&androidNotification=1"))
+        val hash = org.json.JSONObject.quote("#/chat-2?profile=research&androidNotification=1")
+        assertTrue(page.evaluatedScript!!.contains("location.hash = $hash"))
         assertNull(intent.data)
     }
 
