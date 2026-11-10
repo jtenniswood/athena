@@ -20,17 +20,43 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
   const actionsTrigger = useRef<HTMLButtonElement>(null)
   const drawer = useRef<HTMLElement>(null)
   const compact = useCompactBrowser()
-  const { navigation: { coversWorkspace } } = useBrowserEngine()
+  const { navigation: { coversWorkspace, useSidebar } } = useBrowserEngine()
   const mobile = useMobileBrowser()
   const [drawerOpen, setDrawerOpen] = useState(mobile)
-  const [collapsed, setCollapsed] = useState(false)
   const [width, setWidth] = useState(readNavigationWidth)
   const [tab, setTab] = useState<NavigationTab>(readNavigationTab)
   const [visibleTabs, setVisibleTabs] = useState<NavigationTab[]>(readVisibleNavigationTabs)
+  const [searchFocusRequest, setSearchFocusRequest] = useState(0)
   const previous = useRef({ selectionKey, path })
   const focusDrawerOnOpen = useRef(false)
   const preserveNextSelection = useRef(false)
   const preserveTimeout = useRef(0)
+  const selectSessionsTab = () => {
+    setVisibleTabs(current => current.includes('sessions') ? current : ['sessions', ...current])
+    setTab('sessions')
+  }
+  const dismissDrawer = () => {
+    setDrawerOpen(false)
+    requestAnimationFrame(() => trigger.current?.focus())
+  }
+  const toggleDrawer = () => {
+    if (drawerOpen) {
+      dismissDrawer()
+    } else {
+      focusDrawerOnOpen.current = true
+      setDrawerOpen(true)
+    }
+  }
+  const sidebar = useSidebar({
+    compact,
+    toggleDrawer,
+    focusSearch: () => {
+      if (coversWorkspace(path)) return
+      selectSessionsTab()
+      if (compact) setDrawerOpen(true)
+      setSearchFocusRequest(value => value + 1)
+    }
+  })
   useEffect(() => {
     if (!compact) return
     return $preserveNavigationRequest.listen(() => {
@@ -76,7 +102,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
     const keydown = (event: KeyboardEvent) => {
       // Portaled controls own focus and Escape until they are dismissed.
       if (event.defaultPrevented || (event.target instanceof Element && event.target.closest('[role="menu"], [data-browser-action-surface]'))) return
-      if (event.key === 'Escape') { setDrawerOpen(false); requestAnimationFrame(() => trigger.current?.focus()) }
+      if (event.key === 'Escape') dismissDrawer()
       if (event.key !== 'Tab') return
       const items = Array.from(drawer.current?.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input,select,[tabindex="0"]') || []).filter(el => Boolean(el.getClientRects().length))
       const first = items[0], last = items.at(-1)
@@ -86,11 +112,13 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
     document.addEventListener('keydown', keydown)
     return () => document.removeEventListener('keydown', keydown)
   }, [drawerOpen])
+  useEffect(() => {
+    if (searchFocusRequest) drawer.current?.querySelector<HTMLInputElement>('.browser-session-search input')?.focus({ preventScroll: true })
+  }, [searchFocusRequest])
   const backToHistory = useMobileChatHistory({
     mobile, drawerOpen, covered: coversWorkspace(path),
     showHistory: () => {
-      setVisibleTabs(current => current.includes('sessions') ? current : ['sessions', ...current])
-      setTab('sessions')
+      selectSessionsTab()
       focusDrawerOnOpen.current = true
       setDrawerOpen(true)
     },
@@ -100,16 +128,11 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
     }
   })
   return {
-    sections, actionsTrigger, drawer, compact, mobile, drawerOpen, collapsed, width, setWidth, tab, setTab, visibleTabs, backToHistory,
-    open: compact ? drawerOpen : !collapsed,
-    toggle: () => {
-      if (compact) {
-        focusDrawerOnOpen.current = !drawerOpen
-        setDrawerOpen(open => !open)
-      } else setCollapsed(value => !value)
-    },
+    sections, actionsTrigger, drawer, compact, mobile, drawerOpen, width, setWidth, tab, setTab, visibleTabs, backToHistory,
+    open: compact ? drawerOpen : sidebar.open,
+    toggle: compact ? toggleDrawer : () => sidebar.setOpen(!sidebar.open),
     closeDrawer: () => setDrawerOpen(false),
-    dismissDrawer: () => { setDrawerOpen(false); requestAnimationFrame(() => trigger.current?.focus()) },
+    dismissDrawer,
     toggleTab(value: NavigationTab) {
       setVisibleTabs(current => {
         if (current.includes(value)) return current.length === 1 ? current : current.filter(item => item !== value)

@@ -269,8 +269,7 @@ body > [data-slot='fan-menu'] {
   translate: none !important;
 }
 
-/* Replace the running row's animated arc with a spinner in the timestamp slot.
-   The renderer marks live turns on the row itself and renders the age as time. */
+/* Use a spinner in the session row's trailing status slot. */
 .browser-sessions-pane [class*='shimmer'],
 .browser-sessions-pane [class*='shimmer']::before,
 .browser-sessions-pane [class*='shimmer']::after {
@@ -283,33 +282,17 @@ body > [data-slot='fan-menu'] {
   display: none;
 }
 
-.browser-sessions-pane [data-working='true'] time {
+.browser-session-spinner {
   box-sizing: border-box;
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-block;
   width: 0.625rem;
   height: 0.625rem;
-  overflow: hidden;
-  color: transparent !important;
-  font-size: 0 !important;
-  line-height: 0;
   vertical-align: middle;
-}
-
-.browser-sessions-pane [data-working='true'] time::after {
-  position: absolute;
-  inset: 0;
-  box-sizing: border-box;
   border: 1px solid currentColor;
   border-right-color: transparent;
   border-radius: 50%;
   color: var(--ui-accent, #4d83ff);
-  content: '';
   animation: browser-session-spinner 0.8s linear infinite;
-  transform-origin: center;
-  pointer-events: none;
 }
 
 @keyframes browser-session-spinner {

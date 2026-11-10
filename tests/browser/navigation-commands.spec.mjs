@@ -17,7 +17,7 @@ test.beforeAll(async () => {
       if (id.endsWith('/experience/sidebar-sections.tsx')) return 'export function useBrowserSidebarSections() { return {} }'
       if (id.endsWith('/upstream/browser-api.tsx')) return 'export function Codicon() { return null }; export function Tip({children}) { return children }'
     } }],
-    optimizeDeps: { noDiscovery: true, entries: ['tests/browser/fixtures/navigation-commands.html'], include: ['react', 'react-dom/client', 'react/jsx-dev-runtime', 'react-router', 'nanostores', 'clsx', 'tailwind-merge'] }
+    optimizeDeps: { noDiscovery: true, entries: ['tests/browser/fixtures/navigation-commands.html'], include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'react-router', 'nanostores', 'clsx', 'tailwind-merge'] }
   })
   await server.listen()
   origin = `http://127.0.0.1:${server.httpServer.address().port}`

@@ -14,6 +14,7 @@ import { useBrowserGatewayRequest } from './gateway-request'
 import { useBrowserApproval } from './approval'
 import { browserDropProjectId, moveBrowserSessionToProject, reportBrowserProjectMoveFailure } from './project-actions'
 import { useRendererMenuCompatibility } from './use-renderer-menu-compatibility'
+import { useBrowserSidebarCommands } from './sidebar-commands'
 import { useAndroidVisibleConversation } from './android-host'
 
 const SettingsController = lazy(async () => ({ default: (await import('./settings-controller-api')).BrowserSettingsControllerSurface }))
@@ -28,7 +29,7 @@ export const browserEngine = Object.freeze({
   },
   conversations: { useCurrent: useBrowserConversation, useActions: useBrowserSessionActions, select: selectBrowserSession },
   profiles: { useProfiles: useBrowserProfiles, useNewChat: useBrowserNewChatProfile, useActive: useBrowserActiveProfile, useGrouping: useBrowserProfileGrouping },
-  navigation: { usePanels: useBrowserHostPanels, openPage: openBrowserPage, coversWorkspace: browserRouteCoversWorkspace },
+  navigation: { usePanels: useBrowserHostPanels, useSidebar: useBrowserSidebarCommands, openPage: openBrowserPage, coversWorkspace: browserRouteCoversWorkspace },
   settings: { Controller: props => <Suspense fallback={<p role="status">Loading settings…</p>}><SettingsController {...props} /></Suspense> },
   approval: { useRequest: useBrowserGatewayRequest, useMode: useBrowserApproval },
   projects: { eligibleDrop: browserDropProjectId, move: moveBrowserSessionToProject, reportFailure: reportBrowserProjectMoveFailure },
