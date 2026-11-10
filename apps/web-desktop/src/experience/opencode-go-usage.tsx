@@ -68,13 +68,13 @@ function ConfiguredOpenCodeGoUsage() {
     <Tip label={<UsageDetails usage={usage} />} side="top" align="start" boundary="viewport" hidden={open}>
       <PopoverTrigger type="button" className="flex h-(--browser-session-control-height) w-full items-center gap-2 rounded-md px-2 text-left text-[0.8125rem] font-medium text-(--web-text-muted) hover:bg-(--ui-control-hover-background) hover:text-foreground pointer-coarse:min-h-(--web-touch-min)">
         <Codicon name="graph" className="size-4 shrink-0 text-[color-mix(in_srgb,currentColor_72%,transparent)]" />
-        <span className="min-w-0 flex-1 truncate">OpenCode Go</span>
-        <span className="flex shrink-0 flex-col items-end text-xs leading-tight tabular-nums">
+        <span className="min-w-0 flex-1 truncate">Usage</span>
+        {usage !== null && <span className="flex shrink-0 flex-col items-end text-xs leading-tight tabular-nums">
           {usage ? <>
             <span>{percent.format((100 - usage.monthly.percent) / 100)} left</span>
             <span className="text-[0.625rem] opacity-80">This month</span>
-          </> : usage === null ? 'Unavailable' : 'Loading…'}
-        </span>
+          </> : 'Loading…'}
+        </span>}
       </PopoverTrigger>
     </Tip>
     {/* The portaled details must sit above the mobile sidebar drawer. */}
