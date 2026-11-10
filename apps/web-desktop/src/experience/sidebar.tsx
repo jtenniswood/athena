@@ -42,9 +42,7 @@ export function BrowserSidebar({ model, children }: { model: BrowserSidebarModel
       <div data-slot="sidebar-footer" className="mt-auto min-h-0 shrink overflow-y-auto overflow-x-hidden overscroll-contain pb-1 pt-1 scrollbar-fade">
         <OpenCodeGoUsage />
         <BrowserSidebarSettings />
-        {model.showSections && <div className="browser-session-search-section px-2 pt-1">
-          <SearchField containerClassName="browser-session-search" aria-label="Search" placeholder="Search" inputRef={model.search.input} value={model.search.value} onChange={model.search.change} />
-        </div>}
+        {model.showSections && <SearchField containerClassName="browser-sidebar-footer-row browser-session-search" aria-label="Search" placeholder="Search" inputRef={model.search.input} value={model.search.value} onChange={model.search.change} />}
       </div>
       {model.profileRail}
     </div>

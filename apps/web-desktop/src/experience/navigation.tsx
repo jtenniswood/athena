@@ -223,7 +223,7 @@ export function BrowserNavigationResizer({ navigation }: { navigation: Navigatio
 
 export function BrowserNavigationSettings({ navigation, onOpenRoute, row = false }: { navigation: Navigation; onOpenRoute: ComponentProps<typeof SettingsLink>['onOpenRoute']; row?: boolean }) {
   return <>
-    <SettingsLink onOpenRoute={onOpenRoute} triggerRef={navigation.actionsTrigger} triggerClassName={row ? "browser-navigation-settings-link browser-navigation-actions-trigger" : "browser-navigation-actions-trigger"} triggerLabel={row ? "Settings" : undefined} />
+    <SettingsLink onOpenRoute={onOpenRoute} triggerRef={navigation.actionsTrigger} triggerClassName={row ? "browser-sidebar-footer-row browser-navigation-actions-trigger" : "browser-navigation-actions-trigger"} triggerLabel={row ? "Settings" : undefined} />
     <AppSettingsRegistration />
   </>
 }
