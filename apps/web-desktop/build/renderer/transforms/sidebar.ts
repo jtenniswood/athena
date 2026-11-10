@@ -104,7 +104,7 @@ export function useBrowserProfileControllers(source: string, root: string): stri
   source = projectRendererController(source, 'GatewayProfileGroup', `<BrowserProfileGroupControllerSurface model={{
     group, label, open, embedded, first, last, alias: aliases[group.id], sortable, usage,
     renaming, setRenaming, draft, setDraft, onMove, startSession, onNewSessionSplit, route,
-    empty: sessions.length === 0, rows: renderRows(sessions), children,
+    sessions, renderRows, children,
     contribution: group.profile && !embedded ? <ProfileGroupHeaderSlot connectionId={group.connectionId ?? null} profile={group.profile} /> : null
   }} />`, ['[visibleCount, setVisibleCount]', 'hiddenCount'])
   return `import { BrowserProfileGroupsControllerSurface, BrowserProfileGroupControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar-profile'))}\n` +

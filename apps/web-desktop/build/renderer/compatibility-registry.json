@@ -3151,7 +3151,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/gateway-groups.tsx",
-    "reason": "Project live profile groups, owner routes, aliases and ordering into Athena-owned group headers, avatars, nesting and disclosure. Keep hidden groups and full profile session lists browser-owned.",
+    "reason": "Project live profile groups, owner routes, aliases and ordering into Athena-owned group headers, avatars, nesting and disclosure. Keep hidden groups and the seven-chat profile preview browser-owned.",
     "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
     "tests": [
       {
@@ -3187,7 +3187,7 @@
     "sourceHash": "7499db0f9583cdcbadfe66f488cf2dea6562d2e4de0c73674c3013ebb951b83c",
     "sourceRoot": "renderer",
     "inputHash": "7499db0f9583cdcbadfe66f488cf2dea6562d2e4de0c73674c3013ebb951b83c",
-    "outputHash": "a1fbed5c472aa80cd1709924ae336e419f6c91b4d58b95cebd21d46ad770eb83"
+    "outputHash": "bc99f46a4a0362971eda2f8adc80aa1d3ba3eed3318bf6b6ee0c0f68fd5e625b"
   },
   {
     "name": "shared-gateway-profile-route",
