@@ -355,6 +355,3 @@ html[data-experience="browser"] span:has(> img[src*="nous-girl.jpg"]) { display:
 
 .browser-chat-toolbar .browser-new-chat-profile { width:auto; max-width:min(16rem,50vw); min-width:0; gap:var(--web-space-2); padding:0 var(--web-space-2); color:var(--web-text-muted); font-size:var(--web-text-label); }
 .browser-new-chat-profile > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-
-.browser-context-usage-track { stroke:var(--web-border); }
-.browser-context-usage-fill { stroke:var(--web-accent); }
