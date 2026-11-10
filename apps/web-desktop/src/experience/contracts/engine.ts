@@ -1,6 +1,5 @@
 import type { ComponentType, ReactNode } from 'react'
 import type { BrowserApproval, BrowserApprovalRequester, BrowserSessionActions } from './actions'
-import type { BrowserContextUsage } from './context-usage'
 import type { BrowserConversationModel } from './conversation'
 import type { BrowserHostPanel, BrowserSidebarCommands } from './host'
 import type { BrowserNewChatProfile, BrowserProfiles } from './profiles'
@@ -20,7 +19,6 @@ export interface BrowserEngine {
     ProfileEditor: ComponentType<{ profile: string | null; onClose(): void }>
   }
   readonly conversations: {
-    useContextUsage(conversation: BrowserConversationModel): BrowserContextUsage
     useCurrent(): BrowserConversationModel
     useActions(conversation: BrowserConversationModel): BrowserSessionActions
     select(selection: BrowserSessionSelection, navigate: BrowserNavigate): void

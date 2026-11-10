@@ -2,7 +2,6 @@ import type { BrowserConversationModel } from '../experience/contracts/conversat
 import type { BrowserEngine } from '../experience/contracts/engine'
 import { lazy, Suspense } from 'react'
 import { BrowserEngineHost, BrowserSessionsSurface, BrowserBotsSurface, BrowserConversationSurface, BrowserStatusSurface, BrowserPageSurface, useBrowserHostPanels, openBrowserPage } from './browser-host'
-import { useBrowserContextUsage } from './context-usage'
 import { useBrowserConversation } from './conversation'
 import { useBrowserSessionActions } from './conversation-actions'
 import { selectBrowserSession } from './selection'
@@ -28,7 +27,7 @@ export const browserEngine = Object.freeze({
     Conversation: BrowserConversationSurface, Status: BrowserStatusSurface, Page: BrowserPageSurface,
     ProfileEditor: BrowserProfileEditor
   },
-  conversations: { useContextUsage: useBrowserContextUsage, useCurrent: useBrowserConversation, useActions: useBrowserSessionActions, select: selectBrowserSession },
+  conversations: { useCurrent: useBrowserConversation, useActions: useBrowserSessionActions, select: selectBrowserSession },
   profiles: { useProfiles: useBrowserProfiles, useNewChat: useBrowserNewChatProfile, useActive: useBrowserActiveProfile, useGrouping: useBrowserProfileGrouping },
   navigation: { usePanels: useBrowserHostPanels, useSidebar: useBrowserSidebarCommands, openPage: openBrowserPage, coversWorkspace: browserRouteCoversWorkspace },
   settings: { Controller: props => <Suspense fallback={<p role="status">Loading settings…</p>}><SettingsController {...props} /></Suspense> },
