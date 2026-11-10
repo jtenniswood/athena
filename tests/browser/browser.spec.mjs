@@ -839,6 +839,20 @@ touchTest('phone navigation and contextual sheets stay tappable at 320px and 200
   expect(bounds.y + bounds.height).toBe(700)
 })
 
+test('a touch context-menu gesture does not open sidebar sections', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  try {
+    const page = await context.newPage()
+    await open(page)
+    await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).tap()
+    const filters = page.getByRole('button', { name: 'Filters', exact: true })
+    await filters.dispatchEvent('contextmenu', { pointerType: 'touch' })
+    await expect(page.getByRole('dialog', { name: 'Sidebar sections', exact: true })).toHaveCount(0)
+    await filters.tap()
+    await expect(page.getByRole('menuitem', { name: 'Ordering', exact: true })).toBeVisible()
+  } finally { await context.close() }
+})
+
 for (const mode of [
   { name: 'phone touch', viewport: { width: 390, height: 844 }, touch: true },
   { name: 'landscape touch', viewport: { width: 844, height: 390 }, touch: true }
@@ -852,8 +866,6 @@ for (const mode of [
       await activate(page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }))
       await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).toBeVisible()
       const filters = page.getByRole('button', { name: 'Filters', exact: true })
-      await filters.dispatchEvent('contextmenu', { pointerType: 'touch' })
-      await expect(page.getByRole('dialog', { name: 'Sidebar sections', exact: true })).toHaveCount(0)
       await activate(filters)
       const parent = page.locator('[data-slot="dropdown-menu-content"]').last()
       const submenu = page.locator('[data-slot="dropdown-menu-sub-content"]')
