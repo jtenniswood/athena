@@ -350,8 +350,9 @@ class MainActivity : AppCompatActivity() {
         view.setDownloadListener { url, _, _, _, _ -> external(Uri.parse(url)) }
         body.addView(view, 0, FrameLayout.LayoutParams(-1, -1))
         renderConnection(connection.state)
-        if (connectionTest != null || state == null || view.restoreState(state) == null) view.loadUrl(documentOrigin + "/")
-        openNotification(intent)
+        val notification = notificationTarget(intent)
+        if (notification != null) view.loadUrl(notification.toString())
+        else if (connectionTest != null || state == null || view.restoreState(state) == null) view.loadUrl(documentOrigin + "/")
     }
 
     private fun bindConnectionScreen(screen: View) {
@@ -391,8 +392,12 @@ class MainActivity : AppCompatActivity() {
             "webState" -> {
                 webRevision = payload.optString("revision", "Unknown").take(80)
                 serverProtocol = payload.optString("serverProtocol", "Unknown").take(40)
-                if (payload.optBoolean("ready")) { documentReady = true; connection.ready() }
-                else {
+                if (payload.optBoolean("ready")) {
+                    documentReady = true
+                    connection.ready()
+                    val fragment = notificationTarget(intent)?.encodedFragment
+                    if (fragment != null && web?.url?.let(Uri::parse)?.encodedFragment == fragment) intent.data = null
+                } else {
                     connection.recover("web-startup", "Athena could not finish loading. Choose Try again or review settings.")
                     detectAccess(connection.state)
                 }
@@ -565,13 +570,13 @@ class MainActivity : AppCompatActivity() {
         val view = web
         if (view == null) { openServer(null); return }
         // Access can interrupt the first navigation before WebView has a page to reload.
-        val target = view.url?.takeIf {
+        val target = (if (!documentReady) notificationTarget(intent)?.toString() else null) ?: view.url?.takeIf {
             ServerAddress.belongsTo(it, origin) && Uri.parse(it).path == "/" && Uri.parse(it).query == null
         } ?: "$origin/"
         prepareNavigation(allowUnloaded = true) { view.loadUrl(target) }
     }
 
-    private fun prepareNavigation(allowUnloaded: Boolean = false, action: () -> Unit) {
+    private fun prepareNavigation(allowUnloaded: Boolean = false, chatSelection: Boolean = false, action: () -> Unit) {
         // Test documents have no chat or composer; entering testing already saved real drafts.
         if (connectionTest != null) { action(); return }
         val view = web ?: run { action(); return }
@@ -588,7 +593,7 @@ class MainActivity : AppCompatActivity() {
         navigationAction = action
         val requestId = java.util.UUID.randomUUID().toString()
         navigationId = requestId
-        view.evaluateJavascript("window.dispatchEvent(new CustomEvent('athena:prepare-native-navigation', {cancelable:true,detail:{requestId:'$requestId'}}))") { unhandled ->
+        view.evaluateJavascript("window.dispatchEvent(new CustomEvent('athena:prepare-native-navigation', {cancelable:true,detail:{requestId:'$requestId',chatSelection:$chatSelection}}))") { unhandled ->
             if (allowUnloaded && unhandled == "true" && navigationAction === action) {
                 navigationAction = null; navigationId = null; action()
             }
@@ -638,15 +643,31 @@ class MainActivity : AppCompatActivity() {
         catch (_: ActivityNotFoundException) { Toast.makeText(this, "No app can open this link.", Toast.LENGTH_SHORT).show() }
     }
 
-    private fun openNotification(intent: Intent?) {
-        if (connectionTest != null) return
-        val target = intent?.dataString ?: return
-        if (intent.action == "com.athena.android.OPEN_CONVERSATION" && ServerAddress.belongsTo(target, origin) &&
-            Uri.parse(target).path == "/" && Uri.parse(target).query == null) {
-            prepareNavigation(allowUnloaded = true) {
-                web?.loadUrl(target)
-                intent.data = null
-            }
+    private fun notificationTarget(incoming: Intent?): Uri? {
+        if (connectionTest != null || incoming?.action != "com.athena.android.OPEN_CONVERSATION") return null
+        val target = incoming.data ?: return null
+        val route = target.encodedFragment ?: return null
+        if (!ServerAddress.belongsTo(target.toString(), origin) || target.path != "/" || target.query != null ||
+            !route.startsWith("/") || route.substringBefore('?') == "/") return null
+        // The mobile renderer normally shows history on startup, even with a selected chat.
+        val separator = if ('?' in route) "&" else "?"
+        return target.buildUpon().encodedFragment(route + separator + "androidNotification=1").build()
+    }
+
+    private fun openNotification(incoming: Intent) {
+        val target = notificationTarget(incoming) ?: return
+        val view = web ?: run { openServer(null); return }
+        val current = view.url?.let(Uri::parse)
+        val sameDocument = documentReady && ServerAddress.belongsTo(current?.toString(), origin) && current?.path == "/"
+        prepareNavigation(allowUnloaded = true, chatSelection = sameDocument) {
+            if (web !== view) return@prepareNavigation
+            if (sameDocument && !ServerAddress.belongsTo(view.url, origin)) return@prepareNavigation
+            nativeSettings.dismiss()
+            if (sameDocument) {
+                val hash = JSONObject.quote("#" + target.encodedFragment)
+                view.evaluateJavascript("if (location.hash === $hash) window.dispatchEvent(new Event('athena:open-notification')); else location.hash = $hash;", null)
+                incoming.data = null
+            } else view.loadUrl(target.toString())
         }
     }
     private fun startSignIn(access: Boolean, path: String = "/login", started: (Boolean) -> Unit = {}) {
@@ -740,9 +761,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
     override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent); setIntent(intent)
+        super.onNewIntent(intent)
+        if (authentication.receive(intent.data, origin)) { intent.data = null; return }
+        setIntent(intent)
         if (ShareInbox.accepts(intent)) receiveShare(intent)
-        else if (authentication.receive(intent.data, origin)) intent.data = null
         else openNotification(intent)
     }
     override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); if (connectionTest == null) web?.saveState(outState) }

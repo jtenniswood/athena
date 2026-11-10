@@ -18,10 +18,12 @@ object ServerAddress {
         uri.rawUserInfo == null && normalize("${uri.scheme}://${uri.rawAuthority}") == origin
     } catch (_: Exception) { false }
 
-    fun conversationUrl(origin: String, sessionId: String?): String {
-        val hash = sessionId?.takeIf { it.isNotBlank() }?.let {
-            "/" + java.net.URLEncoder.encode(it, "UTF-8").replace("+", "%20")
-        } ?: ""
-        return "$origin/#$hash"
+    fun conversationUrl(origin: String, sessionId: String?, profile: String? = null): String {
+        val hash = sessionId?.takeIf { it.isNotBlank() }?.let { "/" + encode(it) }.orEmpty()
+        val owner = profile?.trim()?.takeIf { it.isNotEmpty() && hash.isNotEmpty() }
+            ?.let { "?profile=" + encode(it) }.orEmpty()
+        return "$origin/#$hash$owner"
     }
+
+    private fun encode(value: String): String = java.net.URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 }

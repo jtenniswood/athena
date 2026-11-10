@@ -11,7 +11,7 @@ import { $activeSessionId, $gatewayState, $selectedStoredSessionId, $sessions } 
 import { $gatewaySwitching } from '@/store/gateway-switch'
 import { androidFinishShare, androidHost, androidPendingShare, androidReadShare, isAndroidApp, type AndroidSharedFiles } from '../platform/android'
 import { WEB_CONNECTION_ID } from '../platform/connection'
-import { beginOperation, sharedFileSelectionReadiness } from '../platform/reload-safety'
+import { beginOperation, chatSelectionReadiness } from '../platform/reload-safety'
 import { BrowserModal } from '../experience/ui/modal'
 import { selectBrowserSession } from './selection'
 import { prepareDefaultNewSession } from './default-session-profile'
@@ -73,7 +73,7 @@ export function AndroidSharePicker() {
   }
   const choose = async (selection: BrowserSessionSelection | null) => {
     if (!share || processing.current) return
-    const readiness = sharedFileSelectionReadiness()
+    const readiness = chatSelectionReadiness()
     if (!readiness.ready) { setError(readiness.reason || 'Finish the current edit first.'); return }
     if ($gatewayState.get() !== 'open' || $gatewaySwitching.get()) { setError('Wait for Athena to connect, then try again.'); return }
     processing.current = true; setBusy(true); setError('')
