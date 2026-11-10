@@ -85,7 +85,7 @@ function BrowserLayout() {
             <Codicon name={navigation.mobile ? 'arrow-left' : 'layout-sidebar-left'} />
           </BrowserToolbarButton>
           <div className="browser-actions">
-            {location.pathname === '/' && <BrowserNewChatProfileSelector />}
+            {location.pathname === '/' && <BrowserNewChatProfileSelector iconOnly={navigation.mobile} />}
             <BrowserContextUsageIndicator key={conversation.selectionKey} conversation={conversation} />
             <BrowserChatActionsMenu actions={sessionActions} title={chatTitle} panels={panels} main={main} />
           </div>
