@@ -43,7 +43,9 @@ class NativeNotifications(private val context: Context) {
             .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val pending = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val channel = if (payload.optBoolean("silent")) "silent" else "responses"
-        val title = if (payload.optString("kind") == "turnDone") "Athena · Response ready" else payload.optString("title", "Athena")
+        val title = (payload.opt("chatTitle") as? String).orEmpty().trim().ifBlank {
+            if (payload.optString("kind") == "turnDone") "Athena · Response ready" else payload.optString("title", "Athena")
+        }
         val notification = Notification.Builder(context, channel)
             .setSmallIcon(com.athena.android.R.drawable.ic_athena)
             .setContentTitle(title.take(200))

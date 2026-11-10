@@ -26,8 +26,12 @@ class NativeNotificationsTest {
         assertEquals("Athena · Response ready", notification.extras.getString(Notification.EXTRA_TITLE))
         assertEquals("https://athena.example/#/chat%2Fid", shadowOf(notification.contentIntent).savedIntent.dataString)
         assertEquals(Notification.VISIBILITY_PRIVATE, notification.visibility)
+        payload.put("chatTitle", "Weekend plans")
         assertTrue(notifications.show("https://athena.example", payload))
         assertEquals(1, shadowOf(manager).allNotifications.size)
+        val updated = shadowOf(manager).getNotification("reply-1", 0)
+        assertEquals("Weekend plans", updated.extras.getString(Notification.EXTRA_TITLE))
+        assertEquals("Ready", updated.extras.getString(Notification.EXTRA_TEXT))
     }
 
     @Test fun mutedAlertsUseTheirOwnLowImportanceChannel() {

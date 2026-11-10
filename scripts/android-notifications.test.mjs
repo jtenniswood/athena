@@ -164,7 +164,7 @@ test('Android alerts on new unread activity and skips existing, manual and visib
   const prefs = atom({ enabled: true, kinds: { turnDone: true } }), muted = atom(false)
   const shown = []
   let visible = 'visible'
-  const row = (id, count, unread = true) => ({ id, message_count: count, unread, last_active: 1 })
+  const row = (id, count, unread = true) => ({ id, title: `Chat ${id}`, message_count: count, unread, last_active: 1 })
   const context = vm.createContext({ exports: {}, queueMicrotask, document: { visibilityState: 'visible', hasFocus: () => true },
     require: name => ({
       '@/store/session': { $sessions: sessions, $cronSessions: cron, $messagingSessions: messaging, $unreadFinishedSessionIds: finished,
@@ -182,6 +182,7 @@ test('Android alerts on new unread activity and skips existing, manual and visib
   sessions.set([row('old', 4), row('manual', 1), row('visible', 2)])
   await Promise.resolve()
   assert.deepEqual(shown.map(item => item.focusSessionId), ['old'])
+  assert.equal(shown[0].chatTitle, 'Chat old')
   finished.set(['manual'])
   muted.set(true)
   await Promise.resolve()

@@ -39,6 +39,7 @@ export function installAndroidUnreadNotifications(): () => void {
         if (!liveCompletion && !(newMessages && (row.unread || finished.has(row.id)))) continue
         void showAndroidNotification({
           kind: 'turnDone',
+          chatTitle: row.title,
           focusSessionId: row.id,
           tag: 'android:' + row.id,
           body: 'You have new unread messages.',
