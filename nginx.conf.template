@@ -146,6 +146,12 @@ http {
             proxy_set_header X-Forwarded-Proto $hermes_forwarded_proto;
             proxy_ssl_server_name on;
             proxy_read_timeout 3600s;
+
+            # Hermes accepts 25 MiB images, plus base64 expansion and JSON framing.
+            location ~ ^/api/chat/image-upload$ {
+                client_max_body_size 34m;
+                proxy_pass ${HERMES_GATEWAY_URL};
+            }
         }
 
         # The mounted plugin service owns both directory metadata and file reads.

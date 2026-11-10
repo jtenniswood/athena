@@ -67,6 +67,13 @@ window.addEventListener('hermes-update-available', event => {
 });
 ${registration};exports.registerPwa();
 </script></body></html>`)
+    } else if (req.method === 'POST' && req.url === '/api/chat/image-upload?profile=fixture') {
+      let bytes = 0
+      req.on('data', chunk => { bytes += chunk.length })
+      req.on('end', () => {
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ bytes, cookie: req.headers.cookie }))
+      })
     } else if (req.url === '/api/status') { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ auth_required: true, auth_providers: ['basic'] })) }
     else { res.statusCode = 401; res.end('Sign in to the fixture gateway') }
   })
@@ -121,6 +128,24 @@ test('nginx serves the built app and uncached identity; API stays available for 
   await page.setViewportSize({ width: 390, height: 844 })
   await page.screenshot({ path: testInfo.outputPath('gateway-recovery-phone.png'), fullPage: true })
   expect(errors).toEqual([])
+})
+
+test('nginx forwards large chat image uploads to Hermes', async () => {
+  const data = JSON.stringify({
+    data_url: `data:image/png;base64,${Buffer.alloc(25 * 1024 * 1024).toString('base64')}`,
+    filename: 'fixture.png'
+  })
+  const headers = { 'Content-Type': 'application/json', Cookie: 'session=fixture' }
+  const response = await fetch(`${origin}/api/chat/image-upload?profile=fixture`, {
+    method: 'POST', headers, body: data
+  })
+  expect(response.status).toBe(200)
+  expect(await response.json()).toEqual({ bytes: Buffer.byteLength(data), cookie: 'session=fixture' })
+
+  const otherRoute = await fetch(`${origin}/api/status`, {
+    method: 'POST', headers, body: data.slice(0, 2 * 1024 * 1024)
+  })
+  expect(otherRoute.status).toBe(413)
 })
 
 test('a controlling service worker leaves build metadata and Cloudflare callbacks on the network', async ({ page }) => {
