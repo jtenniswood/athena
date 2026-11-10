@@ -266,7 +266,7 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-status-controls :is(button,a) { min-height:var(--web-touch-target); height:auto; font-size:var(--web-text-label); padding:.3rem var(--web-space-2); }
 }
 @media (width < 48rem) {
- .browser-shell [data-browser-model-pill],.browser-shell [data-testid="reasoning-pill"],.browser-shell [data-browser-approval-control] { box-sizing:border-box; width:2.25rem; min-width:2.25rem; max-width:2.25rem; padding:0; justify-content:center; gap:0; }
+ .browser-shell [data-browser-model-pill],.browser-shell [data-testid="reasoning-pill"],.browser-shell [data-browser-approval-control] { box-sizing:border-box; width:var(--browser-composer-touch-size,2.25rem); min-width:var(--browser-composer-touch-size,2.25rem); max-width:var(--browser-composer-touch-size,2.25rem); padding:0; justify-content:center; gap:0; }
  .browser-shell [data-browser-model-pill] > .truncate,.browser-shell [data-testid="reasoning-pill"] > span,.browser-shell [data-browser-model-pill] > svg:last-child,.browser-shell [data-testid="reasoning-pill"] > .codicon,.browser-shell [data-browser-approval-control] > [data-mode-name],.browser-shell [data-browser-approval-control] > .codicon { display:none; }
  .browser-profile-choice { width:calc(var(--web-touch-target) + .5rem); height:calc(var(--web-touch-target) + .5rem); flex-basis:calc(var(--web-touch-target) + .5rem); }
  .browser-profile-choice > :is(img,span) { width:calc(var(--web-touch-target) + .25rem) !important; height:calc(var(--web-touch-target) + .25rem) !important; }
