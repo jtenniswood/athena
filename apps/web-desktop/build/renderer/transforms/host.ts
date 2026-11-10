@@ -98,6 +98,21 @@ export function useBrowserSetupHooks(source: string): string {
   return source.replace(pattern, (match, indent) => match.replace('<div ', '<div data-browser-overlay="setup" ').replace('\n' + indent + '<div ', '\n' + indent + '<div data-browser-overlay-card="setup" '))
 }
 
+export function keepBrowserOpenOnProviderMismatch(source: string): string {
+  const before = `  writeCachedConfigured(false)
+  patch({ configured: false, reason })`
+
+  return replaceBrowserContract(source, [[before, `  // The gateway has a provider configured, but the selected runtime is unavailable.
+  // Keep the chat accessible without recording an unverified runtime as ready.
+  if (runtime.checksDisagree && !state.requested && !state.manual) {
+    patch({ configured: true, reason })
+
+    return false
+  }
+
+${before}`]])
+}
+
 export function disableBrowserOnboardingTips(source: string): string {
   const tipImport = "import { TipHost } from '@/components/tips'\n"
   const tipHost = '<TipHost />'

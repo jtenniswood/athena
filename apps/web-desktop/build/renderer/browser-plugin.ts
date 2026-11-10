@@ -109,6 +109,7 @@ import {
   filterBrowserActivityToasts,
   omitBrowserDesktopUpdateNotice,
   useBrowserSetupHooks,
+  keepBrowserOpenOnProviderMismatch,
   disableBrowserOnboardingTips
 } from './transforms/host'
 import {
@@ -130,6 +131,7 @@ export {
   filterBrowserActivityToasts,
   omitBrowserDesktopUpdateNotice,
   useBrowserSetupHooks,
+  keepBrowserOpenOnProviderMismatch,
   disableBrowserOnboardingTips
 } from './transforms/host'
 import {
@@ -314,7 +316,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserDirectResumeOwner: source => useBrowserDirectResumeOwner(source),
     useBrowserTouchHooks: source => useBrowserTouchHooks(source, root), useBrowserAcceptedSubmit: source => useBrowserAcceptedSubmit(source, root),
     useBrowserFollowupSubmit: source => useBrowserFollowupSubmit(source, root), useBrowserAlternateSubmit: source => useBrowserAlternateSubmit(source, root),
-    useBrowserCodingActionHooks, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks,
+    useBrowserCodingActionHooks, omitBrowserDesktopUpdateNotice, useBrowserSetupHooks, keepBrowserOpenOnProviderMismatch,
     removeBrowserConversationalVoiceEntry: source => removeBrowserConversationalVoiceEntry(source),
     scopeBrowserStorage, filterBrowserNarrowNavigation: source => filterBrowserNarrowNavigation(source, root), closeBrowserWorkspacePanels,
     useBrowserProjectDeleteOwner: source => useBrowserProjectDeleteOwner(source, root),

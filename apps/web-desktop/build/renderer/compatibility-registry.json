@@ -2199,6 +2199,28 @@
     "outputHash": "398ee2e87e8e2d3675e0b2719d6c8eed15cc6e72373b23d2cd817a1563abd408"
   },
   {
+    "name": "browser-provider-readiness-mismatch",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "store/onboarding.ts",
+    "reason": "Allow Athena to restore chats when provider credentials are configured but the selected runtime is unavailable.",
+    "owner": "apps/web-desktop/build/renderer/transforms/host.ts",
+    "tests": [
+      {
+        "file": "tests/browser/cold-connection-recovery.spec.mjs",
+        "scenario": "a provider readiness mismatch on restart leaves the restored chat usable"
+      }
+    ],
+    "removal": "Remove when upstream keeps passive provider readiness mismatches out of the setup picker.",
+    "handlers": [
+      "keepBrowserOpenOnProviderMismatch"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "c4414917681d53cd7b3042e894996d25ecfbcd8439e488688133b12fe6469f2f",
+    "inputHash": "c4414917681d53cd7b3042e894996d25ecfbcd8439e488688133b12fe6469f2f",
+    "outputHash": "19bd4f9464f200916614e30a07905657b620fb53960132a27ddf4e0d89d02ec9"
+  },
+  {
     "name": "browser-semantic-desktop-install-overlay",
     "kind": "browser-transform",
     "order": 20,
