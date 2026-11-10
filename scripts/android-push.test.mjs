@@ -99,7 +99,7 @@ test('response completion reaches Firebase after the Android WebView disconnects
     const handler = raw => { if (JSON.parse(raw).id === 1) { client.off('message', handler); resolve() } }
     client.on('message', handler)
   })
-  client.send(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'session.resume', params: { session_id: 'chat-1' } }))
+  client.send(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'session.resume', params: { session_id: 'chat-1', profile: 'research' } }))
   await mounted
   client.close(); await once(client, 'close')
   const pending = nextPush()
@@ -107,6 +107,7 @@ test('response completion reaches Firebase after the Android WebView disconnects
   await pending
   assert.equal(sent.length, 1)
   assert.equal(sent[0][1].focusSessionId, 'chat-1')
+  assert.equal(sent[0][1].focusProfile, 'research')
   assert.equal(sent[0][1].bindingId, bindingId)
   assert.equal(sent[0][2], 'HIGH')
   assert.ok(!JSON.stringify(sent).includes('Private chat content'))

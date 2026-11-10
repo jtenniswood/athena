@@ -46,6 +46,28 @@ test('notification hash routes retain the live document and its original draft',
   await expect(composer(page)).toHaveText('Keep this notification-tab draft')
 })
 
+test('Android notification routes reveal the related chat on cold and warm opens', async ({ browser }) => {
+  const context = await browser.newContext({ hasTouch: true, viewport: { width: 390, height: 800 } })
+  try {
+    const page = await context.newPage()
+    const first = '#/preview-research?profile=research&androidNotification=1'
+    const second = '#/preview-writer?profile=writer&androidNotification=1'
+    await page.goto(origin + '/' + first)
+    await expect(page.getByText('I can help you investigate a question', { exact: false })).toBeVisible()
+    await composer(page).fill('Keep this draft on Android')
+    await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+    await expect(composer(page)).toBeHidden()
+    await page.evaluate(() => window.dispatchEvent(new Event('athena:open-notification')))
+    await expect(composer(page)).toHaveText('Keep this draft on Android')
+    await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+    await expect(composer(page)).toBeHidden()
+    await page.evaluate(hash => { window.location.hash = hash }, second)
+    await expect(page.getByText('Bring a rough outline or a first draft', { exact: false })).toBeVisible()
+    await page.evaluate(hash => { window.location.hash = hash }, first)
+    await expect(composer(page)).toHaveText('Keep this draft on Android')
+  } finally { await context.close() }
+})
+
 test('the live profile can refuse a stale worker client URL without losing its draft', async ({ page }) => {
   const original = page.url()
   await page.getByRole('button', { name: 'Filters', exact: true }).click()

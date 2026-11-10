@@ -21,9 +21,11 @@ class ServerSettingsTest {
     private class Page(context: Context, private val guarded: Boolean, private val pageUrl: String?) : WebView(context) {
         var destroyed = false
         var loadedUrl: String? = null
+        var evaluatedScript: String? = null
         override fun getUrl(): String? = pageUrl
         override fun loadUrl(url: String) { loadedUrl = url }
         override fun evaluateJavascript(script: String, callback: ValueCallback<String>?) {
+            evaluatedScript = script
             callback?.onReceiveValue(if (guarded) "false" else "true")
         }
         override fun destroy() { destroyed = true; super.destroy() }
@@ -112,18 +114,21 @@ class ServerSettingsTest {
 
     @Test fun notificationTapDoesNotDiscardAnUnconfirmedDraft() {
         val (activity, page) = fixture(guarded = true)
-        val target = "https://old.example.com/#/chat-2"
+        val target = "https://old.example.com/#/chat-2?profile=research"
         val intent = android.content.Intent().setAction("com.athena.android.OPEN_CONVERSATION")
             .setData(android.net.Uri.parse(target))
         MainActivity::class.java.getDeclaredMethod("openNotification", android.content.Intent::class.java)
             .apply { isAccessible = true }.invoke(activity, intent)
         assertNull(page.loadedUrl)
         assertEquals(target, intent.dataString)
+        assertTrue(page.evaluatedScript!!.contains("chatSelection:true"))
         val pending = MainActivity::class.java.getDeclaredField("navigationAction").apply { isAccessible = true }.get(activity)
         assertNotNull(pending)
         @Suppress("UNCHECKED_CAST")
         (pending as () -> Unit).invoke()
-        assertEquals(target, page.loadedUrl)
+        assertNull(page.loadedUrl)
+        val hash = org.json.JSONObject.quote("#/chat-2?profile=research&androidNotification=1")
+        assertTrue(page.evaluatedScript!!.contains("location.hash = $hash"))
         assertNull(intent.data)
     }
 

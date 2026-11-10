@@ -14,15 +14,27 @@ export function useMobileChatHistory({ mobile, drawerOpen, covered, showHistory,
   const location = useLocation()
   const navigate = useNavigate()
   const navigationType = useNavigationType()
-  const previous = useRef({ key: location.key, drawerOpen })
+  const previous = useRef({ location: null as typeof location | null, drawerOpen })
   const opening = useRef(false)
   const chatEntry = location.state?.[CHAT_ENTRY] === true
 
   useEffect(() => {
+    if (!mobile || covered) return
+    window.addEventListener('athena:open-notification', showConversation)
+    return () => window.removeEventListener('athena:open-notification', showConversation)
+  }, [mobile, covered, showConversation])
+
+  useEffect(() => {
     const before = previous.current
-    previous.current = { key: location.key, drawerOpen }
+    previous.current = { location, drawerOpen }
     if (!mobile || covered) { opening.current = false; return }
-    if (before.key !== location.key && navigationType === 'POP') {
+    const routeChanged = before.location?.pathname !== location.pathname || before.location?.search !== location.search
+    if (routeChanged && new URLSearchParams(location.search).get('androidNotification') === '1') {
+      opening.current = false
+      showConversation()
+      return
+    }
+    if (before.location && before.location.key !== location.key && navigationType === 'POP') {
       opening.current = false
       if (chatEntry) showConversation()
       else showHistory()
