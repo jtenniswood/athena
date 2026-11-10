@@ -5,6 +5,11 @@ import json
 from functools import partial
 
 DEDICATED_CHAT = "dedicated-chat"
+NEW_CHAT_PER_RUN = "new-chat-per-run"
+CHAT_DELIVERY_TARGETS = {
+    DEDICATED_CHAT: "Create dedicated chat",
+    NEW_CHAT_PER_RUN: "New chat on each run",
+}
 
 
 def _title_if_empty(db, session_id, name):
@@ -24,7 +29,7 @@ def _title_if_empty(db, session_id, name):
     db._execute_write(write)
 
 
-async def _admit(authority, job_id, name, execution_id, text, diagnostic):
+async def _admit(authority, job_id, name, execution_id, text, diagnostic, destination):
     from gateway.owner_identity import host_owner_subject
     from gateway.session_authorities import owner_scope
     from gateway.session_contract import SessionActor
@@ -35,9 +40,11 @@ async def _admit(authority, job_id, name, execution_id, text, diagnostic):
     from hermes_state_keys import local_identity
     from hermes_state_local import commit_local_session
 
-    # The profile and immutable job ID identify the conversation, including
-    # across gateway restarts, concurrent first deliveries and chat renames.
+    # Keep the original job-scoped identity for existing destinations. The
+    # execution ID gives each per-run chat a stable identity across retries.
     request_id = f"athena:cron-delivery:{job_id}"
+    if destination == NEW_CHAT_PER_RUN:
+        request_id = f"athena:cron-run-delivery:{job_id}:{execution_id}"
     actor = SessionActor(host_owner_subject(), authority.profile_id,
                          frozenset({"session:create"}), "athena-cron")
     session_id = local_identity(authority.profile_id, actor.subject, request_id)
@@ -53,28 +60,28 @@ async def _admit(authority, job_id, name, execution_id, text, diagnostic):
                 await tracked_write(authority, partial(
                     commit_local_session, authority.db, epoch=authority.epoch, receipt=receipt))
         await tracked_write(authority, partial(_title_if_empty, authority.db, session_id, name))
-        identity = json.dumps(["cron", "dedicated-chat", job_id, execution_id, diagnostic],
+        identity = json.dumps(["cron", destination, job_id, execution_id, diagnostic],
                               separators=(",", ":"))
         metadata = {"notification_category": "diagnostic"} if diagnostic else {}
         return await _admit_local_delivery(authority, session_id, text, metadata, identity=identity)
 
 
-def deliver_to_dedicated_chat(job_id, name, execution_id, text, *, diagnostic=False):
+def deliver_to_cron_chat(job_id, name, execution_id, text, *, destination, diagnostic=False):
     """Submit a note to the gateway's existing durable session FIFO."""
     from gateway.session_cron import owner_for_home
     from hermes_constants import get_hermes_home
     from hermes_state_runtime import RuntimeStoreError
 
     if not execution_id:
-        return "Dedicated chat delivery requires a cron execution ID"
+        return "Cron chat delivery requires a cron execution ID"
     owner = owner_for_home(get_hermes_home())
     if owner is None:
-        return "Dedicated chat delivery requires the job profile's gateway"
+        return "Cron chat delivery requires the job profile's gateway"
     authority, loop = owner
     try:
         admitted = asyncio.run_coroutine_threadsafe(
-            _admit(authority, job_id, name, execution_id, text, diagnostic), loop).result(timeout=60)
+            _admit(authority, job_id, name, execution_id, text, diagnostic, destination), loop).result(timeout=60)
     except (ValueError, KeyError, TimeoutError) as error:
         reason = error.reason if isinstance(error, RuntimeStoreError) else type(error).__name__
-        return f"Dedicated chat delivery could not be confirmed ({reason})"
-    return None if admitted else "Dedicated chat refused the delivery"
+        return f"Cron chat delivery could not be confirmed ({reason})"
+    return None if admitted else "Cron chat refused the delivery"
