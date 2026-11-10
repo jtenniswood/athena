@@ -4,3 +4,9 @@ export interface BrowserHostPanel {
   checked: boolean | undefined
   select(mode?: 'open' | 'toggle'): boolean
 }
+
+export interface BrowserSidebarCommands {
+  compact: boolean
+  toggleDrawer(): void
+  focusSearch(): void
+}

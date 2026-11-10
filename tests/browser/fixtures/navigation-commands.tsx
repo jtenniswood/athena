@@ -9,7 +9,7 @@ import { BrowserTreeAdd } from '../../../apps/web-desktop/src/experience/sidebar
 
 // This fixture exercises navigation and real sidebar commands. Engine state is
 // represented only by a changing selection; no conversation data is copied.
-const engine = { protocol: 1, navigation: { coversWorkspace: () => false } } as BrowserEngine
+const engine = { protocol: 1, navigation: { coversWorkspace: () => false, useSidebar: () => ({ open: true, setOpen() {} }) } } as BrowserEngine
 function Fixture() {
   const [selection, setSelection] = useState(0)
   const main = useRef<HTMLElement>(null), trigger = useRef<HTMLButtonElement>(null), anchor = useRef<HTMLDivElement>(null)

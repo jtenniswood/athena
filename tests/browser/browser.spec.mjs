@@ -1800,14 +1800,72 @@ test('approval mode keeps the selected profile mode and composer icon synchroniz
   await expect(page.locator('[role="menu"]:visible').last().getByRole('menuitemradio', { name: /Manual/ })).toHaveAttribute('aria-checked', 'true')
 })
 
+for (const width of [1440, 700, 600]) {
+  test(`sidebar and chat search shortcuts preserve the draft at ${width}px`, async ({ page }) => {
+    await page.route('**/api/athena/preferences', route => route.abort())
+    await page.setViewportSize({ width, height: 960 })
+    await open(page)
+    const modifier = await page.evaluate(() => /mac/i.test(navigator.platform) ? 'Meta' : 'Control')
+    const navigation = page.locator('#browser-navigation')
+    const draft = editor(page)
+    await draft.fill('Keep my draft while using shortcuts')
+
+    if (width < 768) {
+      await page.keyboard.press(`${modifier}+b`)
+      await expect(navigation).toBeVisible()
+    }
+    await navigation.getByRole('tab', { name: 'Bots' }).click()
+    await page.keyboard.press(`${modifier}+b`)
+    await expect(navigation).toBeHidden()
+
+    await page.keyboard.press(`${modifier}+Shift+f`)
+    await expect(navigation).toBeVisible()
+    await expect(navigation.getByRole('tab', { name: 'Sessions' })).toHaveAttribute('aria-selected', 'true')
+    await expect(navigation.getByRole('textbox', { name: 'Search', exact: true })).toBeFocused()
+    await page.keyboard.press(`${modifier}+b`)
+    await expect(navigation).toBeHidden()
+    await expect(draft).toHaveText('Keep my draft while using shortcuts')
+  })
+}
+
+for (const [platform, shortcut] of [['MacIntel', 'Control+Meta+n'], ['Win32', 'Alt+n']]) {
+  test(`the browser new chat shortcut opens a fresh draft on ${platform}`, async ({ page }) => {
+    await page.route('**/api/athena/preferences', route => route.abort())
+    await page.addInitScript(platform => Object.defineProperty(navigator, 'platform', { value: platform }), platform)
+    await open(page)
+    await editor(page).fill('Draft in the original chat')
+    await page.keyboard.press(shortcut)
+    await expect(page).toHaveURL(/#\/$/)
+    await expect(editor(page)).toHaveText('')
+    await page.goBack()
+    await expect(editor(page)).toHaveText('Draft in the original chat')
+  })
+}
+
 test('browser settings omit desktop-only keybinds', async ({ page }) => {
+  await page.route('**/api/athena/preferences', route => route.abort())
+  await page.setViewportSize({ width: 1440, height: 960 })
   await open(page)
-  await (await settingsTrigger(page)).click()
-  await page.getByText('Keyboard Shortcuts', { exact: true }).click()
+  const modifier = await page.evaluate(() => /mac/i.test(navigator.platform) ? 'Meta' : 'Control')
+  await page.keyboard.press(`${modifier}+/`)
   await expect(page.getByText('Toggle sessions sidebar', { exact: true })).toBeVisible()
   for (const label of ['Toggle HUD mode', 'Toggle terminal', 'New terminal', 'Open browser', 'New session tab']) {
     await expect(page.getByText(label, { exact: true })).toHaveCount(0)
   }
+
+  const sidebarRow = page.getByText('Toggle sessions sidebar', { exact: true }).locator('..')
+  const rebind = sidebarRow.getByRole('button', { name: 'Rebind' })
+  await rebind.click()
+  const custom = `${modifier}+Shift+8`
+  await page.keyboard.press(custom)
+  await expect(rebind).toContainText('8')
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+  const navigation = page.locator('#browser-navigation')
+  await expect(navigation).toBeVisible()
+  await page.keyboard.press(`${modifier}+b`)
+  await expect(navigation).toBeVisible()
+  await page.keyboard.press(custom)
+  await expect(navigation).toBeHidden()
 })
 
 touchTest('browser workspace panels open and close without losing a draft', async ({ page }) => {
