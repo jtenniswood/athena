@@ -131,8 +131,8 @@
  .browser-sessions-pane [data-browser-group-actions] button:not([data-browser-profile-create]) { opacity:0; }
  .browser-sessions-pane [data-browser-group-header]:is(:hover,:focus-within,:has([data-state="open"])) [data-browser-group-actions] button { opacity:1; }
 }
-/* Inset chat ages and unread dots while aligning hover actions with the header controls. */
-.browser-sessions-pane [data-web-session-id] .session-row-tail:has(time, [data-session-unread]) { padding-inline-end:var(--web-space-2); }
+/* Inset chat ages and status indicators while aligning hover actions with the header controls. */
+.browser-sessions-pane [data-web-session-id] .session-row-tail:has(time, [data-session-unread], .browser-session-spinner) { padding-inline-end:var(--web-space-2); }
 /* Let metadata set the resting fade boundary, then reserve room for visible actions. */
 .browser-sessions-pane [data-row-actions]:has(> [data-browser-session-actions]) { min-height:var(--web-control-compact); }
 .browser-sessions-pane [data-browser-session-actions] { position:absolute; right:0; display:flex; align-items:center; gap:var(--web-space-1); opacity:0; pointer-events:none; }
@@ -245,6 +245,8 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  [data-gateway-group]:has(> [data-browser-session-order] [data-web-session-reorderable]) > .browser-profile-chat-overflow:not([data-card-rows]) { --profile-chat-title-inset:calc(var(--web-touch-target) + .375rem); }
  .browser-sessions-pane [data-browser-session-actions] { position:relative; opacity:1; pointer-events:auto; }
  .browser-sessions-pane [data-web-session-id]:is(:hover,:focus-within,:has([data-state="open"])) [data-row-actions]:has(> [data-browser-session-actions]) { min-width:0; }
+ /* The touch layout reserves space for actions and the spinner side by side. */
+ .browser-sessions-pane .browser-session-spinner { visibility:visible; }
  /* Session ages can sit beside the row button. Hide their separator too. */
  .browser-sessions-pane :is([data-row-actions], button[data-slot="row-button"]) :is(time, span:has(> time)) { display:none !important; }
  .browser-main :has(> button[aria-label="Branch in new chat"]) { opacity:1 !important; pointer-events:auto !important; }

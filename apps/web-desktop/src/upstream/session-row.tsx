@@ -35,6 +35,7 @@ import { $todoProgressBySession } from '@/store/todos'
 import { BrowserSessionRow } from '../experience/session-row'
 import type { BrowserSessionRowModel } from '../experience/contracts/session-row'
 import { BrowserSessionPreview } from '../experience/session-preview'
+import { browserClassNames as cn } from '../experience/ui/classnames'
 
 interface SidebarSessionRowProps extends ComponentProps<'div'> {
   session: SessionInfo
@@ -77,17 +78,19 @@ function SidebarSessionRowAdapter({ session, branchStem, isPinned, isSelected, u
   const tokens = session.input_tokens + session.output_tokens, cost = sessionCostUsd(session)
   const figures = [rowMeta.includes('tokens') && tokens > 0 ? compactNumber(tokens) : null,
     rowMeta.includes('cost') && cost >= 0.01 ? `$${cost.toFixed(2)}` : null].filter(Boolean) as string[]
+  const working = hasLiveTurn(dotState)
   const showAge = rowMeta.includes('updated') || card
   const showUnread = dotState === 'unread'
-  const showTail = showAge || showUnread
+  const showTail = working || showAge || showUnread
   const separator = card ? '\u00a0\u00a0' : ' · '
   const head = (showTail ? figures : figures.slice(0, -1)).join(separator)
   const trailing: ReactNode[] = []
   if ((showProfile || rowMeta.includes('profile')) && normalizeProfileKey(session.profile) !== 'default') trailing.push(<ProfileTag key="profile" profile={session.profile} />)
   if (pr) trailing.push(<PrTag key="pr" pr={pr} />)
   if (figures.length || showTail) trailing.push(<span key="figures" className="pointer-events-none whitespace-nowrap text-[0.625rem] leading-none text-(--ui-text-tertiary)">
-    {head}<span className="session-row-tail inline-block min-w-5 text-right transition-opacity group-hover:opacity-0">{head && separator}
-      {showUnread ? <span data-session-unread="" role="status" aria-label={r.finishedUnread} title={r.finishedUnread}
+    {head}<span className={cn('session-row-tail inline-block min-w-5 text-right', !working && 'transition-opacity group-hover:opacity-0')}>{head && separator}
+      {working ? <span className="browser-session-spinner" role="status" aria-label={r.sessionRunning} />
+        : showUnread ? <span data-session-unread="" role="status" aria-label={r.finishedUnread} title={r.finishedUnread}
         className="inline-flex size-2.5 items-center justify-center align-middle"><span className="size-1.5 rounded-full bg-(--ui-blue)" /></span>
         : showAge ? <Tip label={absolute} side="top"><time aria-label={`${age}, ${absolute}`} dateTime={date.toISOString()} tabIndex={0}
         className="pointer-events-auto focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring">{age}</time></Tip> : figures.at(-1)}
@@ -97,7 +100,7 @@ function SidebarSessionRowAdapter({ session, branchStem, isPinned, isSelected, u
   const handoff = handoffOriginSource(session.handoff_state, session.handoff_platform)
   const originLabel = handoff ? sessionSourceLabel(handoff) ?? handoff : null
   const row: BrowserSessionRowModel = {
-    id: session.id, profile: session.profile || 'default', title, selected: isSelected, working: hasLiveTurn(dotState),
+    id: session.id, profile: session.profile || 'default', title, selected: isSelected, working,
     running: showsRunningArc(dotState), openElsewhere, dragging, reorderable, branch: Boolean(branchStem), card, density,
     context, metadata: details.metadata, preview: details.preview, cardPreview: rowMeta.includes('preview') ? session.preview : null,
     model: card && session.model ? displayModelName(session.model) : '', size: card && session.message_count > 0 ? r.messageCount(session.message_count) : '',

@@ -3593,6 +3593,43 @@ for (const width of [390, 1440]) {
 
 test.describe('semantic mobile controls', () => {
   test.use({ hasTouch: true })
+  test('running chat spinner stays visible on touch even when the row has focus', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    let finishTurn
+    await page.routeWebSocket(/\/api\/ws/, socket => {
+      const server = socket.connectToServer()
+      server.onMessage(message => {
+        const frame = JSON.parse(String(message))
+        if (frame.params?.type === 'message.complete' && frame.params.session_id === 'preview-week') {
+          finishTurn = () => socket.send(message)
+          return
+        }
+        socket.send(message)
+      })
+    })
+    await open(page)
+    await editor(page).fill('Keep the running indicator visible')
+    await editor(page).press('Enter')
+    await expect.poll(() => Boolean(finishTurn)).toBe(true)
+
+    await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible()
+    const row = page.locator('[data-web-session-id="preview-week"]').first()
+    const spinner = row.getByRole('status', { name: 'Session running', exact: true })
+    const title = row.getByRole('button', { name: 'Plan a calmer working week', exact: true })
+    await title.focus()
+    await expect(title).toBeFocused()
+    await expect(spinner).toBeVisible()
+    await expect(spinner).toHaveCSS('animation-name', 'browser-session-spinner')
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await expect(spinner).toBeVisible()
+    await expect(spinner).toHaveCSS('animation-name', 'none')
+
+    finishTurn()
+    await expect(spinner).toHaveCount(0)
+    await expect(row.locator('time')).toBeHidden()
+  })
+
   test('browser touch hooks survive control label and icon changes', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await open(page)
