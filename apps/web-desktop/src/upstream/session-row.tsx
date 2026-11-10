@@ -88,7 +88,8 @@ function SidebarSessionRowAdapter({ session, branchStem, isPinned, isSelected, u
   if ((showProfile || rowMeta.includes('profile')) && normalizeProfileKey(session.profile) !== 'default') trailing.push(<ProfileTag key="profile" profile={session.profile} />)
   if (pr) trailing.push(<PrTag key="pr" pr={pr} />)
   if (figures.length || showTail) trailing.push(<span key="figures" className="pointer-events-none whitespace-nowrap text-[0.625rem] leading-none text-(--ui-text-tertiary)">
-    {head}<span className={cn('session-row-tail inline-block min-w-5 text-right', !working && 'transition-opacity group-hover:opacity-0')}>{head && separator}
+    {working && head ? <span className="min-w-0 truncate">{head}{separator}</span> : head}
+    <span className={cn('session-row-tail inline-block min-w-5 text-right', !working && 'transition-opacity group-hover:opacity-0')}>{!working && head && separator}
       {working ? <span className="browser-session-spinner" role="status" aria-label={r.sessionRunning} />
         : showUnread ? <span data-session-unread="" role="status" aria-label={r.finishedUnread} title={r.finishedUnread}
         className="inline-flex size-2.5 items-center justify-center align-middle"><span className="size-1.5 rounded-full bg-(--ui-blue)" /></span>
@@ -110,7 +111,10 @@ function SidebarSessionRowAdapter({ session, branchStem, isPinned, isSelected, u
     origin: handoff && originLabel ? <Tip label={r.handoffOrigin(originLabel)}><PlatformAvatar className="-mt-px size-4 shrink-0 rounded-[4px] text-[0.5rem] [&_svg]:size-2.5" platformId={handoff} platformName={originLabel} /></Tip> : null,
     leading: <SessionRowSlot area={SESSION_ROW_AREAS.leading} sessionId={sessionPinId(session)} />,
     trailing: <SessionRowSlot area={SESSION_ROW_AREAS.trailing} sessionId={sessionPinId(session)} />,
-    figures: trailing.map((node, index) => <span key={index} className={!figures.length && !showTail && index === trailing.length - 1 ? 'session-row-tail inline-flex min-w-5 justify-end transition-opacity group-hover:opacity-0' : undefined}>{node}</span>),
+    figures: trailing.map((node, index) => <span key={index} className={cn(
+      working && index === trailing.length - 1 && 'browser-session-running-figures',
+      !figures.length && !showTail && index === trailing.length - 1 && 'session-row-tail inline-flex min-w-5 justify-end transition-opacity group-hover:opacity-0'
+    )}>{node}</span>),
     actions: <span data-browser-session-actions=""><SessionActionsMenu {...menu}><Button aria-label={r.sessionActions} size="icon" variant="ghost"
       className="size-5 rounded-[4px] bg-transparent text-transparent transition-colors duration-100 hover:bg-(--ui-control-active-background) hover:text-foreground focus-visible:bg-(--ui-control-active-background) focus-visible:text-foreground focus-visible:ring-0 data-[state=open]:bg-(--ui-control-active-background) data-[state=open]:text-foreground group-hover:text-(--ui-text-tertiary) [&_svg]:size-3.5!">
       <Codicon name="ellipsis" size="0.875rem" /></Button></SessionActionsMenu>

@@ -245,7 +245,13 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  [data-gateway-group]:has(> [data-browser-session-order] [data-web-session-reorderable]) > .browser-profile-chat-overflow:not([data-card-rows]) { --profile-chat-title-inset:calc(var(--web-touch-target) + .375rem); }
  .browser-sessions-pane [data-browser-session-actions] { position:relative; opacity:1; pointer-events:auto; }
  .browser-sessions-pane [data-web-session-id]:is(:hover,:focus-within,:has([data-state="open"])) [data-row-actions]:has(> [data-browser-session-actions]) { min-width:0; }
- /* The touch layout reserves space for actions and the spinner side by side. */
+ /* Give the running indicator room even when figures fill a zoomed-in row. */
+ .browser-sessions-pane [data-web-session-id][data-working="true"] { grid-template-columns:minmax(0,1fr) minmax(0,max-content); }
+ .browser-sessions-pane [data-row-actions]:has(> .browser-session-running-figures) { min-width:0; flex-shrink:1; }
+ .browser-sessions-pane [data-row-actions]:has(> .browser-session-running-figures) > span:not(.browser-session-running-figures, [data-browser-session-actions]) { min-width:0; overflow:hidden; }
+ .browser-sessions-pane .browser-session-running-figures { min-width:1.25rem; }
+ .browser-sessions-pane .browser-session-running-figures > span { display:flex; align-items:center; }
+ .browser-sessions-pane .browser-session-running-figures .session-row-tail { flex:none; }
  .browser-sessions-pane .browser-session-spinner { visibility:visible; }
  /* Session ages can sit beside the row button. Hide their separator too. */
  .browser-sessions-pane :is([data-row-actions], button[data-slot="row-button"]) :is(time, span:has(> time)) { display:none !important; }

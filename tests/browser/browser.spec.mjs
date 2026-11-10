@@ -3593,8 +3593,15 @@ for (const width of [390, 1440]) {
 
 test.describe('semantic mobile controls', () => {
   test.use({ hasTouch: true })
-  test('running chat spinner stays visible on touch even when the row has focus', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 })
+  test('running chat spinner stays visible on touch with focus and crowded metadata', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 720 })
+    await page.route('**/api/athena/preferences', route => route.abort())
+    await page.addInitScript(() => {
+      localStorage.setItem('hermes.desktop.interfaceMode.v1', 'advanced')
+      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles', 'none')
+      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarCardRows', 'true')
+      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarRowMeta', '["tokens","updated"]')
+    })
     let finishTurn
     await page.routeWebSocket(/\/api\/ws/, socket => {
       const server = socket.connectToServer()
@@ -3607,7 +3614,8 @@ test.describe('semantic mobile controls', () => {
         socket.send(message)
       })
     })
-    await open(page)
+    await page.goto(`${origin}/#/preview-week`)
+    await page.locator('#browser-navigation').getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().click()
     await editor(page).fill('Keep the running indicator visible')
     await editor(page).press('Enter')
     await expect.poll(() => Boolean(finishTurn)).toBe(true)
@@ -3624,6 +3632,16 @@ test.describe('semantic mobile controls', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await expect(spinner).toBeVisible()
     await expect(spinner).toHaveCSS('animation-name', 'none')
+
+    await expect(row).toContainText('168')
+    await page.evaluate(() => window.hermesDesktop.zoom.setPercent(500))
+    await expect.poll(() => page.evaluate(() => window.hermesDesktop.zoom.factor())).toBe(5)
+    await expect.poll(() => spinner.evaluate(element => {
+      const spinnerRight = element.getBoundingClientRect().right
+      const rowRight = element.closest('[data-web-session-id]').getBoundingClientRect().right
+      const navigationRight = element.closest('.browser-navigation').getBoundingClientRect().right
+      return Math.min(rowRight, navigationRight) - spinnerRight
+    })).toBeGreaterThanOrEqual(4)
 
     finishTurn()
     await expect(spinner).toHaveCount(0)
