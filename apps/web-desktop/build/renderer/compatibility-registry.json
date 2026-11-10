@@ -3647,7 +3647,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "components/assistant-ui/thread/timeline.tsx",
-    "reason": "Pass the timeline index owner to the mounted rail without deriving conversation identity from refreshed entries.",
+    "reason": "Pass the timeline index owner to the mounted rail and exclude generation scaffolding from its prompt marks.",
     "owner": "apps/web-desktop/build/renderer/transforms/timeline.ts",
     "tests": [
       {
@@ -3657,12 +3657,16 @@
       {
         "file": "tests/browser/timeline-scrubbing.spec.mjs",
         "scenario": "timeline scrubbing stops when the command owner changes with stable entries"
+      },
+      {
+        "file": "tests/browser/timeline-prompts.spec.mjs",
+        "scenario": "the conversation timeline keeps only user prompts from loaded and indexed history"
       }
     ],
-    "removal": "Remove when the renderer supplies a stable conversation owner to its scoped timeline gesture API.",
+    "removal": "Remove when the renderer supplies a stable conversation owner and excludes generation scaffolding from all timeline sources.",
     "sourceHash": "723b1b9773a59fd2590e252ec9975a3b19abb3a3564162623f9c7ecb88350831",
     "inputHash": "723b1b9773a59fd2590e252ec9975a3b19abb3a3564162623f9c7ecb88350831",
-    "outputHash": "52c810a74568b8cd809a851d06a9e4d123c75f96305ef60e9edf3d8727d519cf",
+    "outputHash": "66104a439788fd6ba126f587f700f473426341687808466b440d5d874b52987d",
     "handlers": [
       "useBrowserTimelineOwner"
     ],

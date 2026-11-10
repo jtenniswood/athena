@@ -20,6 +20,17 @@ export function exposeBrowserTimelineHistoryOwner(source: string): string {
   ]])
 }
 
-export function useBrowserTimelineOwner(source: string): string {
-  return replaceBrowserContract(source, [['      <TimelineRail\n', '      <TimelineRail\n        browserOwner={historyIndex.ownerKey}\n']])
+export function useBrowserTimelineOwner(source: string, root: string): string {
+  const promptsImport = 'import { derivePromptEntries, isTimelinePromptText } from ' + JSON.stringify(path.join(root, 'src/experience/ui/timeline-prompts'))
+
+  return promptsImport + '\n' + replaceBrowserContract(source, [
+    ['      <TimelineRail\n', '      <TimelineRail\n        browserOwner={historyIndex.ownerKey}\n'],
+    ['  deriveTimelineEntries,\n', ''],
+    ["  const storeIds = useStoreSelector(view.$messages, messages =>\n    messages\n      .filter(m => m.role === 'user')", "  const storeIds = useStoreSelector(view.$messages, messages =>\n    messages\n      .filter(m => m.role === 'user' && !m.hidden)"],
+    ["      ? all\n          .filter(m => m.role === 'user')", "      ? all\n          .filter(m => m.role === 'user' && !m.hidden)"],
+    ['deriveTimelineEntries(rows)', 'derivePromptEntries(rows)'],
+    ['    const indexed = indexedEntries ?? []', '    const indexed = (indexedEntries ?? []).filter(entry => isTimelinePromptText(entry.preview))'],
+    ['      ? deriveTimelineEntries(', '      ? derivePromptEntries('],
+    ['          (history.currentMessages ?? []).map(message => ({\n            id: message.id,\n            rowId: message.rowId,\n            role: message.role,\n            text: messageContentText(message.parts)\n          }))', "          (history.currentMessages ?? [])\n            .filter(message => message.role === 'user' && !message.hidden)\n            .map(message => ({\n              id: message.id,\n              rowId: message.rowId,\n              role: message.role,\n              text: messageContentText(message.parts)\n            }))"]
+  ])
 }
