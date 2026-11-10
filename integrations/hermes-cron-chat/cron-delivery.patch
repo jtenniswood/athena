@@ -4,8 +4,8 @@
                  "home_env_var": None})
      except Exception:
          logger.debug("cron_delivery_targets: profile listing unavailable", exc_info=True)
-+    targets.append({"id": DEDICATED_CHAT, "name": "Create dedicated chat",
-+                    "home_target_set": True, "home_env_var": None})
++    targets.extend({"id": destination, "name": name, "home_target_set": True, "home_env_var": None}
++                   for destination, name in CHAT_DELIVERY_TARGETS.items())
      return targets
 
 
@@ -13,8 +13,8 @@
      origin = _resolve_origin(job)
      if deliver_value == "local":
          return None
-+    if deliver_value == DEDICATED_CHAT:
-+        return {"platform": DEDICATED_CHAT, "chat_id": job["id"], "thread_id": None}
++    if deliver_value in CHAT_DELIVERY_TARGETS:
++        return {"platform": deliver_value, "chat_id": job["id"], "thread_id": None}
      room_address = parse_room_deliver_token(deliver_value)
      if room_address is not None:
          return resolve_room_target(job, room_address)
@@ -27,7 +27,7 @@
 -            and any(target["platform"] not in (BOT_CHAT_PLATFORM, ROOM_PLATFORM) for target in targets)):
 +    execution_id = str(job.get("execution_id") or "")
 +    needs_chat_owner = False
-+    if execution_id and adapters is None and any(t["platform"] == DEDICATED_CHAT for t in targets):
++    if execution_id and adapters is None and any(t["platform"] in CHAT_DELIVERY_TARGETS for t in targets):
 +        from gateway.session_cron import owner_for_home
 +        from hermes_constants import get_hermes_home
 +        needs_chat_owner = owner_for_home(get_hermes_home()) is None
@@ -46,40 +46,41 @@
          if delivery_status and delivery_status["status"] == "suppressed":
              job["_notification_all_targets_suppressed"] = True
          from cron.jobs import get_job
-@@ -1903,6 +1914,17 @@
+@@ -1903,6 +1914,18 @@
                  if receipt and receipt["status"] == "ambiguous":
                      unverified_targets.append(bot_chat_error)
              continue
-+        if target["platform"] == DEDICATED_CHAT:
-+            from gateway.athena_cron_chat import deliver_to_dedicated_chat
++        if target["platform"] in CHAT_DELIVERY_TARGETS:
++            from gateway.athena_cron_chat import deliver_to_cron_chat
 +            name = _redact_cron_payload(str(job.get("name") or job["id"]), "job name")
 +            if mirror_text:
-+                error = deliver_to_dedicated_chat(job["id"], name, execution_id, mirror_text,
-+                                                  diagnostic=for_failure)
++                error = deliver_to_cron_chat(
++                    job["id"], name, execution_id, mirror_text,
++                    destination=target["platform"], diagnostic=for_failure)
 +                if error:
 +                    delivery_errors.append(error)
 +            if media_files:
-+                delivery_errors.append("Dedicated chat delivery supports text only")
++                delivery_errors.append("Cron chat delivery supports text only")
 +            continue
          if target["platform"] == ROOM_PLATFORM:
              room_error = deliver_to_room(job, content, target["chat_id"], for_failure=for_failure)
              if room_error:
-@@ -1946,6 +1968,7 @@
+@@ -1946,6 +1969,7 @@
  # Late-bound origin namespace (see module docstring). Imported LAST so this module is fully
  # populated before ``scheduler`` re-exports from it.
  from cron import scheduler as _sched
-+from gateway.athena_cron_chat import DEDICATED_CHAT
++from gateway.athena_cron_chat import CHAT_DELIVERY_TARGETS
  from cron.scheduler_delivery_room import (
      ROOM_PLATFORM, deliver_to_room, parse_room_deliver_token, resolve_room_target)
  from cron import scheduler_delivery_origin as _origin
 --- a/cron/scheduler_preflight.py
 +++ b/cron/scheduler_preflight.py
-@@ -263,7 +263,7 @@
-     for lane_value in lane_values:
+@@ -264,6 +264,8 @@
          for part in lane_value.split(","):
              part = part.strip()
--            if not part or part.lower() in {"local", "origin", "all"}:
-+            if not part or part.lower() in {"local", "origin", "all", _delivery.DEDICATED_CHAT}:
+             if not part or part.lower() in {"local", "origin", "all"}:
++                continue
++            if part in _delivery.CHAT_DELIVERY_TARGETS:
                  continue
              # bot-chat targets deliver via a local subprocess; failures land in last_delivery_error.
              if _delivery.parse_bot_chat_deliver_token(part) is not None:

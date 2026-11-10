@@ -52,16 +52,17 @@ def trigger(job):
     assert run["last_status"] == "ok", run
 
 
-def run():
+def create_job(name, destination):
+    return request("/api/cron/jobs", method="POST", body={
+        "name": name, "deliver": destination, "schedule": "0 0 1 1 *",
+        "script": "report.sh", "no_agent": True,
+    })
+
+
+def run_dedicated_chat():
     choices = request("/api/cron/delivery-targets")["targets"]
     assert any(choice["id"] == "dedicated-chat" and choice["name"] == "Create dedicated chat" for choice in choices)
-    jobs = [
-        request("/api/cron/jobs", method="POST", body={
-            "name": name, "deliver": "dedicated-chat", "schedule": "0 0 1 1 *",
-            "script": "report.sh", "no_agent": True,
-        })
-        for name in ("Daily report", "Weekly report")
-    ]
+    jobs = [create_job(name, "dedicated-chat") for name in ("Daily report", "Weekly report")]
     assert not recents()
 
     trigger(jobs[0])
@@ -87,6 +88,48 @@ def run():
         assert all(note["content"] == "Scheduled smoke result" for note in notes), notes
 
 
+def run_new_chat_per_execution(home):
+    from cron.delivery_queue import enqueue_and_wait
+    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+
+    choices = {choice["id"]: choice["name"] for choice in request("/api/cron/delivery-targets")["targets"]}
+    assert choices["new-chat-per-run"] == "New chat on each run", choices
+    job = create_job("Per-run report", "new-chat-per-run")
+
+    trigger(job)
+    first = until(lambda: next((row for row in recents() if row["title"] == "Per-run report"), None))
+    first_id = first["id"]
+    snapshot = request(f"/api/sessions/{first_id}/mutation-snapshot")
+    request(f"/api/sessions/{first_id}", method="PATCH", body={
+        "archived": True, "request_id": "smoke-archive",
+        "expected_revision": snapshot["runtime_revision"],
+        "expected_generation": snapshot["runtime_generation"],
+    })
+
+    trigger(job)
+    second = until(lambda: next(
+        (row for row in recents() if row["id"] != first_id and row["title"].startswith("Per-run report")), None
+    ))
+    second_id = second["id"]
+    assert second["profile"] == first["profile"] == "default"
+    assert request(f"/api/sessions/{first_id}")["archived"]
+    assert [note["content"] for note in reports(first_id)] == ["Scheduled smoke result"]
+    second_notes = reports(second_id)
+    assert [note["content"] for note in second_notes] == ["Scheduled smoke result"]
+
+    # Use a fresh queue key to make the gateway process the same execution again.
+    identity = json.loads(second_notes[0]["display_metadata"]["completion_note"][0])
+    replay = {**job, "execution_id": identity[3]}
+    token = set_hermes_home_override(home)
+    try:
+        assert enqueue_and_wait("smoke-replay", replay, "Scheduled smoke result", timeout=20) is None
+    finally:
+        reset_hermes_home_override(token)
+    rows = request("/api/profiles/sessions?archived=include")["sessions"]
+    assert {row["id"] for row in rows if row["title"].startswith("Per-run report")} == {first_id, second_id}
+    assert len(reports(second_id)) == 1
+
+
 with tempfile.TemporaryDirectory(prefix="athena-cron-smoke-") as directory:
     home = Path(directory)
     (home / "config.yaml").write_text("webapp:\n  enabled: true\n  bind: 127.0.0.1\n  port: 9120\n")
@@ -107,7 +150,8 @@ with tempfile.TemporaryDirectory(prefix="athena-cron-smoke-") as directory:
         try:
             until(ready)
             until(lambda: (home / "state.db").exists())
-            run()
+            run_dedicated_chat()
+            run_new_chat_per_execution(home)
         except HTTPError as error:
             print(error.read().decode())
             raise
@@ -122,4 +166,4 @@ with tempfile.TemporaryDirectory(prefix="athena-cron-smoke-") as directory:
             gateway.wait(timeout=15)
             log.seek(0)
             print(log.read())
-    print("Dedicated cron chat smoke test passed.")
+    print("Cron chat smoke tests passed.")

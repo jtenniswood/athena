@@ -21,12 +21,18 @@ to cancel. Destinations need a working folder, so Home is not a drop target.
 
 ## Deliver scheduled results to a dedicated chat
 
-With the optional gateway extension installed, choose **Create dedicated chat**
-under **Cron Jobs → Deliver to** when creating or editing a job. The first text
-delivery creates a regular chat named after the job in its profile. Later runs
-append to the same chat, where you can reply with the reports in context. The
-gateway delivers results while Athena is closed. Attachments stay in run
-history, and `[SILENT]` runs skip delivery as usual.
+With the optional gateway extension installed, set **Cron Jobs → Deliver to**
+when creating or editing a job.
+
+- **New chat on each run** creates a separate chat for every run that delivers
+  text, even if you archived the previous chat.
+- **Create dedicated chat** creates one chat for the job and appends later
+  reports to it.
+
+To switch an existing job to per-run chats, select **New chat on each run** and
+clear **Create dedicated chat**. You can reply in either kind of chat with the
+report in context. The gateway delivers while Athena is closed. Attachments
+stay in run history, and `[SILENT]` runs skip delivery as usual.
 
 Install the extension on the **Hermes gateway**, using the v0.23.0 release. For a
 Docker gateway, build the extended image from the Athena repository:
@@ -37,8 +43,9 @@ docker build -t hermes-with-cron-chats integrations/hermes-cron-chat
 
 Use `hermes-with-cron-chats` for the gateway container with its existing
 configuration and data volume. For a source installation, run these commands
-from the Athena repository with `HERMES_CHECKOUT` set to the path of the
-Hermes v0.23.0 checkout:
+from the Athena repository with `HERMES_CHECKOUT` set to the path of a clean
+Hermes v0.23.0 checkout. If upgrading a source installation of the extension,
+use a fresh checkout with the same Hermes data directory.
 
 ```sh
 git -C "$HERMES_CHECKOUT" apply --check "$PWD/integrations/hermes-cron-chat/cron-delivery.patch"
@@ -47,7 +54,8 @@ git -C "$HERMES_CHECKOUT" apply "$PWD/integrations/hermes-cron-chat/cron-deliver
 ```
 
 Restart Hermes to load the extension. The Athena UI image can connect to the
-same gateway URL. For CLI-created jobs, use `--deliver dedicated-chat`.
+same gateway URL. For CLI-created jobs, use `--deliver new-chat-per-run` or
+`--deliver dedicated-chat`.
 
 ## Docker self-hosting
 
