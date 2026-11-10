@@ -185,7 +185,7 @@ body > [data-slot='fan-menu'] {
    square-button geometry must not constrain these content-sized controls. */
 [data-slot='composer-root'] :is([data-browser-model-pill], [data-testid='reasoning-pill'], [data-browser-approval-control]) {
   box-sizing: border-box;
-  height: var(--composer-control-size);
+  height: var(--browser-composer-touch-size, var(--composer-control-size));
   gap: var(--web-space-1);
   padding: 0 .375rem;
   border-radius: var(--web-radius-control);
@@ -315,27 +315,54 @@ body > [data-slot='fan-menu'] {
     bottom: env(safe-area-inset-bottom) !important;
   }
 
-  /* Keep frequent composer actions large enough to tap after app zoom. */
-  [data-slot='composer-dock']:not([data-popped-out]) [data-slot='composer-root'] button:has(> svg, > .codicon) {
-    box-sizing: border-box;
-    min-width: var(--web-touch-min);
-    min-height: var(--web-touch-min);
-  }
+  [data-slot='composer-dock']:not([data-popped-out]) [data-slot='composer-root'] {
+    --browser-composer-touch-size: var(--web-touch-target);
+    --composer-control-gap: calc(var(--web-space-1) / var(--web-ui-scale, 1));
+    --browser-composer-icon: calc(1.25rem / var(--web-ui-scale, 1));
+    --browser-composer-codicon: calc(1.125rem / var(--web-ui-scale, 1));
 
-  /* Size the visible glyphs as well as their targets, independent of app zoom. */
-  [data-slot='composer-dock']:not([data-popped-out]) [data-slot='composer-root'] button > :is(svg, .codicon),
-  [data-slot='composer-dock']:not([data-popped-out]) [data-slot='composer-root'] :is([data-browser-model-pill], [data-testid='reasoning-pill'])::before {
-    width: calc(1.375rem / var(--web-ui-scale, 1)) !important;
-    height: calc(1.375rem / var(--web-ui-scale, 1)) !important;
-    font-size: calc(1.375rem / var(--web-ui-scale, 1)) !important;
-    flex: 0 0 calc(1.375rem / var(--web-ui-scale, 1)) !important;
-  }
+    [data-slot='composer-rich-input'] {
+      font-size: var(--conversation-text-font-size);
+    }
 
-  [data-slot='composer-dock']:not([data-popped-out]) [data-slot='composer-root'] :is(button > .codicon-chevron-down, button > .codicon-chevron-up, [data-slot='fan-menu-anchor'] > .codicon-chevron-up) {
-    width: calc(.875rem / var(--web-ui-scale, 1)) !important;
-    height: calc(.875rem / var(--web-ui-scale, 1)) !important;
-    font-size: calc(.875rem / var(--web-ui-scale, 1)) !important;
-    flex: 0 0 calc(.875rem / var(--web-ui-scale, 1)) !important;
+    button:has(> .codicon-add) {
+      margin-inline-end: 0;
+    }
+
+    button:has(> svg, > .codicon) {
+      box-sizing: border-box;
+      min-width: var(--browser-composer-touch-size);
+      min-height: var(--browser-composer-touch-size);
+    }
+
+    /* The renderer uses its own size token to decide which controls fit. */
+    :is([class*='grid-area:menu'], [class*='grid-area:controls'])
+      :is([data-browser-composer-action], button:has(> :is(svg, .codicon):only-child)):not([data-browser-model-pill], [data-testid='reasoning-pill'], [data-browser-approval-control]) {
+      width: var(--browser-composer-touch-size);
+      height: var(--browser-composer-touch-size);
+    }
+
+    /* Codicon glyphs fill more of their box than the outlined SVGs. */
+    button > .codicon {
+      width: var(--browser-composer-codicon) !important;
+      height: var(--browser-composer-codicon) !important;
+      font-size: var(--browser-composer-codicon) !important;
+      flex: 0 0 var(--browser-composer-codicon) !important;
+    }
+
+    button > svg,
+    :is([data-browser-model-pill], [data-testid='reasoning-pill'])::before {
+      width: var(--browser-composer-icon) !important;
+      height: var(--browser-composer-icon) !important;
+      flex: 0 0 var(--browser-composer-icon) !important;
+    }
+
+    :is(button > .codicon-chevron-down, button > .codicon-chevron-up, [data-slot='fan-menu-anchor'] > .codicon-chevron-up) {
+      width: var(--web-icon-small) !important;
+      height: var(--web-icon-small) !important;
+      font-size: var(--web-icon-small) !important;
+      flex: 0 0 var(--web-icon-small) !important;
+    }
   }
 
   /* Status-row actions are otherwise hover-only and can collapse to the icon
