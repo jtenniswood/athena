@@ -97,7 +97,7 @@ html[data-browser-input='keyboard'] :is(.browser-panel-toggle, .browser-panel-to
     transition: none;
   }
   /* Keep the running-session indicator visible without continuous rotation. */
-  .browser-sessions-pane [data-working='true'] time::after {
+  .browser-session-spinner {
     animation: none;
   }
 }
