@@ -125,6 +125,15 @@ http {
             proxy_read_timeout 15s;
         }
 
+        location = /api/athena/opencode-go/usage {
+            proxy_pass http://127.0.0.1:4181;
+            proxy_http_version 1.1;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Forwarded-Proto $hermes_forwarded_proto;
+            proxy_read_timeout 15s;
+        }
+
         # Hermes gateway — REST + WebSocket, same-origin (auth cookies/ws-tickets).
         location ~ ^(${HERMES_PROXY_ROUTES}) {
             proxy_pass ${HERMES_GATEWAY_URL};

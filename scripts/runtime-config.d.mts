@@ -9,10 +9,11 @@ export interface HostingConfiguration {
   stateDir: string
   preferencesDir: string
   listen: string
+  openCodeGoApiKey: string
   publicConfig: {
     version: 1
     gateway: { id: string; name: string; legacyUrls: string[] }
-    capabilities: { gatewaySelection: false; pluginAssets: true }
+    capabilities: { gatewaySelection: false; pluginAssets: true; openCodeGoUsage: boolean }
   }
 }
 export function runtimeConfiguration(env?: NodeJS.ProcessEnv): HostingConfiguration
