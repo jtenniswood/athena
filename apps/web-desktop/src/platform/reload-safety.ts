@@ -84,7 +84,7 @@ export async function assertSafeConnectionChange(): Promise<void> {
 }
 
 /** Chat selection preserves attachment drafts, but cannot interrupt media or queue edits. */
-export function sharedFileSelectionReadiness(): { ready: boolean; reason?: string } {
+export function chatSelectionReadiness(): { ready: boolean; reason?: string } {
   if (operations) return { ready: false, reason: 'Finish selecting or uploading files first.' }
   for (const track of tracks) if (track.readyState === 'ended') tracks.delete(track)
   if (pendingMedia || tracks.size) return { ready: false, reason: 'Finish recording or transcribing first.' }

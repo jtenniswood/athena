@@ -134,8 +134,8 @@ class BridgeIntegrationTest {
                 var navigated = false
                 scenario.onActivity {
                     val action: () -> Unit = { navigated = true }
-                    MainActivity::class.java.getDeclaredMethod("prepareNavigation", Boolean::class.javaPrimitiveType, Function0::class.java)
-                        .apply { isAccessible = true }.invoke(it, false, action)
+                    MainActivity::class.java.getDeclaredMethod("prepareNavigation", Boolean::class.javaPrimitiveType, Boolean::class.javaPrimitiveType, Function0::class.java)
+                        .apply { isAccessible = true }.invoke(it, false, false, action)
                 }
                 waitUntil { evaluate(web, "typeof window.navigationId === 'string'") == "true" }
                 request(web, "navigationReady", JSONObject().put("requestId", "older-request").put("ready", true))

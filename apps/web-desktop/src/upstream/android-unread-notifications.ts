@@ -41,6 +41,7 @@ export function installAndroidUnreadNotifications(): () => void {
           kind: 'turnDone',
           chatTitle: row.title,
           focusSessionId: row.id,
+          focusProfile: row.profile || 'default',
           tag: 'android:' + row.id,
           body: 'You have new unread messages.',
           silent: $hapticsMuted.get()

@@ -222,7 +222,8 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
         const notify = async event => {
           const current = store.devices.get(key)
           if (!current?.enabled || event.type !== 'message.complete' || ['interrupted', 'cancelled'].includes(event.payload?.status)) return
-          const sessionId = relay.sessions.get(event.session_id) || event.session_id
+          const session = relay.sessions.get(event.session_id)
+          const sessionId = session?.id || event.session_id
           if (typeof sessionId !== 'string' || !sessionId) return
           const kind = event.payload?.status === 'error' ? 'turnError' : 'turnDone'
           if (!kind || !current.kinds[kind]) return
@@ -230,6 +231,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
           const id = createHash('sha256').update(JSON.stringify([key, current.bindingId, eventKey])).digest('hex')
           if (store.events.has(id)) return
           const data = { eventId: id, expiresAt: String(now() + 3600000), kind, origin: current.origin, bindingId: current.bindingId, focusSessionId: sessionId, tag: `android:${sessionId}`,
+            ...(session?.profile ? { focusProfile: session.profile } : {}),
             title: kind === 'turnDone' ? 'Athena · Response ready' : kind === 'turnError' ? 'Athena · Response failed' : 'Athena · Attention needed',
             body: kind === 'turnDone' ? 'Your response is ready.' : 'Open Athena to view this conversation.' }
           store.update(state => state.events.set(id, { key, bindingId: current.bindingId, data,
@@ -246,7 +248,10 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
                 for (const line of data.toString().split('\n')) {
                   if (!line) continue
                   const frame = JSON.parse(line)
-                  if (['session.resume', 'session.create', 'session.activate'].includes(frame.method) && frame.id != null) relay.pending.set(frame.id, frame.params?.session_id)
+                  if (['session.resume', 'session.create', 'session.activate'].includes(frame.method) && frame.id != null) {
+                    relay.pending.set(frame.id, { id: frame.method === 'session.activate' ? undefined : frame.params?.session_id,
+                      profile: frame.params?.profile })
+                  }
                 }
               } catch { /* Hermes owns protocol validation. */ }
               upstream.send(data, { binary: false })
@@ -263,8 +268,11 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
               const frame = JSON.parse(line)
               if (frame.id === '__athena_push_ping') continue
               if (frame.result?.session_id) {
-                const stored = frame.result.stored_session_id || relay.pending.get(frame.id) || frame.result.session_id
-                relay.sessions.set(frame.result.session_id, stored)
+                const pending = relay.pending.get(frame.id)
+                const previous = relay.sessions.get(frame.result.session_id)
+                const id = frame.result.stored_session_id || pending?.id || previous?.id || frame.result.session_id
+                const profile = typeof pending?.profile === 'string' && pending.profile || previous?.profile || url.searchParams.get('profile')
+                relay.sessions.set(frame.result.session_id, { id, profile })
                 if (frame.result.running === true) relay.running.add(frame.result.session_id)
               }
               if (frame.id != null) relay.pending.delete(frame.id)

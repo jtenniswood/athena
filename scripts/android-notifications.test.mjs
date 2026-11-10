@@ -85,7 +85,7 @@ test('Access reload distinguishes an unloaded page from a mounted app and waits 
   let finish
   const context = vm.createContext({ exports: {}, window, document: { getElementById: () => null },
     require: name => name === './android' ? { isAndroidApp: () => true, androidNavigationReady: result => replies.push(result) }
-      : { reloadReadinessAfterSaving: () => new Promise(resolve => { finish = resolve }) }
+      : { reloadReadinessAfterSaving: () => new Promise(resolve => { finish = resolve }), chatSelectionReadiness: () => ({ ready: true }) }
   })
   vm.runInContext(source, context)
   assert.equal(window.dispatchEvent(new Event('athena:prepare-native-navigation', { cancelable: true })), true, 'Access page has no draft guard')
@@ -95,6 +95,10 @@ test('Access reload distinguishes an unloaded page from a mounted app and waits 
   finish({ ready: false, reason: 'Recording in progress' })
   await Promise.resolve(); await Promise.resolve()
   assert.equal(replies[0].ready, false)
+  window.dispatchEvent(new CustomEvent('athena:prepare-native-navigation', { cancelable: true,
+    detail: { chatSelection: true, requestId: 'chat-tap' } }))
+  assert.equal(replies[1].ready, true)
+  assert.equal(replies[1].requestId, 'chat-tap')
   stop()
   assert.equal(window.dispatchEvent(new Event('athena:prepare-native-navigation', { cancelable: true })), true)
 })
@@ -164,7 +168,7 @@ test('Android alerts on new unread activity and skips existing, manual and visib
   const prefs = atom({ enabled: true, kinds: { turnDone: true } }), muted = atom(false)
   const shown = []
   let visible = 'visible'
-  const row = (id, count, unread = true) => ({ id, title: `Chat ${id}`, message_count: count, unread, last_active: 1 })
+  const row = (id, count, unread = true) => ({ id, profile: 'research', title: `Chat ${id}`, message_count: count, unread, last_active: 1 })
   const context = vm.createContext({ exports: {}, queueMicrotask, document: { visibilityState: 'visible', hasFocus: () => true },
     require: name => ({
       '@/store/session': { $sessions: sessions, $cronSessions: cron, $messagingSessions: messaging, $unreadFinishedSessionIds: finished,
@@ -183,6 +187,7 @@ test('Android alerts on new unread activity and skips existing, manual and visib
   await Promise.resolve()
   assert.deepEqual(shown.map(item => item.focusSessionId), ['old'])
   assert.equal(shown[0].chatTitle, 'Chat old')
+  assert.equal(shown[0].focusProfile, 'research')
   finished.set(['manual'])
   muted.set(true)
   await Promise.resolve()

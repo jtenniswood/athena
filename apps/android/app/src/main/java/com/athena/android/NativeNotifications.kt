@@ -36,7 +36,7 @@ class NativeNotifications(private val context: Context) {
         val receipts = prefs.getStringSet("pushReceipts", emptySet()) ?: emptySet()
         if (event.isNotEmpty() && event in receipts) return@synchronized true
         val tag = payload.optString("tag").take(256).ifBlank { "athena" }
-        val target = ServerAddress.conversationUrl(origin, payload.optString("focusSessionId"))
+        val target = ServerAddress.conversationUrl(origin, payload.optString("focusSessionId"), payload.optString("focusProfile"))
         val intent = Intent(context, MainActivity::class.java)
             .setAction("com.athena.android.OPEN_CONVERSATION")
             .setData(android.net.Uri.parse(target))
