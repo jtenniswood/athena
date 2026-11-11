@@ -791,7 +791,17 @@ class MainActivity : AppCompatActivity() {
         if (nativeSettings.navigateBack()) return
         if (legacyUi.back()) return
         if (editingServer) { openServer(null); return }
-        if (web?.canGoBack() == true) web?.goBack() else moveTaskToBack(true)
+        val view = web
+        val url = view?.url
+        if (view != null && documentReady && ServerAddress.belongsTo(url, origin)) {
+            view.evaluateJavascript("window.dispatchEvent(new Event('athena:native-back', {cancelable:true}))") { unhandled ->
+                if (unhandled != "false" && web === view && view.url == url) backInWebView(view)
+            }
+        } else backInWebView(view)
+    }
+
+    private fun backInWebView(view: WebView?) {
+        if (view?.canGoBack() == true) view.goBack() else moveTaskToBack(true)
     }
     override fun onDestroy() { shareWorker.shutdown(); connectionTestDialog?.dismiss(); appUpdates.close(); settingsFilesReply?.invoke(org.json.JSONArray()); settingsFilesReply = null; legacyUi.dismiss(); nativeSettings.dismiss(); fileReply?.onReceiveValue(null); microphoneRequest?.deny(); authentication.close(); web?.destroy(); super.onDestroy() }
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
