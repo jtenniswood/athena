@@ -17,6 +17,11 @@ export function useMobileChatHistory({ mobile, drawerOpen, covered, showHistory,
   const previous = useRef({ location: null as typeof location | null, drawerOpen })
   const opening = useRef(false)
   const chatEntry = location.state?.[CHAT_ENTRY] === true
+  const notificationRoute = new URLSearchParams(location.search).get('androidNotification') === '1'
+  const backToHistory = () => {
+    if (chatEntry) void navigate(-1)
+    else showHistory()
+  }
 
   useEffect(() => {
     if (!mobile || covered) return
@@ -25,11 +30,22 @@ export function useMobileChatHistory({ mobile, drawerOpen, covered, showHistory,
   }, [mobile, covered, showConversation])
 
   useEffect(() => {
+    if (!mobile || covered || drawerOpen || !notificationRoute) return
+    // Android's Back can skip history entries created before the first touch.
+    const onBack = (event: Event) => {
+      event.preventDefault()
+      backToHistory()
+    }
+    window.addEventListener('athena:native-back', onBack)
+    return () => window.removeEventListener('athena:native-back', onBack)
+  }, [mobile, covered, drawerOpen, notificationRoute, backToHistory])
+
+  useEffect(() => {
     const before = previous.current
     previous.current = { location, drawerOpen }
     if (!mobile || covered) { opening.current = false; return }
     const routeChanged = before.location?.pathname !== location.pathname || before.location?.search !== location.search
-    if (routeChanged && new URLSearchParams(location.search).get('androidNotification') === '1') {
+    if (routeChanged && notificationRoute) {
       opening.current = false
       showConversation()
       return
@@ -56,10 +72,7 @@ export function useMobileChatHistory({ mobile, drawerOpen, covered, showHistory,
       })
       return () => cancelAnimationFrame(frame)
     }
-  }, [mobile, drawerOpen, covered, location, navigationType, chatEntry, navigate, showHistory, showConversation])
+  }, [mobile, drawerOpen, covered, location, navigationType, chatEntry, notificationRoute, navigate, showHistory, showConversation])
 
-  return () => {
-    if (chatEntry) void navigate(-1)
-    else showHistory()
-  }
+  return backToHistory
 }
