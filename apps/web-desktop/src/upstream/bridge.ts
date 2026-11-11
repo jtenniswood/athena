@@ -73,6 +73,8 @@ export function createWebBridge(): Window['hermesDesktop'] {
     ...mountedPluginFiles(() => native),
     glassSupported: false,
     translucencySupported: false,
+    // The remote gateway does not control the browser's GPU.
+    getRemoteDisplayReason: async () => null,
     zoom: createWebZoomBridge(),
     claimAmbientCue: claimBrowserAmbientCue,
     setActiveWork,
