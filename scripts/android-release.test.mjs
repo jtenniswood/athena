@@ -15,7 +15,12 @@ test('Android releases require a matching version tag already reviewed on main',
 })
 
 test('release capabilities reject injected sensitive permissions, old targets and debuggable APKs', () => {
-  const badging = "targetSdkVersion:'36'\nuses-permission: name='android.permission.INTERNET'\nuses-permission: name='android.permission.RECORD_AUDIO'"
+  const badging = [
+    "targetSdkVersion:'36'",
+    "uses-permission: name='android.permission.INTERNET'",
+    "uses-permission: name='android.permission.RECORD_AUDIO'",
+    "uses-permission: name='android.permission.RECEIVE_BOOT_COMPLETED'"
+  ].join('\n')
   assert.equal(verifyApkCapabilities(badging).targetSdk, 36)
   for (const name of ['android.permission.READ_SMS', 'android.permission.BIND_ACCESSIBILITY_SERVICE', 'android.permission.QUERY_ALL_PACKAGES', 'unexpected.library.permission']) {
     assert.throws(() => verifyApkCapabilities(badging + `\nuses-permission: name='${name}'`), /unexpected APK permissions/)

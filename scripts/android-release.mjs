@@ -36,6 +36,8 @@ export function verifyApkCapabilities(badging) {
     'android.permission.INTERNET', 'android.permission.REQUEST_INSTALL_PACKAGES',
     'android.permission.POST_NOTIFICATIONS', 'android.permission.RECORD_AUDIO',
     'android.permission.MODIFY_AUDIO_SETTINGS', 'android.permission.ACCESS_NETWORK_STATE',
+    // Keep the scheduled updater job across device reboots.
+    'android.permission.RECEIVE_BOOT_COMPLETED',
     'android.permission.WAKE_LOCK', 'com.google.android.c2dm.permission.RECEIVE',
     'com.athena.android.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'
   ])
