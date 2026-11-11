@@ -21,17 +21,34 @@ import java.util.concurrent.Executors
 class AppUpdates(private val activity: AppCompatActivity, private val prepareInstall: (() -> Unit) -> Unit) {
     companion object {
         const val REPOSITORY = "https://github.com/jtenniswood/athena/releases/download/"
+        private const val GITHUB_API = "https://api.github.com/repos/jtenniswood/athena"
+        private val revisionPattern = Regex("[a-f0-9]{40}")
         fun assetUrl(value: String): Boolean = value.startsWith(REPOSITORY) &&
             Uri.parse(value).let { it.scheme == "https" && it.host == "github.com" && it.userInfo == null && it.fragment == null && it.query == null && !it.path.orEmpty().contains("..") }
-        fun candidate(releases: JSONArray, channel: String): JSONObject? = (0 until releases.length())
+        fun stableRelease(releases: JSONArray): JSONObject? = (0 until releases.length())
             .map { releases.getJSONObject(it) }.firstOrNull {
-                !it.optBoolean("draft") && if (channel == "main") it.optString("tag_name").startsWith("android-main-")
-                else !it.optBoolean("prerelease") && Regex("android-v[0-9]+\\.[0-9]+\\.[0-9]+").matches(it.optString("tag_name"))
+                !it.optBoolean("draft") && !it.optBoolean("prerelease") &&
+                    Regex("android-v[0-9]+\\.[0-9]+\\.[0-9]+").matches(it.optString("tag_name"))
             }
+        // The public release list does not reliably return latest-main builds in order.
+        fun latestMainRelease(runs: JSONArray, releaseForTag: (String) -> JSONObject?): JSONObject? =
+            (0 until runs.length()).map { runs.getJSONObject(it) }
+                .sortedByDescending { it.getLong("run_number") }
+                .asSequence()
+                .map { it.optString("head_sha") }
+                .filter(revisionPattern::matches)
+                .distinct()
+                .mapNotNull { revision ->
+                    val tag = "android-main-$revision"
+                    releaseForTag(tag)?.takeIf {
+                        it.optString("tag_name") == tag && it.optBoolean("prerelease") && !it.optBoolean("draft")
+                    }
+                }
+                .firstOrNull()
         fun validateMetadata(info: JSONObject, installedCode: Long) {
             require(info.getInt("schemaVersion") == 1 && info.getString("packageName") == "com.athena.android" && info.getBoolean("firebaseConfigured")) { "Invalid update metadata" }
             require(info.getLong("versionCode") > installedCode) { "This app is already up to date" }
-            require(Regex("[a-f0-9]{40}").matches(info.getString("revision")) && Regex("[a-f0-9]{64}").matches(info.getString("sha256"))) { "Invalid update identity" }
+            require(revisionPattern.matches(info.getString("revision")) && Regex("[a-f0-9]{64}").matches(info.getString("sha256"))) { "Invalid update identity" }
             require(info.getInt("minimumServerProtocol") <= 1 && info.getInt("bridgeProtocol") == 1) { "This update requires a newer server protocol" }
         }
         fun validateApk(info: JSONObject, packageName: String, version: String?, code: Long,
@@ -69,15 +86,7 @@ class AppUpdates(private val activity: AppCompatActivity, private val prepareIns
         if (manual) message("Checking for updates…")
         worker.execute {
             try {
-                var release: JSONObject? = null
-                var page = 1
-                while (release == null) {
-                    require(page <= 50) { "No matching Android release found in the release history" }
-                    val releases = JSONArray(read("https://api.github.com/repos/jtenniswood/athena/releases?per_page=20&page=$page"))
-                    release = candidate(releases, requestedChannel)
-                    if (releases.length() < 20) break
-                    page++
-                }
+                val release = findRelease(requestedChannel)
                 val assets = release?.getJSONArray("assets")
                 fun asset(name: String): String = (0 until (assets?.length() ?: 0)).map { assets!!.getJSONObject(it) }
                     .first { it.getString("name") == name }.getString("browser_download_url").also { require(assetUrl(it)) }
@@ -98,6 +107,22 @@ class AppUpdates(private val activity: AppCompatActivity, private val prepareIns
                 }
             } catch (error: Exception) { ui { busy = false; if (manual) message("Could not check for updates. ${error.message.orEmpty()}") } }
         }
+    }
+
+    private fun findRelease(channel: String): JSONObject? {
+        if (channel == "main") {
+            val runsUrl = "$GITHUB_API/actions/workflows/android-apk.yml/runs?branch=main&status=success&per_page=10"
+            val runs = JSONObject(read(runsUrl)).getJSONArray("workflow_runs")
+            return latestMainRelease(runs) { tag ->
+                readIfAvailable("$GITHUB_API/releases/tags/$tag", allowNotFound = true)?.let { JSONObject(it) }
+            }
+        }
+        for (page in 1..50) {
+            val releases = JSONArray(read("$GITHUB_API/releases?per_page=20&page=$page"))
+            stableRelease(releases)?.let { return it }
+            if (releases.length() < 20) return null
+        }
+        error("No matching Android release found in the release history")
     }
 
     private fun download(info: JSONObject, url: String) {
@@ -183,18 +208,26 @@ class AppUpdates(private val activity: AppCompatActivity, private val prepareIns
         connectTimeout = 15000; readTimeout = 30000
         setRequestProperty("User-Agent", "Athena-Android/${BuildConfig.VERSION_NAME}")
     }
-    private fun read(url: String): String = connection(url).let { connection ->
-        try { connection.inputStream.use { input ->
-            val output = java.io.ByteArrayOutputStream()
-            val buffer = ByteArray(8192)
-            while (true) {
-                val size = input.read(buffer)
-                if (size < 0) break
-                require(output.size() + size <= 1024 * 1024) { "Update response exceeds limit" }
-                output.write(buffer, 0, size)
+    private fun read(url: String): String = checkNotNull(readIfAvailable(url))
+
+    private fun readIfAvailable(url: String, allowNotFound: Boolean = false): String? {
+        val connection = connection(url)
+        try {
+            if (allowNotFound && connection.responseCode == HttpURLConnection.HTTP_NOT_FOUND) return null
+            return connection.inputStream.use { input ->
+                val output = java.io.ByteArrayOutputStream()
+                val buffer = ByteArray(8192)
+                while (true) {
+                    val size = input.read(buffer)
+                    if (size < 0) break
+                    require(output.size() + size <= 1024 * 1024) { "Update response exceeds limit" }
+                    output.write(buffer, 0, size)
+                }
+                output.toString("UTF-8")
             }
-            output.toString("UTF-8")
-        } } finally { connection.disconnect() }
+        } finally {
+            connection.disconnect()
+        }
     }
     fun close() { closed = true; dialog?.dismiss(); worker.shutdownNow() }
 }
