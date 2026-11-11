@@ -96,8 +96,8 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
     if (focusDrawerOnOpen.current) {
       focusDrawerOnOpen.current = false
       const target = drawer.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
-        ?? drawer.current?.querySelector<HTMLElement>('.browser-navigation-actions-trigger')
-      target?.focus()
+        ?? (mobile ? drawer.current : actionsTrigger.current)
+      target?.focus({ preventScroll: true })
     }
     const keydown = (event: KeyboardEvent) => {
       // Portaled controls own focus and Escape until they are dismissed.
@@ -106,12 +106,12 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger }: {
       if (event.key !== 'Tab') return
       const items = Array.from(drawer.current?.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input,select,[tabindex="0"]') || []).filter(el => Boolean(el.getClientRects().length))
       const first = items[0], last = items.at(-1)
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === drawer.current)) { event.preventDefault(); last?.focus() }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
     }
     document.addEventListener('keydown', keydown)
     return () => document.removeEventListener('keydown', keydown)
-  }, [drawerOpen])
+  }, [drawerOpen, mobile])
   useEffect(() => {
     if (searchFocusRequest) drawer.current?.querySelector<HTMLInputElement>('.browser-session-search input')?.focus({ preventScroll: true })
   }, [searchFocusRequest])
