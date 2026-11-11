@@ -9,7 +9,22 @@ import { webNotify } from '../platform/notifications'
 
 /** Capture the engine owner before delivery waits or later selection changes. */
 export function installBrowserNotificationCommands(): () => void {
-  if (isAndroidApp()) return installAndroidUnreadNotifications()
+  if (isAndroidApp()) {
+    const stop = installAndroidUnreadNotifications()
+    const bridge = window.hermesDesktop, previous = bridge.notify
+    const notify: typeof previous = payload => {
+      const owner = payload.focusSessionId ? knownOwnerForSession(payload.sessionId || payload.focusSessionId) : undefined
+      const profile = typeof owner === 'string' ? owner : owner?.targetProfile || owner?.profile
+      const kind = payload.kind
+      const tag = kind === 'approval' || kind === 'input' || kind === 'credits'
+        ? 'android:' + kind + ':' + (payload.focusSessionId || 'system') : payload.tag
+      const delivery = previous({ ...payload, tag, ...(profile ? { focusProfile: profile } : {}) })
+      if (payload.notifyId) clearPluginNotifyHandlers(payload.notifyId)
+      return delivery
+    }
+    bridge.notify = notify
+    return () => { stop(); if (bridge.notify === notify) bridge.notify = previous }
+  }
   const stopCallbacks = installBrowserNotificationCallbacks((notifyId, actionId, dismiss) => {
     try {
       if (!dismiss) {

@@ -172,7 +172,7 @@ class MainActivity : AppCompatActivity() {
                 val next = ServerAddress.normalize(address.text.toString())
                 if (next != origin) {
                     authentication.cancel()
-                    prefs.edit().putBoolean("pushEnabled", false).remove("pushRefreshKey")
+                    prefs.edit().putBoolean("pushEnabled", false).remove("pushRefreshKey").remove("pushPreviewKey")
                         .remove("pushBinding").remove("pushSyncedToken").remove("pushSyncedTokenVersion").remove("pushSyncStatus").apply()
                 }
                 prefs.edit().putString("origin", next).apply()
@@ -467,7 +467,7 @@ class MainActivity : AppCompatActivity() {
                         prefs.edit().putString("deviceId", it).apply()
                     }
                     respond(pushRegistration.registration(task.result, tokenVersion).put("deviceId", deviceId)
-                        .put("refreshKey", pushRegistration.refreshKey()))
+                        .put("refreshKey", pushRegistration.refreshKey()).put("previewKey", pushRegistration.previewKey()))
                 }
             }
             "pushEnabled" -> {
@@ -765,10 +765,27 @@ class MainActivity : AppCompatActivity() {
         if (authentication.receive(intent.data, origin)) { intent.data = null; return }
         setIntent(intent)
         if (ShareInbox.accepts(intent)) receiveShare(intent)
-        else openNotification(intent)
+        else if (!openUpdateNotification()) openNotification(intent)
     }
     override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); if (connectionTest == null) web?.saveState(outState) }
-    override fun onResume() { super.onResume(); foreground = true; appUpdates.check(); pushRegistration.schedule(); nativeSettings.refreshNotifications(); web?.onResume(); CookieManager.getInstance().flush(); if (origin.isNotEmpty()) { authentication.resume(origin) } }
+    private fun openUpdateNotification(): Boolean {
+        if (!foreground || intent.action != NativeNotifications.OPEN_APP_UPDATE) return false
+        intent.action = Intent.ACTION_MAIN
+        appUpdates.check(manual = true)
+        return true
+    }
+
+    override fun onResume() {
+        super.onResume()
+        foreground = true
+        AppUpdateJob.schedule(this)
+        if (!openUpdateNotification()) appUpdates.check()
+        pushRegistration.schedule()
+        nativeSettings.refreshNotifications()
+        web?.onResume()
+        CookieManager.getInstance().flush()
+        if (origin.isNotEmpty()) authentication.resume(origin)
+    }
     override fun onPause() { legacyUi.dismissActions(); foreground = false; visibility.clear(); CookieManager.getInstance().flush(); web?.onPause(); super.onPause() }
     private fun navigateBack() {
         if (nativeSettings.navigateBack()) return
