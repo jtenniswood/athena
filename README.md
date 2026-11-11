@@ -326,9 +326,10 @@ the session through a one-use PKCE exchange lasting five minutes. This moves
 the browser's Athena session into the app so rotating refresh tokens are not
 shared between two clients. Session-token sign-in remains available.
 
-On Android, reply alerts wait for a chat title and show a short preview of the
-assistant’s response. Approval and input alerts open the conversation so you
-can respond there. Open **Athena Settings → Notifications** to choose which
+On Android, Athena sends one response alert per chat. Reply alerts wait for a
+chat title and show a short preview of the assistant’s response. Approval and
+input alerts open the conversation so you can respond there.
+Open **Athena Settings → Notifications** to choose which
 alerts to receive, control background delivery on this device, or send an Android
 push test through Firebase.
 

@@ -84,6 +84,7 @@ export function installAndroidUnreadNotifications(): () => void {
         lastAlertedReply.set(owner, reply.id)
         void showAndroidNotification({
           kind: 'turnDone', chatTitle: title, focusSessionId: row.id, focusProfile: profile,
+          chatAliases: [sessionPinId(latest), ...(latest._lineage_ids ?? [])],
           tag: 'android:' + row.id, body: notificationSnippet(chatMessageText(reply)), silent: $hapticsMuted.get()
         })
       }).catch(() => { alert.reading = false })
