@@ -13,6 +13,7 @@ const bindingId = '22222222-2222-4222-8222-222222222222'
 async function fixture(t, options = {}) {
   const sent = [], attempts = [], waiters = []
   let failures = options.failures || 0, clock = Date.now()
+  const title = options.title ?? 'A named chat'
   const directory = options.persist ? await mkdtemp(path.join(tmpdir(), 'athena-push-')) : undefined
   const gateway = createServer()
   const upstream = new WebSocketServer({ server: gateway })
@@ -32,10 +33,17 @@ async function fixture(t, options = {}) {
   await new Promise(resolve => gateway.listen(0, '127.0.0.1', resolve))
   const createRelay = () => createAthenaServices({ directory, now: () => clock, target: `http://127.0.0.1:${gateway.address().port}`,
     sender: { enabled: true, send: async (...args) => { attempts.push(args); if (failures-- > 0) throw new Error("Temporary sender outage"); sent.push(args); waiters.shift()?.() } },
-    fetch: async (_url, { headers }) => options.tokenTicket && (headers['X-Hermes-Session-Token'] || headers['x-hermes-session-token']) === 'private-existing-token'
+    fetch: async (url, { headers }) => {
+      if (new URL(url).pathname.startsWith('/api/sessions/')) {
+        assert.ok(headers.Cookie === 'session=A' || headers['X-Hermes-Session-Token'] === 'private-existing-token')
+        options.onTitleRead?.(new URL(url))
+        return Response.json({ title })
+      }
+      return options.tokenTicket && (headers['X-Hermes-Session-Token'] || headers['x-hermes-session-token']) === 'private-existing-token'
       ? Response.json({ user_id: 'static-token-account', provider: 'test' })
       : headers.cookie === 'session=A' || headers.cookie === 'session=B'
       ? Response.json({ user_id: headers.cookie, provider: 'test' }) : Response.json({}, { status: 401 })
+    }
   })
   let relay = createRelay()
   const server = createServer((req, res) => { void relay.handle(req, res).then(handled => { if (!handled) { res.writeHead(404); res.end() } }) })
@@ -59,9 +67,14 @@ async function fixture(t, options = {}) {
   const mint = async () => (await (await fetch(origin + '/api/athena/gateway/token-ticket?socket=gateway', {
     method: 'POST', headers: { Origin: origin, 'X-Hermes-Session-Token': 'private-existing-token' }
   })).json()).ticket
-  const emit = (seq, status) => peer.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: {
-    type: 'message.complete', session_id: 'runtime-1', seq, payload: { status, text: 'Private chat content must not reach Firebase' }
+  const event = (type, seq, payload) => peer.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: {
+    type, session_id: 'runtime-1', seq, payload
   } }))
+  const emit = (seq, status) => event('message.complete', seq, { status, text: 'Private chat content must not reach Firebase' })
+  const preview = (eventId, changes = {}) => fetch(origin + '/api/athena/android/push/preview', {
+    method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventId, bindingId, previewKey: 'p'.repeat(43), ...changes })
+  })
   const status = async (account = 'A') => (await fetch(origin + '/api/athena/android/push?device=' + deviceId, { headers: { Cookie: `session=${account}` } })).json()
   const rotate = (changes = {}) => fetch(origin + '/api/athena/android/push/token', {
     method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' },
@@ -77,7 +90,7 @@ async function fixture(t, options = {}) {
     relay = createRelay(); relay.attach(server)
     await relay.drain()
   }
-  return { sent, attempts, register, connect, mint, emit, status, rotate, testPush, restart, directory,
+  return { sent, attempts, register, connect, mint, emit, event, preview, status, rotate, testPush, restart, directory,
     advance: milliseconds => { clock += milliseconds }, drain: () => relay.drain(),
     nextPush: () => new Promise(resolve => waiters.push(resolve)) }
 }
@@ -118,6 +131,79 @@ test('response completion reaches Firebase after the Android WebView disconnects
   await final
   assert.equal(sent.length, 2, 'duplicates and interrupted responses produce no additional alerts')
   assert.equal(sent[1][1].kind, 'turnError')
+})
+
+test('Firebase waits for the title and only the registered installation can fetch the preview from Athena', async t => {
+  let lookup
+  const app = await fixture(t, { title: 'New conversation', onTitleRead: url => { lookup = url } })
+  assert.equal((await app.register({ previewKey: 'p'.repeat(43), refreshKey: 'k'.repeat(43) })).status, 200)
+  const client = app.connect()
+  await once(client, 'open')
+  const reply = new Promise(resolve => {
+    client.on('message', raw => { if (JSON.parse(raw).id === 1) resolve() })
+  })
+  client.send(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'session.resume', params: { session_id: 'chat-1', profile: 'research' } }))
+  await reply
+  client.close(); await once(client, 'close')
+  app.emit(8, 'complete')
+  await until(() => lookup)
+  assert.equal(lookup.pathname, '/api/sessions/chat-1')
+  assert.equal(lookup.searchParams.get('profile'), 'research')
+  assert.equal(app.sent.length, 0)
+  const pending = app.nextPush()
+  app.event('session.title', 9, { session_id: 'chat-1', title: 'Generated title' })
+  await pending
+  const data = app.sent[0][1]
+  assert.equal(data.fetchPreview, 'true')
+  assert.doesNotMatch(JSON.stringify(data), /Generated title|Private chat content/)
+  assert.equal((await app.preview(data.eventId, { previewKey: 'k'.repeat(43) })).status, 404)
+  assert.equal((await app.preview(data.eventId, { bindingId: 'another-binding' })).status, 404)
+  assert.deepEqual(await (await app.preview(data.eventId)).json(), {
+    chatTitle: 'Generated title', body: 'Private chat content must not reach Firebase'
+  })
+  await app.register({}, 'A', 'DELETE')
+  assert.equal((await app.preview(data.eventId)).status, 404)
+})
+
+test('background approval, input and actionable system alerts respect their preferences', async t => {
+  const app = await fixture(t)
+  await app.register({ kinds: { input: false } })
+  const client = app.connect(); await once(client, 'open')
+  client.close(); await once(client, 'close')
+  let pending = app.nextPush()
+  app.event('clarify.request', 1, { prompt_id: 'question' })
+  app.event('approval.request', 2, { prompt_id: 'approval', command: 'Private command' })
+  await pending
+  assert.deepEqual(app.sent.map(([, data]) => data.kind), ['approval'])
+  assert.doesNotMatch(JSON.stringify(app.sent), /Private command/)
+  await app.register()
+  pending = app.nextPush()
+  app.event('clarify.request', 3, { prompt_id: 'question' })
+  await pending
+  pending = app.nextPush()
+  app.event('notification.show', 4, { level: 'warn', text: 'System detail' })
+  await pending
+  assert.equal(app.sent[1][1].kind, 'input')
+  assert.equal(app.sent[2][1].title, 'Athena · System alert')
+  assert.equal(app.sent[2][1].focusSessionId, undefined)
+})
+
+test('a settled approval is removed from the Firebase retry queue', async t => {
+  const app = await fixture(t, { failures: 1 })
+  await app.register()
+  const client = app.connect()
+  await once(client, 'open')
+  app.event('approval.request', 1, { prompt_id: 'open-approval' })
+  await until(() => app.attempts.length === 1)
+  await app.drain()
+  assert.equal((await app.status()).pending, 1)
+  app.event('approval.settled', 2, { prompt_id: 'open-approval' })
+  await until(async () => (await app.status()).pending === 0)
+  app.advance(2000)
+  await app.drain()
+  assert.equal(app.attempts.length, 1)
+  client.close()
+  await once(client, 'close')
 })
 
 test('Android retained sockets preserve native ticket protocols without reflecting the credential', async t => {

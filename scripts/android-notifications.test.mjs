@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import vm from 'node:vm'
 import ts from 'typescript'
 import { atom } from 'nanostores'
+import * as content from '../apps/web-desktop/server/android-notification-content.mjs'
 
 const compile = file => ts.transpileModule(readFileSync(new URL(file, import.meta.url), 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS }
@@ -45,7 +46,9 @@ test('native permission requests and alerts work without the web Notifications A
   assert.equal(api.androidNotificationPermission(), 'granted')
   const payload = { kind: 'turnDone', focusSessionId: 'chat/id', tag: 'turn-1' }
   assert.equal(await api.androidNotify(payload), true)
-  assert.deepEqual(calls.at(-1).payload, payload)
+  assert.equal(calls.at(-1).method, 'requestPermission')
+  assert.equal(await api.showAndroidNotification({ ...payload, chatTitle: 'A named chat' }), true)
+  assert.deepEqual(calls.at(-1).payload, { ...payload, chatTitle: 'A named chat' })
   assert.equal(timers.size, 0)
   assert.deepEqual(events, ['athena:notification-permission'])
 })
@@ -164,9 +167,10 @@ test('a local test still reaches Android when Firebase handles chat completions'
 
 test('Android alerts on new unread activity and skips existing, manual and visible unread state', async () => {
   const source = compile('../apps/web-desktop/src/upstream/android-unread-notifications.ts')
-  const sessions = atom([]), cron = atom([]), messaging = atom([]), finished = atom([])
+  const sessions = atom([]), cron = atom([]), messaging = atom([]), finished = atom([]), working = atom([])
   const prefs = atom({ enabled: true, kinds: { turnDone: true } }), muted = atom(false)
-  const shown = []
+  const shown = [], requested = []
+  const settle = () => new Promise(resolve => setImmediate(resolve))
   let visible = 'visible'
   const row = (id, count, unread = true) => ({
     id, profile: 'research', title: `Chat ${id}`, message_count: count, unread, last_active: 1,
@@ -176,40 +180,55 @@ test('Android alerts on new unread activity and skips existing, manual and visib
     require: name => ({
       '@/store/session': { $sessions: sessions, $cronSessions: cron, $messagingSessions: messaging, $unreadFinishedSessionIds: finished,
         sessionPinId: row => row._lineage_root_id ?? row.id, sessionMatchesStoredId: (row, id) => row.id === id },
+      '@/store/session-states': { $workingSessionIds: working },
+      '@/hermes': { getSessionMessages: async (id, scope) => {
+        requested.push([id, scope.profile])
+        return { messages: [{ role: 'user', text: 'Do not show the question.' }, { id: 'reply-' + id, role: 'assistant', text: 'The generated reply.' }],
+          pagination: { order: 'latest' } }
+      } },
+      '@/lib/chat-messages': { toChatMessages: messages => messages, chatMessageText: message => message.text },
+      '../../server/android-notification-content.mjs': content,
       '@/store/native-notifications': { $nativeNotifyPrefs: prefs },
       '@/store/haptics': { $hapticsMuted: muted },
+      '../platform/connection': { WEB_CONNECTION_ID: 'web' },
       '../platform/android': { androidVisibleSession: () => visible, showAndroidNotification: notification => shown.push(notification) }
     })[name]
   })
   vm.runInContext(source, context)
   const stop = context.exports.installAndroidUnreadNotifications()
   sessions.set([row('old', 3), row('manual', 1, false), row('visible', 1)])
-  await Promise.resolve()
+  await settle()
   assert.equal(shown.length, 0)
+  sessions.set([{ ...row('old', 4), title: 'New chat' }, row('manual', 1), row('visible', 2)])
+  await settle()
+  assert.equal(shown.length, 0, 'the same unread activity waits for the title')
+  assert.deepEqual(requested, [])
   sessions.set([row('old', 4), row('manual', 1), row('visible', 2)])
-  await Promise.resolve()
+  await settle()
   assert.deepEqual(shown.map(item => item.focusSessionId), ['old'])
+  assert.deepEqual(requested, [['old', 'research']])
+  assert.equal(shown[0].body, 'The generated reply.')
   assert.equal(shown[0].chatTitle, 'Chat old')
   assert.equal(shown[0].focusProfile, 'research')
   assert.deepEqual(Array.from(shown[0].chatAliases), ['root', 'previous-tip'])
   finished.set(['manual'])
   muted.set(true)
-  await Promise.resolve()
+  await settle()
   assert.deepEqual(shown.map(item => item.focusSessionId), ['old', 'manual'])
   assert.equal(shown[1].silent, true)
   sessions.set([row('visible', 2)])
-  await Promise.resolve()
+  await settle()
   sessions.set([row('old', 4), row('manual', 1), row('visible', 2)])
-  await Promise.resolve()
+  await settle()
   assert.equal(shown.length, 2, 'returning to a profile does not replay the same alert')
   prefs.set({ enabled: true, kinds: { turnDone: false } })
   visible = null
   sessions.set([row('old', 5), row('manual', 2), row('visible', 3)])
-  await Promise.resolve()
+  await settle()
   assert.equal(shown.length, 2)
   stop()
   prefs.set({ enabled: true, kinds: { turnDone: true } })
   finished.set(['visible'])
-  await Promise.resolve()
+  await settle()
   assert.equal(shown.length, 2, 'watcher stops with the renderer')
 })
