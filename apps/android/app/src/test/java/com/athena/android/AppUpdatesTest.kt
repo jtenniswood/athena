@@ -17,7 +17,7 @@ class AppUpdatesTest {
         .put("firebaseConfigured", true).put("versionCode", 1002).put("revision", "a".repeat(40))
         .put("sha256", "b".repeat(64)).put("minimumServerProtocol", 1).put("bridgeProtocol", 1)
 
-    @Test fun channelsExcludeDockerReleasesDraftsAndOtherPrereleases() {
+    @Test fun stableChannelExcludesDockerReleasesDraftsAndPrereleases() {
         val releases = JSONArray("""[
             {"tag_name":"v99.0.0"},
             {"tag_name":"android-v9.0.0","draft":true},
@@ -25,9 +25,31 @@ class AppUpdatesTest {
             {"tag_name":"android-main-abc","prerelease":true},
             {"tag_name":"android-v0.3.0"}
         ]""")
-        assertEquals("android-v0.3.0", AppUpdates.candidate(releases, "stable")!!.getString("tag_name"))
-        assertEquals("android-main-abc", AppUpdates.candidate(releases, "main")!!.getString("tag_name"))
-        assertNull(AppUpdates.candidate(JSONArray("[]"), "stable"))
+        assertEquals("android-v0.3.0", AppUpdates.stableRelease(releases)!!.getString("tag_name"))
+        assertNull(AppUpdates.stableRelease(JSONArray("[]")))
+    }
+
+    @Test fun latestMainUsesNewestPublishedWorkflowRevision() {
+        val older = "a".repeat(40)
+        val published = "b".repeat(40)
+        val missing = "c".repeat(40)
+        val runs = JSONArray("""
+            [
+                {"run_number": 200, "head_sha": "$older"},
+                {"run_number": 204, "head_sha": "$missing"},
+                {"run_number": 202, "head_sha": "$published"},
+                {"run_number": 203, "head_sha": "$missing"}
+            ]
+        """)
+        val requested = mutableListOf<String>()
+        val release = AppUpdates.latestMainRelease(runs) { tag ->
+            requested.add(tag)
+            if (tag == "android-main-$missing") null
+            else JSONObject().put("tag_name", tag).put("prerelease", true)
+        }
+
+        assertEquals("android-main-$published", release!!.getString("tag_name"))
+        assertEquals(listOf("android-main-$missing", "android-main-$published"), requested)
     }
 
     @Test fun metadataRejectsDowngradesWrongIdentityAndIncompatibleProtocols() {
