@@ -967,6 +967,27 @@ test('phone startup session-route restoration keeps the chat list visible until 
   } finally { await context.close() }
 })
 
+test.extend({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } })('phone Back leaves Settings unhighlighted when only Sessions is visible', async ({ page }) => {
+  await page.route('**/api/athena/preferences', route => route.abort())
+  await page.addInitScript(() => {
+    localStorage.setItem('hermes-web.browser.navigation-tabs', '["sessions"]')
+    localStorage.setItem('hermes-web.browser.navigation', 'sessions')
+  })
+  await page.goto(`${origin}/#/`)
+  const navigation = page.getByRole('dialog', { name: 'Navigation', exact: true })
+  const session = navigation.getByRole('button', { name: 'Plan a calmer working week', exact: true }).first()
+  const settings = navigation.getByRole('button', { name: 'Settings', exact: true })
+  await expect(settings).toBeVisible({ timeout: 30000 })
+  await expect(navigation.getByRole('tablist')).toHaveCount(0)
+
+  await session.tap()
+  await page.getByRole('button', { name: 'Back to chat history', exact: true }).tap()
+  await expect(navigation).toBeFocused()
+  await expect(settings).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await page.keyboard.press('Shift+Tab')
+  await expect.poll(() => navigation.evaluate(element => element !== document.activeElement && element.contains(document.activeElement))).toBe(true)
+})
+
 for (const startPath of ['', 'preview-week']) {
   test(`phone reselecting the highlighted session returns to the chat and preserves its draft from /${startPath}`, async ({ browser }) => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
