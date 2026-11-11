@@ -1,15 +1,47 @@
 import { createAndroidPushStore } from './android-push-store.mjs'
 import { createHash, randomUUID } from 'node:crypto'
+import { setTimeout as delay } from 'node:timers/promises'
+import { notificationChatTitle, notificationSnippet } from './android-notification-content.mjs'
 import { WebSocket, WebSocketServer } from 'ws'
 import { accountIdentity, probeIdentity, requestOrigin } from './identity.mjs'
 
 const root = '/api/athena/android/'
 const retentionMs = 24 * 60 * 60 * 1000
+const titleRetryMs = [0, 1000, 2000, 4000, 8000, 15000, 30000, 60000]
+const creditNotices = new Set(['credits.depleted', 'credits.window_limit', 'credits.restored'])
+const inputRequests = new Set(['clarify', 'sudo', 'secret', 'vault.code', 'vault.unlock', 'vault.save_login', 'display.install.sudo'])
+
+function describeAlert(type, payload) {
+  if (type === 'message.complete') {
+    if (payload.status === 'interrupted' || payload.status === 'cancelled') return
+    if (payload.status !== 'error') return {
+      kind: 'turnDone', title: 'Athena · Response ready', body: notificationSnippet(payload.text) || 'Your response is ready.'
+    }
+  }
+  if (type === 'message.complete' || type === 'error') return {
+    kind: 'turnError', title: 'Athena · Response failed',
+    body: notificationSnippet(payload.message || payload.error || payload.text) || 'Open Athena to see what happened.'
+  }
+  if (type === 'approval.request' || type === 'approval') return {
+    kind: 'approval', title: 'Athena · Approval needed', body: 'Open the conversation to review the request.'
+  }
+  if (type === 'clarify.request' || inputRequests.has(type)) return {
+    kind: 'input', title: 'Athena · Input needed', body: 'Open Athena to respond to the request.'
+  }
+  if (type === 'notification.show') {
+    const credits = creditNotices.has(payload.key)
+    if (credits || ['warn', 'error'].includes(payload.level)) return {
+      kind: credits ? 'credits' : 'turnError', title: 'Athena · System alert',
+      body: notificationSnippet(payload.text) || 'Open Athena to view the alert.'
+    }
+  }
+}
 
 /** Retain the authenticated gateway transport while Android suspends its WebView.
  * This forwards Hermes's own RPC protocol and stores no conversation history. */
 export function createAndroidPush({ target, identityUrl = target, sender, fetch: request = globalThis.fetch, now = Date.now, directory, consumeTokenTicket }) {
   const store = createAndroidPushStore(directory), relays = new Set()
+  const titleLookups = new Set(), shutdown = new AbortController()
   let closed = false, pumping
   const removeDevice = (state, key) => {
     state.devices.delete(key)
@@ -21,7 +53,11 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
       for (const [id, event] of store.events) {
         if (closed) break
         if (event.expires <= now()) {
-          if (event.status === 'pending') store.update(state => Object.assign(state.events.get(id), { status: 'expired', updated: now() }))
+          if (event.status === 'pending') store.update(state => {
+            const current = state.events.get(id)
+            Object.assign(current, { status: 'expired', updated: now() })
+            delete current.preview
+          })
           continue
         }
         if (event.status !== 'pending' || event.nextAttempt > now()) continue
@@ -38,7 +74,9 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
         catch { /* Keep the durable event for the next bounded retry. Never log device credentials. */ }
         store.update(state => {
           const current = state.events.get(id)
-          if (current) Object.assign(current, { status: delivered ? 'accepted' : attempts >= 12 ? 'failed' : 'pending', updated: now() })
+          if (!current) return
+          Object.assign(current, { status: delivered ? 'accepted' : attempts >= 12 ? 'failed' : 'pending', updated: now() })
+          if (current.status === 'failed') delete current.preview
         })
       }
     })().finally(() => { pumping = undefined })
@@ -84,7 +122,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
 
   async function handle(req, res) {
     const url = new URL(req.url, 'http://local.invalid')
-    if (![root + 'push', root + 'push/token', root + 'push/test'].includes(url.pathname)) return false
+    if (![root + 'push', root + 'push/token', root + 'push/test', root + 'push/preview'].includes(url.pathname)) return false
     const json = (status, data) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)) }
     if (!sender.enabled) return json(503, { error: 'Firebase push is not configured' }), true
     if (req.method !== 'GET' && (!['POST', 'DELETE'].includes(req.method) || req.headers.origin !== requestOrigin(req) || !req.headers['content-type']?.startsWith('application/json'))) return json(403, { error: 'Same-origin JSON request required' }), true
@@ -97,6 +135,24 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
       }
       const tokenVersion = body.tokenVersion ?? 0
       if (!Number.isSafeInteger(tokenVersion) || tokenVersion < 0) throw new Error('Invalid token version')
+      if (url.pathname === root + 'push/preview') {
+        if (req.method !== 'POST' || typeof body.previewKey !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(body.previewKey) ||
+            typeof body.eventId !== 'string' || !/^[a-f0-9]{64}$/.test(body.eventId)) {
+          json(400, { error: 'Invalid notification preview request' })
+          return true
+        }
+        const event = store.events.get(body.eventId)
+        const device = event && store.devices.get(event.key)
+        const previewHash = createHash('sha256').update(body.previewKey).digest('hex')
+        if (!event?.preview || event.expires <= now() || !device?.enabled || !device.kinds[event.data.kind] ||
+            event.bindingId !== device.bindingId || device.bindingId !== body.bindingId || device.origin !== requestOrigin(req) ||
+            device.previewHash !== previewHash || event.previewHash !== previewHash) {
+          json(404, { error: 'Notification preview unavailable' })
+          return true
+        }
+        json(200, event.preview)
+        return true
+      }
       if (url.pathname === root + 'push/token') {
         if (req.method !== 'POST' || !/^[A-Za-z0-9_-]{43}$/.test(body.refreshKey) ||
             typeof body.token !== 'string' || body.token.length < 20 || body.token.length > 4096) throw new Error('Invalid refresh')
@@ -162,7 +218,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
           store.update(state => removeDevice(state, other))
           for (const relay of relays) if (relay.key === other) relay.close()
         }
-        const kinds = Object.fromEntries(['turnDone', 'turnError', 'approval', 'input'].map(kind => [kind, body.kinds?.[kind] !== false]))
+        const kinds = Object.fromEntries(['turnDone', 'turnError', 'approval', 'input', 'credits'].map(kind => [kind, body.kinds?.[kind] !== false]))
         store.update(state => {
           const old = state.devices.get(key)
           if (old && (old.bindingId !== body.bindingId || body.enabled !== true)) removeDevice(state, key)
@@ -173,6 +229,8 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
             refreshHash: body.tokenVersion != null && typeof body.refreshKey === 'string' && /^[A-Za-z0-9_-]{43}$/.test(body.refreshKey)
               ? createHash('sha256').update(body.refreshKey).digest('hex') : null,
             lastTest: old?.lastTest,
+            previewHash: typeof body.previewKey === 'string' && /^[A-Za-z0-9_-]{43}$/.test(body.previewKey)
+              ? createHash('sha256').update(body.previewKey).digest('hex') : null,
             origin: requestOrigin(req), activeUntil: body.foreground === true ? now() + 45000 : 0, updated: now() })
         })
       }
@@ -219,24 +277,91 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
         const relay = { key, upstream, client: null, detached: now(), sessions: new Map(), pending: new Map(), running: new Set(),
           close() { upstream.terminate(); relay.client?.terminate(); relays.delete(relay) } }
         relays.add(relay)
+        const profileOnSocket = url.searchParams.get('profile')
+        const authHeaders = {
+          Cookie: req.headers.cookie || '',
+          'X-Hermes-Session-Token': url.searchParams.get('token') || req.headers['x-hermes-session-token'] || '',
+          'X-Forwarded-Host': req.headers['x-forwarded-host'] || req.headers.host,
+          'X-Forwarded-Proto': req.headers['x-forwarded-proto'] || (req.socket.encrypted ? 'https' : 'http')
+        }
+        async function readTitle(runtimeId, sessionId, profile, eligible) {
+          const lookup = new URL(target + '/api/sessions/' + encodeURIComponent(sessionId))
+          if (profile) lookup.searchParams.set('profile', profile)
+          for (const wait of titleRetryMs) {
+            if (wait) await delay(wait, undefined, { ref: false, signal: shutdown.signal })
+            if (!eligible()) return ''
+            const known = relay.sessions.get(runtimeId)
+            if (known?.id === sessionId && known.title) return known.title
+            try {
+              const response = await request(lookup.href, { headers: authHeaders, redirect: 'manual',
+                signal: AbortSignal.any([shutdown.signal, AbortSignal.timeout(4000)]) })
+              if (response.ok) {
+                const title = notificationChatTitle((await response.json()).title)
+                if (title) return title
+              }
+            } catch { /* A title can be persisted after the completion frame. */ }
+          }
+          return ''
+        }
         const notify = async event => {
           const current = store.devices.get(key)
-          if (!current?.enabled || event.type !== 'message.complete' || ['interrupted', 'cancelled'].includes(event.payload?.status)) return
+          if (!current?.enabled) return
+          const payload = event.payload || {}
           const session = relay.sessions.get(event.session_id)
-          const sessionId = session?.id || event.session_id
-          if (typeof sessionId !== 'string' || !sessionId) return
-          const kind = event.payload?.status === 'error' ? 'turnError' : 'turnDone'
-          if (!kind || !current.kinds[kind]) return
-          const eventKey = `${sessionId}:${event.replay_epoch || ''}:${event.seq ?? event.payload?.persisted_turn?.submission_id ?? Math.floor(now() / 1000)}`
-          const id = createHash('sha256').update(JSON.stringify([key, current.bindingId, eventKey])).digest('hex')
-          if (store.events.has(id)) return
-          const data = { eventId: id, expiresAt: String(now() + 3600000), kind, origin: current.origin, bindingId: current.bindingId, focusSessionId: sessionId, tag: `android:${sessionId}`,
-            ...(session?.profile ? { focusProfile: session.profile } : {}),
-            title: kind === 'turnDone' ? 'Athena · Response ready' : kind === 'turnError' ? 'Athena · Response failed' : 'Athena · Attention needed',
-            body: kind === 'turnDone' ? 'Your response is ready.' : 'Open Athena to view this conversation.' }
-          store.update(state => state.events.set(id, { key, bindingId: current.bindingId, data,
-            status: 'pending', attempts: 0, created: now(), updated: now(), nextAttempt: now(), expires: now() + 3600000 }))
+          const system = event.type === 'notification.show'
+          const storedId = session?.id || event.session_id
+          const sessionId = !system && typeof storedId === 'string' ? storedId : ''
+          const profile = session?.profile || profileOnSocket
+          const promptId = payload.prompt_id || payload.request_id
+          if ((event.type === 'approval.settled' || event.type === 'clarify.settled') && promptId) {
+            const pending = [...store.events].filter(([, queued]) => queued.key === key &&
+              queued.status === 'pending' && queued.promptId === promptId && queued.data.focusSessionId === sessionId &&
+              (queued.data.focusProfile || null) === (profile || null))
+            if (pending.length) store.update(state => {
+              for (const [id] of pending) state.events.delete(id)
+            })
+            return
+          }
+          const alert = describeAlert(event.type, payload)
+          if (!alert || !current.kinds[alert.kind] || (alert.kind === 'turnDone' && !sessionId)) return
+          const eventKey = promptId ?? payload.persisted_turn?.submission_id ?? event.seq ?? event.rpcId ?? Math.floor(now() / 1000)
+          const id = createHash('sha256').update(JSON.stringify([
+            key, current.bindingId, profile, sessionId, event.type, event.replay_epoch || '', eventKey
+          ])).digest('hex')
+          if (store.events.has(id) || titleLookups.has(id)) return
+          const eligible = () => {
+            const registered = store.devices.get(key)
+            return !closed && registered?.bindingId === current.bindingId && registered.enabled && registered.kinds[alert.kind]
+          }
+          let chatTitle
+          if (alert.kind === 'turnDone') {
+            titleLookups.add(id)
+            try { chatTitle = await readTitle(event.session_id, sessionId, profile, eligible) }
+            finally { titleLookups.delete(id) }
+            if (!chatTitle) return
+          }
+          if (!eligible() || store.events.has(id)) return
+          const timestamp = now()
+          const expires = timestamp + (['approval', 'input'].includes(alert.kind) ? 300000 : 3600000)
+          const tag = alert.kind === 'turnDone' ? 'android:' + sessionId
+            : 'android:' + alert.kind + ':' + (sessionId || 'system')
+          const data = { eventId: id, expiresAt: String(expires), origin: current.origin, bindingId: current.bindingId,
+            kind: alert.kind, title: alert.title, tag,
+            body: alert.kind === 'turnDone' ? 'Your response is ready.' : ['approval', 'input'].includes(alert.kind) ? alert.body : 'Open Athena to view the alert.',
+            ...(sessionId ? { focusSessionId: sessionId } : {}),
+            ...(sessionId && profile ? { focusProfile: profile } : {}) }
+          const previewHash = store.devices.get(key)?.previewHash
+          const preview = previewHash && (chatTitle || alert.body !== data.body) ? { chatTitle, body: alert.body } : undefined
+          if (preview) data.fetchPreview = 'true'
+          store.update(state => state.events.set(id, { key, bindingId: current.bindingId, data, preview,
+            previewHash: preview ? previewHash : undefined, promptId,
+            status: 'pending', attempts: 0, created: timestamp, updated: timestamp, nextAttempt: timestamp, expires }))
           deliver()
+        }
+        const handleAlert = event => {
+          void notify(event).catch(() => {
+            if (!closed) console.error('Athena Android push event could not be persisted')
+          })
         }
         upstream.on('open', () => {
           if (socket.destroyed) { upstream.close(); return }
@@ -267,12 +392,13 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
             try {
               const frame = JSON.parse(line)
               if (frame.id === '__athena_push_ping') continue
-              if (frame.result?.session_id) {
+              if (frame.result?.session_id && relay.pending.has(frame.id)) {
                 const pending = relay.pending.get(frame.id)
                 const previous = relay.sessions.get(frame.result.session_id)
                 const id = frame.result.stored_session_id || pending?.id || previous?.id || frame.result.session_id
                 const profile = typeof pending?.profile === 'string' && pending.profile || previous?.profile || url.searchParams.get('profile')
-                relay.sessions.set(frame.result.session_id, { id, profile })
+                const title = notificationChatTitle(frame.result.info?.title || frame.result.title)
+                relay.sessions.set(frame.result.session_id, { id, profile, title: title || previous?.title })
                 if (frame.result.running === true) relay.running.add(frame.result.session_id)
               }
               if (frame.id != null) relay.pending.delete(frame.id)
@@ -280,7 +406,18 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
                 const event = frame.params || {}
                 if (event.type === 'message.start') relay.running.add(event.session_id)
                 if (event.type === 'message.complete') relay.running.delete(event.session_id)
-                void notify(event).catch(() => console.error('Athena Android push event could not be persisted'))
+                if (event.type === 'session.title' || event.type === 'session.updated' || event.type === 'session.info') {
+                  const runtimeId = event.session_id
+                  const title = notificationChatTitle(event.payload?.title)
+                  if (runtimeId && title) {
+                    const session = relay.sessions.get(runtimeId)
+                    relay.sessions.set(runtimeId, { id: session?.id || event.payload?.session_id || runtimeId,
+                      profile: session?.profile || profileOnSocket, title })
+                  }
+                }
+                handleAlert(event)
+              } else if (frame.id != null && typeof frame.method === 'string') {
+                handleAlert({ type: frame.method, session_id: frame.params?.session_id, payload: frame.params, rpcId: frame.id })
               }
             } catch { /* Preserve unknown protocol frames. */ }
             forwarded.push(line)
@@ -295,5 +432,5 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
       } catch { socket.destroy() }
     })
   }
-  return { handle, attach, drain, close() { closed = true; clearInterval(deliveryTimer); clearInterval(timer); for (const relay of relays) relay.close(); sockets.close() } }
+  return { handle, attach, drain, close() { closed = true; shutdown.abort(); clearInterval(deliveryTimer); clearInterval(timer); for (const relay of relays) relay.close(); sockets.close() } }
 }

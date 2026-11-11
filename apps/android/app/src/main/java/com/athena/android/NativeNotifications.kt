@@ -12,11 +12,16 @@ import android.os.Build
 import org.json.JSONObject
 
 class NativeNotifications(private val context: Context) {
-    companion object { private val receiptsLock = Any() }
+    companion object {
+        const val OPEN_APP_UPDATE = "com.athena.android.OPEN_APP_UPDATE"
+        private const val UPDATE_TAG = "athena-app-update"
+        private val receiptsLock = Any()
+    }
     private val manager = context.getSystemService(NotificationManager::class.java)
 
     init {
         manager.createNotificationChannel(NotificationChannel("responses", "Responses and alerts", NotificationManager.IMPORTANCE_DEFAULT))
+        manager.createNotificationChannel(NotificationChannel("app-updates", "App updates", NotificationManager.IMPORTANCE_DEFAULT))
         manager.createNotificationChannel(NotificationChannel("silent", "Silent alerts", NotificationManager.IMPORTANCE_LOW))
     }
 
@@ -26,6 +31,26 @@ class NativeNotifications(private val context: Context) {
         }
         return if (manager.areNotificationsEnabled()) "granted" else "denied"
     }
+
+    fun showUpdate(version: String, code: Long, channel: String): Unit = synchronized(receiptsLock) {
+        val prefs = context.getSharedPreferences("athena", Context.MODE_PRIVATE)
+        val release = "$channel:$code"
+        if (permission() != "granted" || prefs.getString("notifiedAppUpdate", null) == release ||
+            prefs.getString("updateChannel", "stable") != channel ||
+            manager.getNotificationChannel("app-updates")?.importance == NotificationManager.IMPORTANCE_NONE) return@synchronized
+        val intent = Intent(context, MainActivity::class.java).setAction(OPEN_APP_UPDATE)
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        val pending = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val notification = Notification.Builder(context, "app-updates")
+            .setSmallIcon(R.drawable.ic_athena)
+            .setContentTitle("Athena update available")
+            .setContentText("Version $version is ready to install.")
+            .setContentIntent(pending).setAutoCancel(true).build()
+        try { manager.notify(UPDATE_TAG, 0, notification) } catch (_: SecurityException) { return@synchronized }
+        prefs.edit().putString("notifiedAppUpdate", release).apply()
+    }
+
+    fun clearUpdate() = manager.cancel(UPDATE_TAG, 0)
 
     fun show(origin: String, payload: JSONObject): Boolean = synchronized(receiptsLock) {
         if (permission() != "granted") return@synchronized false

@@ -14,10 +14,13 @@ class NativePushRegistration(context: Context, private val open: (URL) -> HttpUR
     private val prefs = context.applicationContext.getSharedPreferences("athena", Context.MODE_PRIVATE)
     companion object { private val executor = Executors.newSingleThreadExecutor() }
 
-    fun refreshKey(): String = synchronized(NativePushRegistration::class.java) {
-        prefs.getString("pushRefreshKey", null) ?: Base64.encodeToString(
+    fun refreshKey(): String = installationKey("pushRefreshKey")
+    fun previewKey(): String = installationKey("pushPreviewKey")
+
+    private fun installationKey(name: String): String = synchronized(NativePushRegistration::class.java) {
+        prefs.getString(name, null) ?: Base64.encodeToString(
             ByteArray(32).also { SecureRandom().nextBytes(it) }, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP
-        ).also { prefs.edit().putString("pushRefreshKey", it).apply() }
+        ).also { prefs.edit().putString(name, it).apply() }
     }
 
     fun version(): Long = prefs.getLong("pushTokenVersion", 0)
@@ -37,6 +40,45 @@ class NativePushRegistration(context: Context, private val open: (URL) -> HttpUR
         if (prefs.getString("pushToken", null) == token && (tokenVersion == null || version() == tokenVersion))
             prefs.edit().putString("pushSyncedToken", token).putLong("pushSyncedTokenVersion", version())
                 .putString("pushSyncStatus", "Token registered").apply()
+    }
+
+    fun preview(origin: String, binding: String, eventId: String): JSONObject? {
+        val key = prefs.getString("pushPreviewKey", null) ?: return null
+        if (!Regex("[a-f0-9]{64}").matches(eventId)) return null
+        var connection: HttpURLConnection? = null
+        return try {
+            require(ServerAddress.normalize(origin) == origin)
+            val body = JSONObject().put("bindingId", binding).put("eventId", eventId).put("previewKey", key)
+            connection = open(URL("$origin/api/athena/android/push/preview")).apply {
+                requestMethod = "POST"
+                instanceFollowRedirects = false
+                connectTimeout = 2000
+                readTimeout = 2000
+                setRequestProperty("Origin", origin)
+                setRequestProperty("Content-Type", "application/json")
+                CookieManager.getInstance().getCookie(origin)?.split(';')?.map { it.trim() }
+                    ?.firstOrNull { it.startsWith("CF_Authorization=") }
+                    ?.let { setRequestProperty("Cookie", it) }
+                doOutput = true
+            }
+            connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            if (connection.responseCode != 200 || connection.contentType?.startsWith("application/json") != true) return null
+            connection.inputStream.bufferedReader().use { reader ->
+                val buffer = CharArray(4096)
+                val response = StringBuilder()
+                while (true) {
+                    val count = reader.read(buffer)
+                    if (count < 0) break
+                    require(response.length + count <= buffer.size)
+                    response.append(buffer, 0, count)
+                }
+                JSONObject(response.toString())
+            }
+        } catch (_: Exception) {
+            null
+        } finally {
+            connection?.disconnect()
+        }
     }
 
     fun schedule() {

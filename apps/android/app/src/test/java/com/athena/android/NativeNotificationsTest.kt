@@ -56,4 +56,21 @@ class NativeNotificationsTest {
         assertEquals(0, shadowOf(manager).allNotifications.size)
     }
 
+    @Test fun updateAlertOpensAppUpdatesAndDoesNotReappearForTheSameBuild() {
+        val notifications = NativeNotifications(app)
+        val manager = app.getSystemService(NotificationManager::class.java)
+        notifications.showUpdate("0.3.0", 1002, "main")
+        assertTrue(shadowOf(manager).allNotifications.isEmpty())
+        notifications.showUpdate("0.3.0", 1002, "stable")
+        val notification = shadowOf(manager).allNotifications.single()
+        assertEquals("app-updates", notification.channelId)
+        assertEquals("Version 0.3.0 is ready to install.", notification.extras.getString(Notification.EXTRA_TEXT))
+        assertEquals(NativeNotifications.OPEN_APP_UPDATE, shadowOf(notification.contentIntent).savedIntent.action)
+        manager.cancelAll()
+        notifications.showUpdate("0.3.0", 1002, "stable")
+        assertTrue(shadowOf(manager).allNotifications.isEmpty())
+        notifications.showUpdate("0.3.1", 1003, "stable")
+        assertEquals(1, shadowOf(manager).allNotifications.size)
+    }
+
 }
