@@ -301,6 +301,7 @@ body > [data-slot='fan-menu'] {
 
 /* Keep the send/stop affordance visible while the composer draft is empty. */
 [data-slot='composer-dock']:not([data-popped-out]) [data-browser-send-action] {
+  padding: 0;
   opacity: 1 !important;
   visibility: visible !important;
 }
@@ -340,6 +341,12 @@ body > [data-slot='fan-menu'] {
       :is([data-browser-composer-action], button:has(> :is(svg, .codicon):only-child)):not([data-browser-model-pill], [data-testid='reasoning-pill'], [data-browser-approval-control]) {
       width: var(--browser-composer-touch-size);
       height: var(--browser-composer-touch-size);
+    }
+
+    /* Inset the visible send/stop circle within the full touch target. */
+    [data-browser-send-action] {
+      padding: calc(.375rem / var(--web-ui-scale, 1));
+      background-clip: content-box;
     }
 
     /* Codicon glyphs fill more of their box than the outlined SVGs. */

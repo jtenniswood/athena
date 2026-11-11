@@ -2292,7 +2292,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "b8a7a28284bcdac3f7ef0122c0e04d50b8ed364cae6a1425c1f1f32940a154e1",
     "inputHash": "b8a7a28284bcdac3f7ef0122c0e04d50b8ed364cae6a1425c1f1f32940a154e1",
-    "outputHash": "85fbcc05c2351f39f370b14e95169deb096878133942454d6f28cbfcd9d01fbd"
+    "outputHash": "2361e65a9a5c3dbf98cd2cc247aed6b38e4008a8c523a78a254cb0537c4c2927"
   },
   {
     "name": "browser-semantic-context-menu",
