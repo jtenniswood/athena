@@ -69,7 +69,7 @@ export async function androidNotify(payload: HermesNotification): Promise<boolea
   return showAndroidNotification(payload)
 }
 
-export async function showAndroidNotification(payload: HermesNotification & { chatTitle?: string | null; focusProfile?: string }): Promise<boolean> {
+export async function showAndroidNotification(payload: HermesNotification & { chatTitle?: string | null; focusProfile?: string; chatAliases?: string[] }): Promise<boolean> {
   try { return await call('notify', payload) === true }
   catch { return false }
 }

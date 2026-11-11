@@ -168,11 +168,14 @@ test('Android alerts on new unread activity and skips existing, manual and visib
   const prefs = atom({ enabled: true, kinds: { turnDone: true } }), muted = atom(false)
   const shown = []
   let visible = 'visible'
-  const row = (id, count, unread = true) => ({ id, profile: 'research', title: `Chat ${id}`, message_count: count, unread, last_active: 1 })
+  const row = (id, count, unread = true) => ({
+    id, profile: 'research', title: `Chat ${id}`, message_count: count, unread, last_active: 1,
+    ...(id === 'old' ? { _lineage_root_id: 'root', _lineage_ids: ['previous-tip'] } : {})
+  })
   const context = vm.createContext({ exports: {}, queueMicrotask, document: { visibilityState: 'visible', hasFocus: () => true },
     require: name => ({
       '@/store/session': { $sessions: sessions, $cronSessions: cron, $messagingSessions: messaging, $unreadFinishedSessionIds: finished,
-        sessionPinId: row => row.id, sessionMatchesStoredId: (row, id) => row.id === id },
+        sessionPinId: row => row._lineage_root_id ?? row.id, sessionMatchesStoredId: (row, id) => row.id === id },
       '@/store/native-notifications': { $nativeNotifyPrefs: prefs },
       '@/store/haptics': { $hapticsMuted: muted },
       '../platform/android': { androidVisibleSession: () => visible, showAndroidNotification: notification => shown.push(notification) }
@@ -188,6 +191,7 @@ test('Android alerts on new unread activity and skips existing, manual and visib
   assert.deepEqual(shown.map(item => item.focusSessionId), ['old'])
   assert.equal(shown[0].chatTitle, 'Chat old')
   assert.equal(shown[0].focusProfile, 'research')
+  assert.deepEqual(Array.from(shown[0].chatAliases), ['root', 'previous-tip'])
   finished.set(['manual'])
   muted.set(true)
   await Promise.resolve()

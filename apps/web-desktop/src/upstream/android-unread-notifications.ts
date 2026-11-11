@@ -40,6 +40,7 @@ export function installAndroidUnreadNotifications(): () => void {
         void showAndroidNotification({
           kind: 'turnDone',
           chatTitle: row.title,
+          chatAliases: [sessionPinId(row), ...(row._lineage_ids ?? [])],
           focusSessionId: row.id,
           focusProfile: row.profile || 'default',
           tag: 'android:' + row.id,
