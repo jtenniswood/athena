@@ -9,9 +9,20 @@ class PushService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val prefs = getSharedPreferences("athena", MODE_PRIVATE)
         val origin = prefs.getString("origin", "") ?: return
-        if (MainActivity.visibility.shouldSuppress(MainActivity.foreground, message.data["focusSessionId"]) || origin.isEmpty() || message.data["origin"] != origin || !prefs.getBoolean("pushEnabled", false) ||
-            message.data["bindingId"] != prefs.getString("pushBinding", "")) return
-        NativeNotifications(this).show(origin, JSONObject(message.data as Map<*, *>))
+        val data = message.data
+        val binding = data["bindingId"] ?: return
+        fun eligible() = !MainActivity.visibility.shouldSuppress(MainActivity.foreground, data["focusSessionId"]) &&
+            origin.isNotEmpty() && data["origin"] == origin && prefs.getString("origin", "") == origin &&
+            prefs.getBoolean("pushEnabled", false) && binding == prefs.getString("pushBinding", "")
+        if (!eligible()) return
+        val payload = JSONObject(data as Map<*, *>)
+        if (data["fetchPreview"] == "true") {
+            NativePushRegistration(this).preview(origin, binding, data["eventId"].orEmpty())?.let { preview ->
+                (preview.opt("chatTitle") as? String)?.let { payload.put("chatTitle", it) }
+                (preview.opt("body") as? String)?.let { payload.put("body", it) }
+            }
+        }
+        if (eligible()) NativeNotifications(this).show(origin, payload)
     }
     override fun onNewToken(token: String) {
         NativePushRegistration(this).recordToken(token)

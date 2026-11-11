@@ -326,13 +326,15 @@ the session through a one-use PKCE exchange lasting five minutes. This moves
 the browser's Athena session into the app so rotating refresh tokens are not
 shared between two clients. Session-token sign-in remains available.
 
-Athena alerts you on Android when new messages make a chat unread while the
-web app is running. Open **Athena Settings → Notifications** to choose which
+On Android, Athena sends one response alert per chat. Reply alerts wait for a
+chat title and show a short preview of the assistant’s response. Approval and
+input alerts open the conversation so you can respond there.
+Open **Athena Settings → Notifications** to choose which
 alerts to receive, control background delivery on this device, or send an Android
 push test through Firebase.
 
 Native alerts work without Firebase while the web app is running. In Android **App settings → Test notification**, send a local test alert to check notification permission and on-device display. This test does not contact Firebase or verify background push delivery. To receive
-response-completion and response-error alerts after Android suspends or closes
+reply, approval, input, error and system alerts after Android suspends or closes
 the app:
 
 1. Create a Firebase project and register an Android app with package name
@@ -375,17 +377,22 @@ volumes:
   - ./.athena/firebase-service-account.json:/run/secrets/athena-firebase.json:ro
 ```
 
+Android also checks the selected app update channel in the background. Tap
+**Athena update available** to review and download the APK through the existing
+installer. Update notifications have a separate Android notification channel.
+
 The Android connection goes through a small server relay that forwards the same
 Hermes protocol and retains the authenticated connection while its WebView is
-away. It sends generic alerts through Firebase; response text and credentials
-are not included in push payloads. Notification taps open the conversation.
-Signing out disables native push and removes the server's device registration.
+away. Firebase delivers a generic alert, and the registered Android installation
+fetches its title and preview directly from your Athena server. If the server
+cannot be reached, Android shows the generic alert. Notification taps open the
+conversation. Signing out revokes the device's access to previews.
 
 The relay keeps a disconnected active response for up to 24 hours and closes
 idle disconnected sockets after a minute. Device bindings and a bounded delivery
-queue are stored privately in the existing `/data/athena` volume; no conversation
-history or response text is stored. Observed completion events survive a restart
-and retry up to 12 times, expiring after one hour. Restarting the container still
+queue are stored privately in the existing `/data/athena` volume. The queue keeps
+the short preview until the alert expires, for up to one hour. Queued events
+survive a restart and retry up to 12 times. Restarting the container still
 interrupts the retained upstream connections: events that occur while disconnected
 cannot be recovered until a supported server event source is available.
 

@@ -65,20 +65,23 @@ export async function refreshAndroidNotificationPermission(request = false): Pro
 }
 
 export async function androidNotify(payload: HermesNotification): Promise<boolean> {
-  if (pushActive && (payload.focusSessionId || payload.sessionId) && (payload.kind === 'turnDone' || payload.kind === 'turnError')) return true
+  const conversation = payload.focusSessionId || payload.sessionId
+  // The unread watcher delivers completed replies after the title and transcript are ready.
+  if (conversation && payload.kind === 'turnDone') return true
+  if (conversation && pushActive && payload.kind === 'turnError') return true
   return showAndroidNotification(payload)
 }
 
-export async function showAndroidNotification(payload: HermesNotification & { chatTitle?: string | null; focusProfile?: string }): Promise<boolean> {
+export async function showAndroidNotification(payload: HermesNotification & { chatTitle?: string | null; focusProfile?: string; chatAliases?: string[] }): Promise<boolean> {
   try { return await call('notify', payload) === true }
   catch { return false }
 }
 
-export async function androidPushRegistration(): Promise<{ deviceId: string; token: string; refreshKey?: string; tokenVersion?: number } | null> {
+export async function androidPushRegistration(): Promise<{ deviceId: string; token: string; refreshKey?: string; tokenVersion?: number; previewKey?: string } | null> {
   try {
-    const value = await call('pushRegistration') as { deviceId?: unknown; token?: unknown; refreshKey?: unknown; tokenVersion?: unknown } | null
+    const value = await call('pushRegistration') as { deviceId?: unknown; token?: unknown; refreshKey?: unknown; tokenVersion?: unknown; previewKey?: unknown } | null
     return value && typeof value.deviceId === 'string' && typeof value.token === 'string'
-      ? { deviceId: value.deviceId, token: value.token, ...(typeof value.refreshKey === 'string' ? { refreshKey: value.refreshKey } : {}), ...(typeof value.tokenVersion === 'number' ? { tokenVersion: value.tokenVersion } : {}) } : null
+      ? { deviceId: value.deviceId, token: value.token, ...(typeof value.refreshKey === 'string' ? { refreshKey: value.refreshKey } : {}), ...(typeof value.tokenVersion === 'number' ? { tokenVersion: value.tokenVersion } : {}), ...(typeof value.previewKey === 'string' ? { previewKey: value.previewKey } : {}) } : null
   } catch { return null }
 }
 

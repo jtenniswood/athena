@@ -1,7 +1,7 @@
 import { androidPushRegistration, androidPushDiagnostics, androidVisibleSession, isAndroidApp, setAndroidPushActive } from './android'
 import { apiFetch } from './connection'
 
-let registration: { deviceId: string; token: string; refreshKey?: string; tokenVersion?: number } | null = null
+let registration: { deviceId: string; token: string; refreshKey?: string; tokenVersion?: number; previewKey?: string } | null = null
 let registering: Promise<boolean> | undefined
 let timer: number | undefined
 let stopped = false

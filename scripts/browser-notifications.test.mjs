@@ -39,8 +39,8 @@ function notifications({ permission = 'granted', supported = true, secure = true
     require: name => name === './session-route' ? sessionRoutes.exports : name === './android' ? { isAndroidApp: () => false } : name === './notification-navigation' ? routing.exports : ({ browserCapabilities: () => ({ notifications: supported }) }) })
   vm.runInContext(compiled, context)
   return { api: context.exports, routing: routing.exports, shown, calls, callbacks, cleared, Notification, window, root,
-    installOwner(knownOwnerForSession, android = false) {
-      window.hermesDesktop = { notify: context.exports.webNotify }
+    installOwner(knownOwnerForSession, android = false, notify = context.exports.webNotify) {
+      window.hermesDesktop = { notify }
       const ownerContext = { exports: {}, window, Promise, require: name => {
         if (name === '@/lib/hermes-open-target') return openTargets.exports
         if (name === '@/store/native-notifications') return {
@@ -237,9 +237,15 @@ test('owned page alerts reuse an admitted document and preserve the exact profil
 
 test('engine notification admission leaves native delivery and unrelated bridge replacements alone', async () => {
   const native = notifications()
-  const stopNative = native.installOwner(() => { throw new Error('Native owns delivery') }, true)
-  assert.equal(native.window.hermesDesktop.notify, native.api.webNotify)
+  const delivered = []
+  const nativeBridge = payload => { delivered.push(payload); return Promise.resolve(true) }
+  const stopNative = native.installOwner(() => ({ profile: 'research' }), true, nativeBridge)
+  await native.window.hermesDesktop.notify({ kind: 'approval', focusSessionId: 'chat' })
+  assert.equal(delivered[0].focusProfile, 'research')
+  assert.equal(delivered[0].tag, 'android:approval:chat')
+  assert.deepEqual(native.shown, [])
   stopNative()
+  assert.equal(native.window.hermesDesktop.notify, nativeBridge)
   const foreign = notifications()
   const restore = foreign.installOwner(() => ({ connectionId: 'another-gateway', profile: 'research' }))
   assert.equal(await foreign.window.hermesDesktop.notify({ focusSessionId: 'chat' }), false)

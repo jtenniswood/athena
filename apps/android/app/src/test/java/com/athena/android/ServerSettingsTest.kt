@@ -22,8 +22,11 @@ class ServerSettingsTest {
         var destroyed = false
         var loadedUrl: String? = null
         var evaluatedScript: String? = null
+        var backCount = 0
         override fun getUrl(): String? = pageUrl
         override fun loadUrl(url: String) { loadedUrl = url }
+        override fun canGoBack() = true
+        override fun goBack() { backCount++ }
         override fun evaluateJavascript(script: String, callback: ValueCallback<String>?) {
             evaluatedScript = script
             callback?.onReceiveValue(if (guarded) "false" else "true")
@@ -130,6 +133,16 @@ class ServerSettingsTest {
         val hash = org.json.JSONObject.quote("#/chat-2?profile=research&androidNotification=1")
         assertTrue(page.evaluatedScript!!.contains("location.hash = $hash"))
         assertNull(intent.data)
+    }
+
+    @Test fun backUsesWebViewHistoryOnlyWhenThePageDoesNotHandleIt() {
+        for (handled in listOf(true, false)) {
+            val (activity, page) = fixture(guarded = handled)
+            MainActivity::class.java.getDeclaredField("documentReady").apply { isAccessible = true }.setBoolean(activity, true)
+            activity.onBackPressedDispatcher.onBackPressed()
+            assertTrue(page.evaluatedScript!!.contains("new Event('athena:native-back', {cancelable:true})"))
+            assertEquals(if (handled) 0 else 1, page.backCount)
+        }
     }
 
     private fun connection(activity: MainActivity) = MainActivity::class.java.getDeclaredField("connection")

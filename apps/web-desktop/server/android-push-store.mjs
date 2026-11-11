@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { closeSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
-/** One server process owns this bounded store, alongside account preferences. No chat text is stored. */
+/** One server process owns this bounded store, alongside account preferences. Short-lived previews are served only to the registered installation. */
 export function createAndroidPushStore(directory) {
   const file = directory && path.join(directory, 'android-push.json')
   let state = { devices: new Map(), events: new Map() }
