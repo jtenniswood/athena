@@ -99,6 +99,10 @@ export function useBrowserTouchHooks(source: string, root: string): string {
     if (output.split(queueTarget).length !== 2) throw new Error('Browser queue control contract changed')
     output = output.replace(importTarget, `${importTarget}import { BrowserApprovalComposerControl } from ${JSON.stringify(`${root}/src/experience/browser-approval-composer-control`)}\n`)
       .replace(reasoningTarget, reasoningTarget + '              <BrowserApprovalComposerControl />\n')
+    output = replaceBrowserContract(output, [
+      ['import { Ear, EarOff,', 'import { ArrowUp, Ear, EarOff,'],
+      ['<Codicon name="arrow-up" size="0.875rem" />', '<ArrowUp aria-hidden="true" className={iconSize.sm} />']
+    ])
   }
   return output
 }
