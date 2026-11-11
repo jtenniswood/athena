@@ -22,8 +22,8 @@ class PushServiceTest {
             .putBoolean("pushEnabled", true).commit()
         val service = Robolectric.buildService(PushService::class.java).create().get()
         val manager = app.getSystemService(NotificationManager::class.java)
-        fun message(origin: String, binding: String) = RemoteMessage.Builder("test")
-            .setData(mapOf("origin" to origin, "bindingId" to binding, "kind" to "turnDone", "focusSessionId" to "chat-1"))
+        fun message(origin: String, binding: String, sessionId: String = "chat-1") = RemoteMessage.Builder("test")
+            .setData(mapOf("origin" to origin, "bindingId" to binding, "kind" to "turnDone", "focusSessionId" to sessionId))
             .build()
         MainActivity.foreground = false
         MainActivity.visibility.clear()
@@ -33,17 +33,20 @@ class PushServiceTest {
         service.onMessageReceived(message("https://athena.example", "account-A"))
         assertEquals(1, shadowOf(manager).allNotifications.size)
         manager.cancelAll()
-        MainActivity.foreground = true
         service.onMessageReceived(message("https://athena.example", "account-A"))
+        assertEquals("A second response in the same chat stays quiet", 0, shadowOf(manager).allNotifications.size)
+
+        MainActivity.foreground = true
+        service.onMessageReceived(message("https://athena.example", "account-A", "chat-2"))
         assertEquals("A foreground Activity without a ready chat still receives alerts", 1, shadowOf(manager).allNotifications.size)
         manager.cancelAll()
-        MainActivity.visibility.acknowledge("chat-1")
-        service.onMessageReceived(message("https://athena.example", "account-A"))
+        MainActivity.visibility.acknowledge("chat-3")
+        service.onMessageReceived(message("https://athena.example", "account-A", "chat-3"))
         assertEquals(0, shadowOf(manager).allNotifications.size)
         MainActivity.foreground = false
         MainActivity.visibility.clear()
         prefs.edit().putBoolean("pushEnabled", false).commit()
-        service.onMessageReceived(message("https://athena.example", "account-A"))
+        service.onMessageReceived(message("https://athena.example", "account-A", "chat-4"))
         assertEquals(0, shadowOf(manager).allNotifications.size)
     }
 }
