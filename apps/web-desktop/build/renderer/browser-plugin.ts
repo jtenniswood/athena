@@ -2,7 +2,7 @@ import { useBrowserSelectedSessionOwner, useBrowserOwnedSessionRpc, keepBrowserR
 import { useBrowserProjectCreateOwner, useBrowserProjectDialogOwner } from './transforms/project-create'
 export { useBrowserProjectCreateOwner, useBrowserProjectDialogOwner } from './transforms/project-create'
 export { useBrowserSelectedSessionOwner, useBrowserOwnedSessionRpc, keepBrowserRenameProfile, scopeBrowserSessionTitles, scopeBrowserProjectTitles } from './transforms/session-routing'
-import { useBrowserThreadSubmitScroll } from './transforms/transcript'
+import { expandBrowserMessageOnTap, useBrowserThreadSubmitScroll } from './transforms/transcript'
 import { useBrowserArchiveUndo } from './transforms/archive'
 export { useBrowserArchiveUndo } from './transforms/archive'
 export { useBrowserThreadSubmitScroll } from './transforms/transcript'
@@ -271,6 +271,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     exposeBrowserTimelineHistoryOwner,
     useBrowserTimelineOwner: source => useBrowserTimelineOwner(source, root),
     useBrowserComposerLineBreak,
+    expandBrowserMessageOnTap,
     useBrowserThreadSubmitScroll: source => useBrowserThreadSubmitScroll(source, root),
     useBrowserTimelineScrubbing: source => useBrowserTimelineScrubbing(source, root),
     useBrowserSessionSection: source => useBrowserSessionSection(source, root),
