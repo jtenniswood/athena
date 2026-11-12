@@ -50,7 +50,7 @@ class ConnectionTestingTest {
             val connection = field("connection").get(activity) as ConnectionCoordinator
             connection.recover("auth-access-required", "Sign in through Cloudflare Access to reconnect to Athena.")
             val action = activity.findViewById<com.google.android.material.button.MaterialButton>(R.id.reconnect)
-            assertEquals(activity.getString(R.string.browser_sign_in), action.text.toString())
+            assertEquals("Sign in", action.text.toString())
             assertEquals(android.view.View.VISIBLE, activity.findViewById<android.view.View>(R.id.review_settings).visibility)
             action.performClick()
             assertEquals(ConnectionCoordinator.Stage.ACCESS_SIGN_IN, connection.state.stage)

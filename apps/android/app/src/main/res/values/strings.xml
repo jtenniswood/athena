@@ -27,6 +27,7 @@
     <string name="reload_description">Refresh your connection</string>
     <string name="version">Athena for Android · %1$s</string>
     <string name="recovery_title">Let’s reconnect</string>
+    <string name="recovery_sign_in">Sign in</string>
     <string name="reconnect">Try again</string>
     <string name="review_settings">Review settings</string>
     <string name="connection_details">Connection details</string>
