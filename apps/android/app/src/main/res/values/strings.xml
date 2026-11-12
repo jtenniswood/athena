@@ -29,7 +29,7 @@
     <string name="recovery_title">Let’s reconnect</string>
     <string name="recovery_sign_in">Sign in</string>
     <string name="reconnect">Try again</string>
-    <string name="review_settings">Review settings</string>
+    <string name="review_settings">Settings</string>
     <string name="connection_details">Connection details</string>
     <string name="connection_details_description">App and server status</string>
     <string name="copy_details">Copy details</string>
