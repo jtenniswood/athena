@@ -2913,6 +2913,28 @@
     "removal": "Remove when upstream supports a browser policy that fixes message bubble transparency at 0%."
   },
   {
+    "name": "browser-tap-message-expansion",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/assistant-ui/thread/user-message.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "fab389641f515728709fdad4308f59ffc04f6bb9ac8f4317250cff9b41a84015",
+    "inputHash": "fab389641f515728709fdad4308f59ffc04f6bb9ac8f4317250cff9b41a84015",
+    "outputHash": "af583f3db3b2c5ac9296b814f3e5c2e52e03c28899a387298be9eb654505d8dc",
+    "handlers": [
+      "expandBrowserMessageOnTap"
+    ],
+    "reason": "Let users tap a truncated touch message to expand or collapse it while preserving text selection and inline controls.",
+    "owner": "apps/web-desktop/build/renderer/transforms/transcript.ts",
+    "tests": [
+      {
+        "file": "tests/browser/mobile-message-expansion.spec.mjs",
+        "scenario": "tapping a truncated message card reveals its full text"
+      }
+    ],
+    "removal": "Remove when the upstream touch bubble supports tapping its text area to toggle expansion."
+  },
+  {
     "name": "browser-profile-settings-tabs",
     "kind": "browser-transform",
     "order": 20,
