@@ -51,7 +51,7 @@ dependencies {
     implementation("androidx.fragment:fragment:1.9.1")
     implementation("androidx.browser:browser:1.10.0")
     implementation("androidx.webkit:webkit:1.18.0")
-    implementation("com.google.firebase:firebase-messaging:26.0.1")
+    implementation("com.google.firebase:firebase-messaging:26.0.2")
     androidTestImplementation("androidx.test:core:1.7.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
