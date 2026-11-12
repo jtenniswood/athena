@@ -1,3 +1,15 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
-    <path android:fillColor="#FFFFFF" android:pathData="M24,5L43,43H34L30,34H18L14,43H5L24,5ZM24,20L21,27H27Z" />
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Trace of the A in athena_loading.png, which also supplies the launcher artwork. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M15.271,5 H25.830 L34.669,43 H20.081 V42.304
+            C27.504,42.101 25.855,37.028 24.981,31.931
+            L13.912,43 H13.331 V31.050 L17.461,12.746
+            C18.333,8.776 19.287,5.845 15.271,5.690 Z
+            M19.665,9.285 L14.763,31.050 H24.761 Z" />
 </vector>
