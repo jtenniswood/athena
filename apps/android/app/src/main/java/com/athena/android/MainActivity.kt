@@ -690,7 +690,7 @@ class MainActivity : AppCompatActivity() {
             visibility = if (signingIn || recovery) View.VISIBLE else View.GONE
             setText(when {
                 signingIn -> R.string.cancel_sign_in
-                state.code == "auth-access-required" -> R.string.browser_sign_in
+                state.code == "auth-access-required" -> R.string.recovery_sign_in
                 else -> R.string.reconnect
             })
         }
