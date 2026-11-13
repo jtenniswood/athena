@@ -4,10 +4,13 @@ import { setTimeout as delay } from 'node:timers/promises'
 import { notificationChatTitle, notificationSnippet } from './android-notification-content.mjs'
 import { WebSocket, WebSocketServer } from 'ws'
 import { accountIdentity, probeIdentity, requestOrigin } from './identity.mjs'
+import { browserSubscription } from './browser-push.mjs'
+import { replyLifetimeMs, replyNotificationHeaders, scanRecentReplies } from './reply-notifications.mjs'
 
 const root = '/api/athena/android/'
+const browserRoot = '/api/athena/browser/push'
 const retentionMs = 24 * 60 * 60 * 1000
-const titleRetryMs = [0, 1000, 2000, 4000, 8000, 15000, 30000, 60000]
+const titleRetryMs = [0, 1000, 2000]
 const creditNotices = new Set(['credits.depleted', 'credits.window_limit', 'credits.restored'])
 const inputRequests = new Set(['clarify', 'sudo', 'secret', 'vault.code', 'vault.unlock', 'vault.save_login', 'display.install.sudo'])
 
@@ -39,10 +42,11 @@ function describeAlert(type, payload) {
 
 /** Retain the authenticated gateway transport while Android suspends its WebView.
  * This forwards Hermes's own RPC protocol and stores no conversation history. */
-export function createAndroidPush({ target, identityUrl = target, sender, fetch: request = globalThis.fetch, now = Date.now, directory, consumeTokenTicket }) {
+export function createAndroidPush({ target, identityUrl = target, sender, fetch: request = globalThis.fetch, now = Date.now, directory, browserSender, consumeTokenTicket }) {
   const store = createAndroidPushStore(directory), relays = new Set()
   const titleLookups = new Set(), shutdown = new AbortController()
-  let closed = false, pumping
+  const watches = new Map()
+  let closed = false, pumping, scanning
   const removeDevice = (state, key) => {
     state.devices.delete(key)
     for (const [id, event] of state.events) if (event.key === key) state.events.delete(id)
@@ -65,13 +69,27 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
         if (!device?.enabled || !device.kinds[event.data.kind] || device.bindingId !== event.bindingId) {
           store.update(state => state.events.delete(id)); continue
         }
+        if (device.subscription && !browserSender?.enabled) continue
         const attempts = event.attempts + 1
         store.update(state => Object.assign(state.events.get(id), {
           attempts, updated: now(), nextAttempt: now() + Math.min(60000, 1000 * 2 ** (attempts - 1))
         }))
         let delivered = false
-        try { await sender.send(device.token, event.data, device.activeUntil > now() ? 'NORMAL' : 'HIGH'); delivered = true }
-        catch { /* Keep the durable event for the next bounded retry. Never log device credentials. */ }
+        try {
+          if (device.subscription) {
+            await browserSender.send(device.subscription, event.data, Math.ceil((event.expires - now()) / 1000))
+          } else {
+            const foreground = device.activeUntil > now() && [...relays].some(relay => relay.key === event.key && relay.client)
+            await sender.send(device.token, event.data, foreground && !event.background ? 'NORMAL' : 'HIGH')
+          }
+          delivered = true
+        } catch (error) {
+          if (device.subscription && [404, 410].includes(error.statusCode) &&
+              store.devices.get(event.key)?.subscription?.endpoint === device.subscription.endpoint) {
+            unregister(event.key)
+          }
+          // Keep transient failures in the durable queue for the next retry.
+        }
         store.update(state => {
           const current = state.events.get(id)
           if (!current) return
@@ -82,7 +100,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
     })().finally(() => { pumping = undefined })
     return pumping
   }
-  const deliver = () => { void drain().catch(() => console.error('Athena Android push storage or delivery processing failed')) }
+  const deliver = () => { void drain().catch(() => console.error('Athena push storage or delivery processing failed')) }
   const deliveryTimer = setInterval(deliver, 1000)
   deliveryTimer.unref()
   queueMicrotask(deliver)
@@ -99,10 +117,99 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
       'x-forwarded-proto': req.headers['x-forwarded-proto'] || (req.socket.encrypted ? 'https' : 'http') }
     const response = await probeIdentity(target, headers, request)
     if (!response.ok) throw new Error('Sign in required')
-    return { id: accountIdentity(identityUrl, await response.json()),
-      cookies: response.headers.getSetCookie() }
+    return { id: accountIdentity(identityUrl, await response.json()), cookies: response.headers.getSetCookie() }
   }
   const keyFor = (account, deviceId) => `${account}:${deviceId}`
+  const unregister = key => {
+    watches.delete(key)
+    store.update(state => removeDevice(state, key))
+    for (const relay of relays) if (relay.key === key) relay.close()
+  }
+  function watchReplies(key, req, cookies) {
+    const device = store.devices.get(key)
+    if (!device?.enabled || !device.kinds.turnDone) {
+      watches.delete(key)
+      return
+    }
+    const headers = replyNotificationHeaders(req, device.origin, cookies)
+    if (!headers.cookie && !headers['x-hermes-session-token']) {
+      watches.delete(key)
+      return
+    }
+    const previous = watches.get(key)
+    const same = previous?.bindingId === device.bindingId && previous.since === device.repliesSince
+    const watch = same ? previous : { bindingId: device.bindingId, since: device.repliesSince, inspected: new Map() }
+    watch.headers = headers
+    watches.set(key, watch)
+  }
+  function enqueue({ key, bindingId, id, alert, sessionId, profile, chatTitle, promptId, background = false, completedAt = now() }) {
+    const current = store.devices.get(key)
+    if (closed || !current?.enabled || current.bindingId !== bindingId || !current.kinds[alert.kind] || store.events.has(id)) return
+    const timestamp = now()
+    const expires = completedAt + (['approval', 'input'].includes(alert.kind) ? 300000 : replyLifetimeMs)
+    if (expires <= timestamp) return
+    const tag = alert.kind === 'turnDone' ? 'android:' + sessionId : 'android:' + alert.kind + ':' + (sessionId || 'system')
+    const data = { eventId: id, expiresAt: String(expires), origin: current.origin, bindingId,
+      kind: alert.kind, title: alert.title,
+      tag: current.subscription && sessionId ? JSON.stringify([profile, sessionId]) : tag,
+      body: alert.kind === 'turnDone' ? 'Your response is ready.' : ['approval', 'input'].includes(alert.kind) ? alert.body : 'Open Athena to view the alert.',
+      ...(sessionId ? { focusSessionId: sessionId } : {}),
+      ...(sessionId && profile ? { focusProfile: profile } : {}),
+      ...(current.silent ? { silent: 'true' } : {}) }
+    const preview = current.previewHash && (chatTitle || alert.body !== data.body) ? { chatTitle, body: alert.body } : undefined
+    if (preview) data.fetchPreview = 'true'
+    store.update(state => state.events.set(id, { key, bindingId, data, preview, background,
+      previewHash: preview ? current.previewHash : undefined, promptId,
+      status: 'pending', attempts: 0, created: timestamp, updated: timestamp, nextAttempt: timestamp, expires }))
+    deliver()
+  }
+  const androidReplyId = (key, bindingId, profile, sessionId) =>
+    createHash('sha256').update(JSON.stringify([key, bindingId, profile || 'default', sessionId, 'reply'])).digest('hex')
+  function scanReplies() {
+    if (closed || scanning) return scanning
+    scanning = (async () => {
+      for (const [key, watch] of watches) {
+        const device = store.devices.get(key)
+        if (closed) break
+        if (!device?.enabled || !device.kinds.turnDone || now() - device.updated > retentionMs) continue
+        const headers = watch.headers
+        const since = Math.max(watch.since, now() - replyLifetimeMs)
+        try {
+          const authenticated = await scanRecentReplies({
+            target, headers, request, since, signal: shutdown.signal,
+            shouldInspect: row => {
+              if (watches.get(key) !== watch) return false
+              const owner = JSON.stringify([row.profile, row.id])
+              const revision = JSON.stringify([row.message_count, row.last_active, row.last_read_at, row.end_reason])
+              return watch.inspected.get(owner) !== revision
+            },
+            onInspected(row) {
+              if (watch.inspected.size >= 1000) watch.inspected.clear()
+              watch.inspected.set(JSON.stringify([row.profile, row.id]),
+                JSON.stringify([row.message_count, row.last_active, row.last_read_at, row.end_reason]))
+            },
+            onReply(row, reply) {
+              if (watches.get(key) !== watch) return
+              const registered = store.devices.get(key)
+              const aliases = Array.isArray(row._lineage_ids) ? row._lineage_ids : []
+              if (registered?.subscription && registered.activeUntil > now() &&
+                  (!registered.visibleProfile || registered.visibleProfile === row.profile) &&
+                  [row.id, row._lineage_root_id, ...aliases].includes(registered.visibleSession)) return
+              const sessionId = row._lineage_root_id || row.id
+              const id = device.subscription
+                ? createHash('sha256').update(JSON.stringify([key, watch.bindingId, row.profile, sessionId, reply.replyId])).digest('hex')
+                : androidReplyId(key, watch.bindingId, row.profile, sessionId)
+              const alert = { kind: 'turnDone', title: 'Athena · Response ready', body: reply.body }
+              enqueue({ key, bindingId: watch.bindingId, id, alert, sessionId, profile: row.profile,
+                chatTitle: reply.chatTitle, background: true, completedAt: reply.timestamp })
+            }
+          })
+          if (!authenticated && watches.get(key) === watch && watch.headers === headers) watches.delete(key)
+        } catch { /* A transient gateway failure will be retried on the next scan. */ }
+      }
+    })().finally(() => { scanning = undefined })
+    return scanning
+  }
   const prune = () => {
     const stale = [...store.devices].filter(([, device]) => now() - device.updated > retentionMs).map(([key]) => key)
     const expired = [...store.events].filter(([, event]) => event.expires <= now()).map(([id]) => id)
@@ -110,10 +217,12 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
       for (const key of stale) removeDevice(state, key)
       for (const id of expired) state.events.delete(id)
     })
+    for (const key of stale) watches.delete(key)
     for (const relay of relays) if (!relay.client && now() - relay.detached > (relay.running.size ? retentionMs : 60000)) relay.close()
   }
   const timer = setInterval(() => {
-    try { prune() } catch { console.error('Athena Android push storage maintenance failed') }
+    try { prune() } catch { console.error('Athena push storage maintenance failed') }
+    void scanReplies()
     for (const relay of relays) if (relay.upstream.readyState === WebSocket.OPEN) {
       relay.upstream.send(JSON.stringify({ jsonrpc: '2.0', id: '__athena_push_ping', method: 'gateway.ping', params: {} }))
     }
@@ -122,6 +231,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
 
   async function handle(req, res) {
     const url = new URL(req.url, 'http://local.invalid')
+    if (url.pathname === browserRoot || url.pathname === browserRoot + '/test') return handleBrowser(req, res, url)
     if (![root + 'push', root + 'push/token', root + 'push/test', root + 'push/preview'].includes(url.pathname)) return false
     const json = (status, data) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)) }
     if (!sender.enabled) return json(503, { error: 'Firebase push is not configured' }), true
@@ -156,7 +266,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
       if (url.pathname === root + 'push/token') {
         if (req.method !== 'POST' || !/^[A-Za-z0-9_-]{43}$/.test(body.refreshKey) ||
             typeof body.token !== 'string' || body.token.length < 20 || body.token.length > 4096) throw new Error('Invalid refresh')
-        const match = [...store.devices].find(([, device]) => device.deviceId === body.deviceId &&
+        const match = [...store.devices].find(([, device]) => !device.subscription && device.deviceId === body.deviceId &&
           device.bindingId === body.bindingId && device.origin === requestOrigin(req))
         const [key, device] = match || []
         if (!device?.enabled || now() - device.updated > retentionMs ||
@@ -197,6 +307,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
         const events = [...store.events.values()].filter(event => event.key === key)
         const latest = events.sort((a, b) => b.created - a.created)[0]
         json(200, { registered: Boolean(device?.enabled), persistent: Boolean(directory),
+          watchingReplies: watches.has(key),
           relayConnected: [...relays].some(relay => relay.key === key && relay.upstream.readyState === WebSocket.OPEN),
           pending: events.filter(event => event.status === 'pending').length,
           lastDelivery: latest ? { state: latest.status, attempts: latest.attempts, updated: latest.updated } : null })
@@ -205,8 +316,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
       if (!/^[a-f0-9-]{36}$/.test(body.deviceId)) throw new Error('Invalid device')
       const key = keyFor(account, body.deviceId)
       if (req.method === 'DELETE') {
-        store.update(state => removeDevice(state, key))
-        for (const relay of relays) if (relay.key === key) relay.close()
+        unregister(key)
       } else {
         if (typeof body.token !== 'string' || body.token.length < 20 || body.token.length > 4096) throw new Error('Invalid push token')
         if (!/^[a-f0-9-]{36}$/.test(body.bindingId)) throw new Error('Invalid binding')
@@ -214,9 +324,8 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
         prune()
         if (!store.devices.has(key) && store.devices.size >= 500) throw new Error('Too many devices')
         // One installation belongs to the currently signed-in account only.
-        for (const [other, device] of store.devices) if (other !== key && device.deviceId === body.deviceId) {
-          store.update(state => removeDevice(state, other))
-          for (const relay of relays) if (relay.key === other) relay.close()
+        for (const [other, device] of store.devices) if (other !== key && !device.subscription && device.deviceId === body.deviceId) {
+          unregister(other)
         }
         const kinds = Object.fromEntries(['turnDone', 'turnError', 'approval', 'input', 'credits'].map(kind => [kind, body.kinds?.[kind] !== false]))
         store.update(state => {
@@ -225,17 +334,92 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
           const keepToken = body.tokenVersion != null && old?.bindingId === body.bindingId && (tokenVersion < (old.tokenVersion || 0) ||
             (tokenVersion > 0 && tokenVersion === old.tokenVersion && body.token !== old.token))
           state.devices.set(key, { deviceId: body.deviceId, token: keepToken ? old.token : body.token,
-            tokenVersion: keepToken ? old.tokenVersion : tokenVersion, bindingId: body.bindingId, enabled: body.enabled === true, kinds,
+            tokenVersion: keepToken ? old.tokenVersion : tokenVersion, bindingId: body.bindingId, enabled: body.enabled === true, kinds, silent: body.silent === true,
             refreshHash: body.tokenVersion != null && typeof body.refreshKey === 'string' && /^[A-Za-z0-9_-]{43}$/.test(body.refreshKey)
               ? createHash('sha256').update(body.refreshKey).digest('hex') : null,
             lastTest: old?.lastTest,
+            repliesSince: old?.enabled && old.bindingId === body.bindingId && old.kinds.turnDone && kinds.turnDone && old.repliesSince != null
+              ? old.repliesSince : now(),
             previewHash: typeof body.previewKey === 'string' && /^[A-Za-z0-9_-]{43}$/.test(body.previewKey)
               ? createHash('sha256').update(body.previewKey).digest('hex') : null,
             origin: requestOrigin(req), activeUntil: body.foreground === true ? now() + 45000 : 0, updated: now() })
         })
+        watchReplies(key, req, authenticated.cookies)
       }
       json(200, { ok: true, bindingId: body.bindingId })
     } catch { json(400, { error: 'Could not register Android push notifications' }) }
+    return true
+  }
+
+  async function handleBrowser(req, res, url) {
+    const json = (status, data) => {
+      res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
+      res.end(JSON.stringify(data))
+    }
+    if (!browserSender?.enabled) return json(503, { error: 'Browser push storage is unavailable' }), true
+    const origin = requestOrigin(req)
+    const parsed = new URL(origin)
+    if (parsed.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(parsed.hostname)) {
+      return json(403, { error: 'Browser push requires HTTPS' }), true
+    }
+    if (req.method === 'GET' && url.pathname === browserRoot) {
+      json(200, { publicKey: browserSender.publicKey() })
+      return true
+    }
+    if (!['POST', 'DELETE'].includes(req.method) || req.headers.origin !== origin ||
+        !req.headers['content-type']?.startsWith('application/json')) {
+      return json(403, { error: 'Same-origin JSON request required' }), true
+    }
+    try {
+      let raw = ''
+      for await (const chunk of req) {
+        raw += chunk
+        if (raw.length > 8192) throw new Error('Request too large')
+      }
+      const body = JSON.parse(raw)
+      if (!/^[a-f0-9-]{36}$/.test(body.deviceId)) throw new Error('Invalid installation')
+      const authenticated = await identity(req)
+      if (authenticated.cookies.length) res.setHeader('Set-Cookie', authenticated.cookies)
+      const key = keyFor(authenticated.id, 'web:' + body.deviceId)
+      const old = store.devices.get(key)
+      if (url.pathname.endsWith('/test')) {
+        if (req.method !== 'POST' || !old?.enabled || old.origin !== origin) return json(409, { error: 'Enable browser push first' }), true
+        if (old.lastTest != null && now() - old.lastTest < 15000) return json(429, { error: 'Wait 15 seconds before testing again' }), true
+        store.update(state => { state.devices.get(key).lastTest = now() })
+        try {
+          await browserSender.send(old.subscription, { origin, title: 'Athena · Push test', body: 'Your Athena server sent this notification.' }, 60)
+        } catch (error) {
+          if ([404, 410].includes(error.statusCode)) unregister(key)
+          return json(502, { error: 'The browser push service could not accept the test.' }), true
+        }
+      } else if (req.method === 'DELETE') {
+        if (old?.origin === origin) unregister(key)
+      } else {
+        const subscription = browserSubscription(body.subscription)
+        if (!subscription || (old && old.origin !== origin)) throw new Error('Invalid subscription')
+        prune()
+        if (!store.devices.has(key) && store.devices.size >= 500) throw new Error('Too many installations')
+        for (const [other, device] of store.devices) {
+          if (other !== key && device.subscription &&
+              (device.subscription.endpoint === subscription.endpoint || (device.origin === origin && device.deviceId === body.deviceId))) unregister(other)
+        }
+        const same = old?.subscription?.endpoint === subscription.endpoint
+        const enabled = body.enabled === true
+        store.update(state => {
+          if (!same || !enabled) removeDevice(state, key)
+          state.devices.set(key, { deviceId: body.deviceId, origin, subscription, enabled,
+            bindingId: same ? old.bindingId : randomUUID(), kinds: { turnDone: true },
+            visibleSession: typeof body.visibleSession === 'string' ? body.visibleSession.slice(0, 256) : null,
+            visibleProfile: typeof body.visibleProfile === 'string' ? body.visibleProfile.slice(0, 128) : null,
+            silent: body.silent === true,
+            activeUntil: body.visibleSession ? now() + 45_000 : 0,
+            lastTest: old?.lastTest, updated: now(), repliesSince: same && old.enabled ? old.repliesSince : now() })
+        })
+        watchReplies(key, req, authenticated.cookies)
+        return json(200, { watchingReplies: watches.has(key) }), true
+      }
+      json(200, { ok: true })
+    } catch { json(400, { error: 'Browser push request could not be completed' }) }
     return true
   }
 
@@ -278,12 +462,9 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
           close() { upstream.terminate(); relay.client?.terminate(); relays.delete(relay) } }
         relays.add(relay)
         const profileOnSocket = url.searchParams.get('profile')
-        const authHeaders = {
-          Cookie: req.headers.cookie || '',
-          'X-Hermes-Session-Token': url.searchParams.get('token') || req.headers['x-hermes-session-token'] || '',
-          'X-Forwarded-Host': req.headers['x-forwarded-host'] || req.headers.host,
-          'X-Forwarded-Proto': req.headers['x-forwarded-proto'] || (req.socket.encrypted ? 'https' : 'http')
-        }
+        const authHeaders = replyNotificationHeaders({
+          headers: { ...req.headers, 'x-hermes-session-token': url.searchParams.get('token') || req.headers['x-hermes-session-token'] }
+        }, requestOrigin(req), authenticated.cookies)
         async function readTitle(runtimeId, sessionId, profile, eligible) {
           const lookup = new URL(target + '/api/sessions/' + encodeURIComponent(sessionId))
           if (profile) lookup.searchParams.set('profile', profile)
@@ -293,8 +474,8 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
             const known = relay.sessions.get(runtimeId)
             if (known?.id === sessionId && known.title) return known.title
             try {
-              const response = await request(lookup.href, { headers: authHeaders, redirect: 'manual',
-                signal: AbortSignal.any([shutdown.signal, AbortSignal.timeout(4000)]) })
+              const response = await request(lookup.href, { headers: watches.get(key)?.headers || authHeaders, redirect: 'manual',
+                signal: AbortSignal.any([shutdown.signal, AbortSignal.timeout(1500)]) })
               if (response.ok) {
                 const title = notificationChatTitle((await response.json()).title)
                 if (title) return title
@@ -305,7 +486,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
         }
         const notify = async event => {
           const current = store.devices.get(key)
-          if (!current?.enabled) return
+          if (!current?.enabled || current.bindingId !== device.bindingId) return
           const payload = event.payload || {}
           const session = relay.sessions.get(event.session_id)
           const system = event.type === 'notification.show'
@@ -325,9 +506,11 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
           const alert = describeAlert(event.type, payload)
           if (!alert || !current.kinds[alert.kind] || (alert.kind === 'turnDone' && !sessionId)) return
           const eventKey = promptId ?? payload.persisted_turn?.submission_id ?? event.seq ?? event.rpcId ?? Math.floor(now() / 1000)
-          const id = createHash('sha256').update(JSON.stringify([
-            key, current.bindingId, profile, sessionId, event.type, event.replay_epoch || '', eventKey
-          ])).digest('hex')
+          const id = alert.kind === 'turnDone'
+            ? androidReplyId(key, current.bindingId, profile, sessionId)
+            : createHash('sha256').update(JSON.stringify([
+              key, current.bindingId, profile, sessionId, event.type, event.replay_epoch || '', eventKey
+            ])).digest('hex')
           if (store.events.has(id) || titleLookups.has(id)) return
           const eligible = () => {
             const registered = store.devices.get(key)
@@ -338,25 +521,9 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
             titleLookups.add(id)
             try { chatTitle = await readTitle(event.session_id, sessionId, profile, eligible) }
             finally { titleLookups.delete(id) }
-            if (!chatTitle) return
           }
           if (!eligible() || store.events.has(id)) return
-          const timestamp = now()
-          const expires = timestamp + (['approval', 'input'].includes(alert.kind) ? 300000 : 3600000)
-          const tag = alert.kind === 'turnDone' ? 'android:' + sessionId
-            : 'android:' + alert.kind + ':' + (sessionId || 'system')
-          const data = { eventId: id, expiresAt: String(expires), origin: current.origin, bindingId: current.bindingId,
-            kind: alert.kind, title: alert.title, tag,
-            body: alert.kind === 'turnDone' ? 'Your response is ready.' : ['approval', 'input'].includes(alert.kind) ? alert.body : 'Open Athena to view the alert.',
-            ...(sessionId ? { focusSessionId: sessionId } : {}),
-            ...(sessionId && profile ? { focusProfile: profile } : {}) }
-          const previewHash = store.devices.get(key)?.previewHash
-          const preview = previewHash && (chatTitle || alert.body !== data.body) ? { chatTitle, body: alert.body } : undefined
-          if (preview) data.fetchPreview = 'true'
-          store.update(state => state.events.set(id, { key, bindingId: current.bindingId, data, preview,
-            previewHash: preview ? previewHash : undefined, promptId,
-            status: 'pending', attempts: 0, created: timestamp, updated: timestamp, nextAttempt: timestamp, expires }))
-          deliver()
+          enqueue({ key, bindingId: current.bindingId, id, alert, sessionId, profile, chatTitle, promptId })
         }
         const handleAlert = event => {
           void notify(event).catch(() => {
@@ -432,5 +599,5 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
       } catch { socket.destroy() }
     })
   }
-  return { handle, attach, drain, close() { closed = true; shutdown.abort(); clearInterval(deliveryTimer); clearInterval(timer); for (const relay of relays) relay.close(); sockets.close() } }
+  return { handle, attach, drain, scanReplies, close() { closed = true; shutdown.abort(); watches.clear(); clearInterval(deliveryTimer); clearInterval(timer); for (const relay of relays) relay.close(); sockets.close() } }
 }

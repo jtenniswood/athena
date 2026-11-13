@@ -78,14 +78,22 @@ export function installAndroidUnreadNotifications(): () => void {
             (visibleNow && sessionMatchesStoredId(latest, visibleNow)) ||
             (!latest.unread && !$unreadFinishedSessionIds.get().includes(latest.id))) return
         if (page.pagination?.order !== 'latest' && row.message_count > page.messages.length) return
+        const message = page.messages.at(-1)
+        const metadata = message?.display_metadata
+        const note = message?.display_kind !== 'hidden' && typeof metadata === 'object' && metadata !== null &&
+          'completion_note' in metadata && Array.isArray(metadata.completion_note) && metadata.completion_note.length > 0 &&
+          (!('notification_category' in metadata) || metadata.notification_category !== 'diagnostic') &&
+          typeof message?.content === 'string' ? message : undefined
         const reply = toChatMessages(page.messages).findLast(message =>
           !message.hidden && !message.interim && ['assistant', 'user'].includes(message.role) && chatMessageText(message).trim())
-        if (reply?.role !== 'assistant' || lastAlertedReply.get(owner) === reply.id) return
-        lastAlertedReply.set(owner, reply.id)
+        const body = notificationSnippet(note?.content ?? (reply?.role === 'assistant' ? chatMessageText(reply) : ''))
+        const replyId = note?.id != null ? String(note.id) : reply?.id
+        if (!body || /^\[SILENT\]$/i.test(body) || !replyId || lastAlertedReply.get(owner) === replyId) return
+        lastAlertedReply.set(owner, replyId)
         void showAndroidNotification({
           kind: 'turnDone', chatTitle: title, focusSessionId: row.id, focusProfile: profile,
           chatAliases: [sessionPinId(latest), ...(latest._lineage_ids ?? [])],
-          tag: 'android:' + row.id, body: notificationSnippet(chatMessageText(reply)), silent: $hapticsMuted.get()
+          tag: 'android:' + row.id, body, silent: $hapticsMuted.get()
         })
       }).catch(() => { alert.reading = false })
     }
