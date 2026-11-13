@@ -1,4 +1,5 @@
 import { prepareBrowserBridge } from './browser-bootstrap'
+import { installBrowserPush } from '../platform/browser-push'
 import { resolveToken } from '../platform/connection'
 
 /** Install the host before evaluating stores that read its desktop compatibility bridge. */
@@ -14,6 +15,7 @@ export async function startBrowserHost(): Promise<void> {
   await import('./engine-registration')
   const { installBrowserSessionRoutes } = await import('./browser-session-routes')
   const stopSessionRoutes = installBrowserSessionRoutes()
+  const stopBrowserPush = installBrowserPush()
   let stopNotifications = () => {}
   let stopSummaries = () => {}
   try {
@@ -26,5 +28,5 @@ export async function startBrowserHost(): Promise<void> {
     const { initializeBrowserShell } = await import('./browser-initialize')
     initializeBrowserShell()
     await import('../../../desktop/src/main')
-  } catch (error) { stopSummaries(); stopNotifications(); stopSessionRoutes(); throw error }
+  } catch (error) { stopSummaries(); stopNotifications(); stopBrowserPush(); stopSessionRoutes(); throw error }
 }

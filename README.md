@@ -249,9 +249,10 @@ the latest-reply preview. Drafts, selection, and read status are preserved.
 
 Open **Settings → Notifications → Allow browser notifications**, then accept
 the browser prompt. Keep **Enable notifications** and **Response ready** on to
-receive an alert when a reply finishes in your current chat while Athena is in
-the background. Use **Send test notification** to check delivery. Clicking a
-response notification returns to its conversation.
+receive reply alerts. Turn on **Background delivery on this device** to receive
+alerts for saved replies and scheduled reports when the Athena tab is closed.
+Use **Send browser push test** to check delivery through your browser's push
+service. Clicking an alert opens its conversation.
 
 Plugin notifications can open their requested app page. Plugin callbacks run in
 the window that emitted the alert; after that window closes, the click can still
@@ -259,9 +260,11 @@ open the saved destination. Action buttons appear where the browser supports
 them.
 
 Notifications require HTTPS or localhost. On iPhone and iPad, add Athena to the
-Home Screen and open the installed app. Keep Athena open: alerts pause if the
-browser suspends or closes it. If permission is blocked, allow notifications
-in the browser’s site settings.
+Home Screen and open the installed app. The browser or operating system must
+permit background push. If permission is blocked, allow notifications in the
+browser's site settings. The server stores its Web Push keys in the existing
+`/data/athena` volume. Browser push messages contain a generic alert and the
+chat link.
 
 ### Android app
 
@@ -326,8 +329,8 @@ the session through a one-use PKCE exchange lasting five minutes. This moves
 the browser's Athena session into the app so rotating refresh tokens are not
 shared between two clients. Session-token sign-in remains available.
 
-On Android, Athena sends one response alert per chat. Reply alerts wait for a
-chat title and show a short preview of the assistant’s response. Approval and
+On Android, Athena sends one response alert per chat. Alerts show the chat
+title and a short response preview when available. Approval and
 input alerts open the conversation so you can respond there.
 Open **Athena Settings → Notifications** to choose which
 alerts to receive, control background delivery on this device, or send an Android
@@ -388,13 +391,18 @@ fetches its title and preview directly from your Athena server. If the server
 cannot be reached, Android shows the generic alert. Notification taps open the
 conversation. Signing out revokes the device's access to previews.
 
-The relay keeps a disconnected active response for up to 24 hours and closes
-idle disconnected sockets after a minute. Device bindings and a bounded delivery
-queue are stored privately in the existing `/data/athena` volume. The queue keeps
-the short preview until the alert expires, for up to one hour. Queued events
-survive a restart and retry up to 12 times. Restarting the container still
-interrupts the retained upstream connections: events that occur while disconnected
-cannot be recovered until a supported server event source is available.
+Athena checks Hermes for recently saved replies and scheduled reports about
+every 15 seconds, including after the relay closes. Android and browser push
+both use this check. The server uses the authenticated session established by the
+app and keeps its access credentials in memory. Open Athena again after a server
+restart or when your Hermes sign-in expires to resume these checks. A renewed
+registration can catch replies from the past hour.
+
+The relay keeps a disconnected active response for up to 24 hours and closes idle
+disconnected sockets after a minute. Device bindings and a bounded delivery queue
+are stored privately in the existing `/data/athena` volume. Queued alerts survive
+a restart and retry up to 12 times. The queue keeps Android previews until the
+alert expires, for up to one hour.
 
 App settings shows token-registration and delivery-attempt status. “Accepted by
 Firebase” does not prove Android displayed an alert. A short-lived acknowledgement
@@ -404,10 +412,9 @@ uses a credential restricted to updating that installation's token, with retry o
 app resume when connectivity or Cloudflare Access is unavailable. Sign-out revokes
 the binding; changing servers also discards its native refresh credential.
 
-Force-stopping the
-app, disabling notifications, or Android battery restrictions can prevent or
-delay alerts. Background approvals and plugin alerts still depend on the
-running web app; background push currently covers response completion and errors.
+Force-stopping the app, disabling notifications, or Android battery restrictions
+can prevent or delay alerts. Background approvals and input requests use the
+retained connection. Plugin alerts run in the open app.
 
 Signed APK releases include checksums and build metadata; see [Android releases](docs/android/releases.md).
 

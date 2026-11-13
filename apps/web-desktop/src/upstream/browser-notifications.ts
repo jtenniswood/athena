@@ -4,6 +4,7 @@ import { installBrowserNotificationCallbacks } from '../platform/notification-na
 import { knownOwnerForSession } from '@/store/session-states'
 import { isAndroidApp } from '../platform/android'
 import { installAndroidUnreadNotifications } from './android-unread-notifications'
+import { browserPushReady } from '../platform/browser-push'
 import { WEB_CONNECTION_ID } from '../platform/connection'
 import { webNotify } from '../platform/notifications'
 
@@ -43,6 +44,9 @@ export function installBrowserNotificationCommands(): () => void {
       activate: resolveHermesOpenPath(payload.activate),
       actions: !payload.sessionId || payload.notifyId || payload.activate
         ? payload.actions?.map(action => ({ ...action, activate: resolveHermesOpenPath(action.activate) })) : undefined
+    }
+    if (allowed && payload.kind === 'turnDone' && payload.focusSessionId && !notifyId && browserPushReady()) {
+      return Promise.resolve(true)
     }
     const delivery = allowed ? webNotify(payload, profile, targets) : Promise.resolve(false)
     return delivery.then(delivered => {
