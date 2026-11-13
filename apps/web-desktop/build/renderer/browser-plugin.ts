@@ -59,6 +59,7 @@ import {
   useBrowserFollowupSubmit,
   useBrowserAlternateSubmit,
   useBrowserComposerLineBreak,
+  useBrowserComposerCompositionSubmit,
   removeBrowserConversationalVoiceEntry,
   useBrowserCodingActionHooks,
   keepBrowserMessageBubblesSolid
@@ -271,6 +272,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     exposeBrowserTimelineHistoryOwner,
     useBrowserTimelineOwner: source => useBrowserTimelineOwner(source, root),
     useBrowserComposerLineBreak,
+    useBrowserComposerCompositionSubmit,
     expandBrowserMessageOnTap,
     useBrowserThreadSubmitScroll: source => useBrowserThreadSubmitScroll(source, root),
     useBrowserTimelineScrubbing: source => useBrowserTimelineScrubbing(source, root),
