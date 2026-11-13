@@ -9,6 +9,15 @@ export function useBrowserThreadSubmitScroll(source: string, root: string): stri
   ]])
 }
 
+/** Mount the selection action with the visible transcript and its composer identity. */
+export function useBrowserTranscriptQuote(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/ui/quote-selection'))
+  const target = '      {secondaryWindow && ('
+  return `import { BrowserQuoteSelection } from ${owner}\n` + replaceBrowserContract(source, [[
+    target, `      <BrowserQuoteSelection surfaceId={surfaceId} sessionKey={sessionKey} profile={scrollProfile} visible={paneVisible && !sessionLoading} scrollRef={scrollRef} contentRef={contentRef} />\n${target}`
+  ]])
+}
+
 /** Let touch users read a truncated prompt by tapping its card. */
 export function expandBrowserMessageOnTap(source: string): string {
   const bubble = `<div className={cn(className, 'cursor-text')} data-selectable-text="true">`

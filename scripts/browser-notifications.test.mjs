@@ -13,7 +13,7 @@ const openTargets = { exports: {}, URL, URLSearchParams }
 vm.runInNewContext(ts.transpileModule(readFileSync('apps/desktop/src/lib/hermes-open-target.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, openTargets)
 const adapter = ts.transpileModule(readFileSync(new URL('../apps/web-desktop/src/upstream/browser-notifications.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
 
-function notifications({ permission = 'granted', supported = true, secure = true, worker, rejectPage = false, oldWorker = false } = {}) {
+function notifications({ permission = 'granted', supported = true, secure = true, worker, rejectPage = false, oldWorker = false, backgroundPush = false } = {}) {
   const shown = [], calls = [], callbacks = new Map(), cleared = []
   class Notification {
     static permission = permission
@@ -52,6 +52,7 @@ function notifications({ permission = 'granted', supported = true, secure = true
         if (name === '@/store/session-states') return { knownOwnerForSession }
         if (name === '../platform/android') return { isAndroidApp: () => android }
         if (name === './android-unread-notifications') return { installAndroidUnreadNotifications: () => () => {} }
+        if (name === '../platform/browser-push') return { browserPushReady: () => backgroundPush }
         if (name === '../platform/connection') return { WEB_CONNECTION_ID: 'web-single' }
         if (name === '../platform/notifications') return context.exports
         throw new Error(`Unexpected adapter import: ${name}`)
@@ -396,4 +397,37 @@ test('older pages can ignore focus requests without being navigated', async () =
   } }
   assert.deepEqual(await clickNotification(target, [older], { data: { navigate: false } }), [['close'], ['open', target]])
   assert.deepEqual(messages, ['ATHENA_NOTIFICATION_FOCUS'])
+})
+
+test('the service worker shows browser push with no open Athena window', async () => {
+  const handlers = new Map(), shown = [], opened = []
+  const self = {
+    location: { origin: 'https://athena.example.test' },
+    addEventListener: (type, callback) => handlers.set(type, callback),
+    registration: { showNotification: async (...args) => shown.push(args) },
+    clients: { matchAll: async () => [], openWindow: async url => opened.push(url) }
+  }
+  vm.runInNewContext(readFileSync(new URL('../apps/web-desktop/public/notifications-sw.js', import.meta.url), 'utf8'), { self, URL })
+  const url = 'https://athena.example.test/?profile=research#/report?profile=research'
+  let pending
+  const waitUntil = value => { pending = value }
+  handlers.get('push')({ data: { json: () => ({ title: 'Athena · Response ready', body: 'Your response is ready.', url }) }, waitUntil })
+  await pending
+  assert.equal(shown.length, 1)
+  assert.equal(shown[0][1].data.url, url)
+  handlers.get('notificationclick')({ notification: { close() {}, data: shown[0][1].data }, waitUntil })
+  await pending
+  assert.deepEqual(opened, [url])
+  handlers.get('push')({ data: { json: () => ({ title: 'Invalid', body: 'Invalid', url: 'https://another.example/' }) }, waitUntil })
+  await pending
+  assert.equal(shown.length, 1)
+})
+
+test('browser push replaces the page alert for the same chat and keeps local tests available', async () => {
+  const { installOwner, shown, window } = notifications({ backgroundPush: true })
+  installOwner(() => 'research')
+  assert.equal(await window.hermesDesktop.notify({ kind: 'turnDone', focusSessionId: 'report' }), true)
+  assert.equal(shown.length, 0)
+  assert.equal(await window.hermesDesktop.notify({ kind: 'turnDone', body: 'Local test' }), true)
+  assert.equal(shown.length, 1)
 })

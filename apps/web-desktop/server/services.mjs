@@ -2,17 +2,18 @@ import { createPluginAssets } from './plugin-assets.mjs'
 import { createPreferencesHandler } from './preferences-server.mjs'
 import { createAndroidAuthHandler } from './android-auth.mjs'
 import { createAndroidPush } from './android-push.mjs'
+import { createBrowserPushSender } from './browser-push.mjs'
 import { createFirebaseSender } from './firebase-messaging.mjs'
 import { createGatewayCompatibility } from './gateway-compatibility.mjs'
 import { createOpenCodeGoUsageHandler } from './opencode-go-usage.mjs'
 
 /** Identical route owners and lifecycle in Vite, preview and the container. */
-export function createAthenaServices({ target, identityUrl = target, directory, home, openCodeGoApiKey, fetch, now, sender = createFirebaseSender() }) {
+export function createAthenaServices({ target, identityUrl = target, directory, home, openCodeGoApiKey, fetch, now, sender = createFirebaseSender(), browserSender = createBrowserPushSender(directory) }) {
   const plugins = createPluginAssets({ home })
   const preferences = createPreferencesHandler({ target, identityUrl, directory, fetch })
   const androidAuth = createAndroidAuthHandler({ target, fetch, now })
   const gateway = createGatewayCompatibility({ target, now, fetch })
-  const push = createAndroidPush({ target, identityUrl, directory, fetch, now, sender, consumeTokenTicket: gateway.consumeTokenTicket })
+  const push = createAndroidPush({ target, identityUrl, directory, fetch, now, sender, browserSender, consumeTokenTicket: gateway.consumeTokenTicket })
   const openCodeGoUsage = createOpenCodeGoUsageHandler({ target, apiKey: openCodeGoApiKey, fetch, now })
   let closed = false
   const attached = new WeakSet()
@@ -43,6 +44,7 @@ export function createAthenaServices({ target, identityUrl = target, directory, 
       server.once('close', close)
     },
     close,
-    drain: () => push.drain()
+    drain: () => push.drain(),
+    scanReplies: () => push.scanReplies()
   }
 }

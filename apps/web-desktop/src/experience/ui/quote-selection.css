@@ -1,0 +1,31 @@
+.browser-quote-selection {
+  position: fixed;
+  z-index: 50;
+  /* Selection rectangles already include Athena's document zoom. */
+  zoom: calc(1 / var(--web-ui-scale, 1));
+  border: 1px solid var(--web-border);
+  border-radius: var(--web-radius-panel);
+  background: var(--web-surface);
+  color: var(--web-text);
+  box-shadow: var(--web-shadow-panel);
+  cursor: pointer;
+  user-select: none;
+}
+
+.browser-quote-selection > span {
+  display: flex;
+  align-items: center;
+  min-height: var(--web-control-compact);
+  padding: var(--web-space-1) var(--web-space-3);
+  font-size: var(--web-text-body);
+  white-space: nowrap;
+  zoom: var(--web-ui-scale, 1);
+}
+
+.browser-quote-selection:hover {
+  background: var(--web-hover);
+}
+
+.browser-quote-selection:focus-visible {
+  outline: var(--web-focus-ring);
+}
