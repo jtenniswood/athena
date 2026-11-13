@@ -46,12 +46,16 @@ async function register(): Promise<boolean> {
       window.localStorage.setItem('athena:android-push-binding', bindingId)
     } catch { bindingId ??= crypto.randomUUID() }
     let prefs: { enabled?: boolean; kinds?: Record<string, boolean> } = {}
-    try { prefs = JSON.parse(window.localStorage.getItem('hermes:native-notifications') || '{}') } catch { /* Use renderer defaults. */ }
+    let silent = false
+    try {
+      prefs = JSON.parse(window.localStorage.getItem('hermes:native-notifications') || '{}')
+      silent = window.localStorage.getItem('hermes.desktop.hapticsMuted') === 'true'
+    } catch { /* Use renderer defaults. */ }
     const enabled = prefs?.enabled !== false && androidBackgroundAlerts()
     try {
       const bound = await apiFetch<{ bindingId?: string }>({ method: 'POST', path: '/api/athena/android/push', body: {
         ...registration, bindingId, accountScopedBinding: true, enabled, kinds: prefs?.kinds,
-        foreground: Boolean(androidVisibleSession())
+        foreground: Boolean(androidVisibleSession()), silent
       } })
       if (stopped) return false
       await setAndroidPushActive(enabled, bound.bindingId || bindingId, registration.token, registration.tokenVersion)
@@ -66,12 +70,13 @@ async function register(): Promise<boolean> {
 
 async function reportDelivery(deviceId: string, generation: number): Promise<void> {
   try {
-    const status = await apiFetch<{ persistent: boolean; pending: number; lastDelivery: { state: string; attempts: number } | null }>({
+    const status = await apiFetch<{ persistent: boolean; watchingReplies?: boolean; pending: number; lastDelivery: { state: string; attempts: number } | null }>({
       method: 'GET', path: '/api/athena/android/push?device=' + encodeURIComponent(deviceId), timeoutMs: 4000
     })
     if (stopped || generation !== diagnosticsGeneration) return
     const last = status.lastDelivery
     await androidPushDiagnostics(`${status.persistent ? 'Persistent registration' : 'Temporary registration'} · ${status.pending} pending` +
+      (status.watchingReplies ? ' · Checking for new replies' : '') +
       (last ? ` · Last: ${last.state === 'accepted' ? 'Accepted by Firebase' : last.state} (${last.attempts} attempts)` : ''))
   } catch { /* Optional diagnostics must not delay connecting to chat or block older servers. */ }
 }

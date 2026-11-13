@@ -79,8 +79,21 @@ self.addEventListener('notificationclose', event => {
 })
 
 self.addEventListener('message', event => {
-  if (event.data?.type === 'ATHENA_NOTIFICATION_CAPABILITIES') event.ports[0]?.postMessage({ notificationCallbacks: 1 })
+  if (event.data?.type === 'ATHENA_NOTIFICATION_CAPABILITIES') event.ports[0]?.postMessage({ notificationCallbacks: 1, browserPush: 1 })
   else if (event.data?.type === 'ATHENA_NOTIFICATION_DISMISS') {
     event.waitUntil(dismissNotificationCallbacks(event.data.data).then(() => event.ports[0]?.postMessage({ dismissed: true })))
   }
+})
+
+self.addEventListener('push', event => {
+  event.waitUntil((async () => {
+    let data
+    try { data = event.data?.json() } catch { return }
+    const target = notificationTarget(data)
+    if (!target || typeof data?.title !== 'string' || typeof data?.body !== 'string') return
+    await self.registration.showNotification(data.title, {
+      body: data.body, icon: '/athena.png', badge: '/athena.png',
+      tag: data.tag, silent: data.silent === true, data: { url: target.href, navigate: true }
+    })
+  })())
 })
