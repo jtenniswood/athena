@@ -81,8 +81,6 @@
 .browser-sessions-pane [data-browser-section-hidden] { display:none !important; }
 .browser-sessions-pane [data-gateway-group-empty] { display:none; }
 /* Align the overflow label with the chat row inset, status icon, and gap. */
-.browser-profile-chat-overflow { --profile-chat-title-inset:1.25rem; margin-inline-start:calc(.625rem + var(--profile-chat-title-inset)); }
-.browser-profile-chat-overflow[data-card-rows] { --profile-chat-title-inset:.5rem; }
 /* Use one stack gap for Pinned, Sessions, messaging services, and Cron. The
    upstream sections carry different content padding, which otherwise makes
    the visible gap change from one section to the next. The session scroller
@@ -269,8 +267,6 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-sessions-pane :is([data-browser-group-actions], [data-row-actions]) button:not([data-browser-profile-create]):has(:is(.codicon-add, .codicon-ellipsis, .codicon-kebab-vertical)) { display:none; }
  /* Match the profile header inset instead of adding a second row gutter. */
  .browser-sessions-pane [data-gateway-group] [data-web-session-id] { padding-inline-start:0; }
- .browser-profile-chat-overflow { margin-inline-start:var(--profile-chat-title-inset); }
- [data-gateway-group]:has(> [data-browser-session-order] [data-web-session-reorderable]) > .browser-profile-chat-overflow:not([data-card-rows]) { --profile-chat-title-inset:calc(var(--web-touch-target) + .375rem); }
  .browser-sessions-pane [data-browser-session-actions] { position:relative; opacity:1; pointer-events:auto; }
  .browser-sessions-pane [data-web-session-id]:is(:hover,:focus-within,:has([data-state="open"])) [data-row-actions]:has(> [data-browser-session-actions]) { min-width:0; }
  /* Keep the desktop status slot visible even when optional figures run out of room. */
