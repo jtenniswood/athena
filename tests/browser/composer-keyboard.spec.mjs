@@ -6,8 +6,9 @@ test.beforeAll(async () => { application = await createBuiltApplication(); origi
 test.afterAll(async () => { await application?.close() })
 
 const composer = page => page.locator('[data-slot="composer-rich-input"]:visible').first()
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, isMobile }) => {
   await page.goto(`${origin}/#/preview-week`)
+  if (isMobile) await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).tap()
   await expect(composer(page)).toBeVisible({ timeout: 30000 })
 })
 
@@ -77,5 +78,44 @@ test('accepted sends position their real mounted renderer transcript', async ({ 
       const scale = viewport.getBoundingClientRect().height / viewport.offsetHeight
       return (turn.getBoundingClientRect().top - viewport.getBoundingClientRect().top) / scale
     })).toBeCloseTo(fresh ? 0 : 12, 0)
+  }
+})
+
+test.describe('Android keyboard dictation', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', "Uses Chromium's native IME composition protocol")
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 393, height: 700 } })
+
+  for (const [scenario, initialText] of [
+    ['tapping Send commits keyboard dictation in an empty draft', ''],
+    ['tapping Send commits keyboard dictation after typing', 'Typed first. ']
+  ]) {
+    test(scenario, async ({ page }) => {
+      const editor = composer(page)
+      const send = page.locator('[data-browser-send-action]:visible')
+      if (initialText) {
+        await editor.fill(initialText)
+        await editor.press('End')
+        await expect(send).toBeEnabled()
+      } else {
+        await editor.tap()
+      }
+
+      const ime = await page.context().newCDPSession(page)
+      const dictated = 'Send every dictated word'
+      await ime.send('Input.imeSetComposition', {
+        text: dictated, selectionStart: dictated.length, selectionEnd: dictated.length
+      })
+      const message = initialText + dictated
+      await expect(editor).toHaveText(message)
+
+      await editor.dispatchEvent('keydown', { key: 'Enter', keyCode: 229, isComposing: true })
+      await expect(editor).toHaveText(message)
+
+      await expect(send).toBeEnabled({ timeout: 3000 })
+      await send.tap()
+      const prompt = page.locator('[data-slot="aui_user-message-root"]').filter({ hasText: message })
+      await expect(prompt).toHaveCount(1, { timeout: 3000 })
+      await expect(editor).toBeEmpty()
+    })
   }
 })

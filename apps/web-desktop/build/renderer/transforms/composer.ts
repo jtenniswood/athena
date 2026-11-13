@@ -20,6 +20,58 @@ export function useBrowserComposerLineBreak(source: string): string {
 ${target}`]])
 }
 
+export function useBrowserComposerCompositionSubmit(source: string): string {
+  const submitGuard = `            onSubmit={e => {
+              e.preventDefault()
+
+              if (composingRef.current) {
+                return
+              }`
+  return replaceBrowserContract(source, [
+    ["  useRef\n} from 'react'", "  useRef,\n  useState\n} from 'react'"],
+    ['  beginComposerComposition,', '  beginComposerComposition,\n  composerPlainText,'],
+    ['  const composingRef = useRef(false)', '  const [compositionHasText, setCompositionHasText] = useState(false)\n  const composingRef = useRef(false)'],
+    ['  const hasComposerPayload = hasText || attachments.length > 0', '  const hasComposerPayload = hasText || compositionHasText || attachments.length > 0'],
+    [`    if (composingRef.current) {
+      return
+    }
+
+    scheduleFlushEditorToDraft(event.currentTarget)`, `    if (composingRef.current) {
+      // Touch keyboards can leave dictation in composition until the user taps Send.
+      // Show Send for the visible text without writing uncommitted input into the draft.
+      if (touchPointer) {
+        setCompositionHasText(Boolean(composerPlainText(event.currentTarget).trim()))
+      }
+      return
+    }
+
+    scheduleFlushEditorToDraft(event.currentTarget)`],
+    ['    if (composingRef.current && !event.nativeEvent.isComposing) {',
+      '    if (composingRef.current && !event.nativeEvent.isComposing) {\n      setCompositionHasText(false)'],
+    ['        onBlur={() => {', '        onBlur={() => {\n          setCompositionHasText(false)'],
+    ['        onCompositionEnd={event => {', '        onCompositionEnd={event => {\n          setCompositionHasText(false)'],
+    [submitGuard, `            onSubmit={e => {
+              e.preventDefault()
+
+              if (composingRef.current) {
+                const editor = editorRef.current
+                const submitter = (e.nativeEvent as SubmitEvent).submitter
+                if (!touchPointer || !editor || !submitter?.hasAttribute('data-browser-send-action')) {
+                  return
+                }
+
+                // The button normally keeps editor focus. Blur commits the keyboard
+                // composition before the existing submit command reads the live editor.
+                editor.blur()
+                // If the IME discards its preview, an empty draft must not become Stop.
+                const discardedText = hasComposerPayload && !attachments.length && !composerPlainText(editor).trim()
+                if (composingRef.current || discardedText) {
+                  return
+                }
+              }`]
+  ])
+}
+
 export function keepBrowserMessageBubblesSolid(source: string): string {
   const replacements: [string, string][] = [
     ['clampIntensity(storedString(KEY))', '(window.__HERMES_WEB_BRIDGE__ ? TRANSLUCENCY_MIN : clampIntensity(storedString(KEY)))'],
