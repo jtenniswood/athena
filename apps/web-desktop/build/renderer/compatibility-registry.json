@@ -3195,7 +3195,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/gateway-groups.tsx",
-    "reason": "Project live profile groups, owner routes, aliases and ordering into Athena-owned group headers, avatars, nesting and disclosure. Keep hidden groups and the seven-chat profile preview browser-owned.",
+    "reason": "Project live profile groups, owner routes, aliases and ordering into Athena-owned group headers, avatars, nesting and disclosure. Keep hidden groups browser-owned.",
     "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
     "tests": [
       {

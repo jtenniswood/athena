@@ -1,7 +1,7 @@
 import { arrayMove } from '@dnd-kit/sortable'
 import { compactNumber } from '@hermes/shared'
 import { useStore } from '@nanostores/react'
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { startNewProjectDrag, startNewSessionDrag, type NewSessionSplitHandler } from '@/app/chat/new-session-drag'
 import { renameGatewayGroup, reorderGatewayGroups, toggleGatewayGroup } from '@/app/chat/sidebar/gateway-group-preferences'
 import { ReorderableList, useSortableBindings } from '@/app/chat/sidebar/reorderable-list'
@@ -14,14 +14,12 @@ import { Input } from '@/components/ui/input'
 import { ProfileGlyph } from '@/components/ui/profile-glyph'
 import type { SessionInfo } from '@/hermes'
 import { useI18n } from '@/i18n'
-import { $sidebarCardRows, $sidebarGrouping, $sidebarRowMeta } from '@/store/layout'
+import { $sidebarGrouping, $sidebarRowMeta } from '@/store/layout'
 import { $newProjectDropPlacement } from '@/store/projects'
 import { BrowserProfileGroup, BrowserProfileNesting } from '../experience/sidebar-profile'
 import { BrowserHideProfileItem } from '../experience/profile-list-visibility'
 import { useBrowserProfileSection } from './profile-section'
 import { openBrowserProfileProjectCreate } from './project-create'
-
-const PROFILE_CHAT_LIMIT = 7
 
 export function useBrowserSidebarFigures(totals?: { tokens: number; costUsd: number }) {
   const meta = useStore($sidebarRowMeta)
@@ -76,11 +74,7 @@ interface ProfileGroupController {
 export function BrowserProfileGroupControllerSurface({ model }: { model: ProfileGroupController }) {
   const { t } = useI18n(), s = t.sidebar, copy = s.gatewayGroups
   const { group, sessions, sortable } = model
-  const [showAllChats, setShowAllChats] = useState(false)
-  const hasOverflow = Boolean(group.profile) && !model.embedded && sessions.length > PROFILE_CHAT_LIMIT
-  const visibleSessions = hasOverflow && !showAllChats ? sessions.slice(0, PROFILE_CHAT_LIMIT) : sessions
   const grouping = useStore($sidebarGrouping)
-  const cardRows = useStore($sidebarCardRows)
   const renameLabel = group.profile ? 'Rename profile' : copy.rename
   const browserProfile = useBrowserProfileSection(group.profile)
   const label = model.alias || browserProfile?.label || model.label
@@ -127,11 +121,6 @@ export function BrowserProfileGroupControllerSurface({ model }: { model: Profile
     model={{ label, open: model.open, toggle, activate: toggle, toggleLabel: s.projects.toggle(label, !model.open), figures, actions,
       reorder: { label: `${copy.reorder}: ${label}`, dragging: sortable.dragging, bindings: sortable.dragHandleProps },
       icon: group.profile ? browserProfile?.picture ?? <ProfileGlyph className="size-full" color={group.color ?? null} isDefault={group.profile === 'default'} name={group.profile} /> : <Codicon name="remote" /> }}>
-    {model.children}{model.contribution}{model.open && model.renderRows(visibleSessions)}
-    {hasOverflow && <button type="button" data-card-rows={cardRows || undefined} aria-expanded={showAllChats} onClick={() => setShowAllChats(!showAllChats)}
-      className="browser-profile-chat-overflow inline-flex min-h-7 w-fit items-center gap-1 rounded-sm bg-transparent pe-2 text-xs text-(--ui-text-tertiary) underline-offset-4 hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:underline">
-      <span>{showAllChats ? 'Less' : 'More'}</span>
-      <Codicon name={showAllChats ? 'chevron-up' : 'chevron-down'} size="0.75rem" />
-    </button>}
+    {model.children}{model.contribution}{model.open && model.renderRows(sessions)}
   </BrowserProfileGroup>
 }
