@@ -3658,14 +3658,14 @@
     "sourceRoot": "renderer"
   },
   {
-    "name": "browser-composer-line-break",
+    "name": "browser-composer-keyboard",
     "kind": "browser-transform",
     "order": 40,
     "module": "app/chat/composer/index.tsx",
     "after": [
       "browser-alternate-composer-submit"
     ],
-    "reason": "Handle Shift+Enter and transcript quotes with the composer’s existing IME, undo and draft owners.",
+    "reason": "Handle Shift+Enter and transcript quotes through the existing editor lifecycle, and commit touch keyboard composition on explicit Send.",
     "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
     "tests": [
       {
@@ -3677,16 +3677,25 @@
         "scenario": "composer line breaks respect IME commits, selection and unrelated editors"
       },
       {
+        "file": "tests/browser/composer-keyboard.spec.mjs",
+        "scenario": "tapping Send commits keyboard dictation in an empty draft"
+      },
+      {
+        "file": "tests/browser/composer-keyboard.spec.mjs",
+        "scenario": "tapping Send commits keyboard dictation after typing"
+      },
+      {
         "file": "tests/browser/quote-selection.spec.mjs",
         "scenario": "adding selected transcript text appends an undoable quote to the unsent draft"
       }
     ],
-    "removal": "Remove when the renderer provides equivalent browser line breaks and transcript quote insertion with IME, undo and persistence coverage.",
+    "removal": "Remove when the renderer supports browser line breaks, transcript quote insertion, and explicit Send during touch keyboard composition.",
     "sourceHash": "ef66387bcbe1a3cda559eb1790d1e7ef0142b1221010bb2cb65b7086f96b359d",
     "inputHash": "6b7f1713f6d9badfc639d77684d7ba2544590d9fba50f3e4c2d3d9f1d2e99bf6",
-    "outputHash": "56ff43e4232f73f185d90bb4b3dd6c4d3824940c60e8828620b62613a4442700",
+    "outputHash": "3690742de5049068095cc2ba6582dfcff203465c422258515c70c08da2607389",
     "handlers": [
       "useBrowserComposerLineBreak",
+      "useBrowserComposerCompositionSubmit",
       "useBrowserQuoteInsertion"
     ],
     "sourceRoot": "renderer"

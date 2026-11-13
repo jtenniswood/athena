@@ -60,6 +60,7 @@ import {
   useBrowserFollowupSubmit,
   useBrowserAlternateSubmit,
   useBrowserComposerLineBreak,
+  useBrowserComposerCompositionSubmit,
   removeBrowserConversationalVoiceEntry,
   useBrowserCodingActionHooks,
   keepBrowserMessageBubblesSolid
@@ -272,6 +273,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     exposeBrowserTimelineHistoryOwner,
     useBrowserTimelineOwner: source => useBrowserTimelineOwner(source, root),
     useBrowserComposerLineBreak,
+    useBrowserComposerCompositionSubmit,
     useBrowserQuoteInsertion: source => useBrowserQuoteInsertion(source, root),
     useBrowserTranscriptQuote: source => useBrowserTranscriptQuote(source, root),
     expandBrowserMessageOnTap,
