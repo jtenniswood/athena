@@ -17,10 +17,11 @@ async function fixture(t, options = {}) {
   const directory = options.persist ? await mkdtemp(path.join(tmpdir(), 'athena-push-')) : undefined
   const gateway = createServer()
   const upstream = new WebSocketServer({ server: gateway })
+  const rows = [], transcripts = new Map(), browserSent = []
   let peer
   upstream.on('connection', (socket, req) => {
     assert.equal(req.url, options.tokenTicket ? '/api/ws?token=private-existing-token' : options.protocols ? '/api/ws?native_dial=browser' : '/api/ws?ticket=one-use')
-    assert.equal(req.headers.cookie || '', options.tokenTicket ? '' : 'session=A')
+    assert.equal(req.headers.cookie || '', options.tokenTicket ? '' : 'hermes_session_at=A')
     assert.equal(req.headers.origin, `http://127.0.0.1:${gateway.address().port}`)
     if (options.protocols) assert.equal(req.headers['sec-websocket-protocol'], options.protocols.join(','))
     peer = socket
@@ -32,16 +33,29 @@ async function fixture(t, options = {}) {
   })
   await new Promise(resolve => gateway.listen(0, '127.0.0.1', resolve))
   const createRelay = () => createAthenaServices({ directory, now: () => clock, target: `http://127.0.0.1:${gateway.address().port}`,
+    browserSender: { enabled: true, publicKey: () => 'public-key', send: async (...args) => browserSent.push(args) },
     sender: { enabled: true, send: async (...args) => { attempts.push(args); if (failures-- > 0) throw new Error("Temporary sender outage"); sent.push(args); waiters.shift()?.() } },
     fetch: async (url, { headers }) => {
-      if (new URL(url).pathname.startsWith('/api/sessions/')) {
-        assert.ok(headers.Cookie === 'session=A' || headers['X-Hermes-Session-Token'] === 'private-existing-token')
-        options.onTitleRead?.(new URL(url))
+      const address = new URL(url)
+      const authorized = headers.cookie === 'hermes_session_at=A' || headers['x-hermes-session-token'] === 'private-existing-token'
+      if (address.pathname === '/api/profiles/sessions') {
+        if (!authorized || options.authExpired?.()) return new Response(null, { status: 401 })
+        assert.equal(address.searchParams.get('profile'), 'all')
+        return Response.json({ sessions: rows })
+      }
+      if (address.pathname.endsWith('/messages')) {
+        if (!authorized || options.authExpired?.()) return new Response(null, { status: 401 })
+        assert.equal(address.searchParams.get('inline_images'), 'false')
+        return Response.json({ pagination: { order: 'latest' }, messages: transcripts.get(address.pathname.split('/')[3]) || [] })
+      }
+      if (address.pathname.startsWith('/api/sessions/')) {
+        assert.ok(authorized)
+        options.onTitleRead?.(address)
         return Response.json({ title })
       }
       return options.tokenTicket && (headers['X-Hermes-Session-Token'] || headers['x-hermes-session-token']) === 'private-existing-token'
       ? Response.json({ user_id: 'static-token-account', provider: 'test' })
-      : headers.cookie === 'session=A' || headers.cookie === 'session=B'
+      : headers.cookie === 'hermes_session_at=A' || headers.cookie === 'hermes_session_at=B'
       ? Response.json({ user_id: headers.cookie, provider: 'test' }) : Response.json({}, { status: 401 })
     }
   })
@@ -59,29 +73,44 @@ async function fixture(t, options = {}) {
   })
   const origin = `http://127.0.0.1:${server.address().port}`
   const register = (changes = {}, account = 'A', method = 'POST') => fetch(origin + '/api/athena/android/push', {
-    method, headers: { Origin: origin, ...(options.tokenTicket ? { 'X-Hermes-Session-Token': 'private-existing-token' } : { Cookie: `session=${account}` }), 'Content-Type': 'application/json', 'X-Forwarded-Proto': 'http' },
+    method, headers: { Origin: origin, ...(options.tokenTicket ? { 'X-Hermes-Session-Token': 'private-existing-token' } : { Cookie: `hermes_session_at=${account}` }), 'Content-Type': 'application/json', 'X-Forwarded-Proto': 'http' },
     body: JSON.stringify({ deviceId, bindingId, tokenVersion: 0, token: 'fake-device-token-for-testing-only', enabled: true, foreground: false, ...changes })
   })
   const connect = handle => new WebSocket(origin.replace('http:', 'ws:') + `/api/athena/android/ws?${options.tokenTicket ? 'socket=gateway&athena_token_ticket=' + handle : options.protocols ? 'native_dial=browser' : 'ticket=one-use'}&device=${deviceId}`, options.protocols || [],
-    { headers: { Origin: origin, ...(options.tokenTicket ? {} : { Cookie: 'session=A' }), 'X-Forwarded-Proto': 'http' } })
+    { headers: { Origin: origin, ...(options.tokenTicket ? {} : { Cookie: 'hermes_session_at=A' }), 'X-Forwarded-Proto': 'http' } })
+  const browser = (changes = {}, account = 'A', method = 'POST', suffix = '') => fetch(origin + '/api/athena/browser/push' + suffix, {
+    method, headers: { Origin: origin, Cookie: `hermes_session_at=${account}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deviceId, subscription: {
+      endpoint: 'https://fcm.googleapis.com/fcm/send/test', keys: { p256dh: 'p'.repeat(87), auth: 'a'.repeat(22) }
+    }, enabled: true, ...changes })
+  })
+  const save = (id, message, attrs = {}) => {
+    const messages = transcripts.get(id) || []
+    messages.push({ id: messages.length + 1, timestamp: clock / 1000, ...message })
+    transcripts.set(id, messages)
+    const index = rows.findIndex(row => row.id === id)
+    const row = { id, profile: 'research', title: 'New chat', last_active: clock / 1000, message_count: messages.length, ...attrs }
+    if (index === -1) rows.unshift(row)
+    else rows[index] = row
+  }
   const mint = async () => (await (await fetch(origin + '/api/athena/gateway/token-ticket?socket=gateway', {
     method: 'POST', headers: { Origin: origin, 'X-Hermes-Session-Token': 'private-existing-token' }
   })).json()).ticket
-  const event = (type, seq, payload) => peer.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: {
-    type, session_id: 'runtime-1', seq, payload
+  const event = (type, seq, payload, session = 'runtime-1') => peer.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: {
+    type, session_id: session, seq, payload
   } }))
   const emit = (seq, status) => event('message.complete', seq, { status, text: 'Private chat content must not reach Firebase' })
   const preview = (eventId, changes = {}) => fetch(origin + '/api/athena/android/push/preview', {
     method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' },
     body: JSON.stringify({ eventId, bindingId, previewKey: 'p'.repeat(43), ...changes })
   })
-  const status = async (account = 'A') => (await fetch(origin + '/api/athena/android/push?device=' + deviceId, { headers: { Cookie: `session=${account}` } })).json()
+  const status = async (account = 'A') => (await fetch(origin + '/api/athena/android/push?device=' + deviceId, { headers: { Cookie: `hermes_session_at=${account}` } })).json()
   const rotate = (changes = {}) => fetch(origin + '/api/athena/android/push/token', {
     method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' },
     body: JSON.stringify({ deviceId, bindingId, refreshKey: 'k'.repeat(43), token: 'rotated-device-token-for-testing-only', ...changes })
   })
   const testPush = (account = 'A') => fetch(origin + '/api/athena/android/push/test', {
-    method: 'POST', headers: { Origin: origin, Cookie: `session=${account}`, 'Content-Type': 'application/json' },
+    method: 'POST', headers: { Origin: origin, Cookie: `hermes_session_at=${account}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ deviceId })
   })
   const restart = async () => {
@@ -90,7 +119,7 @@ async function fixture(t, options = {}) {
     relay = createRelay(); relay.attach(server)
     await relay.drain()
   }
-  return { sent, attempts, register, connect, mint, emit, event, preview, status, rotate, testPush, restart, directory,
+  return { sent, browserSent, browser, save, scan: () => relay.scanReplies(), attempts, register, connect, mint, emit, event, preview, status, rotate, testPush, restart, directory,
     advance: milliseconds => { clock += milliseconds }, drain: () => relay.drain(),
     nextPush: () => new Promise(resolve => waiters.push(resolve)) }
 }
@@ -133,7 +162,7 @@ test('response completion reaches Firebase after the Android WebView disconnects
   assert.equal(sent[1][1].kind, 'turnError')
 })
 
-test('Firebase waits for the title and only the registered installation can fetch the preview from Athena', async t => {
+test('Firebase briefly waits for the title and only the registered installation can fetch the preview from Athena', async t => {
   let lookup
   const app = await fixture(t, { title: 'New conversation', onTitleRead: url => { lookup = url } })
   assert.equal((await app.register({ previewKey: 'p'.repeat(43), refreshKey: 'k'.repeat(43) })).status, 200)
@@ -293,7 +322,7 @@ test('expired queued events and disabled notification kinds are never sent on re
   app.advance(2000); await app.drain()
   assert.equal(app.attempts.length, 1)
   await app.register()
-  app.emit(12, 'ok'); await until(() => app.attempts.length === 2); await app.drain()
+  app.event('message.complete', 12, { status: 'ok' }, 'runtime-2'); await until(() => app.attempts.length === 2); await app.drain()
   app.advance(3600001); await app.restart()
   assert.equal(app.sent.length, 0)
   assert.equal((await app.status()).lastDelivery.state, 'expired')
@@ -359,4 +388,74 @@ test('push tests use the signed-in device, bypass category filters and are rate 
   assert.equal(app.sent.length, 1)
   await app.register({ enabled: false })
   assert.equal((await app.testPush()).status, 409)
+})
+
+test('saved replies and scheduled results reach both devices with no chat socket', async t => {
+  const app = await fixture(t)
+  app.save('old', { role: 'assistant', content: 'Old reply' })
+  app.advance(1000)
+  assert.equal((await app.register({ foreground: true, previewKey: 'p'.repeat(43) })).status, 200)
+  assert.equal((await app.browser()).status, 200)
+  app.advance(1000)
+  app.save('scheduled', { role: 'user', content: 'Scheduled result', display_kind: 'internal_notification',
+    display_metadata: { completion_note: ['cron:job:execution'] } }, { title: 'Nightly report' })
+  app.save('prompt-only', { role: 'user', content: 'Waiting for a reply' })
+  app.save('tool-only', { role: 'assistant', content: 'Working on it', tool_calls: [{ id: 'pending' }] })
+  app.save('silent', { role: 'assistant', content: '[SILENT]' })
+  app.save('unread-reply', { role: 'assistant', content: 'New reply' })
+  app.save('active-cron', { role: 'assistant', content: 'Partial' }, { source: 'cron' })
+  await app.scan()
+  await app.drain()
+  assert.deepEqual(app.sent.map(([, data]) => data.focusSessionId).sort(), ['scheduled', 'unread-reply'])
+  assert.deepEqual(app.browserSent.map(([, data]) => data.focusSessionId).sort(), ['scheduled', 'unread-reply'])
+  const [, scheduled, priority] = app.sent.find(([, data]) => data.focusSessionId === 'scheduled')
+  assert.equal(priority, 'HIGH', 'a stale foreground heartbeat cannot delay a closed app alert')
+  assert.equal(scheduled.focusProfile, 'research')
+  assert.equal(scheduled.body, 'Your response is ready.')
+  assert.equal((await (await app.preview(scheduled.eventId)).json()).body, 'Scheduled result')
+  assert.doesNotMatch(JSON.stringify(app.browserSent), /Scheduled result|Nightly report|New reply/)
+  app.advance(1000)
+  app.save('scheduled', { role: 'user', content: 'Another report', display_metadata: { completion_note: ['next'] } })
+  app.save('prompt-only', { role: 'assistant', content: 'Now it is ready' })
+  await app.scan()
+  await app.drain()
+  assert.deepEqual(app.sent.map(([, data]) => data.focusSessionId).sort(), ['prompt-only', 'scheduled', 'unread-reply'])
+  assert.deepEqual(app.browserSent.map(([, data]) => data.focusSessionId).sort(), ['prompt-only', 'scheduled', 'scheduled', 'unread-reply'])
+})
+
+test('expired chat credentials and notification preferences stop background delivery', async t => {
+  let expired = false
+  const app = await fixture(t, { authExpired: () => expired })
+  await app.register({ kinds: { turnDone: false } })
+  await app.browser()
+  app.advance(1000)
+  app.save('already-read', { role: 'assistant', content: 'Read reply' }, { last_read_at: Number.MAX_SAFE_INTEGER })
+  app.save('visible', { role: 'assistant', content: 'Displayed' })
+  await app.browser({ visibleSession: 'visible' })
+  await app.scan()
+  await app.drain()
+  assert.equal(app.sent.length + app.browserSent.length, 0)
+  expired = true
+  app.advance(1000)
+  app.save('new', { role: 'assistant', content: 'Private reply' })
+  await app.scan()
+  assert.equal(app.browserSent.length, 0)
+  expired = false
+  await app.browser({}, 'A', 'DELETE')
+  await app.scan()
+  assert.equal(app.browserSent.length, 0)
+  assert.equal((await app.browser({}, 'A', 'POST', '/test')).status, 409)
+  assert.equal((await app.browser({ subscription: { endpoint: 'https://localhost/api' } })).status, 400)
+})
+
+test('an untitled completed reply still reaches Android', async t => {
+  const app = await fixture(t, { title: 'New chat' })
+  await app.register()
+  const client = app.connect()
+  await once(client, 'open')
+  const pending = app.nextPush()
+  app.emit(1, 'ok')
+  await pending
+  assert.equal(app.sent[0][1].kind, 'turnDone')
+  assert.equal(app.sent[0][1].focusSessionId, 'runtime-1')
 })

@@ -1,6 +1,29 @@
 import path from 'node:path'
 import { replaceBrowserContract } from './contract'
 
+/** Insert transcript quotes through the composer's normal draft and undo paths. */
+export function useBrowserQuoteInsertion(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/ui/quote-selection'))
+  const target = '  const handleEditorInput = (event: FormEvent<HTMLDivElement>) => {'
+  return `import { useBrowserComposerQuote } from ${owner}\n` + replaceBrowserContract(source, [
+    ['  insertComposerContentsAtCaret,', '  insertComposerContentsAtCaret,\n  placeCaretEnd,'],
+    [target, `  useBrowserComposerQuote(surfaceId, !inputDisabled && !queueEdit, quote => {
+    const editor = editorRef.current
+    if (!editor?.isConnected || composingRef.current || queueEditRef.current || isBrowsingHistory(sessionId)) return false
+
+    flushEditorToDraft(editor)
+    recordUndoPoint()
+    const paragraph = draftRef.current && !draftRef.current.endsWith('\\n\\n') ? '\\n' : ''
+    insertText(paragraph + quote)
+    focusInput()
+    if (editor.ownerDocument.activeElement === editor) placeCaretEnd(editor)
+    return true
+  })
+
+${target}`]
+  ])
+}
+
 /** Keep browser line breaks inside the composer's IME, undo and draft lifecycle. */
 export function useBrowserComposerLineBreak(source: string): string {
   const target = '    // Undo/redo before anything else — we own the stack (see useComposerUndo),'

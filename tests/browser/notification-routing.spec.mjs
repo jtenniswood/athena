@@ -216,3 +216,45 @@ test('a prepared update refuses preference application until abort and preserves
   await page.evaluate(() => { window.location.hash = '/preview-research' })
   await expect(composer(page)).toHaveText('Keep this notification-tab draft')
 })
+
+test('browser notification settings subscribe and send a server push test', async ({ page }) => {
+  const endpoint = 'https://fcm.googleapis.com/fcm/send/athena-test'
+  await page.evaluate(endpoint => {
+    Object.defineProperty(Notification, 'permission', { configurable: true, value: 'granted' })
+    let subscription = null
+    const manager = PushManager.prototype
+    manager.getSubscription = async () => subscription
+    manager.subscribe = async options => {
+      if (!options.userVisibleOnly || typeof options.applicationServerKey !== 'string') throw new Error('Missing Web Push options')
+      subscription = {
+        toJSON: () => ({ endpoint, keys: { p256dh: 'p'.repeat(87), auth: 'a'.repeat(22) } }),
+        unsubscribe: async () => { subscription = null; return true }
+      }
+      return subscription
+    }
+  }, endpoint)
+  const registered = []
+  const calls = []
+  await page.route('**/api/athena/browser/push**', route => {
+    const method = route.request().method()
+    const pathname = new URL(route.request().url()).pathname
+    calls.push([method, pathname])
+    if (method === 'GET') return route.fulfill({ json: { publicKey: 'public-key' } })
+    if (method === 'POST' && !pathname.endsWith('/test')) {
+      registered.push(route.request().postDataJSON())
+      return route.fulfill({ json: { watchingReplies: true } })
+    }
+    return route.fulfill({ json: { ok: true } })
+  })
+  await page.evaluate(() => { location.hash = '/settings?tab=notifications' })
+  const toggle = page.getByRole('checkbox', { name: 'Background delivery on this device' })
+  await expect(toggle).toBeVisible({ timeout: 10000 })
+  await toggle.check()
+  await expect.poll(() => registered.at(-1)?.subscription.endpoint).toBe(endpoint)
+  await expect(toggle).toBeChecked()
+  await page.getByRole('button', { name: 'Send browser push test' }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Test sent' })).toBeVisible()
+  await toggle.click()
+  await expect.poll(() => calls.some(([method]) => method === 'DELETE')).toBe(true)
+  await expect(toggle).not.toBeChecked()
+})

@@ -3665,7 +3665,7 @@
     "after": [
       "browser-alternate-composer-submit"
     ],
-    "reason": "Handle Shift+Enter with the existing editor lifecycle and commit touch keyboard composition on explicit Send.",
+    "reason": "Handle Shift+Enter and transcript quotes through the existing editor lifecycle, and commit touch keyboard composition on explicit Send.",
     "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
     "tests": [
       {
@@ -3683,15 +3683,20 @@
       {
         "file": "tests/browser/composer-keyboard.spec.mjs",
         "scenario": "tapping Send commits keyboard dictation after typing"
+      },
+      {
+        "file": "tests/browser/quote-selection.spec.mjs",
+        "scenario": "adding selected transcript text appends an undoable quote to the unsent draft"
       }
     ],
-    "removal": "Remove when the renderer supports browser line breaks and explicit Send during touch keyboard composition.",
+    "removal": "Remove when the renderer supports browser line breaks, transcript quote insertion, and explicit Send during touch keyboard composition.",
     "sourceHash": "ef66387bcbe1a3cda559eb1790d1e7ef0142b1221010bb2cb65b7086f96b359d",
     "inputHash": "6b7f1713f6d9badfc639d77684d7ba2544590d9fba50f3e4c2d3d9f1d2e99bf6",
-    "outputHash": "8082e05129e332b7d0abb11db6c14ae5dd680d79d0334e8d55c7029b1e693307",
+    "outputHash": "3690742de5049068095cc2ba6582dfcff203465c422258515c70c08da2607389",
     "handlers": [
       "useBrowserComposerLineBreak",
-      "useBrowserComposerCompositionSubmit"
+      "useBrowserComposerCompositionSubmit",
+      "useBrowserQuoteInsertion"
     ],
     "sourceRoot": "renderer"
   },
@@ -3756,7 +3761,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "components/assistant-ui/thread/list.tsx",
-    "reason": "Bind accepted-message positioning to the transcript's existing surface, scroll refs and session/profile/visibility lifetime without document discovery or global events.",
+    "reason": "Bind accepted-message positioning and the selection quote action to the transcript's existing scroll refs and session/profile/visibility lifetime.",
     "owner": "apps/web-desktop/build/renderer/transforms/transcript.ts",
     "tests": [
       {
@@ -3770,16 +3775,25 @@
       {
         "file": "tests/browser/composer-keyboard.spec.mjs",
         "scenario": "accepted sends position their real mounted renderer transcript"
+      },
+      {
+        "file": "tests/browser/quote-selection.spec.mjs",
+        "scenario": "selection actions dismiss on Escape and stay with their source conversation"
+      },
+      {
+        "file": "tests/browser/quote-selection.spec.mjs",
+        "scenario": "a selected reply can be added by tapping the control"
       }
     ],
-    "removal": "Remove when the renderer exposes equivalent mounted accepted-submit positioning and reservation lifecycle hooks.",
+    "removal": "Remove when the renderer exposes equivalent accepted-submit positioning and a transcript selection quote action.",
     "handlers": [
-      "useBrowserThreadSubmitScroll"
+      "useBrowserThreadSubmitScroll",
+      "useBrowserTranscriptQuote"
     ],
     "sourceRoot": "renderer",
     "sourceHash": "3b5c0ca769aec48b88852aa0f5f54409abbd46a515dd7f5c5558dd0071583202",
     "inputHash": "3b5c0ca769aec48b88852aa0f5f54409abbd46a515dd7f5c5558dd0071583202",
-    "outputHash": "705dae4c556bee9353ab84810dc6469da47c8049cb542d50e526935d4349d9e3"
+    "outputHash": "0f502beeca9c75ba15ce4d9ab3301fde199db02928a13727e1f3922dece8707a"
   },
   {
     "name": "browser-selected-session-owner",

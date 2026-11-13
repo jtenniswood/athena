@@ -12,6 +12,7 @@ import { webNotify } from '../platform/notifications'
 import { pickBrowserFiles, isWebFileHandle, registerWebFile, webFileAsDataUrl } from '../platform/files'
 import { writeClipboard } from '../platform/clipboard'
 import { mountedPluginFiles } from '../platform/plugin-files'
+import { stopBrowserPush } from '../platform/browser-push'
 import { androidPushGatewayUrl, resumeAndroidPush, stopAndroidPush } from '../platform/android-push'
 import { buildInfo } from '../build-info'
 import { openBrowserExternalLink } from './external-links'
@@ -157,6 +158,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
     },
     oauthLogoutConnectionConfig: async () => {
       await stopAndroidPush()
+      await stopBrowserPush()
       try {
         const response = await fetch(withGatewayRoute(`${baseUrl()}/auth/logout`, activeUpstreamOrigin()), { method: 'POST', credentials: 'same-origin', signal: AbortSignal.timeout(10_000) })
         if (!response.ok) throw new Error(`Sign-out failed (${response.status}). Try again.`)

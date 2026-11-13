@@ -12,7 +12,7 @@ COPY apps/web-desktop/package.json apps/web-desktop/package.json
 RUN node scripts/renderer.mjs \
  && node scripts/renderer-dependencies.mjs \
  && pnpm install --frozen-lockfile
-RUN node -e "require('node:fs').cpSync(require('node:path').dirname(require.resolve('ws/package.json')), '/runtime-ws', { recursive: true })"
+RUN node scripts/copy-runtime-dependencies.mjs /runtime ws web-push
 FROM dependencies AS build
 COPY apps/web-desktop ./apps/web-desktop
 COPY docs ./docs
@@ -53,7 +53,7 @@ COPY nginx.conf.template /etc/nginx/hermes.conf.template
 COPY scripts/runtime-config.mjs /opt/hermes/runtime-config.mjs
 COPY scripts/preference-schema.mjs scripts/browser-preference-contract.mjs scripts/runtime-config.mjs /opt/hermes/scripts/
 COPY apps/web-desktop/server /opt/hermes/apps/web-desktop/server
-COPY --from=dependencies /runtime-ws /opt/hermes/node_modules/ws
+COPY --from=dependencies /runtime/node_modules /opt/hermes/node_modules
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
