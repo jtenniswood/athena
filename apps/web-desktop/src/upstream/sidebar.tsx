@@ -172,7 +172,7 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
         open={c.agentsOpen} onToggle={() => setSidebarRecentsOpen(!c.agentsOpen)} pinned={false} onTogglePin={pinSession}
         card={c.cardRows} collapsible={!c.inProject} dndSensors={c.dndSensors} activeProjectId={c.activeProjectId}
         contentClassName={cn('flex min-h-0 flex-1 flex-col gap-px pb-1.75', scroll, !c.recentsVirtualizes && compactFlat)}
-        rootClassName={cn('browser-session-list-section min-h-32 flex-1 overflow-hidden p-0', !c.recentsVirtualizes && 'compact:min-h-0 compact:flex-none compact:overflow-visible')}
+        rootClassName={cn('browser-session-list-section min-h-32 flex-1 overflow-hidden p-0', c.combinedProfiles && 'browser-combined-profiles-section', !c.recentsVirtualizes && 'compact:min-h-0 compact:flex-none compact:overflow-visible')}
         emptyState={c.inProject && c.projectLoadFailed ? null : c.showSessionSkeletons || (c.inProject && c.projectLoading) ? <SidebarSessionSkeletons /> :
           !c.inProject && c.sessionsLoadError ? <SidebarLoadErrorState onRetry={() => void c.onRetrySessions()} /> :
           <div className="grid min-h-16 place-items-center rounded-lg px-2 text-center text-xs text-(--ui-text-tertiary)">{c.inProject ? s.projectEmpty : c.filtersActive ? s.noFilterMatches : c.pinnedSessions.length ? s.allPinned : s.noSessions}</div>}
