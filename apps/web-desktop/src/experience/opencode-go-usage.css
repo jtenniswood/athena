@@ -1,0 +1,42 @@
+.browser-usage-page {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 3.5rem clamp(1rem, 4vw, 3rem) 2rem;
+  background: var(--web-bg);
+  color: var(--web-text);
+}
+
+.browser-usage-content { max-width: 38rem; margin-inline: auto; }
+.browser-usage-content h1 { margin: 0 0 1rem; font-size: 1.5rem; font-weight: 600; }
+.browser-usage-content h1:focus { outline: none; }
+
+.browser-usage-limits {
+  padding: clamp(1rem, 4vw, 1.5rem);
+  border: 1px solid var(--web-border);
+  border-radius: var(--web-radius-panel);
+  background: var(--web-surface);
+}
+.browser-usage-limits h2 { margin: 0; font-size: 1.125rem; font-weight: 600; }
+.browser-usage-limits p { margin: .375rem 0 0; color: var(--web-text-muted); font-size: var(--web-text-title); }
+.browser-usage-limits p[role="status"] { margin-top: 1.5rem; }
+
+.browser-usage-windows { display: grid; gap: 1.5rem; margin: 1.75rem 0 0; padding: 0; list-style: none; }
+.browser-usage-window { display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: .25rem .625rem; }
+.browser-usage-window strong { font-weight: 600; }
+.browser-usage-window > span { color: var(--web-text-muted); }
+.browser-usage-window .browser-usage-percent { color: var(--web-text); font-variant-numeric: tabular-nums; text-align: end; white-space: nowrap; }
+.browser-usage-track { height: .5rem; margin-top: .625rem; overflow: hidden; border-radius: var(--web-radius-control); background: color-mix(in srgb, var(--web-text-muted) 40%, transparent); }
+.browser-usage-track > div { height: 100%; border-radius: inherit; background: var(--ui-success); }
+.browser-usage-windows [data-exhausted] .browser-usage-percent { color: var(--web-danger); }
+.browser-usage-windows [data-exhausted] .browser-usage-track > div { background: var(--web-danger); }
+
+@media (max-width: 48rem) {
+  [data-overlay-surface]:has(.browser-usage-page) { padding: 0 !important; }
+  [data-overlay-surface]:has(.browser-usage-page) [data-glass-raised] { border: 0; border-radius: 0; }
+}
+
+@media (max-width: 30rem) {
+  .browser-usage-window { grid-template-columns: 1fr auto; }
+  .browser-usage-window > span:first-of-type { grid-row: 2; }
+}

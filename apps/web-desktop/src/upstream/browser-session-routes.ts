@@ -3,7 +3,7 @@ import { $gatewaySwitching } from '@/store/gateway-switch'
 import { $selectedStoredSessionId, $sessionResumeRequest, requestSessionResume } from '@/store/session'
 import { WEB_CONNECTION_ID } from '../platform/connection'
 import { browserSessionRouteProfile } from '../platform/session-route'
-import { isBrowserToolRoute } from '../experience/tool-routes'
+import { isBrowserPageRoute } from '../experience/tool-routes'
 
 let dispose: (() => void) | undefined
 
@@ -14,7 +14,7 @@ export function installBrowserSessionRoutes(): () => void {
     const url = new URL(window.location.href), profile = browserSessionRouteProfile(url)
     if (!profile && !recovering) return
     const route = url.hash.slice(1)
-    if (isBrowserToolRoute(routePathname(route))) return
+    if (isBrowserPageRoute(routePathname(route))) return
     let sessionId: string | null
     try { sessionId = routeSessionId(route) } catch { return }
     if (!sessionId) return

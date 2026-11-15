@@ -1,48 +1,38 @@
-import { useEffect, useState } from 'react'
-import { Codicon, Tip } from '../upstream/browser-api'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { NavLink } from 'react-router'
+import { Codicon } from '../upstream/browser-api'
 import { resolveToken } from '../platform/connection'
 import { runtimeConfig } from '../platform/runtime'
+import { USAGE_ROUTE } from './tool-routes'
+import './opencode-go-usage.css'
 
-const windows = { rolling: '5-hour', weekly: 'Weekly', monthly: 'Monthly' } as const
-type Usage = Record<keyof typeof windows, { percent: number; resetsAt: string }>
+const windows = [
+  { id: 'rolling', label: '5-hour rolling' },
+  { id: 'weekly', label: 'Weekly' },
+  { id: 'monthly', label: 'Monthly' }
+] as const
+type Usage = Record<typeof windows[number]['id'], { percent: number; resetsAt: string }>
 
+const UsageContext = createContext<Usage | null | undefined>(undefined)
 const percent = new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 1 })
-const relativeTime = new Intl.RelativeTimeFormat('en')
 
-function formatRemaining(used: number) {
-  return `${percent.format((100 - used) / 100)} left`
-}
-
-function formatReset(resetsAt: string, now: number) {
+function resetCountdown(resetsAt: string, now: number) {
   const remaining = Date.parse(resetsAt) - now
   if (remaining <= 0) return 'now'
   const minutes = Math.floor(remaining / 60_000)
   const hours = Math.floor(minutes / 60)
-  if (hours >= 24) return relativeTime.format(Math.floor(hours / 24), 'day')
-  if (hours >= 1) return relativeTime.format(hours, 'hour')
-  if (minutes >= 1) return relativeTime.format(minutes, 'minute')
-  return 'in less than a minute'
+  const days = Math.floor(hours / 24)
+  if (days) return `in ${days}d${hours % 24 ? ` ${hours % 24}h` : ''}`
+  if (hours) return `in ${hours}h${minutes % 60 ? ` ${minutes % 60}m` : ''}`
+  return minutes ? `in ${minutes}m` : 'in less than a minute'
 }
 
-function UsageDetails({ usage }: { usage: Usage | null | undefined }) {
-  if (usage === undefined) return <p>Checking OpenCode Go usage…</p>
-  if (!usage) return <p>OpenCode Go usage is temporarily unavailable.</p>
-  const now = Date.now()
-  return <ul className="flex flex-col gap-2">
-    {(Object.keys(windows) as (keyof typeof windows)[]).map(window => {
-      const { percent: used, resetsAt } = usage[window]
-      return <li key={window}>
-        <div className="flex justify-between gap-3"><span>{windows[window]}</span><span>{formatRemaining(used)}</span></div>
-        <div className="opacity-80">Resets <time dateTime={resetsAt}>{formatReset(resetsAt, now)}</time></div>
-      </li>
-    })}
-  </ul>
-}
-
-function ConfiguredOpenCodeGoUsage() {
+export function OpenCodeGoUsageProvider({ children }: { children: ReactNode }) {
+  const enabled = runtimeConfig().capabilities.openCodeGoUsage === true
   const [usage, setUsage] = useState<Usage | null>()
 
   useEffect(() => {
+    if (!enabled) return
     const lifetime = new AbortController()
     let pending = false
     const refresh = async () => {
@@ -75,19 +65,53 @@ function ConfiguredOpenCodeGoUsage() {
       window.clearInterval(timer)
       document.removeEventListener('visibilitychange', refresh)
     }
-  }, [])
+  }, [enabled])
 
-  return <Tip label={<UsageDetails usage={usage} />} side="top" align="start" boundary="viewport">
-    <div tabIndex={0} className="browser-sidebar-footer-row">
-      <Codicon name="graph" />
-      <span className="min-w-0 flex-1 truncate">Usage</span>
-      {usage !== null && <span className="shrink-0 text-[0.6875rem] text-(--web-text-subtle) tabular-nums">
-        {usage ? formatRemaining(usage.monthly.percent) : 'Loading…'}
-      </span>}
-    </div>
-  </Tip>
+  return <UsageContext.Provider value={usage}>{children}</UsageContext.Provider>
 }
 
 export function OpenCodeGoUsage() {
-  return runtimeConfig().capabilities.openCodeGoUsage === true ? <ConfiguredOpenCodeGoUsage /> : null
+  const usage = useContext(UsageContext)
+  if (runtimeConfig().capabilities.openCodeGoUsage !== true) return null
+
+  return <NavLink to={USAGE_ROUTE.path} state={{ fromUsageSidebar: true }} end className="browser-sidebar-footer-row">
+    <Codicon name="graph" />
+    <span className="min-w-0 flex-1 truncate">{USAGE_ROUTE.label}</span>
+    {usage !== null && <span className="shrink-0 text-[0.6875rem] text-(--web-text-subtle) tabular-nums">
+      {usage ? `${percent.format((100 - usage.monthly.percent) / 100)} left` : 'Loading…'}
+    </span>}
+  </NavLink>
+}
+
+export function OpenCodeGoUsagePage() {
+  const usage = useContext(UsageContext)
+  const enabled = runtimeConfig().capabilities.openCodeGoUsage === true
+  const heading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => { heading.current?.focus({ preventScroll: true }) }, [])
+  const now = Date.now()
+
+  return <div className="browser-usage-page">
+    <section className="browser-usage-content" aria-labelledby="browser-usage-title">
+      <h1 id="browser-usage-title" ref={heading} tabIndex={-1}>{USAGE_ROUTE.label}</h1>
+      <div className="browser-usage-limits">
+        <h2>Limits</h2>
+        {enabled ? <p>When your OpenCode Go usage resets</p> : <p>OpenCode Go usage is disabled on this server.</p>}
+        {enabled && usage === undefined && <p role="status">Checking OpenCode Go usage…</p>}
+        {enabled && usage === null && <p role="status">OpenCode Go usage is temporarily unavailable.</p>}
+        {enabled && usage && <ul role="list" className="browser-usage-windows">
+          {windows.map(({ id, label }) => {
+            const { percent: used, resetsAt } = usage[id]
+            return <li key={id} data-exhausted={used === 100 || undefined}>
+              <div className="browser-usage-window">
+                <strong>{label}</strong>
+                <span>Resets <time dateTime={resetsAt}>{resetCountdown(resetsAt, now)}</time></span>
+                <span className="browser-usage-percent">{percent.format(used / 100)} used</span>
+              </div>
+              <div className="browser-usage-track" aria-hidden="true"><div style={{ width: `${used}%` }} /></div>
+            </li>
+          })}
+        </ul>}
+      </div>
+    </section>
+  </div>
 }

@@ -122,6 +122,7 @@
   text-align:start;
 }
 .browser-sessions-pane .browser-sidebar-footer-row:is(:hover,:focus-within) { background:var(--web-hover); color:var(--web-text); }
+.browser-sessions-pane .browser-sidebar-footer-row[aria-current="page"] { background:var(--web-active); color:var(--web-text); }
 .browser-sessions-pane .browser-sidebar-footer-row > :is(.codicon, svg) {
   width:var(--web-icon-size);
   height:var(--web-icon-size);

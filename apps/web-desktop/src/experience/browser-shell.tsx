@@ -5,6 +5,7 @@ import { BrowserNewChatProfileSelector } from './new-chat-profile-selector'
 import { BrowserProfileNavigation } from './profile-navigation'
 import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
+import { OpenCodeGoUsageProvider } from './opencode-go-usage'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { BrowserNavigationTabs, BrowserNavigationSettings, BrowserNavigationResizer, useBrowserNavigation } from './navigation'
 import { BrowserActionError } from './action-errors'
@@ -23,7 +24,7 @@ import { currentPwaUpdate, subscribePwaUpdate, type PwaUpdateNotice } from '../p
 export function BrowserShell() {
   const { surfaces: { Host } } = useBrowserEngine()
   return <SidebarProvider className="browser-provider" style={{ '--sidebar-width': '100%' } as CSSProperties}>
-    <Host><BrowserLayout /></Host>
+    <Host><OpenCodeGoUsageProvider><BrowserLayout /></OpenCodeGoUsageProvider></Host>
   </SidebarProvider>
 }
 function BrowserLayout() {
