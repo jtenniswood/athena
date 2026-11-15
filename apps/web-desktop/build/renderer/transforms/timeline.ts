@@ -29,9 +29,18 @@ export function exposeBrowserTimelineHistoryOwner(source: string): string {
 }
 
 export function useBrowserTimelineOwner(source: string, root: string): string {
-  const promptsImport = 'import { derivePromptEntries, isTimelinePromptText } from ' + JSON.stringify(path.join(root, 'src/experience/ui/timeline-prompts'))
+  const promptsImport = 'import { derivePromptEntries, isTimelinePromptText, summarizeTimeline } from ' + JSON.stringify(path.join(root, 'src/experience/ui/timeline-prompts'))
 
   return promptsImport + '\n' + replaceBrowserContract(source, [
+    [
+      '  if (!railEntries.length) {',
+      `  const landmarks = useMemo(() => summarizeTimeline(railEntries), [railEntries])
+  const activeLandmark = landmarks.indexes.findLastIndex(index => index <= activeIndex)
+
+  if (!landmarks.entries.length) {`
+    ],
+    ['height: `min(${railEntries.length * 0.4375}rem, 50%)`', 'height: `min(${landmarks.entries.length * 0.4375}rem, 50%)`'],
+    ['        activeIndex={activeIndex}\n        entries={railEntries}', '        activeIndex={activeLandmark}\n        entries={landmarks.entries}'],
     ['      <TimelineRail\n', '      <TimelineRail\n        browserOwner={historyIndex.ownerKey}\n'],
     [
       '        const destination = Math.max(\n          0,\n          start + turn.getBoundingClientRect().top - viewport.getBoundingClientRect().top - 8\n        )',

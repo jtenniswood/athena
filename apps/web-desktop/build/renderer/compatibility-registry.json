@@ -3705,7 +3705,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "components/assistant-ui/thread/timeline.tsx",
-    "reason": "Pass the timeline index owner to the mounted rail and exclude generation scaffolding from its prompt marks.",
+    "reason": "Pass the timeline index owner to the mounted rail and exclude generation scaffolding from its prompt marks. Condense long timelines into navigable landmarks while tracking the full prompt list.",
     "owner": "apps/web-desktop/build/renderer/transforms/timeline.ts",
     "tests": [
       {
@@ -3723,12 +3723,16 @@
       {
         "file": "tests/browser/timeline-prompts.spec.mjs",
         "scenario": "jumping from a timeline tick aligns its prompt at the default display scale"
+      },
+      {
+        "file": "tests/browser/timeline-prompts.spec.mjs",
+        "scenario": "the timeline condenses to landmarks as more history becomes available"
       }
     ],
-    "removal": "Remove when the renderer supplies a stable conversation owner and excludes generation scaffolding from all timeline sources.",
+    "removal": "Remove when the renderer supplies a stable conversation owner, filters generation scaffolding, and condenses long timelines.",
     "sourceHash": "723b1b9773a59fd2590e252ec9975a3b19abb3a3564162623f9c7ecb88350831",
     "inputHash": "723b1b9773a59fd2590e252ec9975a3b19abb3a3564162623f9c7ecb88350831",
-    "outputHash": "1680cc750a44564d5f0d9f40e8d123278cbe721fbe8023b1c996b405f98237bc",
+    "outputHash": "908e7f34b8e3a1925aaae4b2eaa39e6f8b1d4caf7b1376b7a974e63f236200e5",
     "handlers": [
       "useBrowserTimelineOwner"
     ],
