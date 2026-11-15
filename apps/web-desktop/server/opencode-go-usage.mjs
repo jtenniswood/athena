@@ -1,10 +1,12 @@
 import { accountIdentity, probeIdentity } from './identity.mjs'
+import { createOpenCodeGoHistory } from './opencode-go-history.mjs'
 
 const usagePath = '/api/athena/opencode-go/usage'
 const providerUrl = 'https://opencode.ai/inference/go/v1/usage'
 const cacheDuration = 60_000
 
-export function createOpenCodeGoUsageHandler({ target, apiKey, fetch: request = globalThis.fetch, now = Date.now }) {
+export function createOpenCodeGoUsageHandler({ target, apiKey, directory, fetch: request = globalThis.fetch, now = Date.now }) {
+  const record = createOpenCodeGoHistory(directory, apiKey)
   let cached
   let expiresAt = 0
   let pending
@@ -21,13 +23,15 @@ export function createOpenCodeGoUsageHandler({ target, apiKey, fetch: request = 
     }
 
     const { usage } = await response.json()
-    return Object.fromEntries(['rolling', 'weekly', 'monthly'].map(window => {
+    const quotas = Object.fromEntries(['rolling', 'weekly', 'monthly'].map(window => {
       const { percent, resetsAt } = usage[window]
       if (!Number.isFinite(percent) || typeof resetsAt !== 'string' || !Number.isFinite(Date.parse(resetsAt))) {
         throw new Error('Invalid OpenCode Go usage')
       }
       return [window, { percent: Math.max(0, Math.min(100, percent)), resetsAt }]
     }))
+    const monthlyHistory = await record(quotas.monthly, now())
+    return { usage: quotas, monthlyHistory }
   }
 
   function getUsage() {
@@ -67,7 +71,7 @@ export function createOpenCodeGoUsageHandler({ target, apiKey, fetch: request = 
         throw new Error('Hermes account verification failed')
       }
       accountIdentity(target, await identity.json())
-      return send(200, { usage: await getUsage() })
+      return send(200, await getUsage())
     } catch {
       return send(503, { error: 'OpenCode Go usage is temporarily unavailable' })
     }

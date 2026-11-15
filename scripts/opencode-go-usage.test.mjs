@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { createServer } from 'node:http'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import { test } from 'node:test'
 import { createAthenaServices } from '../apps/web-desktop/server/services.mjs'
 import { runtimeConfiguration, runtimeScripts } from './runtime-config.mjs'
@@ -14,8 +17,14 @@ const usage = {
   monthly: { percent: 41, resetsAt: '2026-12-01T12:30:00.000Z' }
 }
 
+async function temporaryDirectory(t) {
+  const directory = await mkdtemp(path.join(tmpdir(), 'athena-opencode-go-'))
+  t.after(() => rm(directory, { recursive: true, force: true }))
+  return directory
+}
+
 async function start(t, options) {
-  const services = createAthenaServices({ target, directory: '/unused', ...options })
+  const services = createAthenaServices({ target, directory: options.directory ?? await temporaryDirectory(t), ...options })
   const server = createServer(async (req, res) => {
     if (!await services.handle(req, res)) {
       res.writeHead(204)
@@ -43,8 +52,8 @@ test('disabled usage does not authenticate or fetch provider data', async t => {
   assert.equal((await request()).status, 404)
 })
 
-test('usage requires Hermes authentication and shares only the quota snapshot', async t => {
-  let clock = 0
+test('usage requires Hermes authentication and shares only sanitized quota data', async t => {
+  let clock = Date.parse('2026-11-10T12:00:00.000Z')
   let providerReads = 0
   let providerPayload = { usage: { ...usage, monthly: { ...usage.monthly, internal: apiKey } } }
   const request = await start(t, { openCodeGoApiKey: apiKey, now: () => clock, fetch: async (url, options) => {
@@ -72,7 +81,7 @@ test('usage requires Hermes authentication and shares only the quota snapshot', 
     assert.equal(response.status, 200)
     assert.equal(response.headers.get('cache-control'), 'no-store')
     assert.equal(response.headers.get('set-cookie'), 'session=browser; HttpOnly')
-    assert.deepEqual(await response.json(), { usage })
+    assert.deepEqual(await response.json(), { usage, monthlyHistory: [{ at: clock, percent: 41 }] })
   }
   assert.equal(providerReads, 1)
   assert.equal((await request()).status, 401, 'a cached result still requires authentication')
@@ -85,4 +94,41 @@ test('usage requires Hermes authentication and shares only the quota snapshot', 
   providerPayload = { usage }
   assert.equal((await request(tokenHeaders)).status, 200)
   assert.equal(providerReads, 3)
+})
+
+test('monthly samples survive a restart and stay within the provider key and billing period', async t => {
+  const directory = await temporaryDirectory(t)
+  const hour = 3_600_000
+  const first = Date.parse('2026-11-10T12:00:00.000Z')
+  let clock = first
+  let monthly = { ...usage.monthly }
+  const options = { directory, openCodeGoApiKey: apiKey, now: () => clock, fetch: async url =>
+    url === target + '/api/auth/me' ? Response.json({ user_id: 'test', provider: 'test' })
+      : Response.json({ usage: { ...usage, monthly } }) }
+  let request = await start(t, options)
+  const history = async () => {
+    const response = await request()
+    assert.equal(response.status, 200)
+    return (await response.json()).monthlyHistory
+  }
+
+  assert.deepEqual(await history(), [{ at: first, percent: 41 }])
+  clock += hour / 2
+  monthly.percent = 45
+  assert.deepEqual(await history(), [{ at: first, percent: 41 }, { at: clock, percent: 45 }])
+  clock += hour / 2
+  monthly.percent = 47
+  monthly.resetsAt = '2026-12-01T12:30:00.750Z'
+  request = await start(t, options)
+  assert.deepEqual(await history(), [{ at: first, percent: 41 }, { at: clock, percent: 47 }])
+  assert.ok(!(await readFile(path.join(directory, 'opencode-go-history.json'), 'utf8')).includes(apiKey))
+
+  clock = Date.parse(monthly.resetsAt) + hour
+  monthly = { percent: 2, resetsAt: '2027-01-01T12:30:00.000Z' }
+  assert.deepEqual(await history(), [{ at: clock, percent: 2 }])
+
+  clock += hour
+  monthly.percent = 19
+  request = await start(t, { ...options, openCodeGoApiKey: 'another-test-key' })
+  assert.deepEqual(await history(), [{ at: clock, percent: 19 }])
 })
