@@ -22,7 +22,7 @@
     "update:hermes": "node scripts/hermes-release.mjs",
     "sync:renderer-dependencies": "node scripts/renderer-dependencies.mjs --sync"
   },
-  "packageManager": "pnpm@12.18.0",
+  "packageManager": "pnpm@12.21.0",
   "devDependencies": {
     "@playwright/test": "1.65.0",
     "web-push": "3.6.7",
