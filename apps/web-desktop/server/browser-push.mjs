@@ -1,7 +1,7 @@
 import { linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
-import webPush from 'web-push'
+import { generateVAPIDKeys, sendNotification } from 'web-push'
 
 export function browserSubscription(value) {
   const { endpoint, keys } = value || {}
@@ -29,7 +29,7 @@ export function createBrowserPushSender(directory) {
       if (error.code !== 'ENOENT') throw error
       mkdirSync(directory, { recursive: true, mode: 0o700 })
       const temporary = path.join(directory, '.web-push-' + randomUUID())
-      writeFileSync(temporary, JSON.stringify(webPush.generateVAPIDKeys()), { flag: 'wx', mode: 0o600 })
+      writeFileSync(temporary, JSON.stringify(generateVAPIDKeys()), { flag: 'wx', mode: 0o600 })
       try { linkSync(temporary, file) }
       catch (error) { if (error.code !== 'EEXIST') throw error }
       finally { unlinkSync(temporary) }
@@ -48,7 +48,7 @@ export function createBrowserPushSender(directory) {
         url.hash = '/' + encodeURIComponent(data.focusSessionId) + (profile ? '?' + profile : '')
       }
       const subject = url.protocol === 'https:' ? url.origin : 'mailto:postmaster@localhost'
-      return webPush.sendNotification(subscription, JSON.stringify({
+      return sendNotification(subscription, JSON.stringify({
         title: data.title, body: data.body, url: url.href, tag: data.tag, silent: data.silent === 'true'
       }), { TTL: ttl, timeout: 8000, vapidDetails: { ...details(), subject } })
     }
