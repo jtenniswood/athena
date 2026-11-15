@@ -1,0 +1,85 @@
+[data-overlay-surface]:has(> div > .browser-settings-fullscreen-card) {
+  box-sizing: border-box;
+  top: calc(var(--web-viewport-top, 0px) / var(--web-ui-scale, 1));
+  bottom: auto;
+  width: calc(100vw / var(--web-ui-scale, 1));
+  height: calc(var(--web-viewport-height, 100dvh) / var(--web-ui-scale, 1));
+  padding: 0 !important;
+  background: var(--web-bg);
+  backdrop-filter: none;
+}
+
+[data-overlay-surface]:has(> div > .browser-settings-fullscreen-card) > div,
+.browser-settings-fullscreen-card {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.browser-settings-fullscreen-content {
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.browser-settings-fullscreen-card {
+  --settings-safe-top: calc(env(safe-area-inset-top, 0px) / var(--web-ui-scale, 1));
+  --settings-header-height: max(3.25rem, var(--web-touch-min));
+}
+
+/* Android's native host already applies system-bar insets around the WebView. */
+:root[data-android-app] .browser-settings-fullscreen-card {
+  --settings-safe-top: 0px;
+}
+
+/* Align the existing overlay close control with the browser toolbar. */
+.browser-settings-fullscreen-card > .pointer-events-none > .pointer-events-auto {
+  top: calc(var(--settings-safe-top) + var(--settings-header-height) / 2);
+  right: var(--web-sheet-padding-end);
+}
+
+.browser-settings-header {
+  display: flex;
+  min-height: var(--settings-header-height);
+  align-items: center;
+  gap: var(--web-space-6);
+  flex: 0 0 auto;
+  padding: 0 calc(var(--web-sheet-padding-end) + var(--web-control-regular) + var(--web-space-3)) 0 var(--web-sheet-padding-start);
+  border-bottom: 1px solid var(--web-border-subtle);
+  background: var(--web-sidebar);
+}
+.browser-settings-heading { display: flex; min-width: 0; align-items: center; gap: var(--web-space-2); }
+.browser-settings-heading h1 { margin: 0; font-size: var(--web-text-title); font-weight: 600; line-height: var(--web-line-body); }
+
+.browser-settings-search > button,
+.browser-settings-fullscreen-card > .pointer-events-none button {
+  width: var(--web-control-regular);
+  height: var(--web-control-regular);
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--web-radius-control);
+  background: transparent;
+  color: var(--web-text-muted);
+  box-shadow: none;
+  transition: background-color 100ms, color 100ms;
+}
+.browser-settings-search > button:is(:hover, :focus-visible),
+.browser-settings-fullscreen-card > .pointer-events-none button:is(:hover, :focus-visible) { background: var(--web-hover); color: var(--web-text); }
+.browser-settings-search > button:focus-visible,
+.browser-settings-fullscreen-card > .pointer-events-none button:focus-visible { outline: var(--web-focus-ring); outline-offset: -2px; box-shadow: none; }
+.browser-settings-search > button > :not(svg) { display: none; }
+.browser-settings-search > button > svg,
+.browser-settings-fullscreen-card > .pointer-events-none button > .codicon { width: var(--web-icon-size); height: var(--web-icon-size); }
+.browser-settings-fullscreen-card > .pointer-events-none button > .codicon { font-size: var(--web-icon-size) !important; line-height: 1; }
+
+@media (max-width: 55.999rem), (pointer: coarse) and (max-height: 27rem) {
+  .browser-settings-header { gap: var(--web-space-2); padding-right: calc(var(--web-sheet-padding-end) + var(--web-touch-min) + var(--web-space-2)); }
+  .browser-settings-heading { flex: 1; min-height: var(--settings-header-height); }
+  .browser-settings-heading h1 { overflow-wrap: anywhere; }
+  .browser-settings-fullscreen-card > .pointer-events-none button { width: var(--web-touch-min); height: var(--web-touch-min); }
+}

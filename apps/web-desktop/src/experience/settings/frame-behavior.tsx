@@ -3,6 +3,7 @@ import { useLocation } from 'react-router'
 import { useBrowserSettingsEscapeClose } from '../../upstream/settings-interactions'
 import { OverlayView } from '../../upstream/browser-api'
 import { useBrowserOverlayFocus } from '../ui/overlay-focus'
+import './fullscreen-overlay.css'
 
 export type SettingsFrameVariant = 'fullscreen' | 'embedded'
 const queries: Record<SettingsFrameVariant, string> = {
