@@ -12,7 +12,6 @@ import type { SettingsControl, SettingsFrameDescriptor } from '../contracts/sett
 import { BROWSER_TOOL_ROUTES } from '../tool-routes'
 import { useAppSettingsAvailable } from '../settings-menu'
 import { androidOpenAppSettings } from '../../platform/android'
-import './settings.css'
 
 const PluginManager = lazy(async () => ({ default: (await import('./plugin-manager')).BrowserPluginManager }))
 
