@@ -698,7 +698,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/session-actions-menu.tsx",
-    "reason": "Keep single-view browser menus, shared shortcut labels, profile-correct renames, title updates and chat reminders.",
+    "reason": "Keep single-view browser menus, shared shortcut labels, profile-correct renames and conversation-based title updates.",
     "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
     "tests": [
       {
@@ -720,10 +720,6 @@
       {
         "file": "tests/browser/update-title.spec.mjs",
         "scenario": "Update title shortcut shares menu behavior and protects editing on"
-      },
-      {
-        "file": "tests/browser/notification-routing.spec.mjs",
-        "scenario": "chat reminders can be scheduled from the toolbar and managed from the sidebar"
       }
     ],
     "removal": "The browser also owns sidebar session menus or upstream accepts browser capabilities.",
@@ -734,7 +730,7 @@
     "sourceHash": "42f9e8057e0b92521d9f636c85c043ce34cdb25c91a49cb1f09fb131e06210c0",
     "sourceRoot": "renderer",
     "inputHash": "42f9e8057e0b92521d9f636c85c043ce34cdb25c91a49cb1f09fb131e06210c0",
-    "outputHash": "075f42f1c118439dd6d9d667c1afa136603bcc39b37f027e5999c71ca6f40743"
+    "outputHash": "af8c20dbbf0e4fa343387bef23312f215a0a42b664eb12ec9c50688c4c59bbbb"
   },
   {
     "name": "canonical-bot-row-actions",

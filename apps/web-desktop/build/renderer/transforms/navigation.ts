@@ -511,33 +511,7 @@ export function disableBrowserSessionOpenActions(source: string, root: string): 
     ["  const [renameOpen, setRenameOpen] = useState(false)", "  const [renameOpen, setRenameOpen] = useState(false)\n  const { updatingTitle, updateTitle } = useBrowserUpdateTitle(sessionId, profile)"],
     ["          })\n        ]\n      : []),\n    spec({\n      disabled: !onPin,", "          }),\n          spec({\n            key: 'update-title',\n            disabled: !sessionId || updatingTitle,\n            icon: 'refresh',\n            label: browserSessionActionLabel('update-title', updatingTitle ? 'Updating title…' : 'Update title'),\n            onSelect: () => void updateTitle()\n          })\n        ]\n      : []),\n    spec({\n      disabled: !onPin,"]
   ])
-  const reminder = JSON.stringify(path.join(root, 'src/experience/chat-reminder-dialog'))
-  menu = replaceBrowserContract(menu, [
-    ['  const [deleteOpen, setDeleteOpen] = useState(false)', `  const [deleteOpen, setDeleteOpen] = useState(false)
-  const [reminderOpen, setReminderOpen] = useState(false)
-  const reminderRequested = useRef(false)`],
-    ['      {identityItems.map(item => renderActionItem(kit, item))}', `      {identityItems.map(item => renderActionItem(kit, item))}
-      {sessionId && renderActionItem(kit, {
-        key: 'reminder', disabled: false, icon: 'bell', label: 'Remind me',
-        onSelect: () => { reminderRequested.current = true }
-      })}`],
-    ['  const onCloseAutoFocus = (event: Event) => {', `  const onCloseAutoFocus = (event: Event) => {
-    if (reminderRequested.current) {
-      reminderRequested.current = false
-      queueMicrotask(() => setReminderOpen(true))
-    }`],
-    ['  return { deleteDialog, onCloseAutoFocus, renameDialog, renderItems }', `  const reminderDialog = reminderOpen && sessionId
-    ? <ChatReminderDialog sessionId={sessionId} profile={profile || 'default'} title={title} onClose={() => setReminderOpen(false)} />
-    : null
-  return { deleteDialog, onCloseAutoFocus, reminderDialog, renameDialog, renderItems }`]
-  ])
-  const menuFields = 'deleteDialog, onCloseAutoFocus, renameDialog, renderItems'
-  const dialogs = '      {renameDialog}\n      {deleteDialog}'
-  if (menu.split(menuFields).length !== 3 || menu.split(dialogs).length !== 3) {
-    throw new Error('Browser session reminder dialog contract changed')
-  }
-  menu = menu.replaceAll(menuFields, menuFields + ', reminderDialog').replaceAll(dialogs, dialogs + '\n      {reminderDialog}')
-  return `import { ChatReminderDialog } from ${reminder}\nimport { useBrowserUpdateTitle } from ${titleUpdate}\nimport { browserSessionActionLabel } from ${owner}\n` + menu
+  return `import { useBrowserUpdateTitle } from ${titleUpdate}\nimport { browserSessionActionLabel } from ${owner}\n` + menu
 }
 
 /** Session references are browser links, including their native link gestures. */
