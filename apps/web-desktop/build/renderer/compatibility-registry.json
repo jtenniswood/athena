@@ -3651,7 +3651,7 @@
     "removal": "Remove when the renderer exposes equivalent scoped pointer scrubbing through its timeline navigation owner.",
     "sourceHash": "6f104cd714617622a569be35e4efb801ed6879889c908489316889443ff3cce7",
     "inputHash": "6f104cd714617622a569be35e4efb801ed6879889c908489316889443ff3cce7",
-    "outputHash": "a93126af7d269687dfc94b45b59704bd0da5d1a9f5871d1ec4a9498cd130b489",
+    "outputHash": "fcc0153af9ff5d3e900378db1ad7b60c70440f2d08aef97609e62ab2c57384e5",
     "handlers": [
       "useBrowserTimelineScrubbing"
     ],
@@ -3705,7 +3705,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "components/assistant-ui/thread/timeline.tsx",
-    "reason": "Pass the timeline index owner to the mounted rail and exclude generation scaffolding from its prompt marks.",
+    "reason": "Pass the timeline index owner to the mounted rail and exclude generation scaffolding from its prompt marks. Condense long timelines into navigable landmarks while tracking the full prompt list.",
     "owner": "apps/web-desktop/build/renderer/transforms/timeline.ts",
     "tests": [
       {
@@ -3719,12 +3719,20 @@
       {
         "file": "tests/browser/timeline-prompts.spec.mjs",
         "scenario": "the conversation timeline keeps only user prompts from loaded and indexed history"
+      },
+      {
+        "file": "tests/browser/timeline-prompts.spec.mjs",
+        "scenario": "jumping from a timeline tick aligns its prompt at the default display scale"
+      },
+      {
+        "file": "tests/browser/timeline-prompts.spec.mjs",
+        "scenario": "the timeline condenses to landmarks as more history becomes available"
       }
     ],
-    "removal": "Remove when the renderer supplies a stable conversation owner and excludes generation scaffolding from all timeline sources.",
+    "removal": "Remove when the renderer supplies a stable conversation owner, filters generation scaffolding, and condenses long timelines.",
     "sourceHash": "723b1b9773a59fd2590e252ec9975a3b19abb3a3564162623f9c7ecb88350831",
     "inputHash": "723b1b9773a59fd2590e252ec9975a3b19abb3a3564162623f9c7ecb88350831",
-    "outputHash": "66104a439788fd6ba126f587f700f473426341687808466b440d5d874b52987d",
+    "outputHash": "908e7f34b8e3a1925aaae4b2eaa39e6f8b1d4caf7b1376b7a974e63f236200e5",
     "handlers": [
       "useBrowserTimelineOwner"
     ],

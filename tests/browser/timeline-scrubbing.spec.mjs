@@ -14,7 +14,7 @@ test.beforeAll(async () => {
   server = await createServer({ configFile: false, root, cacheDir: cache,
     plugins: [rendererAdapterPlugin(path.join(root, 'apps/web-desktop')), react()],
     resolve: { alias: { '@/components/ui/tooltip': path.join(root, 'tests/browser/fixtures/timeline-tooltip.tsx') }, dedupe: ['react', 'react-dom'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [root, realpathSync(path.join(root, 'apps/desktop')), realpathSync(path.join(root, 'node_modules'))] } },
+    server: { host: '127.0.0.1', port: 0, hmr: false, fs: { allow: [root, realpathSync(path.join(root, 'apps/desktop')), realpathSync(path.join(root, 'node_modules'))] } },
     optimizeDeps: { entries: ['tests/browser/fixtures/timeline-scrubbing.html'], include: ['react', 'react-dom/client', '@tanstack/react-virtual'] }
   })
   await server.listen()
@@ -29,11 +29,8 @@ test.beforeEach(async ({ page }) => {
 
 const jumps = page => page.evaluate(() => window.timelineJumps)
 async function position(page, owner, index) {
-  return page.getByTestId(owner).locator('[data-slot="thread-timeline-ticks"]').evaluate((rail, index) => {
-    const rect = rail.getBoundingClientRect(), scale = rect.height / rail.offsetHeight
-    const pitch = Number.parseFloat(rail.querySelector('button').style.height)
-    return { x: rect.right - 12, y: rect.top + ((index + .5) * pitch - rail.scrollTop) * scale }
-  }, index)
+  const tick = await page.getByTestId(owner).locator(`[data-timeline-index="${index}"]`).boundingBox()
+  return { x: tick.x + tick.width - 12, y: tick.y + tick.height / 2 }
 }
 
 test('timeline drags call the owning command once per entry without synthetic clicks', async ({ page }) => {
@@ -57,9 +54,18 @@ test('timeline drags call the owning command once per entry without synthetic cl
 
 test('timeline dragging respects virtual scroll offsets and UI scale', async ({ page }) => {
   await page.getByRole('button', { name: 'Scale UI', exact: true }).click()
-  await page.getByTestId('research').locator('[data-slot="thread-timeline-ticks"]').evaluate(rail => { rail.scrollTop = 700 })
+  const rail = page.getByTestId('research').locator('[data-slot="thread-timeline-ticks"]')
+  await rail.evaluate(element => { element.scrollTop = 700 })
   await expect(page.getByRole('button', { name: 'research message 100', exact: true })).toBeVisible()
   const start = await position(page, 'research', 101), end = await position(page, 'research', 106)
+  const bar = index => page.getByTestId('research').locator(`[data-slot="timeline-bar"][data-index="${index}"]`)
+  await page.mouse.move(end.x, end.y)
+  await expect.poll(() => bar(106).evaluate(element => parseFloat(element.style.width))).toBeGreaterThan(0.98)
+
+  await rail.evaluate(element => { element.scrollTop += 14 })
+  await expect.poll(() => bar(108).evaluate(element => parseFloat(element.style.width))).toBeGreaterThan(0.98)
+  await rail.evaluate(element => { element.scrollTop -= 14 })
+
   await page.mouse.move(start.x, start.y)
   await page.mouse.down()
   await page.mouse.move(end.x, end.y)

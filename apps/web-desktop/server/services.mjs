@@ -14,7 +14,7 @@ export function createAthenaServices({ target, identityUrl = target, directory, 
   const androidAuth = createAndroidAuthHandler({ target, fetch, now })
   const gateway = createGatewayCompatibility({ target, now, fetch })
   const push = createAndroidPush({ target, identityUrl, directory, fetch, now, sender, browserSender, consumeTokenTicket: gateway.consumeTokenTicket })
-  const openCodeGoUsage = createOpenCodeGoUsageHandler({ target, apiKey: openCodeGoApiKey, fetch, now })
+  const openCodeGoUsage = createOpenCodeGoUsageHandler({ target, apiKey: openCodeGoApiKey, directory, fetch, now })
   let closed = false
   const attached = new WeakSet()
   const close = () => {
