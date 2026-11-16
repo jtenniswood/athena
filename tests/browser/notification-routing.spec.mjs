@@ -217,8 +217,7 @@ test('a prepared update refuses preference application until abort and preserves
   await expect(composer(page)).toHaveText('Keep this notification-tab draft')
 })
 
-test('browser notification settings subscribe and send a server push test', async ({ page }) => {
-  const endpoint = 'https://fcm.googleapis.com/fcm/send/athena-test'
+async function mockBrowserSubscription(page, endpoint) {
   await page.evaluate(endpoint => {
     Object.defineProperty(Notification, 'permission', { configurable: true, value: 'granted' })
     let subscription = null
@@ -233,6 +232,11 @@ test('browser notification settings subscribe and send a server push test', asyn
       return subscription
     }
   }, endpoint)
+}
+
+test('browser notification settings subscribe and send a server push test', async ({ page }) => {
+  const endpoint = 'https://fcm.googleapis.com/fcm/send/athena-test'
+  await mockBrowserSubscription(page, endpoint)
   const registered = []
   const calls = []
   await page.route('**/api/athena/browser/push**', route => {
@@ -257,4 +261,49 @@ test('browser notification settings subscribe and send a server push test', asyn
   await toggle.click()
   await expect.poll(() => calls.some(([method]) => method === 'DELETE')).toBe(true)
   await expect(toggle).not.toBeChecked()
+})
+
+test('chat reminders can be scheduled from the toolbar and managed from the sidebar', async ({ page }) => {
+  await page.goto(origin + '/?profile=default#/preview-week')
+  await expect(composer(page)).toBeVisible({ timeout: 30000 })
+  await composer(page).fill('Keep this chat reminder draft')
+  await mockBrowserSubscription(page, 'https://fcm.googleapis.com/fcm/send/athena-reminder-test')
+  const menu = page.getByRole('button', { name: 'Chat actions', exact: true })
+  const dialog = page.getByRole('dialog', { name: 'Remind me' })
+  await menu.click()
+  await page.getByRole('menuitem', { name: 'Remind me', exact: true }).click()
+  await expect(dialog.getByRole('radio', { name: 'In 30 minutes' })).toBeChecked()
+  await dialog.getByRole('radio', { name: 'In 1 hour' }).check()
+  const scheduled = page.waitForResponse(response => response.request().method() === 'POST' && response.url().includes('/push/reminder?'))
+  await dialog.getByRole('button', { name: 'Set reminder', exact: true }).click()
+  await expect(dialog.getByRole('status')).toContainText('Scheduled for')
+  const response = await scheduled
+  const url = new URL(response.url())
+  expect(url.searchParams.get('session')).toBe('preview-week')
+  expect(url.searchParams.get('profile')).toBe('default')
+  const original = (await response.json()).dueAt
+  expect(original - Date.now()).toBeGreaterThan(59 * 60_000)
+  expect(original - Date.now()).toBeLessThanOrEqual(60 * 60_000)
+  await dialog.getByRole('button', { name: 'Done', exact: true }).click()
+  await expect(menu).toBeFocused()
+
+  const row = page.locator('[data-web-session-id="preview-week"]').first()
+  await row.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Remind me', exact: true }).click()
+  await expect(dialog.getByRole('status')).toContainText('Scheduled for')
+  const field = dialog.getByLabel('Reminder date and time')
+  await expect(field).toBeVisible()
+  const custom = await page.evaluate(() => {
+    const date = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
+  })
+  await field.fill(custom)
+  const updated = page.waitForResponse(response => response.request().method() === 'POST' && response.url().includes('/push/reminder?'))
+  await dialog.getByRole('button', { name: 'Update reminder' }).click()
+  expect((await (await updated).json()).dueAt).toBe(await page.evaluate(value => Date.parse(value), custom))
+  await dialog.getByRole('button', { name: 'Remove reminder' }).click()
+  await expect(dialog.getByRole('status')).toHaveText('Reminder removed.')
+  await dialog.getByRole('button', { name: 'Done', exact: true }).click()
+  await expect(page).toHaveURL(/preview-week/)
+  await expect(composer(page)).toHaveText('Keep this chat reminder draft')
 })

@@ -10,6 +10,7 @@ class WebVisibilityTest {
         assertFalse(visibility.shouldSuppress(true, "chat-1"))
         visibility.acknowledge("chat-1")
         assertTrue(visibility.shouldSuppress(true, "chat-1"))
+        assertFalse(visibility.shouldSuppress(true, "chat-1", kind = "reminder"))
         assertFalse(visibility.shouldSuppress(false, "chat-1"))
         assertFalse(visibility.shouldSuppress(true, "chat-2"))
         time += 10001

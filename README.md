@@ -266,6 +266,17 @@ browser's site settings. The server stores its Web Push keys in the existing
 `/data/athena` volume. Browser push messages contain a generic alert and the
 chat link.
 
+### Chat reminders
+
+Open a chat’s **Chat actions** menu or its sidebar menu and choose **Remind me**.
+Pick a preset or enter a custom date and time in your device’s time zone. Open
+the same menu to reschedule or remove the reminder.
+
+You can schedule one reminder per chat on each device. Athena sends the
+notification to the device where you set it using browser push or Android
+background delivery, so it can arrive while Athena is closed. Tap it to return
+to the chat.
+
 ### Android app
 
 `apps/android` contains a native Android shell for the hosted Athena web app.

@@ -113,13 +113,20 @@ async function fixture(t, options = {}) {
     method: 'POST', headers: { Origin: origin, Cookie: `hermes_session_at=${account}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ deviceId })
   })
+  const reminder = ({ platform = 'browser', account = 'A', profile = 'research', session = 'chat-1',
+    method = 'GET', dueAt, requestOrigin = origin } = {}) => fetch(
+    origin + '/api/athena/' + platform + '/push/reminder?' + new URLSearchParams({ device: deviceId, session, profile }), {
+      method,
+      headers: { Origin: requestOrigin, ...(account ? { Cookie: `hermes_session_at=${account}` } : {}), 'Content-Type': 'application/json' },
+      ...(method === 'POST' ? { body: JSON.stringify({ dueAt }) } : {})
+    })
   const restart = async () => {
     relay.close(); await relay.drain()
     server.removeAllListeners('upgrade')
     relay = createRelay(); relay.attach(server)
     await relay.drain()
   }
-  return { sent, browserSent, browser, save, scan: () => relay.scanReplies(), attempts, register, connect, mint, emit, event, preview, status, rotate, testPush, restart, directory,
+  return { sent, browserSent, browser, save, scan: () => relay.scanReplies(), attempts, register, connect, mint, emit, event, preview, status, rotate, testPush, reminder, restart, directory, now: () => clock,
     advance: milliseconds => { clock += milliseconds }, drain: () => relay.drain(),
     nextPush: () => new Promise(resolve => waiters.push(resolve)) }
 }
@@ -458,4 +465,67 @@ test('an untitled completed reply still reaches Android', async t => {
   await pending
   assert.equal(app.sent[0][1].kind, 'turnDone')
   assert.equal(app.sent[0][1].focusSessionId, 'runtime-1')
+})
+
+test('browser chat reminders survive a restart and notification registration aging with reply alerts off', async t => {
+  const app = await fixture(t, { persist: true })
+  const dueAt = app.now() + 3 * 24 * 60 * 60 * 1000
+  const schedule = { method: 'POST', dueAt }
+  assert.equal((await app.reminder(schedule)).status, 409)
+  assert.equal((await app.browser({ turnDone: false })).status, 200)
+  assert.equal((await app.reminder({ ...schedule, account: '' })).status, 401)
+  assert.equal((await app.reminder({ ...schedule, requestOrigin: 'https://other.example' })).status, 403)
+  assert.equal((await app.reminder({ ...schedule, dueAt: app.now() })).status, 400)
+  assert.deepEqual(await (await app.reminder(schedule)).json(), { dueAt })
+  assert.deepEqual(await (await app.reminder({ account: 'B' })).json(), { dueAt: null })
+  assert.deepEqual(await (await app.reminder({ profile: 'default' })).json(), { dueAt: null })
+  assert.deepEqual(await (await app.reminder({ method: 'DELETE', account: 'B' })).json(), { dueAt: null })
+  await app.restart()
+  app.advance(2 * 24 * 60 * 60 * 1000)
+  // An unrelated registration prunes stale installations.
+  assert.equal((await app.browser({ deviceId: bindingId, subscription: {
+    endpoint: 'https://fcm.googleapis.com/fcm/send/other', keys: { p256dh: 'p'.repeat(87), auth: 'a'.repeat(22) }
+  } }, 'B')).status, 200)
+  assert.deepEqual(await (await app.reminder()).json(), { dueAt })
+  await app.drain()
+  assert.equal(app.browserSent.length, 0)
+  app.advance(24 * 60 * 60 * 1000)
+  await app.drain()
+  assert.equal(app.browserSent.length, 1)
+  const [, data] = app.browserSent[0]
+  assert.equal(data.kind, 'reminder')
+  assert.equal(data.focusSessionId, 'chat-1')
+  assert.equal(data.focusProfile, 'research')
+  assert.deepEqual(await (await app.reminder()).json(), { dueAt: null })
+  await app.restart()
+  assert.equal(app.browserSent.length, 1)
+})
+
+test('Android chat reminders can be rescheduled, cancelled and delivered independently of reply alerts', async t => {
+  const app = await fixture(t, { persist: true })
+  const platform = 'android'
+  assert.equal((await app.register({ kinds: { turnDone: false }, silent: true })).status, 200)
+  const write = (dueAt, session) => app.reminder({ platform, method: 'POST', dueAt, session })
+  const dueAt = app.now() + 60_000
+  assert.equal((await write(dueAt)).status, 200)
+  assert.equal((await write(dueAt + 60_000)).status, 200)
+  assert.equal((await app.register({ bindingId, enabled: false })).status, 200)
+  assert.deepEqual(await (await app.reminder({ platform })).json(), { dueAt: null })
+  assert.equal((await app.register({ kinds: { turnDone: false }, silent: true })).status, 200)
+  assert.equal((await write(dueAt)).status, 200)
+  assert.equal((await write(dueAt + 60_000)).status, 200)
+  assert.equal((await write(dueAt + 60_000, 'cancelled-chat')).status, 200)
+  assert.equal((await app.reminder({ platform, session: 'cancelled-chat', method: 'DELETE' })).status, 200)
+  app.advance(60_000)
+  await app.drain()
+  assert.equal(app.sent.length, 0)
+  app.advance(60_000)
+  await app.drain()
+  assert.equal(app.sent.length, 1)
+  const [, data, priority] = app.sent[0]
+  assert.equal(data.kind, 'reminder')
+  assert.equal(data.silent, 'true')
+  assert.equal(data.focusSessionId, 'chat-1')
+  assert.equal(data.focusProfile, 'research')
+  assert.equal(priority, 'HIGH')
 })
