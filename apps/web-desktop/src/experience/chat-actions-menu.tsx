@@ -5,7 +5,6 @@ import type { BrowserSessionActions } from './contracts/actions'
 import type { BrowserHostPanel } from './contracts/host'
 import { BrowserActionSurface, type BrowserActionAnchor, type BrowserActionGroup } from './ui/action-surface'
 import { BrowserToolbarButton } from './ui/toolbar-button'
-import { ChatReminderDialog } from './chat-reminder-dialog'
 import { useCompactBrowser, useMobileBrowser } from './ui/use-compact-browser'
 import { useBrowserDialogReturnFocus } from './ui/dialog-focus'
 import { browserSessionActionLabel, useBrowserSessionShortcuts } from './session-shortcuts'
@@ -23,8 +22,8 @@ export function BrowserChatActionsMenu({ actions, title, panels, main }: {
   const compactViewport = useCompactBrowser()
   const trigger = useRef<HTMLButtonElement>(null)
   const [anchor, setAnchor] = useState<BrowserActionAnchor | null>(null)
-  const [dialog, setDialog] = useState<{ kind: 'rename' | 'delete' | 'reminder'; actions: BrowserSessionActions; title: string } | null>(null)
-  const openDialog = (kind: 'rename' | 'delete' | 'reminder') => setDialog({ kind, actions, title })
+  const [dialog, setDialog] = useState<{ kind: 'rename' | 'delete'; actions: BrowserSessionActions; title: string } | null>(null)
+  const openDialog = (kind: 'rename' | 'delete') => setDialog({ kind, actions, title })
   const renameLabel = r.rename.replace(/(?:\.{3}|…)$/, '')
   const updateTitleLabel = actions.updatingTitle ? 'Updating title…' : 'Update title'
   const pinLabel = actions.pinned ? r.unpin : r.pin
@@ -41,7 +40,6 @@ export function BrowserChatActionsMenu({ actions, title, panels, main }: {
       { key: 'update-title', label: updateTitleLabel, labelContent: browserSessionActionLabel('update-title', updateTitleLabel), icon: <Codicon name="refresh" />, disabled: actions.updatingTitle, run: () => void actions.updateTitle() },
       { key: 'pin', label: pinLabel, labelContent: browserSessionActionLabel('pin', pinLabel), icon: <Codicon name="pin" />, run: actions.togglePin },
       { key: 'unread', label: unreadLabel, labelContent: browserSessionActionLabel('unread', unreadLabel), icon: <Codicon name={actions.unread ? 'mail-read' : 'mail'} />, run: () => void actions.toggleUnread() },
-      { key: 'reminder', label: 'Remind me', icon: <Codicon name="bell" />, afterClose: true, run: () => openDialog('reminder') },
       ...panelActions
     ] },
     { key: 'danger', actions: [
@@ -73,8 +71,6 @@ export function BrowserChatActionsMenu({ actions, title, panels, main }: {
     }}><Codicon name="ellipsis" /></BrowserToolbarButton>}
     <BrowserActionSurface title="Chat actions" groups={groups} anchor={anchor} compact={compact} onClose={() => setAnchor(null)} fallbackFocus={trigger} toggleTrigger={trigger} />
     {dialog?.kind === 'rename' && <BrowserRenameSessionDialog actions={dialog.actions} title={dialog.title} onClose={() => setDialog(null)} />}
-    {dialog?.kind === 'reminder' && dialog.actions.sessionId && <ChatReminderDialog sessionId={dialog.actions.sessionId}
-      profile={dialog.actions.profile} title={dialog.title} onClose={() => setDialog(null)} />}
     <ConfirmDialog open={dialog?.kind === 'delete'} title={r.deleteTitle} description={r.deleteDesc(dialog?.title || '')} destructive confirmLabel={t.common.delete} busyLabel={r.deleting} doneLabel={r.deleted} onClose={() => setDialog(null)} onConfirm={() => dialog?.actions.delete()} />
   </>
 }

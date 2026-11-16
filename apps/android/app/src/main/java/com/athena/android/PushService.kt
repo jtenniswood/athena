@@ -11,7 +11,7 @@ class PushService : FirebaseMessagingService() {
         val origin = prefs.getString("origin", "") ?: return
         val data = message.data
         val binding = data["bindingId"] ?: return
-        fun eligible() = !MainActivity.visibility.shouldSuppress(MainActivity.foreground, data["focusSessionId"], data["kind"]) &&
+        fun eligible() = !MainActivity.visibility.shouldSuppress(MainActivity.foreground, data["focusSessionId"]) &&
             origin.isNotEmpty() && data["origin"] == origin && prefs.getString("origin", "") == origin &&
             prefs.getBoolean("pushEnabled", false) && binding == prefs.getString("pushBinding", "")
         if (!eligible()) return
