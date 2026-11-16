@@ -10,7 +10,6 @@ import { replyLifetimeMs, replyNotificationHeaders, scanRecentReplies } from './
 const root = '/api/athena/android/'
 const browserRoot = '/api/athena/browser/push'
 const retentionMs = 24 * 60 * 60 * 1000
-const reminderKind = 'reminder'
 const titleRetryMs = [0, 1000, 2000]
 const creditNotices = new Set(['credits.depleted', 'credits.window_limit', 'credits.restored'])
 const inputRequests = new Set(['clarify', 'sudo', 'secret', 'vault.code', 'vault.unlock', 'vault.save_login', 'display.install.sudo'])
@@ -47,7 +46,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
   const store = createAndroidPushStore(directory), relays = new Set()
   const titleLookups = new Set(), shutdown = new AbortController()
   const watches = new Map()
-  let closed = false, pumping, scanning, sendingReminder
+  let closed = false, pumping, scanning
   const removeDevice = (state, key) => {
     state.devices.delete(key)
     for (const [id, event] of state.events) if (event.key === key) state.events.delete(id)
@@ -55,11 +54,8 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
   async function drain() {
     if (closed || pumping) return pumping
     pumping = (async () => {
-      for (const id of store.events.keys()) {
+      for (const [id, event] of store.events) {
         if (closed) break
-        // The stored event may have been removed while another delivery was in flight.
-        const event = store.events.get(id)
-        if (!event) continue
         if (event.expires <= now()) {
           if (event.status === 'pending') store.update(state => {
             const current = state.events.get(id)
@@ -70,8 +66,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
         }
         if (event.status !== 'pending' || event.nextAttempt > now()) continue
         const device = store.devices.get(event.key)
-        const reminder = event.data.kind === reminderKind
-        if (!device?.enabled || (!reminder && !device.kinds[event.data.kind]) || device.bindingId !== event.bindingId) {
+        if (!device?.enabled || !device.kinds[event.data.kind] || device.bindingId !== event.bindingId) {
           store.update(state => state.events.delete(id)); continue
         }
         if (device.subscription && !browserSender?.enabled) continue
@@ -80,14 +75,12 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
           attempts, updated: now(), nextAttempt: now() + Math.min(60000, 1000 * 2 ** (attempts - 1))
         }))
         let delivered = false
-        const data = reminder && device.silent ? { ...event.data, silent: 'true' } : event.data
-        if (reminder) sendingReminder = id
         try {
           if (device.subscription) {
-            await browserSender.send(device.subscription, data, Math.ceil((event.expires - now()) / 1000))
+            await browserSender.send(device.subscription, event.data, Math.ceil((event.expires - now()) / 1000))
           } else {
             const foreground = device.activeUntil > now() && [...relays].some(relay => relay.key === event.key && relay.client)
-            await sender.send(device.token, data, foreground && !event.background ? 'NORMAL' : 'HIGH')
+            await sender.send(device.token, event.data, foreground && !event.background ? 'NORMAL' : 'HIGH')
           }
           delivered = true
         } catch (error) {
@@ -96,8 +89,6 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
             unregister(event.key)
           }
           // Keep transient failures in the durable queue for the next retry.
-        } finally {
-          if (reminder) sendingReminder = undefined
         }
         store.update(state => {
           const current = state.events.get(id)
@@ -220,15 +211,8 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
     return scanning
   }
   const prune = () => {
-    const timestamp = now()
-    const reminderDevices = new Set()
-    const expired = []
-    for (const [id, event] of store.events) {
-      if (event.expires <= timestamp) expired.push(id)
-      else if (event.dueAt && event.status === 'pending') reminderDevices.add(event.key)
-    }
-    const stale = [...store.devices].filter(([key, device]) =>
-      timestamp - device.updated > retentionMs && !reminderDevices.has(key)).map(([key]) => key)
+    const stale = [...store.devices].filter(([, device]) => now() - device.updated > retentionMs).map(([key]) => key)
+    const expired = [...store.events].filter(([, event]) => event.expires <= now()).map(([id]) => id)
     if (stale.length || expired.length) store.update(state => {
       for (const key of stale) removeDevice(state, key)
       for (const id of expired) state.events.delete(id)
@@ -247,9 +231,6 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
 
   async function handle(req, res) {
     const url = new URL(req.url, 'http://local.invalid')
-    if (url.pathname === browserRoot + '/reminder' || url.pathname === root + 'push/reminder') {
-      return handleReminder(req, res, url, url.pathname.startsWith(browserRoot))
-    }
     if (url.pathname === browserRoot || url.pathname === browserRoot + '/test') return handleBrowser(req, res, url)
     if (![root + 'push', root + 'push/token', root + 'push/test', root + 'push/preview'].includes(url.pathname)) return false
     const json = (status, data) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)) }
@@ -427,88 +408,19 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
         store.update(state => {
           if (!same || !enabled) removeDevice(state, key)
           state.devices.set(key, { deviceId: body.deviceId, origin, subscription, enabled,
-            bindingId: same ? old.bindingId : randomUUID(), kinds: { turnDone: body.turnDone !== false },
+            bindingId: same ? old.bindingId : randomUUID(), kinds: { turnDone: true },
             visibleSession: typeof body.visibleSession === 'string' ? body.visibleSession.slice(0, 256) : null,
             visibleProfile: typeof body.visibleProfile === 'string' ? body.visibleProfile.slice(0, 128) : null,
             silent: body.silent === true,
             activeUntil: body.visibleSession ? now() + 45_000 : 0,
-            lastTest: old?.lastTest, updated: now(), repliesSince: same && old.enabled && old.kinds.turnDone && body.turnDone !== false ? old.repliesSince : now() })
+            lastTest: old?.lastTest, updated: now(), repliesSince: same && old.enabled ? old.repliesSince : now() })
         })
         watchReplies(key, req, authenticated.cookies)
-        return json(200, { registered: enabled, watchingReplies: watches.has(key) }), true
+        return json(200, { watchingReplies: watches.has(key) }), true
       }
       json(200, { ok: true })
     } catch { json(400, { error: 'Browser push request could not be completed' }) }
     return true
-  }
-
-  async function handleReminder(req, res, url, browser) {
-    const json = (status, data) => {
-      res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
-      res.end(JSON.stringify(data))
-      return true
-    }
-    const origin = requestOrigin(req)
-    const { method } = req
-    if (method !== 'GET' && (!['POST', 'DELETE'].includes(method) || req.headers.origin !== origin ||
-        (method === 'POST' && !req.headers['content-type']?.startsWith('application/json')))) {
-      return json(403, { error: 'Same-origin request required.' })
-    }
-    const deviceId = url.searchParams.get('device')
-    const sessionId = url.searchParams.get('session')
-    const profile = url.searchParams.get('profile') || 'default'
-    if (!deviceId || !/^[a-f0-9-]{36}$/.test(deviceId) || !sessionId || sessionId.length > 256 || profile.length > 128 ||
-        /[\x00-\x1f\x7f]/.test(sessionId + profile)) return json(400, { error: 'Invalid chat reminder.' })
-    let authenticated
-    try { authenticated = await identity(req) }
-    catch { return json(401, { error: 'Sign in to manage chat reminders.' }) }
-    if (authenticated.cookies.length) res.setHeader('Set-Cookie', authenticated.cookies)
-    const key = keyFor(authenticated.id, (browser ? 'web:' : '') + deviceId)
-    const id = createHash('sha256').update(JSON.stringify([reminderKind, key, profile, sessionId])).digest('hex')
-    let dueAt
-    if (method === 'POST') {
-      try {
-        let raw = ''
-        for await (const chunk of req) {
-          raw += chunk
-          if (raw.length > 1024) return json(400, { error: 'Invalid chat reminder.' })
-        }
-        dueAt = JSON.parse(raw).dueAt
-      } catch { return json(400, { error: 'Invalid chat reminder.' }) }
-      if (!Number.isSafeInteger(dueAt) || dueAt > 8.64e15 || dueAt <= now()) {
-        return json(400, { error: 'Choose a date and time in the future.' })
-      }
-    }
-    const device = store.devices.get(key)
-    const event = store.events.get(id)
-    const active = device?.origin === origin && event?.status === 'pending' && event.expires > now()
-    if (method === 'GET') return json(200, { dueAt: active ? event.dueAt : null })
-    if (sendingReminder === id && active) return json(409, { error: 'This reminder is being delivered. Try again shortly.' })
-    if (method === 'DELETE') {
-      if (active) store.update(state => state.events.delete(id))
-      return json(200, { dueAt: null })
-    }
-    if (!directory || !(browser ? browserSender?.enabled : sender.enabled)) {
-      return json(503, { error: 'Background notifications are unavailable on this server.' })
-    }
-    if (!device?.enabled || device.origin !== origin) {
-      return json(409, { error: 'Enable background delivery in Settings → Notifications on this device.' })
-    }
-    if (active && event.dueAt === dueAt) return json(200, { dueAt })
-
-    const timestamp = now()
-    const expires = dueAt + retentionMs
-    const eventId = randomUUID()
-    const data = {
-      eventId, expiresAt: String(expires), kind: reminderKind, origin, bindingId: device.bindingId,
-      title: 'Athena · Chat reminder', body: 'Open Athena to return to your conversation.',
-      tag: 'athena:reminder:' + eventId, focusSessionId: sessionId, focusProfile: profile
-    }
-    store.update(state => state.events.set(id, {
-      key, bindingId: device.bindingId, data, dueAt, background: true,
-      status: 'pending', attempts: 0, created: timestamp, updated: timestamp, nextAttempt: dueAt, expires
-    }))
-    return json(200, { dueAt })
   }
 
   function attach(server) {

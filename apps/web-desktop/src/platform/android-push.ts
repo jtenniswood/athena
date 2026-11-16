@@ -81,10 +81,6 @@ async function reportDelivery(deviceId: string, generation: number): Promise<voi
   } catch { /* Optional diagnostics must not delay connecting to chat or block older servers. */ }
 }
 
-export function androidPushDeviceId(): string | undefined {
-  return stopped ? undefined : registration?.deviceId
-}
-
 export async function testAndroidPush(): Promise<void> {
   if (!await syncAndroidPushPreferences() || !registration) throw new Error('Push registration is unavailable.')
   await apiFetch({ method: 'POST', path: '/api/athena/android/push/test', body: { deviceId: registration.deviceId } })
