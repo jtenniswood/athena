@@ -30,15 +30,15 @@ export function useMobileChatHistory({ mobile, drawerOpen, covered, showHistory,
   }, [mobile, covered, showConversation])
 
   useEffect(() => {
-    if (!mobile || covered || drawerOpen || !notificationRoute) return
-    // Android's Back can skip history entries created before the first touch.
+    if (!mobile || covered || drawerOpen) return
+    // Match the toolbar when a cold open or an archive reset leaves no chat entry.
     const onBack = (event: Event) => {
       event.preventDefault()
       backToHistory()
     }
     window.addEventListener('athena:native-back', onBack)
     return () => window.removeEventListener('athena:native-back', onBack)
-  }, [mobile, covered, drawerOpen, notificationRoute, backToHistory])
+  }, [mobile, covered, drawerOpen, backToHistory])
 
   useEffect(() => {
     const before = previous.current
