@@ -1,10 +1,43 @@
-.browser-archive-toasts { position:fixed; z-index:201; top:calc(env(safe-area-inset-top, 0px) + 1rem); left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:0.5rem; width:max-content; max-width:calc(100% - 2rem); pointer-events:none; }
-.browser-archive-toast { display:flex; align-items:center; gap:0.5rem; padding:0.375rem 0.625rem; font-size:0.8125rem; line-height:1.25; border:1px solid var(--web-border); border-radius:var(--web-radius-panel); background:var(--web-surface); color:var(--web-text); box-shadow:var(--web-shadow-panel); pointer-events:auto; }
-.browser-archive-toast .codicon { flex-shrink:0; font-size:0.875rem; }
-.browser-archive-toast > span { min-width:0; }
-.browser-archive-toast button { flex-shrink:0; min-height:1.75rem; border:0; cursor:pointer; font:inherit; }
-.browser-archive-undo { padding:0.25rem 0.625rem; border-radius:var(--web-radius-control); background:var(--web-text); color:var(--web-surface); }
-.browser-archive-undo:disabled { cursor:wait; opacity:0.65; }
-.browser-archive-dismiss { display:grid; place-items:center; width:1.75rem; padding:0; border-radius:var(--web-radius-control); background:transparent; color:inherit; }
-.browser-archive-dismiss:hover { background:var(--web-hover); }
-.browser-archive-toast button:focus-visible { outline:2px solid var(--web-text); outline-offset:3px; }
+.browser-archive-toasts {
+  flex: 0 0 auto;
+  max-block-size: min(8.5rem, 30%);
+  overflow-y: auto;
+  border-block-start: 1px solid var(--web-border-subtle);
+  padding-inline: var(--web-sheet-padding-start) var(--web-sheet-padding-end);
+  padding-block-end: calc(env(safe-area-inset-bottom, 0px) / var(--web-ui-scale, 1));
+  background: var(--web-bg);
+}
+
+.browser-archive-toasts:empty { display: none; }
+
+.browser-archive-toast {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--web-space-2);
+  color: var(--web-text-muted);
+  font-size: var(--web-text-body);
+  line-height: var(--web-line-body);
+}
+
+.browser-archive-toast + .browser-archive-toast { border-block-start: 1px solid var(--web-border-subtle); }
+.browser-archive-toast > .codicon { flex: none; font-size: var(--web-icon-size); }
+.browser-archive-toast > span { min-width: 0; overflow-wrap: anywhere; }
+
+.browser-archive-toast button {
+  flex: none;
+  min-inline-size: var(--web-control-regular);
+  min-block-size: var(--web-control-regular);
+  border: 0;
+  border-radius: var(--web-radius-control);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.browser-archive-toast button:hover { background: var(--web-hover); }
+.browser-archive-toast button:focus-visible { outline: var(--web-focus-ring); outline-offset: -2px; }
+.browser-archive-toast .browser-archive-undo { padding-inline: var(--web-space-2); color: var(--web-text); font-weight: 600; }
+.browser-archive-undo:disabled { cursor: wait; opacity: 0.65; }
+.browser-archive-dismiss { display: grid; place-items: center; padding: 0; }
