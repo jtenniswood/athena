@@ -1,8 +1,10 @@
 import { useStore } from '@nanostores/react'
 import { atom } from 'nanostores'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type Ref } from 'react'
 import { Codicon } from '../upstream/browser-api'
 import './archive-toast.css'
+
+export const ARCHIVE_FOOTER_ID = 'browser-archive-footer'
 
 type ArchiveNotice = { id: number; undo: () => Promise<void> }
 const $archives = atom<ArchiveNotice[]>([])
@@ -10,7 +12,7 @@ let nextId = 0
 const dismiss = (id: number) => $archives.set($archives.get().filter(notice => notice.id !== id))
 
 export function showArchivedChatToast(undo: () => Promise<void>): void {
-  $archives.set([...$archives.get(), { id: ++nextId, undo }])
+  $archives.set([{ id: ++nextId, undo }, ...$archives.get()])
 }
 
 function ArchiveToast({ notice }: { notice: ArchiveNotice }) {
@@ -40,9 +42,9 @@ function ArchiveToast({ notice }: { notice: ArchiveNotice }) {
   </div>
 }
 
-export function BrowserArchiveToasts() {
+export function BrowserArchiveToasts({ ref }: { ref: Ref<HTMLDivElement> }) {
   const notices = useStore($archives)
-  return <div className="browser-archive-toasts" role="region" aria-label="Archived chats">
+  return <div id={ARCHIVE_FOOTER_ID} ref={ref} className="browser-archive-toasts" role="region" aria-label="Archived chats">
     {notices.map(notice => <ArchiveToast key={notice.id} notice={notice} />)}
   </div>
 }
