@@ -22,7 +22,7 @@ export function browserPushSupported(): boolean {
   return !isAndroidApp() && window.isSecureContext && 'PushManager' in window && 'serviceWorker' in navigator
 }
 
-export function browserPushEnabled(): boolean { return Boolean(browserPushDeviceId()) }
+export function browserPushEnabled(): boolean { return Boolean(installationId()) }
 
 export function browserPushReady(): boolean { return ready && browserPushEnabled() }
 
@@ -34,7 +34,7 @@ function publish(status: boolean) {
   return status
 }
 
-export function browserPushDeviceId(): string | null {
+function installationId(): string | null {
   try { return localStorage.getItem(installationKey) } catch { return null }
 }
 
@@ -64,7 +64,7 @@ export async function prepareBrowserPush(): Promise<boolean> {
   } catch { return false }
 }
 
-function sendRegistration(deviceId: string, subscription: PushSubscription): Promise<{ registered?: boolean; watchingReplies?: boolean }> {
+function sendRegistration(deviceId: string, subscription: PushSubscription): Promise<{ watchingReplies?: boolean }> {
   let prefs: { enabled?: boolean; kinds?: { turnDone?: boolean } } = {}
   try { prefs = JSON.parse(localStorage.getItem(preferencesKey) || '{}') } catch { /* Use the renderer defaults. */ }
   const [route, query] = location.hash.split('?')
@@ -73,7 +73,7 @@ function sendRegistration(deviceId: string, subscription: PushSubscription): Pro
   const visibleProfile = new URLSearchParams(query).get('profile') || new URL(location.href).searchParams.get('profile')
   return apiFetch({
     method: 'POST', path, timeoutMs: 6000, body: {
-      deviceId, subscription: subscription.toJSON(), enabled: prefs?.enabled !== false, turnDone: prefs?.kinds?.turnDone !== false,
+      deviceId, subscription: subscription.toJSON(), enabled: prefs?.enabled !== false && prefs?.kinds?.turnDone !== false,
       visibleSession: visibleSession && decodeURIComponent(visibleSession),
       visibleProfile, silent: localStorage.getItem(mutedKey) === 'true'
     }
@@ -82,7 +82,7 @@ function sendRegistration(deviceId: string, subscription: PushSubscription): Pro
 
 export async function syncBrowserPush(): Promise<boolean> {
   if (stopped || !browserPushSupported()) return false
-  const id = browserPushDeviceId()
+  const id = installationId()
   if (!id) return ready ? publish(false) : false
   if (pending) return pending
   pending = (async () => {
@@ -92,11 +92,9 @@ export async function syncBrowserPush(): Promise<boolean> {
         return publish(false)
       }
       const subscription = await (await worker())?.pushManager.getSubscription()
-      if (!subscription || stopped || browserPushDeviceId() !== id) return publish(false)
+      if (!subscription || stopped || installationId() !== id) return publish(false)
       const status = await sendRegistration(id, subscription)
-      const current = !stopped && browserPushDeviceId() === id
-      publish(current && status.watchingReplies === true)
-      return current && (status.registered ?? status.watchingReplies) === true
+      return publish(!stopped && installationId() === id && status.watchingReplies === true)
     } catch { return publish(false) }
   })().finally(() => { pending = undefined })
   return pending
@@ -119,18 +117,18 @@ export async function setBrowserPushEnabled(enabled: boolean): Promise<boolean> 
   const publicKey = await browserPushKey()
   if (!publicKey) throw new Error('Browser push is unavailable.')
   await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: publicKey })
-  localStorage.setItem(installationKey, browserPushDeviceId() || crypto.randomUUID())
+  localStorage.setItem(installationKey, installationId() || crypto.randomUUID())
   return syncBrowserPush()
 }
 
 export async function testBrowserPush(): Promise<void> {
-  const id = browserPushDeviceId()
+  const id = installationId()
   if (!id || !await syncBrowserPush()) throw new Error('Background delivery is unavailable')
   await apiFetch({ method: 'POST', path: path + '/test', timeoutMs: 10000, body: { deviceId: id } })
 }
 
 async function revokeBrowserPush() {
-  const id = browserPushDeviceId()
+  const id = installationId()
   if (!id) return
   localStorage.removeItem(installationKey)
   await Promise.allSettled([
@@ -140,7 +138,7 @@ async function revokeBrowserPush() {
 }
 
 export async function stopBrowserPush(): Promise<void> {
-  if (!browserPushSupported() || !browserPushDeviceId()) return
+  if (!browserPushSupported() || !installationId()) return
   stopped = true
   publish(false)
   await pending
