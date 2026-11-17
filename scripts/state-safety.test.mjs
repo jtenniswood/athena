@@ -262,3 +262,40 @@ test('sign-out verifies credential removal before reloading and unlocks on stora
   assert.equal(app.calls().reloads, 0)
   assert.equal(app.root.inert, false)
 })
+
+test('chat selection can keep unsent files while page replacement requires saving', () => {
+  const safety = load('reload-safety', {
+    draftSafety: { browserDraftSnapshot: () => ({ blocked: false, storageKey: 'drafts', texts: { chat: 'draft' }, attachments: 1 }) }
+  })
+  safety.setActiveWork({ count: 1 })
+  assert.equal(safety.chatSelectionReadiness().ready, true)
+  assert.match(safety.reloadReadiness().reason, /active response/)
+  assert.match(safety.reloadReadiness(true, 'ui-update').reason, /unsent attachments/)
+  const finish = safety.beginOperation()
+  assert.match(safety.chatSelectionReadiness().reason, /uploading/)
+  finish()
+})
+
+test('a page transition started during Android draft flush refuses the correlated navigation', async () => {
+  const root = { inert: false }, body = { inert: false }, replies = []
+  const saving = Promise.withResolvers()
+  let prepare
+  const { installAndroidNavigationGuard } = load('android-navigation', {
+    require: specifier => ({
+      './android': { isAndroidApp: () => true, androidNavigationReady: async result => replies.push(result) },
+      './reload-safety': { reloadReadinessAfterSaving: () => saving.promise }
+    })[specifier],
+    document: { getElementById: () => root, body },
+    window: { addEventListener: (_, callback) => { prepare = callback } }
+  })
+  installAndroidNavigationGuard()
+  const pending = prepare({ detail: { requestId: 'first' }, preventDefault() {} })
+  body.inert = true
+  await prepare({ detail: { requestId: 'second' }, preventDefault() {} })
+  saving.resolve({ ready: true })
+  await pending
+  assert.deepEqual(replies.map(({ requestId, ready }) => [requestId, ready]), [
+    ['second', false], ['first', false]
+  ])
+  assert.ok(replies.every(reply => reply.reason.includes('finish updating')))
+})
