@@ -5,11 +5,7 @@ import { replaceBrowserContract } from './contract'
 export function useBrowserSidebarController(source: string, root: string): string {
   source = replaceBrowserContract(source, [
     ["  const ownerGrouped = profileScope === ALL_PROFILES && grouping === 'profile'", "  const combinedProfiles = useBrowserProfileGrouping()\n  const ownerGrouped = profileScope === ALL_PROFILES && combinedProfiles"],
-    ['interface ChatSidebarProps extends', 'export interface ChatSidebarProps extends'],
-    ['  const messagingProfile = sidebarProfileForScope(profileScope)', '  const messagingProfile = sidebarProfileForScope(profileScope)\n  useBrowserSidebarChannels()'],
     ['const profileGroups = useGatewaySessionGroups(agentSessions, ownerGrouped, filtersNarrow)', 'const profileGroups = useBrowserProfileGroups(useGatewaySessionGroups(agentSessions, ownerGrouped, filtersNarrow))'],
-    ['  const showSessionSections = hasSessionArea({', '  const showSessionSections = Boolean(displayAgentGroups?.length) || hasSessionArea({'],
-    ['cronJobs: showsAdvancedChrome ? cronJobs.length : 0,', 'cronJobs: cronJobs.length,'],
     ['  useEffect(() => {\n    const next = resolveManualSessionOrderIds(', '  useEffect(() => {\n    if (sessionsLoading) return\n    const next = resolveManualSessionOrderIds('],
     ['[agentOrderIds, agentOrderManual, unpinnedAgentSessions]', '[agentOrderIds, agentOrderManual, unpinnedAgentSessions, sessionsLoading]']
   ])
@@ -32,8 +28,7 @@ export function useBrowserSidebarController(source: string, root: string): strin
   source = projectRendererController(source, 'ChatSidebar', `<BrowserSidebarControllerSurface model={{ labels: s, ${projection.join(', ')} }} />`, ['[messagingVisible, setMessagingVisible]', 'revealMoreMessaging'])
   return `import { useBrowserProfileGrouping } from ${JSON.stringify(path.join(root, 'src/upstream/profile-section'))}\n` +
     `import { BrowserSidebarControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar'))}\n` +
-    `import { useBrowserProfileGroups } from ${JSON.stringify(path.join(root, 'src/upstream/profile-groups'))}\n` +
-    `import { useBrowserSidebarChannels } from ${JSON.stringify(path.join(root, 'src/experience/sidebar-sections'))}\n` + source
+    `import { useBrowserProfileGroups } from ${JSON.stringify(path.join(root, 'src/upstream/profile-groups'))}\n` + source
 }
 
 export function useBrowserSessionSection(source: string, root: string): string {
