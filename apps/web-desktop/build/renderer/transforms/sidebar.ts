@@ -171,6 +171,18 @@ export function useBrowserRepositoryController(source: string, root: string): st
 }
 
 export function useBrowserCronController(source: string, root: string): string {
+  if (source.includes("import type { CronSidebarPresentation } from './cron-presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/upstream/cron-sidebar-presentation'))
+    const controller = replaceBrowserContract(source, [
+      ['export function SidebarCronJobsSection(', 'function HermesSidebarCronJobsSection(']
+    ])
+    return `import { browserCronSidebarPresentation } from ${adapter}
+` + controller + `
+export function SidebarCronJobsSection(props: SidebarCronJobsSectionProps) {
+  return <HermesSidebarCronJobsSection {...props} presentation={browserCronSidebarPresentation} />
+}
+`
+  }
   source = projectRendererController(source, 'SidebarCronJobsSection', `<BrowserSidebarSection model={{
     id: 'cron-jobs', label, open, toggle: onToggle, collapsible: true, pinned: false, acceptsSessionDrops: false,
     className: 'shrink-0 p-0 pb-1',

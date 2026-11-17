@@ -2155,7 +2155,7 @@
         "scenario": "scheduled tasks retain each endpoint profile from a Research chat"
       }
     ],
-    "removal": "Remove when a public renderer controller contract supplies the same job and live-run projections.",
+    "removal": "Remove the private cron view rewrites once the pinned Hermes release provides the cron sidebar presentation interface.",
     "handlers": [
       "useBrowserCronController"
     ],

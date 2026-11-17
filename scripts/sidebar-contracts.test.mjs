@@ -39,22 +39,39 @@ test('semantic adapters preserve identity and reject upstream drift', () => {
   const api = load('build/renderer/browser-plugin.ts')
   const sidebar = source('app/chat/sidebar/index.tsx')
   const adapted = api.useBrowserSidebarController(sidebar, root)
-  assert.match(adapted, /BrowserSidebarControllerSurface model=\{\{/)
-  assert.doesNotMatch(adapted, /useBrowserSidebarChannels\(\)/)
-  assert.doesNotMatch(adapted, /export interface ChatSidebarProps/)
+  if (sidebar.includes('ChatSidebarPresentationContext')) {
+    assert.ok(adapted.includes(sidebar.replace('export function ChatSidebar(', 'function HermesChatSidebar(')))
+    assert.match(adapted, /<ChatSidebarPresentationContext\.Provider/)
+  } else {
+    assert.match(adapted, /BrowserSidebarControllerSurface model=\{\{/)
+    assert.doesNotMatch(adapted, /useBrowserSidebarChannels\(\)/)
+    assert.doesNotMatch(adapted, /export interface ChatSidebarProps/)
+    assert.doesNotMatch(adapted, /browserChannels.map/)
+    assert.doesNotMatch(adapted, /!worktreeGroupingActive &&\s+messagingGroups.map/)
+    assert.doesNotMatch(adapted, /showsAdvancedChrome && cronJobs\.length/)
+  }
   const wrapper = readFileSync(path.join(root, 'src/upstream/sidebar.tsx'), 'utf8')
   assert.match(wrapper, /useBrowserSidebarChannels\(\)/)
   assert.match(wrapper, /showSections: c\.showSessionSections \|\| Boolean\(c\.displayAgentGroups\?\.length\) \|\| c\.cronJobs\.length > 0/)
-  assert.doesNotMatch(adapted, /browserChannels.map/)
-  assert.doesNotMatch(adapted, /!worktreeGroupingActive &&\s+messagingGroups.map/)
-  assert.doesNotMatch(adapted, /showsAdvancedChrome && cronJobs\.length/)
-  assert.throws(() => api.useBrowserSidebarController(sidebar.replace('function ChatSidebar(', 'function DifferentSidebar('), root), /controller changed/)
-  const section = api.useBrowserSessionSection(source('app/chat/sidebar/sessions-section.tsx'), root)
-  assert.match(section, /<BrowserSidebarSection model=\{\{/)
-  assert.match(section, /id: browserSectionId/)
-  const cron = api.useBrowserCronController(source('app/chat/sidebar/cron-jobs-section.tsx'), root)
-  assert.match(cron, /id: 'cron-jobs', label, open/)
-  assert.match(cron, /BrowserCronRuns loadingLabel/)
+  assert.throws(() => api.useBrowserSidebarController(sidebar.replace('function ChatSidebar(', 'function DifferentSidebar('), root), /controller changed|semantic hook target changed/)
+  const sectionSource = source('app/chat/sidebar/sessions-section.tsx')
+  const section = api.useBrowserSessionSection(sectionSource, root)
+  if (sectionSource.includes('SidebarSessionsSectionPresentation')) {
+    assert.ok(section.includes(sectionSource.replace('export function SidebarSessionsSection(', 'function HermesSidebarSessionsSection(')))
+    assert.match(section, /presentation=\{browserSessionSectionPresentation\}/)
+  } else {
+    assert.match(section, /<BrowserSidebarSection model=\{\{/)
+    assert.match(section, /id: browserSectionId/)
+  }
+  const cronSource = source('app/chat/sidebar/cron-jobs-section.tsx')
+  const cron = api.useBrowserCronController(cronSource, root)
+  if (cronSource.includes('CronSidebarPresentation')) {
+    assert.ok(cron.includes(cronSource.replace('export function SidebarCronJobsSection(', 'function HermesSidebarCronJobsSection(')))
+    assert.match(cron, /presentation=\{browserCronSidebarPresentation\}/)
+  } else {
+    assert.match(cron, /id: 'cron-jobs', label, open/)
+    assert.match(cron, /BrowserCronRuns loadingLabel/)
+  }
   // An upstream icon change cannot alter which notice the browser suppresses.
   const updates = api.omitBrowserDesktopUpdateNotice(source('store/updates.ts').replace("icon: 'gift'", "icon: 'bell'"))
   assert.match(updates, /export function maybeNotifyUpdateAvailable[^\n]+\{\}/)
