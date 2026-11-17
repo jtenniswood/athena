@@ -53,10 +53,15 @@ test('project presentation shows all rows without expansion or paging', () => {
   const output = useBrowserProjectController(original, root)
   assert.match(output, /useWorkspaceNodeOpen\(project.id\)/)
   assert.match(output, /latestProjectSessions\(project, Infinity\)/)
-  assert.match(output, /rows: renderRows\?\.\(recent\)/)
-  assert.doesNotMatch(output, /const page =|const showAll =|offerShowAll|setExpanded/)
   assert.match(output, /BrowserProjectControllerSurface/)
-  assert.doesNotMatch(output, /const shell =|const labelLink =|const lead =/)
+  if (original.includes('ProjectOverviewPresentation')) {
+    assert.ok(output.includes(original.replace('export function ProjectOverviewRow(', 'function HermesProjectOverviewRow(')))
+    assert.match(output, /presentation=\{BrowserProjectControllerSurface\}/)
+  } else {
+    assert.match(output, /rows: renderRows\?\.\(recent\)/)
+    assert.doesNotMatch(output, /const page =|const showAll =|offerShowAll|setExpanded/)
+    assert.doesNotMatch(output, /const shell =|const labelLink =|const lead =/)
+  }
 })
 
 test('worktree creation retains the captured lane owner and refuses creation after a failed branch switch', async () => {
@@ -82,11 +87,14 @@ test('worktree creation retains the captured lane owner and refuses creation aft
     notifyError: err => errors.push(err.message)
   })
   vm.runInContext(ts.transpileModule(functions, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React } }).outputText, context)
-  const create = profile => context.exports.SidebarWorkspaceGroup({
-    group: { id: 'same-lane-id', label: 'main', path: `/repo-${profile}`, mode: 'workspace', isMain: true, sessions: Array.from({ length: 60 }, (_, index) => ({ id: `chat-${index}` })) },
-    owner: { connectionId: 'shared', profile }, renderRows: rows => rows,
-    onNewSession: path => calls.push(['create', profile, path])
-  })
+  const create = profile => {
+    const view = context.exports.SidebarWorkspaceGroup({
+      group: { id: 'same-lane-id', label: 'main', path: `/repo-${profile}`, mode: 'workspace', isMain: true, sessions: Array.from({ length: 60 }, (_, index) => ({ id: `chat-${index}` })) },
+      owner: { connectionId: 'shared', profile }, renderRows: rows => rows,
+      onNewSession: path => calls.push(['create', profile, path])
+    })
+    return typeof view.type === 'function' ? view.type(view.props) : view
+  }
   const first = create('research'), second = create('writer')
   assert.equal(first.type, 'browser-worktree')
   assert.equal(first.props.model.rows.length, 60, 'a workspace renders beyond both the preview and page limits')

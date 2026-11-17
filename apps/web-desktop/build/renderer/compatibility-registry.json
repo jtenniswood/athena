@@ -2708,7 +2708,7 @@
         "scenario": "project groups show all sessions without clipping"
       }
     ],
-    "removal": "Remove when the renderer exports a public project controller with owner-scoped commands.",
+    "removal": "Remove the private project row rewrite once the pinned Hermes release provides its presentation interface.",
     "sourceRoot": "renderer",
     "sourceHash": "e2cba07ac9067e609b355d6c850597e7e06432210d6d583a7fa9ad97579ac268",
     "inputHash": "e2cba07ac9067e609b355d6c850597e7e06432210d6d583a7fa9ad97579ac268",
@@ -3566,7 +3566,7 @@
         "scenario": "worktree creation retains the captured lane owner and refuses creation after a failed branch switch"
       }
     ],
-    "removal": "Remove when a public renderer controller contract supplies the same worktree facts and commands.",
+    "removal": "Remove the private workspace group rewrite once the pinned Hermes release provides its presentation interface.",
     "handlers": [
       "useBrowserWorkspaceController"
     ],

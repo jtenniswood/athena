@@ -94,6 +94,16 @@ export function SidebarSessionsSection({ browserSectionId, ...props }: SidebarSe
 }
 
 export function useBrowserProjectController(source: string, root: string): string {
+  if (source.includes("import type { ProjectOverviewPresentation } from './row-presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/upstream/sidebar-project'))
+    const controller = replaceBrowserContract(source, [['export function ProjectOverviewRow(', 'function HermesProjectOverviewRow(']])
+    return `import { BrowserProjectControllerSurface } from ${adapter}
+` + controller + `
+export function ProjectOverviewRow(props: ProjectOverviewRowProps) {
+  return <HermesProjectOverviewRow {...props} presentation={BrowserProjectControllerSurface} />
+}
+`
+  }
   source = replaceBrowserContract(source, [
     ['const recent = fetched.length ? fetched : latestProjectSessions(project, limit)',
       'const recent = previewSessions?.length ? previewSessions : latestProjectSessions(project, Infinity)']
@@ -134,6 +144,16 @@ export function useBrowserProfileControllers(source: string, root: string): stri
 }
 
 export function useBrowserWorkspaceController(source: string, root: string): string {
+  if (source.includes("import type { WorkspaceGroupPresentation } from './row-presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/upstream/sidebar-workspace'))
+    const controller = replaceBrowserContract(source, [['export function SidebarWorkspaceGroup(', 'function HermesSidebarWorkspaceGroup(']])
+    return `import { BrowserWorkspaceControllerSurface } from ${adapter}
+` + controller + `
+export function SidebarWorkspaceGroup(props: SidebarWorkspaceGroupProps) {
+  return <HermesSidebarWorkspaceGroup {...props} presentation={BrowserWorkspaceControllerSurface} />
+}
+`
+  }
   source = projectRendererController(source, 'SidebarWorkspaceGroup', `<BrowserWorkspaceControllerSurface model={{
     group, isProfileGroup, usage, open, toggleOpen,
     empty: sessions.length === 0, rows: renderRows(sessions), canCreate: Boolean(onNewSession || isProfileGroup),
