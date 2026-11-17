@@ -1,11 +1,16 @@
+import { chatSelectionReadiness } from './reload-safety'
+
 /** Reuse this document only for hash navigation; query changes reload its work. */
 export function routeBrowserNotification(href: string, focusOnly = false): boolean {
   try {
-    if (document.getElementById('root')?.inert) return false
+    if (document.getElementById('root')?.inert || document.body?.inert) return false
     const current = new URL(window.location.href)
     const target = new URL(href, current)
     if (target.origin !== current.origin || target.pathname !== current.pathname || target.search !== current.search) return false
-    if (!focusOnly && target.hash !== current.hash) window.location.hash = target.hash
+    if (!focusOnly && target.hash !== current.hash) {
+      if (!chatSelectionReadiness().ready) return false
+      window.location.hash = target.hash
+    }
     return true
   } catch { return false }
 }
