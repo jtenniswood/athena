@@ -96,7 +96,7 @@ test('Access reload distinguishes an unloaded page from a mounted app and waits 
   assert.equal(window.dispatchEvent(new Event('athena:prepare-native-navigation', { cancelable: true })), false, 'mounted app takes ownership before asynchronous saving')
   assert.equal(replies.length, 0)
   finish({ ready: false, reason: 'Recording in progress' })
-  await Promise.resolve(); await Promise.resolve()
+  await new Promise(resolve => setImmediate(resolve))
   assert.equal(replies[0].ready, false)
   window.dispatchEvent(new CustomEvent('athena:prepare-native-navigation', { cancelable: true,
     detail: { chatSelection: true, requestId: 'chat-tap' } }))
@@ -149,8 +149,11 @@ test('asynchronous navigation approvals retain the originating request ID', asyn
     event.detail = { requestId }
     window.dispatchEvent(event)
   }
-  finishes[1]({ ready: true }); finishes[0]({ ready: false })
-  await Promise.resolve(); await Promise.resolve()
+  finishes[1]({ ready: true })
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(replies[0].requestId, 'second')
+  finishes[0]({ ready: false })
+  await new Promise(resolve => setImmediate(resolve))
   assert.deepEqual(replies.map(reply => reply.requestId), ['second', 'first'])
   stop()
 })
