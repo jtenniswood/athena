@@ -2926,13 +2926,14 @@ test('profiles can reorder and hide the default Hermes profile', async ({ page }
 
   await hermes.click({ button: 'right' })
   const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
-  await expect(menu.getByRole('menuitem', { name: 'Hide profile', exact: true })).toBeVisible()
-  await menu.getByRole('menuitem', { name: 'Hide profile', exact: true }).click()
+  const visibility = menu.getByRole('menuitemcheckbox', { name: 'Hermes', exact: true })
+  await expect(visibility).toHaveAttribute('aria-checked', 'true')
+  await visibility.click()
   await expect(hermes).toHaveCount(0)
-
-  await page.locator('.browser-profile-rail').click({ button: 'right' })
-  await page.getByRole('menu', { name: 'Profile actions', exact: true }).getByRole('menuitem', { name: 'Show hidden', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Hermes', exact: true })).toBeVisible()
+  await expect(visibility).toHaveAttribute('aria-checked', 'false')
+  await visibility.click()
+  await expect(hermes).toBeVisible()
+  await expect(visibility).toHaveAttribute('aria-checked', 'true')
 })
 
 for (const width of [1440]) {

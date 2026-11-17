@@ -118,6 +118,19 @@ export function ProjectOverviewRow(props: ProjectOverviewRowProps) {
 }
 
 export function useBrowserProfileControllers(source: string, root: string): string {
+  if (source.includes("import type { ProfileGroupPresentation } from './profile-group-presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/upstream/sidebar-profile'))
+    const controller = replaceBrowserContract(source, [
+      ['export function GatewayProfileGroups(', 'function HermesGatewayProfileGroups(']
+    ])
+    return `import { useBrowserProfileGroupPresentation } from ${adapter}
+` + controller + `
+export function GatewayProfileGroups(props: GatewayProfileGroupsProps) {
+  const presentation = useBrowserProfileGroupPresentation()
+  return <HermesGatewayProfileGroups {...props} presentation={presentation} />
+}
+`
+  }
   source = replaceBrowserContract(source, [
     ['  const order = useStore($gatewayGroupOrder)', "  const order = useStore($gatewayGroupOrder)\n  const presentationMode = useBrowserProfileGrouping()\n  const hiddenProfileGroups = useHiddenProfileGroups()"],
     ['if (nested || embedded || !owner) {', 'if (nested || embedded || !owner || presentationMode) {'],
@@ -163,6 +176,18 @@ export function SidebarWorkspaceGroup(props: SidebarWorkspaceGroupProps) {
 }
 
 export function useBrowserWorkspacePresentation(source: string, root: string): string {
+  if (source.includes("import type { WorkspaceChromePresentation } from './row-presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/upstream/workspace-chrome'))
+    const names = ['WorkspaceAddButton', 'WorkspaceShowMoreRow', 'WorkspaceShowMoreButton', 'StartWorkButton', 'WorkspaceHeader']
+    const controller = replaceBrowserContract(source, names.map(name => [`export function ${name}(`, `function Hermes${name}(`]))
+    const wrappers = names.map(name => `
+export function ${name}(props: Parameters<typeof Hermes${name}>[0]) {
+  return <Hermes${name} {...props} presentation={browserWorkspaceChromePresentation} />
+}
+`).join('')
+    return `import { browserWorkspaceChromePresentation } from ${adapter}
+` + controller + wrappers
+  }
   const views: [string, string][] = [
     ['WorkspaceAddButton', '<BrowserTreeAdd label={label} onClick={onClick} onPointerDown={onPointerDown} />'],
     ['WorkspaceShowMoreRow', '<BrowserTreeMore label={label} onClick={onClick} disabled={disabled} />'],
@@ -175,6 +200,16 @@ export function useBrowserWorkspacePresentation(source: string, root: string): s
 }
 
 export function useBrowserRepositoryController(source: string, root: string): string {
+  if (source.includes("import type { RepositoryPresentation } from './row-presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/experience/sidebar-tree'))
+    const controller = replaceBrowserContract(source, [['export function EnteredProjectContent(', 'function HermesEnteredProjectContent(']])
+    return `import { BrowserRepository } from ${adapter}
+` + controller + `
+export function EnteredProjectContent(props: EnteredProjectContentProps) {
+  return <HermesEnteredProjectContent {...props} presentation={BrowserRepository} />
+}
+`
+  }
   source = projectRendererController(source, 'HomeSessions', '<>{renderRows(sessions)}</>', ['home'])
   source = projectRendererController(source, 'RepoFlatSection', `<BrowserRepository model={{
     label: repo.label, title: repo.path ? displayPath(repo.path) : undefined, open, toggle: toggleOpen, emphasis: true,

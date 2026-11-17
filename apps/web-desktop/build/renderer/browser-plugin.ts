@@ -353,7 +353,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserWorkspacePresentation: source => useBrowserWorkspacePresentation(source, root),
     useBrowserRepositoryController: source => useBrowserRepositoryController(source, root),
     useBrowserCronController: source => useBrowserCronController(source, root),
-    sessionReorderingGroups: source => useBrowserSessionReordering(source, 'groups'),
+    sessionReorderingGroups: source => source.includes('useBrowserProfileGroupPresentation')
+      ? source : useBrowserSessionReordering(source, 'groups'),
     ungroupedStore: source => enableBrowserUngroupedSessions(source, 'store'),
     ungroupedMenu: source => enableBrowserUngroupedSessions(source, 'menu'),
   }

@@ -3231,7 +3231,7 @@
         "scenario": "profile layout composes with content grouping and preserves the draft"
       }
     ],
-    "removal": "Remove when upstream profile headers use the configured profile picture and support a single shared-gateway list.",
+    "removal": "Remove the private profile-group rewrite once the pinned Hermes release provides its presentation interface.",
     "handlers": [
       "useBrowserProfileControllers",
       "sessionReorderingGroups"
@@ -3592,7 +3592,7 @@
         "scenario": "worktree creation retains the captured lane owner and refuses creation after a failed branch switch"
       }
     ],
-    "removal": "Remove when a public renderer controller contract supplies the same worktree facts and commands.",
+    "removal": "Remove the private workspace control rewrites once the pinned Hermes release provides the workspace chrome presentation interface.",
     "handlers": [
       "useBrowserWorkspacePresentation"
     ],
@@ -3618,7 +3618,7 @@
         "scenario": "worktree creation retains the captured lane owner and refuses creation after a failed branch switch"
       }
     ],
-    "removal": "Remove when a public renderer controller contract supplies the same worktree facts and commands.",
+    "removal": "Remove the private repository rewrite once the pinned Hermes release provides its presentation interface.",
     "handlers": [
       "useBrowserRepositoryController"
     ],
