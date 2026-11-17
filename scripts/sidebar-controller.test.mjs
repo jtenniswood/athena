@@ -140,3 +140,18 @@ export function ChatSidebar(props: ChatSidebarProps) {
   assert.equal(result.child.type(result.child.props).view, 'athena')
   assert.equal(result.child.type(result.child.props).model.owner, 'research')
 })
+
+test('the section presentation leaves Hermes row grouping and ordering code intact', () => {
+  const { useBrowserSessionSection } = createBuildModuleLoader().load(path.join(root, 'build/renderer/transforms/sidebar.ts'))
+  const source = `import type { SidebarSessionsSectionPresentation } from './section-presentation'
+interface SidebarSessionsSectionProps { sectionId?: string; presentation?: SidebarSessionsSectionPresentation }
+export function SidebarSessionsSection(props: SidebarSessionsSectionProps) {
+  const rows = readControllerRows()
+  return props.presentation?.Section({ model: { sectionId: props.sectionId }, children: rows })
+}`
+  const output = useBrowserSessionSection(source, root)
+  assert.ok(output.includes(source.replace('export function SidebarSessionsSection(', 'function HermesSidebarSessionsSection(')))
+  assert.match(output, /sectionId=\{browserSectionId \?\? props.sectionId\}/)
+  assert.match(output, /presentation=\{browserSessionSectionPresentation\}/)
+  assert.doesNotMatch(output, /renderBrowserRows|BrowserSessionReorderList|browserProfileListRows/)
+})

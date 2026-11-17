@@ -2106,9 +2106,13 @@
       {
         "file": "tests/browser/sidebar-gestures.spec.mjs",
         "scenario": "cancelling a title reorder"
+      },
+      {
+        "file": "scripts/sidebar-controller.test.mjs",
+        "scenario": "the section presentation leaves Hermes row grouping and ordering code intact"
       }
     ],
-    "removal": "Remove when the renderer exposes the same section controller through a public host contract.",
+    "removal": "Remove the private section rewrites once the pinned Hermes release provides the section presentation interface.",
     "handlers": [
       "useBrowserSessionSection",
       "sessionReorderingSection"

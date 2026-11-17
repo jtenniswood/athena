@@ -346,7 +346,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserCreatedGroupSelection: source => useBrowserRosterSelection(source, root, 'created-group'),
     trackBrowserSettingsSaves: source => trackBrowserSettingsSaves(source, root),
     useBrowserSettingsFrame: source => useBrowserSettingsFrame(source, root),
-    sessionReorderingSection: source => useBrowserSessionReordering(source, 'section'),
+    sessionReorderingSection: source => source.includes('browserSessionSectionPresentation')
+      ? source : useBrowserSessionReordering(source, 'section'),
     useBrowserProfileControllers: source => useBrowserProfileControllers(source, root),
     useBrowserWorkspaceController: source => useBrowserWorkspaceController(source, root),
     useBrowserWorkspacePresentation: source => useBrowserWorkspacePresentation(source, root),

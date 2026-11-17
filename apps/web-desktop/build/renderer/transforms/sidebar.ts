@@ -45,6 +45,19 @@ export function ChatSidebar(props: ChatSidebarProps) {
 }
 
 export function useBrowserSessionSection(source: string, root: string): string {
+  if (source.includes("import type { SidebarSessionsSectionPresentation } from './section-presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/upstream/session-section'))
+    const controller = replaceBrowserContract(source, [
+      ['export function SidebarSessionsSection(', 'function HermesSidebarSessionsSection(']
+    ])
+    return `import { browserSessionSectionPresentation } from ${adapter}
+` + controller + `
+export function SidebarSessionsSection({ browserSectionId, ...props }: SidebarSessionsSectionProps & { browserSectionId?: string }) {
+  return <HermesSidebarSessionsSection {...props} sectionId={browserSectionId ?? props.sectionId}
+    presentation={browserSessionSectionPresentation} />
+}
+`
+  }
   source = replaceBrowserContract(source, [
     ['interface SidebarSessionsSectionProps {', 'interface SidebarSessionsSectionProps {\n  browserSectionId?: string'],
     ['<ReorderableList ids={sortableRowIds} onReorder={persistSessionOrder} sensors={dndSensors}>\n        {virtual}', '<BrowserSessionReorderList ids={sortableRowIds} onReorder={persistSessionOrder} sensors={dndSensors}>\n        {virtual}'],
