@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { createServer } from 'node:http'
@@ -15,6 +15,8 @@ async function fixture(t, options = {}) {
   let failures = options.failures || 0, clock = Date.now()
   const title = options.title ?? 'A named chat'
   const directory = options.persist ? await mkdtemp(path.join(tmpdir(), 'athena-push-')) : undefined
+  const replyFeedFile = options.feed && path.join(directory, 'reply-feed.json')
+  if (replyFeedFile) await writeFile(replyFeedFile, JSON.stringify(options.feed.grants), { mode: 0o600 })
   const gateway = createServer()
   const upstream = new WebSocketServer({ server: gateway })
   const rows = [], transcripts = new Map(), browserSent = []
@@ -32,12 +34,17 @@ async function fixture(t, options = {}) {
     socket.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: { type: 'gateway.ready' } }))
   })
   await new Promise(resolve => gateway.listen(0, '127.0.0.1', resolve))
-  const createRelay = () => createAthenaServices({ directory, now: () => clock, target: `http://127.0.0.1:${gateway.address().port}`,
+  const createRelay = () => createAthenaServices({ directory, replyFeedFile, now: () => clock, target: `http://127.0.0.1:${gateway.address().port}`,
     browserSender: { enabled: true, publicKey: () => 'public-key', send: async (...args) => browserSent.push(args) },
     sender: { enabled: true, send: async (...args) => { attempts.push(args); if (failures-- > 0) throw new Error("Temporary sender outage"); sent.push(args); waiters.shift()?.() } },
     fetch: async (url, { headers }) => {
       const address = new URL(url)
       const authorized = headers.cookie === 'hermes_session_at=A' || headers['x-hermes-session-token'] === 'private-existing-token'
+      if (address.pathname === '/api/sessions/reply-completions') {
+        assert.ok(options.feed)
+        assert.deepEqual(Object.keys(headers), ['Authorization'])
+        return options.feed.read(address, headers.Authorization, clock)
+      }
       if (address.pathname === '/api/profiles/sessions') {
         if (!authorized || options.authExpired?.()) return new Response(null, { status: 401 })
         assert.equal(address.searchParams.get('profile'), 'all')
@@ -65,6 +72,7 @@ async function fixture(t, options = {}) {
     }
   })
   let relay = createRelay()
+  if (replyFeedFile) await relay.scanReplies()
   const server = createServer((req, res) => { void relay.handle(req, res).then(handled => { if (!handled) { res.writeHead(404); res.end() } }) })
   relay.attach(server)
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
@@ -518,4 +526,73 @@ test('an untitled completed reply still reaches Android', async t => {
   await pending
   assert.equal(app.sent[0][1].kind, 'turnDone')
   assert.equal(app.sent[0][1].focusSessionId, 'runtime-1')
+})
+
+test('scoped reply feed resumes from disk without a renewed sign-in or transcript access', async t => {
+  const requests = [], completions = []
+  const grant = { profile: 'research', token: 'u'.repeat(43),
+    account: { user_id: 'hermes_session_at=A', provider: 'test' } }
+  let result = 'ok'
+  const app = await fixture(t, {
+    persist: true,
+    authExpired: () => true,
+    feed: {
+      grants: [grant],
+      read(url, bearer, clock) {
+        assert.equal(bearer, 'Bearer ' + grant.token)
+        assert.equal(url.searchParams.get('profile'), 'research')
+        const after = Number(url.searchParams.get('after'))
+        requests.push(after)
+        if (result === 'denied') return new Response(null, { status: 401 })
+        if (result === 'wrong-profile') return Response.json({
+          profile: 'default', next_cursor: 200, has_more: false,
+          events: [{ sequence: 200, session_id: 'foreign', conversation_id: 'foreign', completed_at: clock / 1000 }]
+        })
+        return Response.json({
+          profile: 'research', next_cursor: after < 3 ? 3 : Math.max(after, completions.at(-1)?.sequence ?? 0),
+          has_more: after < 3, events: after < 3 ? [] : completions.filter(event => event.sequence > after)
+        })
+      }
+    }
+  })
+  assert.equal((await app.register()).status, 200)
+  assert.equal((await app.browser()).status, 200)
+  assert.equal((await app.browser({
+    deviceId: '33333333-3333-4333-8333-333333333333',
+    subscription: { endpoint: 'https://fcm.googleapis.com/fcm/send/other-account',
+      keys: { p256dh: 'p'.repeat(87), auth: 'a'.repeat(22) } }
+  }, 'B')).status, 200)
+  const completed = Date.now() / 1000
+  completions.push({ sequence: 4, session_id: 'tip', conversation_id: 'original', completed_at: completed })
+  await app.scan()
+  await app.drain()
+  assert.deepEqual(requests, [0, 3])
+  assert.equal(app.sent.length, 1)
+  assert.equal(app.browserSent.length, 1)
+  assert.equal(app.sent[0][1].focusSessionId, 'original')
+  assert.equal(app.sent[0][1].focusProfile, 'research')
+
+  result = 'denied'
+  await app.restart()
+  await app.scan()
+  assert.equal(requests.at(-1), 4)
+  assert.equal((await app.status()).watchingReplies, false)
+  result = 'wrong-profile'
+  await app.scan()
+  assert.equal(requests.at(-1), 4)
+  assert.equal(app.sent.length, 1)
+
+  result = 'ok'
+  completions.push(
+    { sequence: 5, session_id: 'new-tip', conversation_id: 'original', completed_at: completed },
+    { sequence: 6, session_id: 'report', conversation_id: 'report', completed_at: completed }
+  )
+  await app.scan()
+  await app.drain()
+  assert.equal((await app.status()).watchingReplies, true)
+  assert.deepEqual(app.sent.map(([, data]) => data.focusSessionId), ['original', 'report'])
+  assert.deepEqual(app.browserSent.map(([, data]) => data.focusSessionId), ['original', 'original', 'report'])
+  const saved = await readFile(path.join(app.directory, 'android-push.json'), 'utf8')
+  assert.equal(saved.includes(grant.token), false)
+  assert.equal(JSON.parse(saved).replyCursors[0][1].sequence, 6)
 })

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useStore } from '@nanostores/react'
-import { $nativeNotifyPrefs } from '@/store/native-notifications'
+import { useBrowserNotificationAlertsEnabled } from '../../upstream/browser-notifications'
 import { Button } from '../../upstream/ui'
 import { browserNotificationPermission, requestBrowserNotificationPermission } from '../../platform/notifications'
 import { androidPushActive, isAndroidApp, refreshAndroidNotificationPermission } from '../../platform/android'
@@ -19,7 +18,7 @@ export function BrowserNotificationPermissionSetting() {
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
   const [deliveryMessage, setDeliveryMessage] = useState('')
-  const alertsEnabled = useStore($nativeNotifyPrefs).enabled
+  const alertsEnabled = useBrowserNotificationAlertsEnabled()
 
   const changeBackground = async (enabled: boolean) => {
     setBackground(enabled)

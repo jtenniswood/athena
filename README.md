@@ -393,10 +393,43 @@ conversation. Signing out revokes the device's access to previews.
 
 Athena checks Hermes for recently saved replies and scheduled reports about
 every 15 seconds, including after the relay closes. Android and browser push
-both use this check. The server uses the authenticated session established by the
+both use this check. By default, the server uses the authenticated session established by the
 app and keeps its access credentials in memory. Open Athena again after a server
 restart or when your Hermes sign-in expires to resume these checks. A renewed
 registration can catch replies from the past hour.
+
+#### Reply alerts after a server restart
+
+If your Hermes build includes the reply completion endpoint, you can provision a
+profile-scoped feed so existing push registrations recover missed alerts without
+opening Athena again. The feed supplies chat links and completion times. Alerts
+from the feed use generic text, and Athena can deliver them for up to one hour
+after completion.
+
+1. Generate a separate token for each profile with `python3 -c 'import secrets; print(secrets.token_urlsafe(32))'`.
+2. On Hermes, set `HERMES_REPLY_FEED_GRANTS_FILE` to an absolute path to a private
+   JSON file. Use the SHA-256 hex digest of each token as the key, and set its
+   value to `{"profile":"default","expires_at":<Unix timestamp in seconds>}`.
+3. On Athena, keep the corresponding tokens in a separate private file. Set
+   `ATHENA_REPLY_FEED_GRANTS_FILE` to its absolute path inside the container,
+   and mount the file read-only. Its contents follow this format.
+
+   ```json
+   [
+     {
+       "profile": "default",
+       "account": {"provider": "your-provider", "user_id": "your-user-id", "org_id": ""},
+       "token": "your-generated-token"
+     }
+   ]
+   ```
+
+   Use the signed-in account's `provider`, `user_id`, and `org_id` from Hermes
+   `/api/auth/me`. Assign each profile only to the account authorized to receive
+   alerts for the entire profile. Keep the existing `/data/athena` volume for
+   registrations and feed cursors. Rotate tokens by replacing both grants files,
+   and remove the entry on Hermes to revoke it. Profiles without a configured
+   feed continue to use the signed-in session.
 
 The relay keeps a disconnected active response for up to 24 hours and closes idle
 disconnected sockets after a minute. Device bindings and a bounded delivery queue

@@ -15,6 +15,8 @@ services:
       HERMES_GATEWAY_IDENTITY_URL: ${HERMES_GATEWAY_IDENTITY_URL:-}
       HERMES_GATEWAY_NAME: ${HERMES_GATEWAY_NAME:-Hermes}
       OPENCODE_GO_API_KEY: ${OPENCODE_GO_API_KEY:-}
+      # Optional absolute path to a private reply-feed grants file mounted read-only.
+      ATHENA_REPLY_FEED_GRANTS_FILE: ${ATHENA_REPLY_FEED_GRANTS_FILE:-}
 
 volumes:
   athena-preferences:
