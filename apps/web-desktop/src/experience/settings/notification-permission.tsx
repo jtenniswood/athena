@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useBrowserNotificationAlertsEnabled } from '../../upstream/browser-notifications'
+import { useBrowserNotificationAlertsEnabled } from '../../upstream/settings-interactions'
 import { Button } from '../../upstream/ui'
 import { browserNotificationPermission, requestBrowserNotificationPermission } from '../../platform/notifications'
 import { androidPushActive, isAndroidApp, refreshAndroidNotificationPermission } from '../../platform/android'

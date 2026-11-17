@@ -1,6 +1,5 @@
-import { useStore } from '@nanostores/react'
 import { resolveHermesOpenPath } from '@/lib/hermes-open-target'
-import { $nativeNotifyPrefs, clearPluginNotifyHandlers, invokePluginNotifyAction, invokePluginNotifyActivate } from '@/store/native-notifications'
+import { clearPluginNotifyHandlers, invokePluginNotifyAction, invokePluginNotifyActivate } from '@/store/native-notifications'
 import { installBrowserNotificationCallbacks } from '../platform/notification-navigation'
 import { knownOwnerForSession } from '@/store/session-states'
 import { isAndroidApp } from '../platform/android'
@@ -8,10 +7,6 @@ import { installAndroidUnreadNotifications } from './android-unread-notification
 import { browserPushReady } from '../platform/browser-push'
 import { WEB_CONNECTION_ID } from '../platform/connection'
 import { webNotify } from '../platform/notifications'
-
-export function useBrowserNotificationAlertsEnabled(): boolean {
-  return useStore($nativeNotifyPrefs).enabled
-}
 
 /** Capture the engine owner before delivery waits or later selection changes. */
 export function installBrowserNotificationCommands(): () => void {
