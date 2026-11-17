@@ -8,6 +8,43 @@ test.afterAll(async () => { await app?.close() })
 test.beforeEach(async ({ page }) => { await page.route('**/api/athena/preferences', route => route.abort()) })
 const editor = page => page.locator('[data-slot="composer-rich-input"]:visible').first()
 
+test('Android shows the Hermes prompt after Cloudflare Access and continues into chat', async ({ page }) => {
+  let authenticated = false
+  await page.route('**/api/status', route => route.fulfill({ json: { auth_required: true, auth_providers: ['basic'] } }))
+  await page.route('**/api/auth/me', route => route.fulfill({
+    status: authenticated ? 200 : 401,
+    json: authenticated ? { user_id: 'preview-user', provider: 'basic' } : {}
+  }))
+  const nativeRequests = []
+  await page.exposeBinding('recordAndroidRequest', (_source, request) => nativeRequests.push(request))
+  await page.addInitScript(() => {
+    window.AthenaAndroid = {
+      onmessage: null,
+      postMessage(raw) {
+        const request = JSON.parse(raw)
+        void window.recordAndroidRequest(request)
+        const value = request.method === 'hello'
+          ? { protocol: 1, capabilities: ['web-state'] }
+          : true
+        queueMicrotask(() => this.onmessage?.({ data: JSON.stringify({ id: request.id, value }) }))
+      }
+    }
+  })
+
+  // The app can load Athena after importing the Access cookie, while Hermes still requires its own session.
+  await page.goto(app.origin + '/#/preview-week')
+  const signIn = page.getByRole('button', { name: 'Sign in', exact: true })
+  await expect(signIn).toBeEnabled()
+  await expect.poll(() => nativeRequests.filter(request => request.method === 'webState').map(request => request.payload.ready)).toEqual([true])
+  await expect(editor(page)).toHaveCount(0)
+  await signIn.click()
+  await expect.poll(() => nativeRequests.some(request => request.method === 'openSignIn')).toBe(true)
+
+  authenticated = true
+  await expect(editor(page)).toBeVisible()
+  await expect(page).toHaveURL(app.origin + '/#/preview-week')
+})
+
 async function expireCookie(page) {
   let startup = true
   await page.route('**/api/status', route => route.fulfill({ json: { auth_required: true, auth_providers: ['basic'] } }))
