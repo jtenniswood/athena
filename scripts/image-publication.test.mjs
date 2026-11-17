@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { execFile, execFileSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { tmpdir } from 'node:os'
+import { createServer } from 'node:http'
+import { promisify } from 'node:util'
 import { test } from 'node:test'
 import { imagePublication } from './image-publication.mjs'
 
@@ -71,7 +73,8 @@ test('workflow outputs and both actual workflow callers use the same publication
 test('the publication artifact pins the build digest and the checked renderer release', t => {
   const directory = mkdtempSync(path.join(tmpdir(), 'athena-publication-'))
   t.after(() => rmSync(directory, { recursive: true, force: true }))
-  const script = new URL('./record-image-publication.mjs', import.meta.url)
+  const script = path.join(directory, 'record.mjs')
+  symlinkSync(new URL('./record-image-publication.mjs', import.meta.url), script)
   const release = JSON.parse(readFileSync(new URL('../hermes-release.json', import.meta.url), 'utf8'))
   const digest = 'sha256:' + 'e'.repeat(64)
   const summary = path.join(directory, 'summary')
@@ -94,7 +97,7 @@ esac
     BUILD_INFO_FIXTURE: fixture, DOCKER_COMMANDS: commands, IMAGE: image, IMAGE_DIGEST: digest, GITHUB_SHA: revision,
     IMAGE_CHANNEL: 'development', GITHUB_STEP_SUMMARY: summary
   }
-  execFileSync(process.execPath, [script.pathname], { cwd: directory, env })
+  execFileSync(process.execPath, [script], { cwd: directory, env })
   assert.deepEqual(JSON.parse(readFileSync(path.join(directory, 'image-publication.json'), 'utf8')), {
     image: image + '@' + digest, wrapperRevision: revision, channel: 'development',
     rendererRevision: release.revision, hermesRelease: release.version, gatewayFixtureImage: release.gatewayImage
@@ -103,7 +106,7 @@ esac
   const artifact = path.join(directory, 'image-publication.json')
   rmSync(artifact)
   writeFileSync(fixture, JSON.stringify({ ...built, rendererRevision: 'b'.repeat(40) }))
-  const run = () => execFileSync(process.execPath, [script.pathname], { cwd: directory, env, stdio: 'pipe' })
+  const run = () => execFileSync(process.execPath, [script], { cwd: directory, env, stdio: 'pipe' })
   assert.throws(run, error => error.stderr.toString().includes('does not match the expected rendererRevision'))
   assert.throws(() => readFileSync(artifact), { code: 'ENOENT' })
   const dockerCommands = readFileSync(commands, 'utf8').trim().split('\n')
@@ -112,7 +115,63 @@ esac
     `create --platform=linux/amd64 ${image}@${digest}`
   ])
   assert.equal(dockerCommands.filter(command => command === 'rm -v container-id').length, 2)
-  assert.throws(() => execFileSync(process.execPath, [script.pathname], {
+  assert.throws(() => execFileSync(process.execPath, [script], {
     cwd: directory, env: { ...env, IMAGE_DIGEST: 'latest' }, stdio: 'pipe'
   }))
+})
+
+
+test('running image verification checks both the registry digest and HTTP build identity', async t => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'athena-running-image-'))
+  t.after(() => rmSync(directory, { recursive: true, force: true }))
+  const snapshot = path.join(directory, 'snapshot')
+  const digests = path.join(directory, 'digests')
+  const artifact = path.join(directory, 'image-publication.json')
+  const imageId = 'sha256:' + 'c'.repeat(64)
+  const reference = image + '@sha256:' + 'd'.repeat(64)
+  const record = { image: reference, wrapperRevision: revision,
+    rendererRevision: 'b'.repeat(40), hermesRelease: 'v1.2.3', channel: 'development' }
+  writeFileSync(artifact, JSON.stringify(record))
+  writeFileSync(snapshot, 'container ' + imageId + ' true first')
+  writeFileSync(digests, JSON.stringify([reference]))
+  writeFileSync(path.join(directory, 'docker'), `#!/bin/sh
+case "$1 $2" in
+  'container inspect') test "$5" = athena && cat "$SNAPSHOT" ;;
+  'image inspect') test "$5" = "$IMAGE_ID" && cat "$DIGESTS" ;;
+  *) exit 1 ;;
+esac
+`, { mode: 0o755 })
+
+  let served = record
+  let restart = false
+  let requests = 0
+  const server = createServer((request, response) => {
+    assert.equal(request.url, '/build-info.json')
+    requests++
+    if (restart) writeFileSync(snapshot, 'container ' + imageId + ' true second')
+    response.setHeader('Content-Type', 'application/json')
+    response.end(JSON.stringify(served))
+  })
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
+  t.after(() => new Promise(resolve => server.close(resolve)))
+  const origin = 'http://127.0.0.1:' + server.address().port
+  const script = path.join(directory, 'verify.mjs')
+  symlinkSync(new URL('./verify-running-image.mjs', import.meta.url), script)
+  const verify = () => promisify(execFile)(process.execPath, [script, artifact, 'athena', origin], {
+    env: { ...process.env, PATH: directory + path.delimiter + process.env.PATH,
+      SNAPSHOT: snapshot, DIGESTS: digests, IMAGE_ID: imageId }
+  })
+  assert.ok((await verify()).stdout.includes(reference))
+
+  writeFileSync(digests, JSON.stringify([image + '@' + imageId]))
+  await assert.rejects(verify, error => error.stderr.includes('does not match the published digest'))
+  assert.equal(requests, 1)
+
+  writeFileSync(digests, JSON.stringify([reference]))
+  served = { ...record, wrapperRevision: 'e'.repeat(40) }
+  await assert.rejects(verify, error => error.stderr.includes('does not match the expected wrapperRevision'))
+
+  served = record
+  restart = true
+  await assert.rejects(verify, error => error.stderr.includes('container changed during the check'))
 })

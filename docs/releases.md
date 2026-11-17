@@ -117,11 +117,18 @@ It also identifies the gateway fixture image from the official release manifest.
 The optional cron extension is built separately and its own Dockerfile selects
 its gateway base.
 
-After Komodo reports a completed deployment, check the container's image digest
-against the publication record. Fetch `/build-info.json` from your running
-Athena origin and compare its `wrapperRevision` and `rendererRevision` with the
-record. This checks both the image selected by the stack and the web assets
-served to clients.
+After Komodo reports a completed deployment, download the matching
+`image-publication.json` artifact. From a shell with the running stack's Docker
+context and access to the Athena origin, run the read-only verifier.
+
+```sh
+node scripts/verify-running-image.mjs image-publication.json athena https://athena.example.com
+```
+
+Pass the stack's container name or ID as the second argument. The verifier
+compares the running image's repository digest and the served
+`/build-info.json` with the publication record. Run it again if the container
+restarts during verification.
 
 ## Roll back
 

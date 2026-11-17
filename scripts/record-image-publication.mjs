@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -38,11 +38,11 @@ function inspectPublishedImage(reference) {
 
 export function verifyBuildInfo(identity, built) {
   for (const field of ['wrapperRevision', 'rendererRevision', 'hermesRelease', 'channel']) {
-    if (built?.[field] !== identity[field]) throw new Error(`Published build-info.json does not match the expected ${field}`)
+    if (built?.[field] !== identity[field]) throw new Error(`Build info does not match the expected ${field}`)
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && existsSync(process.argv[1]) && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const { IMAGE, IMAGE_DIGEST, IMAGE_CHANNEL, GITHUB_SHA, GITHUB_STEP_SUMMARY } = process.env
   const identity = publishedImageIdentity({
     image: IMAGE, digest: IMAGE_DIGEST, wrapperRevision: GITHUB_SHA, channel: IMAGE_CHANNEL,
