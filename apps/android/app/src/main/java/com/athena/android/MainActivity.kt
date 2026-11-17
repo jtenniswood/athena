@@ -433,8 +433,9 @@ class MainActivity : AppCompatActivity() {
             }
             "webVisibility" -> {
                 connection.sessionConnected(payload.optBoolean("connected", connection.state.stage == ConnectionCoordinator.Stage.READY))
-                if (connection.state.stage == ConnectionCoordinator.Stage.READY && !nativeSettings.isShowing && web?.hasWindowFocus() == true) visibility.acknowledge(payload.optString("sessionId"))
-                else visibility.clear()
+                if (connection.state.stage == ConnectionCoordinator.Stage.READY && !nativeSettings.isShowing && web?.hasWindowFocus() == true) {
+                    visibility.acknowledge(payload.optString("sessionId"), payload.optString("profile"))
+                } else visibility.clear()
                 respond(true)
             }
             "pushDiagnostics" -> {

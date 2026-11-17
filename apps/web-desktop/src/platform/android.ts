@@ -148,14 +148,15 @@ export async function androidWebState(ready: boolean, revision: string): Promise
   try { await call('webState', { ready, revision, serverProtocol }) } catch { /* Native recovery stays available. */ }
 }
 
-let visibleSession: string | null = null
-export function androidVisibleSession(): string | null { return visibleSession }
-export async function androidWebVisibility(sessionId: string | null, connected = false): Promise<void> {
-  visibleSession = sessionId
+let visibleConversation: { sessionId: string; profile: string | null } | null = null
+export function androidVisibleConversation() { return visibleConversation }
+export function androidVisibleSession(): string | null { return visibleConversation?.sessionId ?? null }
+export async function androidWebVisibility(sessionId: string | null, connected = false, profile: string | null = null): Promise<void> {
+  visibleConversation = sessionId ? { sessionId, profile } : null
   if (!isAndroidApp()) return
   const host = await androidHost()
   if (!host?.capabilities.includes('web-visibility')) return
-  try { await call('webVisibility', { sessionId: sessionId || '', connected }) } catch { /* Expiring native leases restore alerts. */ }
+  try { await call('webVisibility', { sessionId: sessionId || '', connected, ...(sessionId && profile ? { profile } : {}) }) } catch { /* Expiring native leases restore alerts. */ }
 }
 
 export async function androidPushDiagnostics(status: string): Promise<void> {

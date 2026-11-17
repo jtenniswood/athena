@@ -63,10 +63,11 @@ class NativeNotifications(private val context: Context) {
         if (event.isNotEmpty() && event in receipts) return@synchronized true
         val sessionId = (payload.opt("focusSessionId") as? String).orEmpty()
         val kind = payload.optString("kind")
+        val profile = payload.optString("focusProfile").trim()
         val chatKeys = if (sessionId.isNotBlank() && (kind == "turnDone" || kind == "turnError")) {
             val aliases = payload.optJSONArray("chatAliases")
             val ids = listOf(sessionId) + (0 until (aliases?.length() ?: 0)).mapNotNull { aliases?.opt(it) as? String }
-            ids.filter { it.isNotBlank() }.distinct().map { ServerAddress.conversationUrl(origin, it) }
+            ids.filter { it.isNotBlank() }.distinct().map { ServerAddress.conversationUrl(origin, it, profile) }
         } else emptyList()
         if (chatKeys.any(notifiedChats::contains)) {
             // The WebView can link compression aliases after a Firebase alert arrives.
@@ -75,8 +76,9 @@ class NativeNotifications(private val context: Context) {
         }
         val channel = if (payload.optBoolean("silent")) "silent" else "responses"
         if (manager.getNotificationChannel(channel)?.importance == NotificationManager.IMPORTANCE_NONE) return@synchronized false
-        val tag = payload.optString("tag").take(256).ifBlank { "athena" }
-        val target = ServerAddress.conversationUrl(origin, sessionId, payload.optString("focusProfile"))
+        val target = ServerAddress.conversationUrl(origin, sessionId, profile)
+        val tag = if (profile.isNotEmpty() && chatKeys.isNotEmpty()) target
+            else payload.optString("tag").take(256).ifBlank { "athena" }
         val intent = Intent(context, MainActivity::class.java)
             .setAction("com.athena.android.OPEN_CONVERSATION")
             .setData(android.net.Uri.parse(target))

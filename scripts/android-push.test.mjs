@@ -46,7 +46,8 @@ async function fixture(t, options = {}) {
       if (address.pathname.endsWith('/messages')) {
         if (!authorized || options.authExpired?.()) return new Response(null, { status: 401 })
         assert.equal(address.searchParams.get('inline_images'), 'false')
-        return Response.json({ pagination: { order: 'latest' }, messages: transcripts.get(address.pathname.split('/')[3]) || [] })
+        const owner = JSON.stringify([address.searchParams.get('profile'), decodeURIComponent(address.pathname.split('/')[3])])
+        return Response.json({ pagination: { order: 'latest' }, messages: transcripts.get(owner) || [] })
       }
       if (address.pathname.startsWith('/api/sessions/')) {
         assert.ok(authorized)
@@ -85,11 +86,13 @@ async function fixture(t, options = {}) {
     }, enabled: true, ...changes })
   })
   const save = (id, message, attrs = {}) => {
-    const messages = transcripts.get(id) || []
+    const profile = attrs.profile ?? 'research'
+    const owner = JSON.stringify([profile, id])
+    const messages = transcripts.get(owner) || []
     messages.push({ id: messages.length + 1, timestamp: clock / 1000, ...message })
-    transcripts.set(id, messages)
-    const index = rows.findIndex(row => row.id === id)
-    const row = { id, profile: 'research', title: 'New chat', last_active: clock / 1000, message_count: messages.length, ...attrs }
+    transcripts.set(owner, messages)
+    const index = rows.findIndex(row => row.id === id && row.profile === profile)
+    const row = { id, profile, title: 'New chat', last_active: clock / 1000, message_count: messages.length, ...attrs }
     if (index === -1) rows.unshift(row)
     else rows[index] = row
   }
@@ -421,6 +424,38 @@ test('saved replies and scheduled results reach both devices with no chat socket
   await app.drain()
   assert.deepEqual(app.sent.map(([, data]) => data.focusSessionId).sort(), ['prompt-only', 'scheduled', 'unread-reply'])
   assert.deepEqual(app.browserSent.map(([, data]) => data.focusSessionId).sort(), ['prompt-only', 'scheduled', 'scheduled', 'unread-reply'])
+})
+
+test('renewed registrations recover profile-scoped replies and scheduled notes after restart', async t => {
+  const app = await fixture(t, { persist: true })
+  assert.equal((await app.register()).status, 200)
+  assert.equal((await app.browser()).status, 200)
+  await app.restart()
+  app.advance(1000)
+  app.save('shared', { role: 'assistant', content: 'Research reply' })
+  app.save('shared', { role: 'user', content: 'Scheduled report',
+    display_metadata: { completion_note: ['cron:job:run'] } }, { profile: 'writing' })
+  await app.scan()
+  assert.equal(app.sent.length + app.browserSent.length, 0, 'the service has no signed-in watcher after restart')
+
+  assert.equal((await app.register()).status, 200)
+  assert.equal((await app.browser()).status, 200)
+  await app.scan()
+  await app.drain()
+  for (const deliveries of [app.sent, app.browserSent]) {
+    assert.deepEqual(deliveries.map(([, data]) => [data.focusProfile, data.focusSessionId]).sort(), [
+      ['research', 'shared'], ['writing', 'shared']
+    ])
+    assert.equal(new Set(deliveries.map(([, data]) => data.eventId)).size, 2)
+  }
+
+  assert.equal((await app.register({}, 'A', 'DELETE')).status, 200)
+  assert.equal((await app.browser({}, 'A', 'DELETE')).status, 200)
+  app.advance(1000)
+  app.save('after-sign-out', { role: 'assistant', content: 'Private reply' })
+  await app.scan()
+  await app.drain()
+  assert.equal(app.sent.length + app.browserSent.length, 4)
 })
 
 test('expired chat credentials and notification preferences stop background delivery', async t => {

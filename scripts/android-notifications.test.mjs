@@ -171,7 +171,7 @@ test('Android alerts on new unread activity and skips existing, manual and visib
   const prefs = atom({ enabled: true, kinds: { turnDone: true } }), muted = atom(false)
   const shown = [], requested = []
   const settle = () => new Promise(resolve => setImmediate(resolve))
-  let visible = 'visible'
+  let visible = { sessionId: 'visible', profile: 'research' }
   const row = (id, count, unread = true) => ({
     id, profile: 'research', title: `Chat ${id}`, message_count: count, unread, last_active: 1,
     ...(id === 'old' ? { _lineage_root_id: 'root', _lineage_ids: ['previous-tip'] } : {})
@@ -191,7 +191,7 @@ test('Android alerts on new unread activity and skips existing, manual and visib
       '@/store/native-notifications': { $nativeNotifyPrefs: prefs },
       '@/store/haptics': { $hapticsMuted: muted },
       '../platform/connection': { WEB_CONNECTION_ID: 'web' },
-      '../platform/android': { androidVisibleSession: () => visible, showAndroidNotification: notification => shown.push(notification) }
+      '../platform/android': { androidVisibleConversation: () => visible, showAndroidNotification: notification => shown.push(notification) }
     })[name]
   })
   vm.runInContext(source, context)
@@ -221,14 +221,23 @@ test('Android alerts on new unread activity and skips existing, manual and visib
   sessions.set([row('old', 4), row('manual', 1), row('visible', 2)])
   await settle()
   assert.equal(shown.length, 2, 'returning to a profile does not replay the same alert')
+  sessions.set([row('old', 4), row('manual', 1), row('visible', 2),
+    { ...row('visible', 1), profile: 'writing' }])
+  await settle()
+  sessions.set([row('old', 4), row('manual', 1), row('visible', 2),
+    { ...row('visible', 2), profile: 'writing' }])
+  await settle()
+  assert.deepEqual(shown.map(item => [item.focusProfile, item.focusSessionId]), [
+    ['research', 'old'], ['research', 'manual'], ['writing', 'visible']
+  ])
   prefs.set({ enabled: true, kinds: { turnDone: false } })
   visible = null
   sessions.set([row('old', 5), row('manual', 2), row('visible', 3)])
   await settle()
-  assert.equal(shown.length, 2)
+  assert.equal(shown.length, 3)
   stop()
   prefs.set({ enabled: true, kinds: { turnDone: true } })
   finished.set(['visible'])
   await settle()
-  assert.equal(shown.length, 2, 'watcher stops with the renderer')
+  assert.equal(shown.length, 3, 'watcher stops with the renderer')
 })
