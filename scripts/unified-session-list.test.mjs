@@ -21,7 +21,11 @@ test('profile grouping uses the native all-profile scope', () => {
   const { useBrowserSidebarController } = load('build/renderer/browser-plugin.ts')
   const source = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/index.tsx'), 'utf8')
   const output = useBrowserSidebarController(source, root)
-  assert.match(output, /useBrowserProfileGroups\(useGatewaySessionGroups\(agentSessions, ownerGrouped, filtersNarrow\)\)/)
+  if (source.includes('ChatSidebarPresentationContext')) {
+    assert.match(output, /<ChatSidebarPresentationContext\.Provider value=\{presentation\}>/)
+  } else {
+    assert.match(output, /useBrowserProfileGroups\(useGatewaySessionGroups\(agentSessions, ownerGrouped, filtersNarrow\)\)/)
+  }
   assert.doesNotMatch(output, /browserPresentationMode/)
 })
 

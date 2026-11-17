@@ -104,3 +104,39 @@ test('worktree creation retains the captured lane owner and refuses creation aft
   assert.equal(calls.filter(call => call[0] === 'create').length, 2)
   assert.deepEqual(errors, ['refused'])
 })
+
+test('a renderer with the sidebar presentation context keeps its controller body intact', () => {
+  const { useBrowserSidebarController } = createBuildModuleLoader().load(path.join(root, 'build/renderer/transforms/sidebar.ts'))
+  const source = `import { ChatSidebarPresentationContext } from './presentation'
+interface ChatSidebarProps { owner: string }
+export function ChatSidebar(props: ChatSidebarProps) {
+  const presentation = useContext(ChatSidebarPresentationContext)
+  const current = readPrivateControllerState(props.owner)
+  if (presentation) return presentation.render(current)
+  return <DesktopSidebar />
+}`
+  const output = useBrowserSidebarController(source, root)
+  assert.ok(output.includes(source.replace('export function ChatSidebar(', 'function HermesChatSidebar(')))
+  assert.doesNotMatch(output, /BrowserSidebarControllerSurface|useBrowserProfileGroups|resolveManualSessionOrderIds/)
+  const context = vm.createContext({
+    exports: {},
+    React: { createElement: (type, props, child) => ({ type, props, child }) },
+    require(specifier) {
+      if (specifier === './presentation') return { ChatSidebarPresentationContext: { Provider: 'sidebar-context' } }
+      assert.equal(specifier, path.join(root, 'src/upstream/sidebar'))
+      return { useBrowserSidebarPresentation: () => ({ render: model => ({ view: 'athena', model }) }) }
+    },
+    useContext: () => selected,
+    readPrivateControllerState: owner => ({ owner, rows: ['shared'] })
+  })
+  let selected
+  vm.runInContext(ts.transpileModule(output, { compilerOptions: {
+    module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React
+  } }).outputText, context)
+  const result = context.exports.ChatSidebar({ owner: 'research' })
+  assert.equal(result.type, 'sidebar-context')
+  assert.equal(result.child.props.owner, 'research')
+  selected = result.props.value
+  assert.equal(result.child.type(result.child.props).view, 'athena')
+  assert.equal(result.child.type(result.child.props).model.owner, 'research')
+})

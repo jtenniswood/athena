@@ -35,6 +35,8 @@ import { markAllSessionsRead } from '@/store/session'
 import { ackAllSessionsRead } from '@/store/session-unread'
 import { BrowserSidebar, type BrowserSidebarModel } from '../experience/sidebar'
 import { useBrowserSidebarChannels } from '../experience/sidebar-sections'
+import { useBrowserProfileGroupProjection } from './profile-groups'
+import { useBrowserProfileGrouping } from './profile-section'
 
 interface MessagingSection { sourceId: string; label: string; sessions: SessionInfo[]; total: number; hasMore: boolean }
 interface SidebarController extends Pick<Parameters<typeof ChatSidebar>[0], 'onNavigate' | 'onResumeSession' | 'onDeleteSession' | 'onArchiveSession' | 'onBranchSession' | 'onNewSessionInWorkspace' | 'onNewSessionSplit' | 'onRetrySessions' | 'onManageCronJob' | 'onTriggerCronJob'> {
@@ -206,4 +208,15 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
         onOpenRun={c.onResumeSession} onToggle={() => setSidebarCronOpen(!c.cronOpen)} onTriggerJob={c.onTriggerCronJob} open={c.cronOpen} />}
     </>}
   </BrowserSidebar>
+}
+
+/** Adapt the upstream presentation context without depending on its private bindings. */
+export function useBrowserSidebarPresentation() {
+  const groupAcrossProfiles = useBrowserProfileGrouping()
+  const projectProfileGroups = useBrowserProfileGroupProjection()
+  return {
+    groupAcrossProfiles,
+    projectProfileGroups,
+    render: (model: SidebarController) => <BrowserSidebarControllerSurface model={model} />
+  }
 }

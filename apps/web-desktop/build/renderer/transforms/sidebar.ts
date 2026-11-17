@@ -3,6 +3,19 @@ import { projectRendererController } from '../controller'
 import { replaceBrowserContract } from './contract'
 
 export function useBrowserSidebarController(source: string, root: string): string {
+  if (source.includes("import { ChatSidebarPresentationContext } from './presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/upstream/sidebar'))
+    const controller = replaceBrowserContract(source, [['export function ChatSidebar(', 'function HermesChatSidebar(']])
+    return `import { useBrowserSidebarPresentation } from ${adapter}
+` + controller + `
+export function ChatSidebar(props: ChatSidebarProps) {
+  const presentation = useBrowserSidebarPresentation()
+  return <ChatSidebarPresentationContext.Provider value={presentation}>
+    <HermesChatSidebar {...props} />
+  </ChatSidebarPresentationContext.Provider>
+}
+`
+  }
   source = replaceBrowserContract(source, [
     ["  const ownerGrouped = profileScope === ALL_PROFILES && grouping === 'profile'", "  const combinedProfiles = useBrowserProfileGrouping()\n  const ownerGrouped = profileScope === ALL_PROFILES && combinedProfiles"],
     ['const profileGroups = useGatewaySessionGroups(agentSessions, ownerGrouped, filtersNarrow)', 'const profileGroups = useBrowserProfileGroups(useGatewaySessionGroups(agentSessions, ownerGrouped, filtersNarrow))'],
@@ -33,12 +46,12 @@ export function useBrowserSidebarController(source: string, root: string): strin
 
 export function useBrowserSessionSection(source: string, root: string): string {
   source = replaceBrowserContract(source, [
-    ['interface SidebarSessionsSectionProps {', 'interface SidebarSessionsSectionProps {\n  browserSectionId: string'],
+    ['interface SidebarSessionsSectionProps {', 'interface SidebarSessionsSectionProps {\n  browserSectionId?: string'],
     ['<ReorderableList ids={sortableRowIds} onReorder={persistSessionOrder} sensors={dndSensors}>\n        {virtual}', '<BrowserSessionReorderList ids={sortableRowIds} onReorder={persistSessionOrder} sensors={dndSensors}>\n        {virtual}'],
     ['<ReorderableList ids={sortableRowIds} onReorder={persistSessionOrder} sensors={dndSensors}>\n        {visibleRows.map', '<BrowserSessionReorderList ids={sortableRowIds} onReorder={persistSessionOrder} sensors={dndSensors}>\n        {visibleRows.map'],
     ['        {virtual}\n      </ReorderableList>', '        {virtual}\n      </BrowserSessionReorderList>'],
     ['        {visibleRows.map(row => renderListRow(row, true, dividerAction))}\n      </ReorderableList>', '        {visibleRows.map(row => renderListRow(row, true, dividerAction))}\n      </BrowserSessionReorderList>'],
-    ['export function SidebarSessionsSection({', 'export function SidebarSessionsSection({\n  browserSectionId,']
+    ['export function SidebarSessionsSection({', 'export function SidebarSessionsSection({\n  browserSectionId = \'sessions\',']
   ])
   source = replaceBrowserContract(source, [
     ['<SidebarDateDivider\n          action={action}', '<SidebarDateDivider\n          data-browser-group-header=""\n          action={action && <div data-browser-group-actions="" className="flex shrink-0 items-center">{action}</div>}'],
