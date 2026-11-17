@@ -1,8 +1,9 @@
+import { buildInfo } from '../build-info'
 import { connectionState } from './connection-state'
 import { baseUrl, browserLoginUrl, checkBrowserSession, fetchStatus, openOauthLoginPopup, resolveToken } from './connection'
 import { browserSignInTarget } from './sign-in-target'
 import { createSignInView } from './sign-in-view'
-import { isAndroidApp } from './android'
+import { androidWebState, isAndroidApp } from './android'
 
 /** Gate cold startup without evaluating upstream stores or touching saved drafts. */
 export async function waitForSignIn(): Promise<void> {
@@ -52,6 +53,13 @@ export async function waitForSignIn(): Promise<void> {
       section.setAttribute('aria-busy', String(value))
     }
 
+    function showPrompt() {
+      if (section.isConnected) return
+      root!.replaceChildren(section)
+      // Android must uncover the WebView before the user can finish Hermes sign-in.
+      void androidWebState(true, buildInfo.wrapperRevision)
+    }
+
     function connected() {
       if (finished) return
       finished = true
@@ -87,11 +95,11 @@ export async function waitForSignIn(): Promise<void> {
         signIn.textContent = target.label
         setStatus('Sign in to start chatting with Hermes Agent.')
         actions.hidden = advanced.hidden = false
-        if (!section.isConnected) root!.replaceChildren(section)
+        showPrompt()
       } catch {
         setStatus('Could not reach your Hermes server. Check your connection and try again.')
         retry.hidden = false
-        if (!section.isConnected) root!.replaceChildren(section)
+        showPrompt()
       } finally { if (!finished) setBusy(false) }
     }
 
