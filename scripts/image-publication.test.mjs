@@ -67,3 +67,25 @@ test('workflow outputs and both actual workflow callers use the same publication
     assert.doesNotMatch(source, /echo .*:latest/)
   }
 })
+
+test('the publication artifact pins the build digest and the checked renderer release', t => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'athena-publication-'))
+  t.after(() => rmSync(directory, { recursive: true, force: true }))
+  const script = new URL('./record-image-publication.mjs', import.meta.url)
+  const release = JSON.parse(readFileSync(new URL('../hermes-release.json', import.meta.url), 'utf8'))
+  const digest = 'sha256:' + 'e'.repeat(64)
+  const summary = path.join(directory, 'summary')
+  const env = {
+    ...process.env, IMAGE: image, IMAGE_DIGEST: digest, GITHUB_SHA: revision,
+    IMAGE_CHANNEL: 'development', GITHUB_STEP_SUMMARY: summary
+  }
+  execFileSync(process.execPath, [script.pathname], { cwd: directory, env })
+  assert.deepEqual(JSON.parse(readFileSync(path.join(directory, 'image-publication.json'), 'utf8')), {
+    image: image + '@' + digest, wrapperRevision: revision, channel: 'development',
+    rendererRevision: release.revision, hermesRelease: release.version, gatewayFixtureImage: release.gatewayImage
+  })
+  assert.ok(readFileSync(summary, 'utf8').includes(image + '@' + digest))
+  assert.throws(() => execFileSync(process.execPath, [script.pathname], {
+    cwd: directory, env: { ...env, IMAGE_DIGEST: 'latest' }, stdio: 'pipe'
+  }))
+})
