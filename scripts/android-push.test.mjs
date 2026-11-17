@@ -41,7 +41,11 @@ async function fixture(t, options = {}) {
       if (address.pathname === '/api/profiles/sessions') {
         if (!authorized || options.authExpired?.()) return new Response(null, { status: 401 })
         assert.equal(address.searchParams.get('profile'), 'all')
-        return Response.json({ sessions: rows })
+        const limit = Number(address.searchParams.get('limit')), offset = Number(address.searchParams.get('offset'))
+        const ordered = [...rows].sort((a, b) => b.last_active - a.last_active)
+        const end = offset + limit
+        return Response.json({ limit, offset, total: ordered.length,
+          sessions: [...ordered.slice(offset, end), ...ordered.slice(end).filter(row => row.pinned)] })
       }
       if (address.pathname.endsWith('/messages')) {
         if (!authorized || options.authExpired?.()) return new Response(null, { status: 401 })
@@ -456,6 +460,27 @@ test('renewed registrations recover profile-scoped replies and scheduled notes a
   await app.scan()
   await app.drain()
   assert.equal(app.sent.length + app.browserSent.length, 4)
+})
+
+test('saved replies beyond the first page recover even when Hermes appends an old pin', async t => {
+  const app = await fixture(t, { persist: true })
+  app.save('pinned', { role: 'assistant', content: 'An old pinned reply' }, { pinned: true })
+  app.advance(1000)
+  assert.equal((await app.register()).status, 200)
+  assert.equal((await app.browser()).status, 200)
+  await app.restart()
+  app.advance(1000)
+  app.save('second-page-reply', { role: 'assistant', content: 'A reply worth recovering' })
+  app.advance(1000)
+  for (let i = 0; i < 100; i++) app.save('newer-' + i, { role: 'user', content: 'Awaiting an answer' })
+
+  assert.equal((await app.register()).status, 200)
+  assert.equal((await app.browser()).status, 200)
+  await app.scan()
+  await app.drain()
+  for (const deliveries of [app.sent, app.browserSent]) {
+    assert.deepEqual(deliveries.map(([, data]) => data.focusSessionId), ['second-page-reply'])
+  }
 })
 
 test('expired chat credentials and notification preferences stop background delivery', async t => {

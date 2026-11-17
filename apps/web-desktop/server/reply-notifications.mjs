@@ -37,41 +37,52 @@ export async function scanRecentReplies({ target, headers, request, since, signa
     if (!response.ok) throw new Error('Hermes could not read recent chats')
     return response.json()
   }
-  const list = await read('/api/profiles/sessions?profile=all&order=recent&limit=100&min_messages=1')
-  if (!list) return false
-  if (!Array.isArray(list.sessions)) throw new Error('Hermes returned an invalid chat list')
-  for (const row of list.sessions) {
-    if (signal.aborted) break
-    if (!row || typeof row.id !== 'string' || !row.id || typeof row.profile !== 'string' || !row.profile ||
-        row.archived || row.hidden || !(row.last_active * 1000 >= since) ||
-        (row.source === 'cron' && row.end_reason !== 'cron_complete')) continue
-    if (!shouldInspect(row)) continue
-    const profile = new URLSearchParams({ profile: row.profile, order: 'latest', limit: '4', inline_images: 'false' })
-    let page
-    try { page = await read('/api/sessions/' + encodeURIComponent(row.id) + '/messages?' + profile) }
-    catch { continue }
-    if (!page) return false
-    if (page.pagination?.order !== 'latest' || !Array.isArray(page.messages)) continue
-    // Scheduled results arrive as persisted completion notes, with the user role.
-    const message = page.messages.findLast(item => item?.role === 'user' || item?.role === 'assistant' || item?.role === 'tool')
-    const metadata = message?.display_metadata
-    const note = message?.role === 'user' && Array.isArray(metadata?.completion_note) && metadata.completion_note.length > 0
-    const text = notificationSnippet(replyText(message))
-    const timestamp = message?.timestamp * 1000
-    if (metadata?.notification_category === 'diagnostic' || !text || /^\[SILENT\]$/i.test(text) || !(timestamp >= since) ||
-        (row.last_read_at > 0 && message.timestamp <= row.last_read_at) ||
-        ['hidden', 'failed_turn'].includes(message.display_kind) || message._compressed_summary ||
-        message.tool_calls?.length || ['error', 'agent_error', 'content_filter', 'length'].includes(message.finish_reason) ||
-        (!note && (message.role !== 'assistant' || message.display_kind === 'internal_notification'))) {
+  const limit = 100
+  for (let offset = 0; !signal.aborted; offset += limit) {
+    const query = new URLSearchParams({ profile: 'all', order: 'recent', limit: String(limit), min_messages: '1', offset: String(offset) })
+    const list = await read('/api/profiles/sessions?' + query)
+    if (!list) return false
+    if (!Array.isArray(list.sessions)) throw new Error('Hermes returned an invalid chat list')
+    // Older gateways can omit page metadata. An echoed offset also prevents reading the first page repeatedly.
+    if (offset && list.offset !== offset) break
+    for (const row of list.sessions) {
+      if (signal.aborted) break
+      if (!row || typeof row.id !== 'string' || !row.id || typeof row.profile !== 'string' || !row.profile ||
+          row.archived || row.hidden || !(row.last_active * 1000 >= since) ||
+          (row.source === 'cron' && row.end_reason !== 'cron_complete')) continue
+      if (!shouldInspect(row)) continue
+      const profile = new URLSearchParams({ profile: row.profile, order: 'latest', limit: '4', inline_images: 'false' })
+      let page
+      try { page = await read('/api/sessions/' + encodeURIComponent(row.id) + '/messages?' + profile) }
+      catch { continue }
+      if (!page) return false
+      if (page.pagination?.order !== 'latest' || !Array.isArray(page.messages)) continue
+      // Scheduled results arrive as persisted completion notes, with the user role.
+      const message = page.messages.findLast(item => item?.role === 'user' || item?.role === 'assistant' || item?.role === 'tool')
+      const metadata = message?.display_metadata
+      const note = message?.role === 'user' && Array.isArray(metadata?.completion_note) && metadata.completion_note.length > 0
+      const text = notificationSnippet(replyText(message))
+      const timestamp = message?.timestamp * 1000
+      if (metadata?.notification_category === 'diagnostic' || !text || /^\[SILENT\]$/i.test(text) || !(timestamp >= since) ||
+          (row.last_read_at > 0 && message.timestamp <= row.last_read_at) ||
+          ['hidden', 'failed_turn'].includes(message.display_kind) || message._compressed_summary ||
+          message.tool_calls?.length || ['error', 'agent_error', 'content_filter', 'length'].includes(message.finish_reason) ||
+          (!note && (message.role !== 'assistant' || message.display_kind === 'internal_notification'))) {
+        onInspected(row)
+        continue
+      }
+      const replyId = message.message_uid || message.id
+      if (!replyId) continue
+      onReply(row, {
+        replyId, timestamp, chatTitle: notificationChatTitle(row.title), body: text
+      })
       onInspected(row)
-      continue
     }
-    const replyId = message.message_uid || message.id
-    if (!replyId) continue
-    onReply(row, {
-      replyId, timestamp, chatTitle: notificationChatTitle(row.title), body: text
-    })
-    onInspected(row)
+    // Hermes appends older pinned rows after the ordered page. Stop at the
+    // last row of the ordered window once it falls outside the reply lifetime.
+    const lastRecent = list.sessions[limit - 1]
+    if (!lastRecent || (lastRecent.last_active || lastRecent.started_at) * 1000 < since ||
+        list.offset !== offset || list.limit !== limit || !(list.total > offset + limit)) break
   }
   return true
 }
