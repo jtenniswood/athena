@@ -36,7 +36,7 @@ function inspectPublishedImage(reference) {
   }
 }
 
-function verifyBuildInfo(identity, built) {
+export function verifyBuildInfo(identity, built) {
   for (const field of ['wrapperRevision', 'rendererRevision', 'hermesRelease', 'channel']) {
     if (built?.[field] !== identity[field]) throw new Error(`Published build-info.json does not match the expected ${field}`)
   }
