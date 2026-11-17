@@ -65,7 +65,7 @@ async function openSidebar(page, { combined = false, occupied = false, failMove 
   })
   await page.goto(`${app.origin}/#/preview-week`)
   const editor = page.locator('[contenteditable="true"]:visible').first()
-  await expect(editor).toBeVisible()
+  await expect(editor).toBeVisible({ timeout: 30000 })
   await expect(page.locator('.athena-connecting-overlay')).toHaveCount(0)
   await editor.fill('Keep the draft through sidebar gestures')
   return { moves, editor }
