@@ -50,45 +50,41 @@ an equivalent web path, while retaining native connection and recovery controls.
 
 ## Completion-event source assessment
 
-This assessment inspected Hermes revision
-`f0d94882e89ab8d4098b5bb2f166adfb9ee0a0ab`, pinned in Athena's `flake.lock`.
+This assessment inspected Hermes v0.23.0 at the renderer revision in
+`hermes-release.json` and `flake.lock`.
 The supported interfaces found do not provide a durable, account-scoped global
 completion feed that can replace Athena's retained authenticated transport.
 
-- The [OpenRPC contract](https://github.com/NousResearch/hermes-agent/blob/f0d94882e89ab8d4098b5bb2f166adfb9ee0a0ab/apps/shared/src/gateway-contract.openrpc.json)
+- The [OpenRPC contract](https://github.com/NousResearch/hermes-agent/blob/2bd378ed1b8d6bf2192cb26e0a55ff3091e6bd19/apps/shared/src/gateway-contract.openrpc.json)
   exposes `session.events.since` and `session.events.stats`. The
-  [implementation](https://github.com/NousResearch/hermes-agent/blob/f0d94882e89ab8d4098b5bb2f166adfb9ee0a0ab/tui_gateway/methods_session.py)
+  [implementation](https://github.com/NousResearch/hermes-agent/blob/2bd378ed1b8d6bf2192cb26e0a55ff3091e6bd19/tui_gateway/methods_session.py)
   reads an in-process replay ring, with sequence/epoch and truncation semantics.
-- [Replay storage](https://github.com/NousResearch/hermes-agent/blob/f0d94882e89ab8d4098b5bb2f166adfb9ee0a0ab/tui_gateway/event_replay.py)
+- [Replay storage](https://github.com/NousResearch/hermes-agent/blob/2bd378ed1b8d6bf2192cb26e0a55ff3091e6bd19/tui_gateway/event_replay.py)
   is bounded in memory and freed when a session is torn down. It helps reconnecting
   viewers; it cannot promise completion recovery after a gateway restart.
-- [SessionEvents observers](https://github.com/NousResearch/hermes-agent/blob/f0d94882e89ab8d4098b5bb2f166adfb9ee0a0ab/gateway/session_events.py)
+- [SessionEvents observers](https://github.com/NousResearch/hermes-agent/blob/2bd378ed1b8d6bf2192cb26e0a55ff3091e6bd19/gateway/session_events.py)
   are authority-local Python recipients, rather than an externally authenticated,
   durable service subscription.
-- The [agent:end hook](https://github.com/NousResearch/hermes-agent/blob/f0d94882e89ab8d4098b5bb2f166adfb9ee0a0ab/gateway/hooks.py)
-  and its [post-turn invocation](https://github.com/NousResearch/hermes-agent/blob/f0d94882e89ab8d4098b5bb2f166adfb9ee0a0ab/gateway/run_turn_persistence.py)
+- The [agent:end hook](https://github.com/NousResearch/hermes-agent/blob/2bd378ed1b8d6bf2192cb26e0a55ff3091e6bd19/gateway/hooks.py)
+  and its [post-turn invocation](https://github.com/NousResearch/hermes-agent/blob/2bd378ed1b8d6bf2192cb26e0a55ff3091e6bd19/gateway/run_turn_persistence.py)
   are useful extension points. Their documented context includes response content,
   but does not establish an account-scoped delivery cursor, replay/acknowledgement
   contract or universal correlation with every desktop completion event.
 
-Revalidated against the pinned source on 2026-11-03. The current
-`SessionEvents` implementation adds authority-private replay keys, lifecycle
-epochs and explicit replay-gap handling, but still stores replay in the same
-bounded process memory. Its Python observers remain synchronous, local recipients.
-Neither the replay API nor the post-turn hook supplies a durable external
-account subscription that survives a gateway restart.
-
-The implemented decision is to retain the authenticated relay and persist events
-once observed. Do not read private Hermes database tables, retain broad account
-cookies for an unattended collector, or forward raw hook context to Firebase.
-Those choices would weaken the current authentication and privacy boundary.
+Athena combines the authenticated relay with a scan of recent saved replies and
+scheduled reports. Its queue survives server restarts. The scan uses an
+in-memory authenticated watch, so discovery resumes after the app renews its
+registration. Renewed registration can recover replies within the scan window.
+The [push tests](../../scripts/android-push.test.mjs) exercise this boundary
+with a saved reply and a scheduled report that share a chat ID across profiles,
+then check that sign-out stops delivery.
 
 A replacement feed needs stable completion identifiers, account/profile/session
-ownership, durable cursors, expiry, revocation and replay-gap handling. Once a
-supported upstream interface supplies those properties, it can feed the existing
-outbox without replacing the Android client or creating another chat store.
-Current limits remain explicit: the queue survives Athena restarts, but an event
-never observed while the transport is down cannot be reconstructed from it.
+ownership, durable cursors, expiry, revocation, and replay-gap handling.
+Evaluate it alongside the current sources with delivery disabled until it
+handles restart, duplicate IDs across profiles, scheduled reports, and
+sign-out. Its authorization should be scoped to this feed so registering a
+device does not give the delivery service general access to the account.
 
 ## Native UI framework assessment
 
