@@ -109,9 +109,10 @@ stack's deployment and recovery procedure before relying on those scripts.
 
 ## Identify the running release
 
-Both image publishers attach an `image-publication.json` artifact and show the
-immutable image reference in the Actions summary. The record pairs the published
-digest with the Athena commit, release channel, and pinned Hermes renderer.
+Both image publishers resolve the registry digest and read `build-info.json`
+from a stopped container. They attach an `image-publication.json` artifact and
+show the immutable image reference in the Actions summary after the packaged
+Athena commit, release channel, and pinned Hermes renderer match the build.
 It also identifies the gateway fixture image from the official release manifest.
 The optional cron extension is built separately and its own Dockerfile selects
 its gateway base.

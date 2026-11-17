@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { tmpdir } from 'node:os'
 import { test } from 'node:test'
@@ -75,8 +75,23 @@ test('the publication artifact pins the build digest and the checked renderer re
   const release = JSON.parse(readFileSync(new URL('../hermes-release.json', import.meta.url), 'utf8'))
   const digest = 'sha256:' + 'e'.repeat(64)
   const summary = path.join(directory, 'summary')
+  const fixture = path.join(directory, 'expected-build-info.json')
+  const commands = path.join(directory, 'docker-commands')
+  const docker = path.join(directory, 'docker')
+  const built = { wrapperRevision: revision, rendererRevision: release.revision, hermesRelease: release.version, channel: 'development' }
+  writeFileSync(fixture, JSON.stringify(built))
+  writeFileSync(docker, `#!/bin/sh
+printf '%s\n' "$*" >> "$DOCKER_COMMANDS"
+case "$1" in
+  create) printf 'container-id\n' ;;
+  cp) cp "$BUILD_INFO_FIXTURE" "$3" ;;
+  rm) test "$2 $3" = '-v container-id' ;;
+  *) exit 1 ;;
+esac
+`, { mode: 0o755 })
   const env = {
-    ...process.env, IMAGE: image, IMAGE_DIGEST: digest, GITHUB_SHA: revision,
+    ...process.env, PATH: directory + path.delimiter + process.env.PATH,
+    BUILD_INFO_FIXTURE: fixture, DOCKER_COMMANDS: commands, IMAGE: image, IMAGE_DIGEST: digest, GITHUB_SHA: revision,
     IMAGE_CHANNEL: 'development', GITHUB_STEP_SUMMARY: summary
   }
   execFileSync(process.execPath, [script.pathname], { cwd: directory, env })
@@ -85,6 +100,18 @@ test('the publication artifact pins the build digest and the checked renderer re
     rendererRevision: release.revision, hermesRelease: release.version, gatewayFixtureImage: release.gatewayImage
   })
   assert.ok(readFileSync(summary, 'utf8').includes(image + '@' + digest))
+  const artifact = path.join(directory, 'image-publication.json')
+  rmSync(artifact)
+  writeFileSync(fixture, JSON.stringify({ ...built, rendererRevision: 'b'.repeat(40) }))
+  const run = () => execFileSync(process.execPath, [script.pathname], { cwd: directory, env, stdio: 'pipe' })
+  assert.throws(run, error => error.stderr.toString().includes('does not match the expected rendererRevision'))
+  assert.throws(() => readFileSync(artifact), { code: 'ENOENT' })
+  const dockerCommands = readFileSync(commands, 'utf8').trim().split('\n')
+  assert.deepEqual(dockerCommands.filter(command => command.startsWith('create ')), [
+    `create --platform=linux/amd64 ${image}@${digest}`,
+    `create --platform=linux/amd64 ${image}@${digest}`
+  ])
+  assert.equal(dockerCommands.filter(command => command === 'rm -v container-id').length, 2)
   assert.throws(() => execFileSync(process.execPath, [script.pathname], {
     cwd: directory, env: { ...env, IMAGE_DIGEST: 'latest' }, stdio: 'pipe'
   }))
