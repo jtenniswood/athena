@@ -202,3 +202,55 @@ test('a provider readiness mismatch on restart leaves the restored chat usable',
   await expect(setup).toHaveCount(0)
   await expect(editor(page)).toHaveText('Draft after restarting')
 })
+
+test('overlapping configuration reads share transport within the same gateway scope', async ({ page }) => {
+  const reads = []
+  let revision = 0
+  let release
+  const heldRead = new Promise(resolve => { release = resolve })
+  await page.route(/\/api\/config\?startup_fixture=1(?:&|$)/, async route => {
+    if (route.request().method() === 'PUT') {
+      revision++
+      return route.fulfill({ json: { ok: true } })
+    }
+    const url = new URL(route.request().url())
+    const profile = url.searchParams.get('profile')
+    reads.push(profile)
+    const value = revision
+    if (!value) await heldRead
+    return route.fulfill({ json: { profile, revision: value } })
+  })
+  await page.goto(app.origin + '/#/preview-week')
+  await expect(editor(page)).toBeVisible()
+
+  const result = page.evaluate(async () => {
+    const api = request => window.hermesDesktop.api({ path: '/api/config?startup_fixture=1', ...request })
+    const first = api({ profile: 'default' })
+    const second = api({ profile: 'default' })
+    const otherProfile = api({ profile: 'research' })
+    window.athenaStartupFixture = { first, second, otherProfile, api }
+  })
+  await result
+  try {
+    await expect.poll(() => reads.toSorted()).toEqual(['default', 'research'])
+    const fresh = await page.evaluate(async () => {
+      const { api } = window.athenaStartupFixture
+      await api({ method: 'PUT', profile: 'default', body: { updated: true } })
+      return api({ profile: 'default' })
+    })
+    expect(fresh).toEqual({ profile: 'default', revision: 1 })
+  } finally {
+    release()
+  }
+  const prior = await page.evaluate(async () => {
+    const { first, second, otherProfile } = window.athenaStartupFixture
+    const [a, b, c] = await Promise.all([first, second, otherProfile])
+    a.revision = -1
+    return [b, c]
+  })
+  expect(prior).toEqual([
+    { profile: 'default', revision: 0 },
+    { profile: 'research', revision: 0 }
+  ])
+  expect(reads.toSorted()).toEqual(['default', 'default', 'research'])
+})
