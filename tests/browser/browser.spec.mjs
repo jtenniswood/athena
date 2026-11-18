@@ -1086,6 +1086,34 @@ test('chat menu archive Undo restores the original chat without replacing a newe
   await expect(editor(page)).toHaveText('Keep this newer draft')
 })
 
+test('Android Back after archiving shows the chat list and leaves Undo explicit', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  try {
+    const page = await context.newPage()
+    await open(page)
+    await expect.poll(() => page.evaluate(() => window.history.state?.usr?.athenaMobileChat)).toBe(true)
+    const row = page.locator('[data-web-session-id="preview-week"]').first()
+    const list = page.getByRole('tabpanel', { name: 'sessions', exact: true })
+    const toast = page.locator('.browser-archive-toast')
+    const getArchiveStatus = async () => (await (await page.request.get(`${origin}/api/sessions/preview-week?profile=default`)).json()).archived
+
+    await page.getByLabel('Chat toolbar').getByRole('button', { name: 'Archive', exact: true }).tap()
+    await expect(toast).toContainText('Archived chat')
+    await expect(page).toHaveURL(/#\/$/)
+    const handled = await page.evaluate(() => !window.dispatchEvent(new Event('athena:native-back', { cancelable: true })))
+    if (!handled) await page.goBack()
+
+    await expect(list).toBeVisible()
+    await expect(page).toHaveURL(/#\/$/)
+    await expect(row).toHaveCount(0)
+    expect(await getArchiveStatus()).toBe(true)
+
+    await toast.getByRole('button', { name: 'Undo', exact: true }).tap()
+    await expect(row).toBeVisible()
+    expect(await getArchiveStatus()).toBe(false)
+  } finally { await context.close() }
+})
+
 test.describe('running chat archives require confirmation before stopping work', () => {
   test.describe.configure({ retries: 0 })
   for (const source of ['sidebar', 'chat menu']) {
@@ -2898,13 +2926,14 @@ test('profiles can reorder and hide the default Hermes profile', async ({ page }
 
   await hermes.click({ button: 'right' })
   const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
-  await expect(menu.getByRole('menuitem', { name: 'Hide profile', exact: true })).toBeVisible()
-  await menu.getByRole('menuitem', { name: 'Hide profile', exact: true }).click()
+  const visibility = menu.getByRole('menuitemcheckbox', { name: 'Hermes', exact: true })
+  await expect(visibility).toHaveAttribute('aria-checked', 'true')
+  await visibility.click()
   await expect(hermes).toHaveCount(0)
-
-  await page.locator('.browser-profile-rail').click({ button: 'right' })
-  await page.getByRole('menu', { name: 'Profile actions', exact: true }).getByRole('menuitem', { name: 'Show hidden', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Hermes', exact: true })).toBeVisible()
+  await expect(visibility).toHaveAttribute('aria-checked', 'false')
+  await visibility.click()
+  await expect(hermes).toBeVisible()
+  await expect(visibility).toHaveAttribute('aria-checked', 'true')
 })
 
 for (const width of [1440]) {

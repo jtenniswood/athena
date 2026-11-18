@@ -31,6 +31,7 @@ jobs:
         id: identity
         run: node scripts/image-publication.mjs --github-output --development
       - name: Build and publish amd64 image
+        id: publish
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -43,3 +44,14 @@ jobs:
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
             io.hermes.release.channel=${{ steps.identity.outputs.channel }}
+      - name: Record published image identity
+        env:
+          IMAGE: ${{ steps.identity.outputs.image }}
+          IMAGE_DIGEST: ${{ steps.publish.outputs.digest }}
+          IMAGE_CHANNEL: ${{ steps.identity.outputs.channel }}
+        run: node scripts/record-image-publication.mjs
+      - uses: actions/upload-artifact@v7
+        with:
+          name: image-publication
+          path: image-publication.json
+          if-no-files-found: error

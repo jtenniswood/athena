@@ -19,6 +19,13 @@ async function updateMessage(page, type, transaction) {
   }, { type, transaction })
 }
 
+async function routeNotification(page, href) {
+  return page.context().serviceWorkers()[0].evaluate(async url => {
+    const [client] = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    return self.routeNotificationClient(client, url)
+  }, href)
+}
+
 async function startLiveDictation(page) {
   let socket, ending = false
   await page.route(/\/api\/audio\/voice-config(?:\?|$)/, route => route.fulfill({ json: {
@@ -56,6 +63,10 @@ async function startLiveDictation(page) {
 
 test('an update waits for the dictation transcript after its microphone closes', async ({ page }) => {
   const socket = await startLiveDictation(page)
+  const original = page.url(), destination = new URL(original)
+  destination.hash = '/preview-research?profile=research'
+  expect(await routeNotification(page, destination.href)).toBe(false)
+  await expect(page).toHaveURL(original)
   expect((await updateMessage(page, 'HERMES_FLUSH_UPDATE', 'voice-pending')).ready).toBe(false)
   await expect(page.locator('#root')).toHaveJSProperty('inert', false)
   const refused = await page.evaluate(async () => {
@@ -69,6 +80,10 @@ test('an update waits for the dictation transcript after its microphone closes',
   expect((await updateMessage(page, 'HERMES_FLUSH_UPDATE', 'voice-complete')).ready).toBe(true)
   await updateMessage(page, 'HERMES_ABORT_UPDATE', 'voice-complete')
   await expect(page.locator('#root')).toHaveJSProperty('inert', false)
+  expect(await routeNotification(page, destination.href)).toBe(true)
+  await expect(page).toHaveURL(destination.href)
+  expect(await routeNotification(page, original)).toBe(true)
+  await expect(composer(page)).toContainText('and my recorded words')
 })
 
 test('a failed dictation releases update safety without changing the draft', async ({ page }) => {

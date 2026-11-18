@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { createServer } from 'node:http'
@@ -15,6 +15,8 @@ async function fixture(t, options = {}) {
   let failures = options.failures || 0, clock = Date.now()
   const title = options.title ?? 'A named chat'
   const directory = options.persist ? await mkdtemp(path.join(tmpdir(), 'athena-push-')) : undefined
+  const replyRecoveryFile = options.recovery && path.join(directory, 'reply-recovery.json')
+  if (replyRecoveryFile) await writeFile(replyRecoveryFile, JSON.stringify(options.recovery.grants), { mode: 0o600 })
   const gateway = createServer()
   const upstream = new WebSocketServer({ server: gateway })
   const rows = [], transcripts = new Map(), browserSent = []
@@ -32,21 +34,28 @@ async function fixture(t, options = {}) {
     socket.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: { type: 'gateway.ready' } }))
   })
   await new Promise(resolve => gateway.listen(0, '127.0.0.1', resolve))
-  const createRelay = () => createAthenaServices({ directory, now: () => clock, target: `http://127.0.0.1:${gateway.address().port}`,
+  const createRelay = () => createAthenaServices({ directory, replyRecoveryFile, now: () => clock, target: `http://127.0.0.1:${gateway.address().port}`,
     browserSender: { enabled: true, publicKey: () => 'public-key', send: async (...args) => browserSent.push(args) },
     sender: { enabled: true, send: async (...args) => { attempts.push(args); if (failures-- > 0) throw new Error("Temporary sender outage"); sent.push(args); waiters.shift()?.() } },
     fetch: async (url, { headers }) => {
       const address = new URL(url)
       const authorized = headers.cookie === 'hermes_session_at=A' || headers['x-hermes-session-token'] === 'private-existing-token'
+      const configuredRecovery = options.recovery?.grants.some(grant => headers.Authorization === 'Bearer ' + grant.session_token)
+      const canReadHistory = configuredRecovery ? options.recovery.authorize(address, headers) : authorized && !options.authExpired?.()
       if (address.pathname === '/api/profiles/sessions') {
-        if (!authorized || options.authExpired?.()) return new Response(null, { status: 401 })
-        assert.equal(address.searchParams.get('profile'), 'all')
-        return Response.json({ sessions: rows })
+        if (!canReadHistory) return new Response(null, { status: 401 })
+        if (!configuredRecovery) assert.equal(address.searchParams.get('profile'), 'all')
+        const limit = Number(address.searchParams.get('limit')), offset = Number(address.searchParams.get('offset'))
+        const ordered = [...rows].sort((a, b) => b.last_active - a.last_active)
+        const end = offset + limit
+        return Response.json({ limit, offset, total: ordered.length,
+          sessions: [...ordered.slice(offset, end), ...ordered.slice(end).filter(row => row.pinned)] })
       }
       if (address.pathname.endsWith('/messages')) {
-        if (!authorized || options.authExpired?.()) return new Response(null, { status: 401 })
+        if (!canReadHistory) return new Response(null, { status: 401 })
         assert.equal(address.searchParams.get('inline_images'), 'false')
-        return Response.json({ pagination: { order: 'latest' }, messages: transcripts.get(address.pathname.split('/')[3]) || [] })
+        const owner = JSON.stringify([address.searchParams.get('profile'), decodeURIComponent(address.pathname.split('/')[3])])
+        return Response.json({ pagination: { order: 'latest' }, messages: transcripts.get(owner) || [] })
       }
       if (address.pathname.startsWith('/api/sessions/')) {
         assert.ok(authorized)
@@ -60,6 +69,7 @@ async function fixture(t, options = {}) {
     }
   })
   let relay = createRelay()
+  if (replyRecoveryFile) await relay.scanReplies()
   const server = createServer((req, res) => { void relay.handle(req, res).then(handled => { if (!handled) { res.writeHead(404); res.end() } }) })
   relay.attach(server)
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
@@ -85,11 +95,13 @@ async function fixture(t, options = {}) {
     }, enabled: true, ...changes })
   })
   const save = (id, message, attrs = {}) => {
-    const messages = transcripts.get(id) || []
+    const profile = attrs.profile ?? 'research'
+    const owner = JSON.stringify([profile, id])
+    const messages = transcripts.get(owner) || []
     messages.push({ id: messages.length + 1, timestamp: clock / 1000, ...message })
-    transcripts.set(id, messages)
-    const index = rows.findIndex(row => row.id === id)
-    const row = { id, profile: 'research', title: 'New chat', last_active: clock / 1000, message_count: messages.length, ...attrs }
+    transcripts.set(owner, messages)
+    const index = rows.findIndex(row => row.id === id && row.profile === profile)
+    const row = { id, profile, title: 'New chat', last_active: clock / 1000, message_count: messages.length, ...attrs }
     if (index === -1) rows.unshift(row)
     else rows[index] = row
   }
@@ -423,6 +435,59 @@ test('saved replies and scheduled results reach both devices with no chat socket
   assert.deepEqual(app.browserSent.map(([, data]) => data.focusSessionId).sort(), ['prompt-only', 'scheduled', 'scheduled', 'unread-reply'])
 })
 
+test('renewed registrations recover profile-scoped replies and scheduled notes after restart', async t => {
+  const app = await fixture(t, { persist: true })
+  assert.equal((await app.register()).status, 200)
+  assert.equal((await app.browser()).status, 200)
+  await app.restart()
+  app.advance(1000)
+  app.save('shared', { role: 'assistant', content: 'Research reply' })
+  app.save('shared', { role: 'user', content: 'Scheduled report',
+    display_metadata: { completion_note: ['cron:job:run'] } }, { profile: 'writing' })
+  await app.scan()
+  assert.equal(app.sent.length + app.browserSent.length, 0, 'the service has no signed-in watcher after restart')
+
+  assert.equal((await app.register()).status, 200)
+  assert.equal((await app.browser()).status, 200)
+  await app.scan()
+  await app.drain()
+  for (const deliveries of [app.sent, app.browserSent]) {
+    assert.deepEqual(deliveries.map(([, data]) => [data.focusProfile, data.focusSessionId]).sort(), [
+      ['research', 'shared'], ['writing', 'shared']
+    ])
+    assert.equal(new Set(deliveries.map(([, data]) => data.eventId)).size, 2)
+  }
+
+  assert.equal((await app.register({}, 'A', 'DELETE')).status, 200)
+  assert.equal((await app.browser({}, 'A', 'DELETE')).status, 200)
+  app.advance(1000)
+  app.save('after-sign-out', { role: 'assistant', content: 'Private reply' })
+  await app.scan()
+  await app.drain()
+  assert.equal(app.sent.length + app.browserSent.length, 4)
+})
+
+test('saved replies beyond the first page recover even when Hermes appends an old pin', async t => {
+  const app = await fixture(t, { persist: true })
+  app.save('pinned', { role: 'assistant', content: 'An old pinned reply' }, { pinned: true })
+  app.advance(1000)
+  assert.equal((await app.register()).status, 200)
+  assert.equal((await app.browser()).status, 200)
+  await app.restart()
+  app.advance(1000)
+  app.save('second-page-reply', { role: 'assistant', content: 'A reply worth recovering' })
+  app.advance(1000)
+  for (let i = 0; i < 100; i++) app.save('newer-' + i, { role: 'user', content: 'Awaiting an answer' })
+
+  assert.equal((await app.register()).status, 200)
+  assert.equal((await app.browser()).status, 200)
+  await app.scan()
+  await app.drain()
+  for (const deliveries of [app.sent, app.browserSent]) {
+    assert.deepEqual(deliveries.map(([, data]) => data.focusSessionId), ['second-page-reply'])
+  }
+})
+
 test('expired chat credentials and notification preferences stop background delivery', async t => {
   let expired = false
   const app = await fixture(t, { authExpired: () => expired })
@@ -458,4 +523,58 @@ test('an untitled completed reply still reaches Android', async t => {
   await pending
   assert.equal(app.sent[0][1].kind, 'turnDone')
   assert.equal(app.sent[0][1].focusSessionId, 'runtime-1')
+})
+
+test('configured recovery uses released profile history after restart without a renewed sign-in', async t => {
+  const requests = []
+  const grant = { profile: 'research', session_token: 'u'.repeat(43),
+    account: { user_id: 'hermes_session_at=A', provider: 'test' } }
+  let denied = false
+  const app = await fixture(t, {
+    persist: true,
+    authExpired: () => true,
+    recovery: {
+      grants: [grant],
+      authorize(url, headers) {
+        assert.deepEqual(headers, { Authorization: 'Bearer ' + grant.session_token })
+        assert.equal(url.searchParams.get('profile'), 'research')
+        requests.push(url.pathname)
+        return !denied
+      }
+    }
+  })
+  assert.equal((await app.register({ previewKey: 'p'.repeat(43) })).status, 200)
+  assert.equal((await app.browser()).status, 200)
+  assert.equal((await app.browser({
+    deviceId: '33333333-3333-4333-8333-333333333333',
+    subscription: { endpoint: 'https://fcm.googleapis.com/fcm/send/other-account',
+      keys: { p256dh: 'p'.repeat(87), auth: 'a'.repeat(22) } }
+  }, 'B')).status, 200)
+  app.save('tip', { role: 'assistant', content: 'Private research reply' }, { _lineage_root_id: 'original' })
+  app.save('foreign', { role: 'assistant', content: 'Private foreign reply' }, { profile: 'default' })
+  await app.scan()
+  await app.drain()
+  assert.deepEqual(requests, ['/api/profiles/sessions', '/api/sessions/tip/messages'])
+  assert.equal(app.sent.length, 1)
+  assert.equal(app.browserSent.length, 1)
+  assert.equal(app.sent[0][1].focusSessionId, 'original')
+  assert.equal(app.sent[0][1].focusProfile, 'research')
+  assert.equal(app.sent[0][1].fetchPreview, undefined)
+
+  denied = true
+  await app.restart()
+  await app.scan()
+  assert.equal((await app.status()).watchingReplies, false)
+  assert.equal(app.sent.length, 1)
+
+  denied = false
+  app.save('report', { role: 'assistant', content: 'Private report' })
+  await app.scan()
+  await app.drain()
+  assert.equal((await app.status()).watchingReplies, true)
+  assert.deepEqual(app.sent.map(([, data]) => data.focusSessionId), ['original', 'report'])
+  assert.deepEqual(app.browserSent.map(([, data]) => data.focusSessionId), ['original', 'report'])
+  const saved = await readFile(path.join(app.directory, 'android-push.json'), 'utf8')
+  assert.equal(saved.includes(grant.session_token), false)
+  assert.equal(saved.includes('Private report'), false)
 })

@@ -8,6 +8,43 @@ test.afterAll(async () => { await app?.close() })
 test.beforeEach(async ({ page }) => { await page.route('**/api/athena/preferences', route => route.abort()) })
 const editor = page => page.locator('[data-slot="composer-rich-input"]:visible').first()
 
+test('Android shows the Hermes prompt after Cloudflare Access and continues into chat', async ({ page }) => {
+  let authenticated = false
+  await page.route('**/api/status', route => route.fulfill({ json: { auth_required: true, auth_providers: ['basic'] } }))
+  await page.route('**/api/auth/me', route => route.fulfill({
+    status: authenticated ? 200 : 401,
+    json: authenticated ? { user_id: 'preview-user', provider: 'basic' } : {}
+  }))
+  const nativeRequests = []
+  await page.exposeBinding('recordAndroidRequest', (_source, request) => nativeRequests.push(request))
+  await page.addInitScript(() => {
+    window.AthenaAndroid = {
+      onmessage: null,
+      postMessage(raw) {
+        const request = JSON.parse(raw)
+        void window.recordAndroidRequest(request)
+        const value = request.method === 'hello'
+          ? { protocol: 1, capabilities: ['web-state'] }
+          : true
+        queueMicrotask(() => this.onmessage?.({ data: JSON.stringify({ id: request.id, value }) }))
+      }
+    }
+  })
+
+  // The app can load Athena after importing the Access cookie, while Hermes still requires its own session.
+  await page.goto(app.origin + '/#/preview-week')
+  const signIn = page.getByRole('button', { name: 'Sign in', exact: true })
+  await expect(signIn).toBeEnabled()
+  await expect.poll(() => nativeRequests.filter(request => request.method === 'webState').map(request => request.payload.ready)).toEqual([true])
+  await expect(editor(page)).toHaveCount(0)
+  await signIn.click()
+  await expect.poll(() => nativeRequests.some(request => request.method === 'openSignIn')).toBe(true)
+
+  authenticated = true
+  await expect(editor(page)).toBeVisible()
+  await expect(page).toHaveURL(app.origin + '/#/preview-week')
+})
+
 async function expireCookie(page) {
   let startup = true
   await page.route('**/api/status', route => route.fulfill({ json: { auth_required: true, auth_providers: ['basic'] } }))
@@ -164,4 +201,56 @@ test('a provider readiness mismatch on restart leaves the restored chat usable',
   await editor(page).fill('Draft after restarting')
   await expect(setup).toHaveCount(0)
   await expect(editor(page)).toHaveText('Draft after restarting')
+})
+
+test('overlapping configuration reads share transport within the same gateway scope', async ({ page }) => {
+  const reads = []
+  let revision = 0
+  let release
+  const heldRead = new Promise(resolve => { release = resolve })
+  await page.route(/\/api\/config\?startup_fixture=1(?:&|$)/, async route => {
+    if (route.request().method() === 'PUT') {
+      revision++
+      return route.fulfill({ json: { ok: true } })
+    }
+    const url = new URL(route.request().url())
+    const profile = url.searchParams.get('profile')
+    reads.push(profile)
+    const value = revision
+    if (!value) await heldRead
+    return route.fulfill({ json: { profile, revision: value } })
+  })
+  await page.goto(app.origin + '/#/preview-week')
+  await expect(editor(page)).toBeVisible()
+
+  const result = page.evaluate(async () => {
+    const api = request => window.hermesDesktop.api({ path: '/api/config?startup_fixture=1', ...request })
+    const first = api({ profile: 'default' })
+    const second = api({ profile: 'default' })
+    const otherProfile = api({ profile: 'research' })
+    window.athenaStartupFixture = { first, second, otherProfile, api }
+  })
+  await result
+  try {
+    await expect.poll(() => reads.toSorted()).toEqual(['default', 'research'])
+    const fresh = await page.evaluate(async () => {
+      const { api } = window.athenaStartupFixture
+      await api({ method: 'PUT', profile: 'default', body: { updated: true } })
+      return api({ profile: 'default' })
+    })
+    expect(fresh).toEqual({ profile: 'default', revision: 1 })
+  } finally {
+    release()
+  }
+  const prior = await page.evaluate(async () => {
+    const { first, second, otherProfile } = window.athenaStartupFixture
+    const [a, b, c] = await Promise.all([first, second, otherProfile])
+    a.revision = -1
+    return [b, c]
+  })
+  expect(prior).toEqual([
+    { profile: 'default', revision: 0 },
+    { profile: 'research', revision: 0 }
+  ])
+  expect(reads.toSorted()).toEqual(['default', 'default', 'research'])
 })

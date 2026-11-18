@@ -6,6 +6,7 @@ import path from 'node:path'
 import { createBuiltApplication } from './built-application.mjs'
 import { createPreviewGateway } from '../../scripts/preview/gateway.mjs'
 import { getBrowserTarget } from './test-target.mjs'
+import { waitForBrowserNetwork } from './network-readiness.mjs'
 
 const { image, url } = getBrowserTarget()
 if (url) throw new Error('Plugin discovery requires its isolated mounted home; use HERMES_TEST_IMAGE or the built preview fixture')
@@ -32,7 +33,7 @@ async function prepareHome(directory) {
     writeFile(path.join(agent, 'package.json'), JSON.stringify({ name: 'agent-fixture' }))
   ])
 }
-test.beforeAll(async () => {
+test.beforeAll(async ({ browser }, testInfo) => {
   if (!image) {
     application = await createBuiltApplication({ prepareHome })
     ;({ home, origin } = application)
@@ -47,7 +48,9 @@ test.beforeAll(async () => {
     '-e', `HERMES_GATEWAY_URL=http://host.docker.internal:${gateway.server.address().port}`, image], { encoding: 'utf8' }).trim()
   const port = execFileSync('docker', ['port', container, '80/tcp'], { encoding: 'utf8' }).trim().split(':').at(-1)
   origin = `http://127.0.0.1:${port}`
-  await expect.poll(async () => { try { return (await fetch(origin)).status } catch { return 0 } }).toBe(200)
+  await expect.poll(async () => { try { return (await fetch(origin)).status } catch { return 0 } }, { timeout: 15000 }).toBe(200)
+  const readiness = await waitForBrowserNetwork(browser, origin)
+  await testInfo.attach('fixture-network-readiness', { body: JSON.stringify(readiness), contentType: 'application/json' })
 })
 test.afterAll(async () => {
   try { if (container) execFileSync('docker', ['stop', container], { stdio: 'ignore' }) }

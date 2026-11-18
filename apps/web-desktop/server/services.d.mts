@@ -5,6 +5,7 @@ import type { FirebaseSender } from './firebase-messaging.mjs'
 export function createAthenaServices(options: {
   target: string
   identityUrl?: string
+  replyRecoveryFile?: string
   directory: string
   home?: string
   openCodeGoApiKey?: string

@@ -1,8 +1,14 @@
 import { useEffect } from 'react'
+import { useStore } from '@nanostores/react'
 import { ESCAPE_PRIORITY, isTopEscapeLayer, pushEscapeLayer } from '@/lib/escape-layers'
 import { triggerHaptic } from '@/lib/haptics'
+import { $nativeNotifyPrefs } from '@/store/native-notifications'
 
 export function announceSettingsReset(): void { triggerHaptic('warning') }
+
+export function useBrowserNotificationAlertsEnabled(): boolean {
+  return useStore($nativeNotifyPrefs).enabled
+}
 
 /** Embedded settings participate in the engine's nested overlay Escape policy. */
 export function useBrowserSettingsEscapeClose(onClose: () => void): void {

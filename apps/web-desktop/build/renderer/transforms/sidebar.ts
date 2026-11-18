@@ -3,13 +3,22 @@ import { projectRendererController } from '../controller'
 import { replaceBrowserContract } from './contract'
 
 export function useBrowserSidebarController(source: string, root: string): string {
+  if (source.includes("import { ChatSidebarPresentationContext } from './presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/upstream/sidebar'))
+    const controller = replaceBrowserContract(source, [['export function ChatSidebar(', 'function HermesChatSidebar(']])
+    return `import { useBrowserSidebarPresentation } from ${adapter}
+` + controller + `
+export function ChatSidebar(props: ChatSidebarProps) {
+  const presentation = useBrowserSidebarPresentation()
+  return <ChatSidebarPresentationContext.Provider value={presentation}>
+    <HermesChatSidebar {...props} />
+  </ChatSidebarPresentationContext.Provider>
+}
+`
+  }
   source = replaceBrowserContract(source, [
     ["  const ownerGrouped = profileScope === ALL_PROFILES && grouping === 'profile'", "  const combinedProfiles = useBrowserProfileGrouping()\n  const ownerGrouped = profileScope === ALL_PROFILES && combinedProfiles"],
-    ['interface ChatSidebarProps extends', 'export interface ChatSidebarProps extends'],
-    ['  const messagingProfile = sidebarProfileForScope(profileScope)', '  const messagingProfile = sidebarProfileForScope(profileScope)\n  useBrowserSidebarChannels()'],
     ['const profileGroups = useGatewaySessionGroups(agentSessions, ownerGrouped, filtersNarrow)', 'const profileGroups = useBrowserProfileGroups(useGatewaySessionGroups(agentSessions, ownerGrouped, filtersNarrow))'],
-    ['  const showSessionSections = hasSessionArea({', '  const showSessionSections = Boolean(displayAgentGroups?.length) || hasSessionArea({'],
-    ['cronJobs: showsAdvancedChrome ? cronJobs.length : 0,', 'cronJobs: cronJobs.length,'],
     ['  useEffect(() => {\n    const next = resolveManualSessionOrderIds(', '  useEffect(() => {\n    if (sessionsLoading) return\n    const next = resolveManualSessionOrderIds('],
     ['[agentOrderIds, agentOrderManual, unpinnedAgentSessions]', '[agentOrderIds, agentOrderManual, unpinnedAgentSessions, sessionsLoading]']
   ])
@@ -32,18 +41,30 @@ export function useBrowserSidebarController(source: string, root: string): strin
   source = projectRendererController(source, 'ChatSidebar', `<BrowserSidebarControllerSurface model={{ labels: s, ${projection.join(', ')} }} />`, ['[messagingVisible, setMessagingVisible]', 'revealMoreMessaging'])
   return `import { useBrowserProfileGrouping } from ${JSON.stringify(path.join(root, 'src/upstream/profile-section'))}\n` +
     `import { BrowserSidebarControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar'))}\n` +
-    `import { useBrowserProfileGroups } from ${JSON.stringify(path.join(root, 'src/upstream/profile-groups'))}\n` +
-    `import { useBrowserSidebarChannels } from ${JSON.stringify(path.join(root, 'src/experience/sidebar-sections'))}\n` + source
+    `import { useBrowserProfileGroups } from ${JSON.stringify(path.join(root, 'src/upstream/profile-groups'))}\n` + source
 }
 
 export function useBrowserSessionSection(source: string, root: string): string {
+  if (source.includes("import type { SidebarSessionsSectionPresentation } from './section-presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/upstream/session-section'))
+    const controller = replaceBrowserContract(source, [
+      ['export function SidebarSessionsSection(', 'function HermesSidebarSessionsSection(']
+    ])
+    return `import { browserSessionSectionPresentation } from ${adapter}
+` + controller + `
+export function SidebarSessionsSection({ browserSectionId, ...props }: SidebarSessionsSectionProps & { browserSectionId?: string }) {
+  return <HermesSidebarSessionsSection {...props} sectionId={browserSectionId ?? props.sectionId}
+    presentation={browserSessionSectionPresentation} />
+}
+`
+  }
   source = replaceBrowserContract(source, [
-    ['interface SidebarSessionsSectionProps {', 'interface SidebarSessionsSectionProps {\n  browserSectionId: string'],
+    ['interface SidebarSessionsSectionProps {', 'interface SidebarSessionsSectionProps {\n  browserSectionId?: string'],
     ['<ReorderableList ids={sortableRowIds} onReorder={persistSessionOrder} sensors={dndSensors}>\n        {virtual}', '<BrowserSessionReorderList ids={sortableRowIds} onReorder={persistSessionOrder} sensors={dndSensors}>\n        {virtual}'],
     ['<ReorderableList ids={sortableRowIds} onReorder={persistSessionOrder} sensors={dndSensors}>\n        {visibleRows.map', '<BrowserSessionReorderList ids={sortableRowIds} onReorder={persistSessionOrder} sensors={dndSensors}>\n        {visibleRows.map'],
     ['        {virtual}\n      </ReorderableList>', '        {virtual}\n      </BrowserSessionReorderList>'],
     ['        {visibleRows.map(row => renderListRow(row, true, dividerAction))}\n      </ReorderableList>', '        {visibleRows.map(row => renderListRow(row, true, dividerAction))}\n      </BrowserSessionReorderList>'],
-    ['export function SidebarSessionsSection({', 'export function SidebarSessionsSection({\n  browserSectionId,']
+    ['export function SidebarSessionsSection({', 'export function SidebarSessionsSection({\n  browserSectionId = \'sessions\',']
   ])
   source = replaceBrowserContract(source, [
     ['<SidebarDateDivider\n          action={action}', '<SidebarDateDivider\n          data-browser-group-header=""\n          action={action && <div data-browser-group-actions="" className="flex shrink-0 items-center">{action}</div>}'],
@@ -73,6 +94,16 @@ export function useBrowserSessionSection(source: string, root: string): string {
 }
 
 export function useBrowserProjectController(source: string, root: string): string {
+  if (source.includes("import type { ProjectOverviewPresentation } from './row-presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/upstream/sidebar-project'))
+    const controller = replaceBrowserContract(source, [['export function ProjectOverviewRow(', 'function HermesProjectOverviewRow(']])
+    return `import { BrowserProjectControllerSurface } from ${adapter}
+` + controller + `
+export function ProjectOverviewRow(props: ProjectOverviewRowProps) {
+  return <HermesProjectOverviewRow {...props} presentation={BrowserProjectControllerSurface} />
+}
+`
+  }
   source = replaceBrowserContract(source, [
     ['const recent = fetched.length ? fetched : latestProjectSessions(project, limit)',
       'const recent = previewSessions?.length ? previewSessions : latestProjectSessions(project, Infinity)']
@@ -87,6 +118,19 @@ export function useBrowserProjectController(source: string, root: string): strin
 }
 
 export function useBrowserProfileControllers(source: string, root: string): string {
+  if (source.includes("import type { ProfileGroupPresentation } from './profile-group-presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/upstream/sidebar-profile'))
+    const controller = replaceBrowserContract(source, [
+      ['export function GatewayProfileGroups(', 'function HermesGatewayProfileGroups(']
+    ])
+    return `import { useBrowserProfileGroupPresentation } from ${adapter}
+` + controller + `
+export function GatewayProfileGroups(props: GatewayProfileGroupsProps) {
+  const presentation = useBrowserProfileGroupPresentation()
+  return <HermesGatewayProfileGroups {...props} presentation={presentation} />
+}
+`
+  }
   source = replaceBrowserContract(source, [
     ['  const order = useStore($gatewayGroupOrder)', "  const order = useStore($gatewayGroupOrder)\n  const presentationMode = useBrowserProfileGrouping()\n  const hiddenProfileGroups = useHiddenProfileGroups()"],
     ['if (nested || embedded || !owner) {', 'if (nested || embedded || !owner || presentationMode) {'],
@@ -113,6 +157,16 @@ export function useBrowserProfileControllers(source: string, root: string): stri
 }
 
 export function useBrowserWorkspaceController(source: string, root: string): string {
+  if (source.includes("import type { WorkspaceGroupPresentation } from './row-presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/upstream/sidebar-workspace'))
+    const controller = replaceBrowserContract(source, [['export function SidebarWorkspaceGroup(', 'function HermesSidebarWorkspaceGroup(']])
+    return `import { BrowserWorkspaceControllerSurface } from ${adapter}
+` + controller + `
+export function SidebarWorkspaceGroup(props: SidebarWorkspaceGroupProps) {
+  return <HermesSidebarWorkspaceGroup {...props} presentation={BrowserWorkspaceControllerSurface} />
+}
+`
+  }
   source = projectRendererController(source, 'SidebarWorkspaceGroup', `<BrowserWorkspaceControllerSurface model={{
     group, isProfileGroup, usage, open, toggleOpen,
     empty: sessions.length === 0, rows: renderRows(sessions), canCreate: Boolean(onNewSession || isProfileGroup),
@@ -122,6 +176,18 @@ export function useBrowserWorkspaceController(source: string, root: string): str
 }
 
 export function useBrowserWorkspacePresentation(source: string, root: string): string {
+  if (source.includes("import type { WorkspaceChromePresentation } from './row-presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/upstream/workspace-chrome'))
+    const names = ['WorkspaceAddButton', 'WorkspaceShowMoreRow', 'WorkspaceShowMoreButton', 'StartWorkButton', 'WorkspaceHeader']
+    const controller = replaceBrowserContract(source, names.map(name => [`export function ${name}(`, `function Hermes${name}(`]))
+    const wrappers = names.map(name => `
+export function ${name}(props: Parameters<typeof Hermes${name}>[0]) {
+  return <Hermes${name} {...props} presentation={browserWorkspaceChromePresentation} />
+}
+`).join('')
+    return `import { browserWorkspaceChromePresentation } from ${adapter}
+` + controller + wrappers
+  }
   const views: [string, string][] = [
     ['WorkspaceAddButton', '<BrowserTreeAdd label={label} onClick={onClick} onPointerDown={onPointerDown} />'],
     ['WorkspaceShowMoreRow', '<BrowserTreeMore label={label} onClick={onClick} disabled={disabled} />'],
@@ -134,6 +200,16 @@ export function useBrowserWorkspacePresentation(source: string, root: string): s
 }
 
 export function useBrowserRepositoryController(source: string, root: string): string {
+  if (source.includes("import type { RepositoryPresentation } from './row-presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/experience/sidebar-tree'))
+    const controller = replaceBrowserContract(source, [['export function EnteredProjectContent(', 'function HermesEnteredProjectContent(']])
+    return `import { BrowserRepository } from ${adapter}
+` + controller + `
+export function EnteredProjectContent(props: EnteredProjectContentProps) {
+  return <HermesEnteredProjectContent {...props} presentation={BrowserRepository} />
+}
+`
+  }
   source = projectRendererController(source, 'HomeSessions', '<>{renderRows(sessions)}</>', ['home'])
   source = projectRendererController(source, 'RepoFlatSection', `<BrowserRepository model={{
     label: repo.label, title: repo.path ? displayPath(repo.path) : undefined, open, toggle: toggleOpen, emphasis: true,
@@ -150,6 +226,18 @@ export function useBrowserRepositoryController(source: string, root: string): st
 }
 
 export function useBrowserCronController(source: string, root: string): string {
+  if (source.includes("import type { CronSidebarPresentation } from './cron-presentation'")) {
+    const adapter = JSON.stringify(path.join(root, 'src/upstream/cron-sidebar-presentation'))
+    const controller = replaceBrowserContract(source, [
+      ['export function SidebarCronJobsSection(', 'function HermesSidebarCronJobsSection(']
+    ])
+    return `import { browserCronSidebarPresentation } from ${adapter}
+` + controller + `
+export function SidebarCronJobsSection(props: SidebarCronJobsSectionProps) {
+  return <HermesSidebarCronJobsSection {...props} presentation={browserCronSidebarPresentation} />
+}
+`
+  }
   source = projectRendererController(source, 'SidebarCronJobsSection', `<BrowserSidebarSection model={{
     id: 'cron-jobs', label, open, toggle: onToggle, collapsible: true, pinned: false, acceptsSessionDrops: false,
     className: 'shrink-0 p-0 pb-1',

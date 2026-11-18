@@ -30,7 +30,11 @@ function notifications({ permission = 'granted', supported = true, secure = true
   const location = { href: 'https://athena.example.test/#/settings?tab=notifications' }
   const window = { isSecureContext: secure, location, focus: () => calls.push('focus'), open: (...args) => calls.push(['open', ...args]), setTimeout, clearTimeout }
   const root = { inert: false }
-  const routing = vm.createContext({ exports: {}, window, URL, crypto: { randomUUID }, document: { getElementById: () => root } })
+  const routing = vm.createContext({ exports: {}, window, URL, crypto: { randomUUID }, document: { getElementById: () => root },
+    require: name => {
+      assert.equal(name, './reload-safety')
+      return { chatSelectionReadiness: () => ({ ready: true }) }
+    } })
   vm.runInContext(ts.transpileModule(readFileSync(new URL('../apps/web-desktop/src/platform/notification-navigation.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, routing)
   if (worker && !oldWorker) worker.active ??= { postMessage(_message, ports) { ports?.[0]?.postMessage({ notificationCallbacks: 1 }) } }
   class MessageChannel { constructor() { this.port1 = { close() {} }; this.port2 = { close() {}, postMessage: data => this.port1.onmessage?.({ data }) } } }

@@ -196,17 +196,22 @@ test('a prepared update refuses preference application until abort and preserves
     return route.fulfill({ json: { exists: true, generation: 'another-machine-store', revision: 100,
       values: { 'hermes-desktop-theme-v2': theme === 'dark' ? 'light' : 'dark' } } })
   })
-  let requests = 0
-  await page.route('**/api/athena/preferences', async request => { requests++; await request.continue() })
+  let preferenceReads = 0
+  await page.route('**/api/athena/preferences', request => {
+    // Background writes may finish while the update holds the transition.
+    if (request.request().method() === 'GET') preferenceReads++
+    return request.continue()
+  })
   expect((await sendFromWorker(page, { type: 'HERMES_FLUSH_UPDATE', transaction: 'update-first' })).ready).toBe(true)
   // A stale presenter command can invoke an action even while ordinary input is inert.
   await page.getByRole('button', { name: 'Apply changes', exact: true }).evaluate(button => button.click())
-  expect(requests).toBe(0)
+  expect(preferenceReads).toBe(0)
   expect(await page.locator('#root').evaluate(root => root.inert)).toBe(true)
   await sendFromWorker(page, { type: 'HERMES_ABORT_UPDATE', transaction: 'update-first' }, false)
   await expect(page.locator('#root')).toHaveJSProperty('inert', false)
   await Promise.all([
     page.waitForEvent('domcontentloaded'),
+    page.waitForRequest(request => request.method() === 'GET' && new URL(request.url()).pathname === '/api/athena/preferences'),
     page.getByRole('button', { name: 'Apply changes', exact: true }).click()
   ])
   await expect(page.getByRole('heading', { name: 'Sync across devices', exact: true })).toBeVisible()

@@ -5,6 +5,7 @@ import { notificationChatTitle, notificationSnippet } from './android-notificati
 import { WebSocket, WebSocketServer } from 'ws'
 import { accountIdentity, probeIdentity, requestOrigin } from './identity.mjs'
 import { browserSubscription } from './browser-push.mjs'
+import { readReplyRecoveryGrants } from './reply-recovery-grants.mjs'
 import { replyLifetimeMs, replyNotificationHeaders, scanRecentReplies } from './reply-notifications.mjs'
 
 const root = '/api/athena/android/'
@@ -42,11 +43,12 @@ function describeAlert(type, payload) {
 
 /** Retain the authenticated gateway transport while Android suspends its WebView.
  * This forwards Hermes's own RPC protocol and stores no conversation history. */
-export function createAndroidPush({ target, identityUrl = target, sender, fetch: request = globalThis.fetch, now = Date.now, directory, browserSender, consumeTokenTicket }) {
+export function createAndroidPush({ target, identityUrl = target, sender, fetch: request = globalThis.fetch, now = Date.now, directory, browserSender, consumeTokenTicket, replyRecoveryFile = process.env.ATHENA_REPLY_RECOVERY_GRANTS_FILE }) {
   const store = createAndroidPushStore(directory), relays = new Set()
   const titleLookups = new Set(), shutdown = new AbortController()
   const watches = new Map()
   let closed = false, pumping, scanning
+  const recoveryProfiles = new Map()
   const removeDevice = (state, key) => {
     state.devices.delete(key)
     for (const [id, event] of state.events) if (event.key === key) state.events.delete(id)
@@ -119,6 +121,11 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
     if (!response.ok) throw new Error('Sign in required')
     return { id: accountIdentity(identityUrl, await response.json()), cookies: response.headers.getSetCookie() }
   }
+  const recoveryCovers = (key, profile) => {
+    const recovery = recoveryProfiles.get(profile)
+    return recovery?.live && key.startsWith(recovery.account + ':')
+  }
+  const watchesReplies = key => watches.has(key) || [...recoveryProfiles.keys()].some(profile => recoveryCovers(key, profile))
   const keyFor = (account, deviceId) => `${account}:${deviceId}`
   const unregister = key => {
     watches.delete(key)
@@ -165,9 +172,73 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
   }
   const androidReplyId = (key, bindingId, profile, sessionId) =>
     createHash('sha256').update(JSON.stringify([key, bindingId, profile || 'default', sessionId, 'reply'])).digest('hex')
+  const inspectionKey = row => JSON.stringify([row.profile, row.id])
+  const inspectionRevision = row => JSON.stringify([row.message_count, row.last_active, row.last_read_at, row.end_reason])
+  const rememberInspection = (inspected, row) => {
+    if (inspected.size >= 1000) inspected.clear()
+    inspected.set(inspectionKey(row), inspectionRevision(row))
+  }
+  const enqueueRecoveredReply = (key, device, row, reply, showDetails) => {
+    const current = store.devices.get(key)
+    const aliases = Array.isArray(row._lineage_ids) ? row._lineage_ids : []
+    if (current?.subscription && current.activeUntil > now() &&
+        (!current.visibleProfile || current.visibleProfile === row.profile) &&
+        [row.id, row._lineage_root_id, ...aliases].includes(current.visibleSession)) return
+    const sessionId = row._lineage_root_id || row.id
+    const id = device.subscription
+      ? createHash('sha256').update(JSON.stringify([key, device.bindingId, row.profile, sessionId, reply.replyId])).digest('hex')
+      : androidReplyId(key, device.bindingId, row.profile, sessionId)
+    const alert = { kind: 'turnDone', title: 'Athena · Response ready',
+      body: showDetails ? reply.body : 'Your response is ready.' }
+    enqueue({ key, bindingId: device.bindingId, id, alert, sessionId, profile: row.profile,
+      chatTitle: showDetails ? reply.chatTitle : undefined, background: true, completedAt: reply.timestamp })
+  }
+  async function scanConfiguredRecovery() {
+    if (!replyRecoveryFile) return
+    let grants
+    try {
+      grants = await readReplyRecoveryGrants(replyRecoveryFile, identityUrl)
+    } catch {
+      // Retry a failed file replacement and let any signed-in watch take over.
+      for (const recovery of recoveryProfiles.values()) recovery.live = false
+      return
+    }
+    if (closed) return
+    const owners = new Map(grants.map(({ profile, account }) => [profile, account]))
+    for (const [profile, recovery] of recoveryProfiles) {
+      if (owners.get(profile) !== recovery.account) recoveryProfiles.delete(profile)
+    }
+    for (const grant of grants) {
+      if (closed) break
+      const eligible = [...store.devices].filter(([key, device]) => key.startsWith(grant.account + ':') &&
+        device.enabled && device.kinds.turnDone && Number.isFinite(device.repliesSince) &&
+        now() - device.updated <= retentionMs && (device.subscription ? browserSender?.enabled : sender.enabled))
+      if (!eligible.length) {
+        recoveryProfiles.delete(grant.profile)
+        continue
+      }
+      const recovery = recoveryProfiles.get(grant.profile) || { account: grant.account, live: false, inspected: new Map() }
+      recoveryProfiles.set(grant.profile, recovery)
+      const since = Math.max(now() - replyLifetimeMs, Math.min(...eligible.map(([, device]) => device.repliesSince)))
+      try {
+        recovery.live = await scanRecentReplies({
+          target, request, since, signal: shutdown.signal, profile: grant.profile,
+          headers: { Authorization: 'Bearer ' + grant.token },
+          shouldInspect: row => recovery.inspected.get(inspectionKey(row)) !== inspectionRevision(row),
+          onInspected: row => rememberInspection(recovery.inspected, row),
+          onReply(row, reply) {
+            for (const [key, device] of eligible) {
+              if (reply.timestamp >= device.repliesSince) enqueueRecoveredReply(key, device, row, reply, false)
+            }
+          }
+        })
+      } catch { recovery.live = false }
+    }
+  }
   function scanReplies() {
     if (closed || scanning) return scanning
     scanning = (async () => {
+      await scanConfiguredRecovery()
       for (const [key, watch] of watches) {
         const device = store.devices.get(key)
         if (closed) break
@@ -177,31 +248,11 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
         try {
           const authenticated = await scanRecentReplies({
             target, headers, request, since, signal: shutdown.signal,
-            shouldInspect: row => {
-              if (watches.get(key) !== watch) return false
-              const owner = JSON.stringify([row.profile, row.id])
-              const revision = JSON.stringify([row.message_count, row.last_active, row.last_read_at, row.end_reason])
-              return watch.inspected.get(owner) !== revision
-            },
-            onInspected(row) {
-              if (watch.inspected.size >= 1000) watch.inspected.clear()
-              watch.inspected.set(JSON.stringify([row.profile, row.id]),
-                JSON.stringify([row.message_count, row.last_active, row.last_read_at, row.end_reason]))
-            },
+            shouldInspect: row => watches.get(key) === watch && !recoveryCovers(key, row.profile) &&
+              watch.inspected.get(inspectionKey(row)) !== inspectionRevision(row),
+            onInspected: row => rememberInspection(watch.inspected, row),
             onReply(row, reply) {
-              if (watches.get(key) !== watch) return
-              const registered = store.devices.get(key)
-              const aliases = Array.isArray(row._lineage_ids) ? row._lineage_ids : []
-              if (registered?.subscription && registered.activeUntil > now() &&
-                  (!registered.visibleProfile || registered.visibleProfile === row.profile) &&
-                  [row.id, row._lineage_root_id, ...aliases].includes(registered.visibleSession)) return
-              const sessionId = row._lineage_root_id || row.id
-              const id = device.subscription
-                ? createHash('sha256').update(JSON.stringify([key, watch.bindingId, row.profile, sessionId, reply.replyId])).digest('hex')
-                : androidReplyId(key, watch.bindingId, row.profile, sessionId)
-              const alert = { kind: 'turnDone', title: 'Athena · Response ready', body: reply.body }
-              enqueue({ key, bindingId: watch.bindingId, id, alert, sessionId, profile: row.profile,
-                chatTitle: reply.chatTitle, background: true, completedAt: reply.timestamp })
+              if (watches.get(key) === watch) enqueueRecoveredReply(key, device, row, reply, true)
             }
           })
           if (!authenticated && watches.get(key) === watch && watch.headers === headers) watches.delete(key)
@@ -222,12 +273,15 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
   }
   const timer = setInterval(() => {
     try { prune() } catch { console.error('Athena push storage maintenance failed') }
-    void scanReplies()
+    void scanReplies().catch(() => console.error('Athena reply scan failed'))
     for (const relay of relays) if (relay.upstream.readyState === WebSocket.OPEN) {
       relay.upstream.send(JSON.stringify({ jsonrpc: '2.0', id: '__athena_push_ping', method: 'gateway.ping', params: {} }))
     }
   }, 15000)
   timer.unref()
+  if (replyRecoveryFile) queueMicrotask(() => {
+    void scanReplies().catch(() => console.error('Athena reply scan failed'))
+  })
 
   async function handle(req, res) {
     const url = new URL(req.url, 'http://local.invalid')
@@ -307,7 +361,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
         const events = [...store.events.values()].filter(event => event.key === key)
         const latest = events.sort((a, b) => b.created - a.created)[0]
         json(200, { registered: Boolean(device?.enabled), persistent: Boolean(directory),
-          watchingReplies: watches.has(key),
+          watchingReplies: Boolean(device?.enabled && device.kinds.turnDone && watchesReplies(key)),
           relayConnected: [...relays].some(relay => relay.key === key && relay.upstream.readyState === WebSocket.OPEN),
           pending: events.filter(event => event.status === 'pending').length,
           lastDelivery: latest ? { state: latest.status, attempts: latest.attempts, updated: latest.updated } : null })
@@ -416,7 +470,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
             lastTest: old?.lastTest, updated: now(), repliesSince: same && old.enabled ? old.repliesSince : now() })
         })
         watchReplies(key, req, authenticated.cookies)
-        return json(200, { watchingReplies: watches.has(key) }), true
+        return json(200, { watchingReplies: enabled && watchesReplies(key) }), true
       }
       json(200, { ok: true })
     } catch { json(400, { error: 'Browser push request could not be completed' }) }

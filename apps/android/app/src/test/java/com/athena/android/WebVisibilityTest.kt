@@ -17,4 +17,15 @@ class WebVisibilityTest {
         visibility.acknowledge("chat-1"); visibility.clear()
         assertFalse(visibility.shouldSuppress(true, "chat-1"))
     }
+
+    @Test fun twoProfilesWithTheSameSessionIdKeepIndependentVisibility() {
+        val visibility = WebVisibility { 100L }
+        visibility.acknowledge("shared", "research")
+        assertTrue(visibility.shouldSuppress(true, "shared", "research"))
+        assertFalse(visibility.shouldSuppress(true, "shared", "writing"))
+        assertTrue(visibility.shouldSuppress(true, "shared"))
+        visibility.acknowledge("shared", "writing")
+        assertFalse(visibility.shouldSuppress(true, "shared", "research"))
+        assertTrue(visibility.shouldSuppress(true, "shared", "writing"))
+    }
 }
