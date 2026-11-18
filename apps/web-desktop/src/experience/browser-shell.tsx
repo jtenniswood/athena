@@ -9,7 +9,7 @@ import { OpenCodeGoUsageProvider } from './opencode-go-usage'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { BrowserNavigationTabs, BrowserNavigationSettings, BrowserNavigationResizer, useBrowserNavigation } from './navigation'
 import { BrowserActionError } from './action-errors'
-import { ARCHIVE_FOOTER_ID, BrowserArchiveToasts } from './archive-toast'
+import { ARCHIVE_TOASTS_ID, BrowserArchiveToasts } from './archive-toast'
 import { BrowserArchiveConfirmation } from './archive-confirmation'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useLocation, useNavigate } from 'react-router'
@@ -38,8 +38,8 @@ function BrowserLayout() {
   const chatTitle = conversation.displayName || ''
   const panels = engine.navigation.usePanels()
   const main = useRef<HTMLElement>(null), menu = useRef<HTMLButtonElement>(null)
-  const archiveFooter = useRef<HTMLDivElement>(null)
-  const navigation = useBrowserNavigation({ selectionKey: conversation.selectionKey, path: location.pathname, main, trigger: menu, archiveFooter })
+  const archiveToasts = useRef<HTMLDivElement>(null)
+  const navigation = useBrowserNavigation({ selectionKey: conversation.selectionKey, path: location.pathname, main, trigger: menu, archiveToasts })
   const profiles = engine.profiles.useProfiles()
   const preventSessionPaneDrag = useSidebarGestures(navigation.drawer, engine.projects,
     JSON.stringify([profiles.active, profiles.all, presentationMode, navigation.tab, navigation.open, location.pathname]))
@@ -62,7 +62,7 @@ function BrowserLayout() {
     <BrowserArchiveConfirmation />
     <div className="browser-workspace">
       {navigation.compact && !navigation.mobile && navigation.drawerOpen && <button type="button" className="browser-scrim" aria-label="Dismiss navigation" tabIndex={-1} onClick={navigation.dismissDrawer} />}
-      <aside id="browser-navigation" ref={navigation.drawer} tabIndex={navigation.mobile ? -1 : undefined} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={navigation.compact && navigation.drawerOpen ? 'dialog' : undefined} aria-modal={navigation.compact && navigation.drawerOpen ? true : undefined} aria-owns={navigation.compact && navigation.drawerOpen ? ARCHIVE_FOOTER_ID : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
+      <aside id="browser-navigation" ref={navigation.drawer} tabIndex={navigation.mobile ? -1 : undefined} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={navigation.compact && navigation.drawerOpen ? 'dialog' : undefined} aria-modal={navigation.compact && navigation.drawerOpen ? true : undefined} aria-owns={navigation.compact && navigation.drawerOpen ? ARCHIVE_TOASTS_ID : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
         <BrowserNavigationTabs navigation={navigation} actions={tab !== 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} /> : undefined} />
         <div className="browser-navigation-body" data-profile-layout={presentationMode ? 'combined' : 'separate'} role="tabpanel" aria-label={tab}>
           <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}><BrowserSidebarNavigation settings={tab === 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} row /> : null}><BrowserSessionsSurface /></BrowserSidebarNavigation></BrowserSessionsPane>
@@ -93,7 +93,7 @@ function BrowserLayout() {
         <div className="browser-status"><BrowserStatusSurface /></div>
       </main>
       <BrowserToolModal />
+      <BrowserArchiveToasts ref={archiveToasts} />
     </div>
-    <BrowserArchiveToasts ref={archiveFooter} />
   </div>
 }

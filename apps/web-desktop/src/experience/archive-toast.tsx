@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type Ref } from 'react'
 import { Codicon } from '../upstream/browser-api'
 import './archive-toast.css'
 
-export const ARCHIVE_FOOTER_ID = 'browser-archive-footer'
+export const ARCHIVE_TOASTS_ID = 'browser-archive-toasts'
 
 type ArchiveNotice = { id: number; undo: () => Promise<void> }
 const $archives = atom<ArchiveNotice[]>([])
@@ -21,7 +21,7 @@ function ArchiveToast({ notice }: { notice: ArchiveNotice }) {
   const running = useRef(false)
   useEffect(() => {
     if (hovered || focused || pending || failed) return
-    const timer = window.setTimeout(() => dismiss(notice.id), 10_000)
+    const timer = window.setTimeout(() => dismiss(notice.id), 5_000)
     return () => window.clearTimeout(timer)
   }, [notice.id, hovered, focused, pending, failed])
   const undo = async () => {
@@ -44,7 +44,7 @@ function ArchiveToast({ notice }: { notice: ArchiveNotice }) {
 
 export function BrowserArchiveToasts({ ref }: { ref: Ref<HTMLDivElement> }) {
   const notices = useStore($archives)
-  return <div id={ARCHIVE_FOOTER_ID} ref={ref} className="browser-archive-toasts" role="region" aria-label="Archived chats">
+  return <div id={ARCHIVE_TOASTS_ID} ref={ref} className="browser-archive-toasts" role="region" aria-label="Archived chats">
     {notices.map(notice => <ArchiveToast key={notice.id} notice={notice} />)}
   </div>
 }
