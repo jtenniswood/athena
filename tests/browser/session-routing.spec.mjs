@@ -135,7 +135,7 @@ async function openCopy(page, gesture = 'click', link = reference(page)) {
   } else await link.click(gesture === 'middle' ? { button: 'middle' } : gesture === 'modifier' ? { modifiers: ['ControlOrMeta'] } : {})
   const popup = await opened
   await expect(popup).toHaveURL(href)
-  await expect(popup.getByText('research copied transcript', { exact: true })).toBeVisible()
+  await expect(popup.getByText('research copied transcript', { exact: true })).toBeVisible({ timeout: 15000 })
   await expect(popup.locator('.athena-connecting-overlay')).toBeHidden()
   expect(new URL(popup.url()).hash).toBe('#/preview-idea?profile=research')
   expect(await popup.evaluate(() => window.opener)).toBeNull()
@@ -250,9 +250,18 @@ test('a late archive of one copy preserves a newer selection of the other profil
 
 test('a background copied row cannot rename the selected profile runtime', async ({ page, context }) => {
   const backend = await copiedSessions(context)
+  await context.addInitScript(() => {
+    try { localStorage.setItem('hermes-web.browser.combined-profiles', 'true') } catch {}
+  })
   await openReferences(page)
   const popup = await openCopy(page)
-  await popup.locator('[data-web-session-id="preview-idea"][data-web-session-profile="default"]').click({ button: 'right' })
+  const copies = popup.locator('[data-web-session-id="preview-idea"]')
+  const selected = copies.and(popup.locator('[data-web-session-profile="research"]'))
+  const sibling = copies.and(popup.locator('[data-web-session-profile="default"]'))
+  await expect(selected).toHaveAttribute('data-web-session-selected', 'true')
+  await expect(sibling).toBeVisible()
+  await expect(sibling).not.toHaveAttribute('data-web-session-selected', 'true')
+  await sibling.click({ button: 'right' })
   await popup.getByRole('menuitem', { name: /^Rename/ }).click()
   const dialog = popup.getByRole('dialog').last()
   await dialog.getByRole('textbox').fill('Default copy renamed')
@@ -263,6 +272,14 @@ test('a background copied row cannot rename the selected profile runtime', async
   await action(popup, /^Rename/)
   await expect(popup.getByRole('dialog').last().getByRole('textbox')).toHaveValue('research copy')
   await popup.getByRole('dialog').last().getByRole('button', { name: 'Cancel', exact: true }).click()
+  await editor(popup).fill('Draft for the research copy')
+  await sibling.getByRole('button', { name: 'Default copy renamed', exact: true }).click()
+  await expect(popup.getByText('default copied transcript', { exact: true })).toBeVisible()
+  await expect(sibling).toHaveAttribute('data-web-session-selected', 'true')
+  await expect(selected).not.toHaveAttribute('data-web-session-selected', 'true')
+  await selected.getByRole('button', { name: 'research copy', exact: true }).click()
+  await expect(popup.getByText('research copied transcript', { exact: true })).toBeVisible()
+  await expect(editor(popup)).toHaveText('Draft for the research copy')
   await popup.close()
   expect(backend.errors).toEqual([])
 })

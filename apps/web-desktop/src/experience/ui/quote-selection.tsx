@@ -1,7 +1,6 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
-import { usePaneVisible } from '@/components/pane-shell/pane-visibility'
-import { useI18n } from '@/i18n'
+import { useI18n, usePaneVisible } from '../../upstream/browser-api'
 import './quote-selection.css'
 
 const messageText = '[data-slot="aui_assistant-message-content"], [data-slot="aui_user-message-text"]'

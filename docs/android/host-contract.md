@@ -53,6 +53,11 @@ loaded a composer can allow reconnect without claiming that an active draft is
 safe. A mounted old web client without request-ID support blocks the operation
 and asks the user to update rather than risking draft loss.
 
+A visible conversation sends a short-lived `webVisibility` acknowledgement with
+its session ID and optional profile. When both the acknowledgement and push
+include a profile, Android requires both fields to match before suppressing the
+alert. Older clients can still acknowledge by session ID.
+
 ## Connection lifecycle
 
 `ConnectionCoordinator` describes setup, loading, Access sign-in, Athena sign-in,

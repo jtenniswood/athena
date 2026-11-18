@@ -38,11 +38,15 @@ export function trackMediaRequests(): void {
   }
 }
 
-export function reloadReadiness(requirePersisted = true, purpose: ReloadPurpose = 'navigation'): { ready: boolean; reason?: string; drafts?: DraftSnapshot } {
-  if (activeWork === undefined) return { ready: false, reason: 'Wait for the app to finish connecting.' }
+type NavigationPurpose = ReloadPurpose | 'chat-selection'
+type NavigationReadiness = { ready: true; drafts: DraftSnapshot; reason?: undefined } | { ready: false; reason: string; drafts?: undefined }
+
+function inspectNavigation(purpose: NavigationPurpose, requirePersisted: boolean): NavigationReadiness {
+  const replacesDocument = purpose !== 'chat-selection'
+  if (replacesDocument && activeWork === undefined) return { ready: false, reason: 'Wait for the app to finish connecting.' }
   // A UI update reconnects to the same gateway and resumes its running turns.
   // Navigation may change credentials or servers, so it still waits for work.
-  if (activeWork > 0 && purpose !== 'ui-update') return { ready: false, reason: 'Wait for the active response to finish, or cancel it.' }
+  if (purpose === 'navigation' && activeWork) return { ready: false, reason: 'Wait for the active response to finish, or cancel it.' }
   if (operations > 0) return { ready: false, reason: 'Finish selecting or uploading files first.' }
   for (const track of tracks) if (track.readyState === 'ended') tracks.delete(track)
   if (pendingMedia || tracks.size) return { ready: false, reason: 'Finish recording or transcribing first.' }
@@ -50,6 +54,7 @@ export function reloadReadiness(requirePersisted = true, purpose: ReloadPurpose 
     const drafts = browserDraftSnapshot()
     if (!drafts) return { ready: false, reason: 'Wait for the app to finish connecting.' }
     if (drafts.blocked) return { ready: false, reason: drafts.reason || 'Finish editing the queued message or leave message history first.' }
+    if (!replacesDocument) return { ready: true, drafts }
     if (drafts.attachments) return { ready: false, reason: 'Send or remove unsent attachments before reloading.' }
     if (!requirePersisted) return { ready: true, drafts }
     const stored = JSON.parse(window.localStorage.getItem(drafts.storageKey) || '{}')
@@ -58,6 +63,10 @@ export function reloadReadiness(requirePersisted = true, purpose: ReloadPurpose 
     }
     return { ready: true, drafts }
   } catch { return { ready: false, reason: 'Browser storage is unavailable. Copy your draft before reloading.' } }
+}
+
+export function reloadReadiness(requirePersisted = true, purpose: ReloadPurpose = 'navigation'): NavigationReadiness {
+  return inspectNavigation(purpose, requirePersisted)
 }
 
 export function assertSafeReload(): void {
@@ -85,11 +94,6 @@ export async function assertSafeConnectionChange(): Promise<void> {
 
 /** Chat selection preserves attachment drafts, but cannot interrupt media or queue edits. */
 export function chatSelectionReadiness(): { ready: boolean; reason?: string } {
-  if (operations) return { ready: false, reason: 'Finish selecting or uploading files first.' }
-  for (const track of tracks) if (track.readyState === 'ended') tracks.delete(track)
-  if (pendingMedia || tracks.size) return { ready: false, reason: 'Finish recording or transcribing first.' }
-  const drafts = browserDraftSnapshot()
-  if (!drafts) return { ready: false, reason: 'Wait for Athena to finish connecting.' }
-  if (drafts.blocked) return { ready: false, reason: drafts.reason || 'Finish editing the queued message or leave message history first.' }
-  return { ready: true }
+  const state = inspectNavigation('chat-selection', false)
+  return state.ready ? { ready: true } : state
 }
