@@ -223,7 +223,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
       try {
         recovery.live = await scanRecentReplies({
           target, request, since, signal: shutdown.signal, profile: grant.profile,
-          headers: { 'x-hermes-session-token': grant.token },
+          headers: { Authorization: 'Bearer ' + grant.token },
           shouldInspect: row => recovery.inspected.get(inspectionKey(row)) !== inspectionRevision(row),
           onInspected: row => rememberInspection(recovery.inspected, row),
           onReply(row, reply) {

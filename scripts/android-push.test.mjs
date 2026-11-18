@@ -40,7 +40,7 @@ async function fixture(t, options = {}) {
     fetch: async (url, { headers }) => {
       const address = new URL(url)
       const authorized = headers.cookie === 'hermes_session_at=A' || headers['x-hermes-session-token'] === 'private-existing-token'
-      const configuredRecovery = options.recovery?.grants.some(grant => grant.session_token === headers['x-hermes-session-token'])
+      const configuredRecovery = options.recovery?.grants.some(grant => headers.Authorization === 'Bearer ' + grant.session_token)
       const canReadHistory = configuredRecovery ? options.recovery.authorize(address, headers) : authorized && !options.authExpired?.()
       if (address.pathname === '/api/profiles/sessions') {
         if (!canReadHistory) return new Response(null, { status: 401 })
@@ -536,7 +536,7 @@ test('configured recovery uses released profile history after restart without a 
     recovery: {
       grants: [grant],
       authorize(url, headers) {
-        assert.deepEqual(headers, { 'x-hermes-session-token': grant.session_token })
+        assert.deepEqual(headers, { Authorization: 'Bearer ' + grant.session_token })
         assert.equal(url.searchParams.get('profile'), 'research')
         requests.push(url.pathname)
         return !denied
