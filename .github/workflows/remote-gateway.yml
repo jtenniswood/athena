@@ -73,6 +73,21 @@ jobs:
           done
           docker logs athena-review-ui
           exit 1
+      - name: Verify the running UI build identity
+        run: |
+          curl --fail --silent --show-error http://localhost:4190/build-info.json -o test-results/remote/build-info.json
+          node --input-type=module <<'JS'
+          import { readFileSync } from 'node:fs'
+          import { readOfficialRelease } from './scripts/official-release.mjs'
+          import { verifyBuildInfo } from './scripts/record-image-publication.mjs'
+
+          const served = JSON.parse(readFileSync('test-results/remote/build-info.json', 'utf8'))
+          const release = readOfficialRelease()
+          verifyBuildInfo({
+            wrapperRevision: process.env.GITHUB_SHA, rendererRevision: release.revision,
+            hermesRelease: release.version, channel: 'review'
+          }, served)
+          JS
       - name: Check real gateway chat, drafts, uploads and preferences
         env:
           ATHENA_GATEWAY_TEST_URL: http://localhost:4190

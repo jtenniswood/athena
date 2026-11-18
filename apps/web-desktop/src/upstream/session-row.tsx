@@ -26,7 +26,7 @@ import { $sidebarRowMeta } from '@/store/layout'
 import { normalizeProfileKey } from '@/store/profile'
 import { $projects } from '@/store/projects'
 import { $pullRequestsByBranch, sessionPrKey } from '@/store/pull-requests'
-import { sessionPinId } from '@/store/session'
+import { $sessionResumeRequest, sessionPinId } from '@/store/session'
 import { $sessionDotStateById, hasLiveTurn, showsRunningArc } from '@/store/session-dot-state'
 import { $sessionListDensity } from '@/store/session-list-density'
 import { $openStoredSessionIds } from '@/store/session-states'
@@ -57,7 +57,7 @@ interface SidebarSessionRowProps extends ComponentProps<'div'> {
 }
 
 /** Project live engine metadata; mutation callbacks remain captured by the caller. */
-function SidebarSessionRowAdapter({ session, branchStem, isPinned, isSelected, unread, onArchive, onBranch, onDelete, onPin,
+function SidebarSessionRowAdapter({ session, branchStem, isPinned, isSelected: selectedById, unread, onArchive, onBranch, onDelete, onPin,
   onToggleUnread, onResume, reorderable = false, dragging = false, dragHandleProps, showProfile = false, card = false, ...props }: SidebarSessionRowProps) {
   const { t } = useI18n(), r = t.sidebar.row
   const title = sessionTitle(session)
@@ -71,7 +71,13 @@ function SidebarSessionRowAdapter({ session, branchStem, isPinned, isSelected, u
   const absolute = formatMessageTimestamp(date, t.assistant.thread)
   const prKey = sessionPrKey(session)
   const pr = useStoreSelector($pullRequestsByBranch, values => rowMeta.includes('pr') && prKey ? values[prKey] : undefined)
-  const openElsewhere = useStoreSelector($openStoredSessionIds, open => !isSelected && open.has(session.id))
+  const isSelected = useStoreSelector($sessionResumeRequest, resume => {
+    if (!selectedById) return false
+    const owner = resume?.sessionId === session.id ? resume.ownerRoute : undefined
+    return !owner || (normalizeProfileKey(session.profile) === owner.profile &&
+      (!session.connection_id || session.connection_id === owner.connectionId))
+  })
+  const openElsewhere = useStoreSelector($openStoredSessionIds, open => !selectedById && open.has(session.id))
   const dotState = useStoreSelector($sessionDotStateById, states => states[session.id] ?? 'idle')
   const context = useStoreSelector($projects, projects => card ? sessionProjectLabel(session, projects) ?? (pathLeaf(session.cwd) || t.sidebar.projects.home) : null)
   const progress = useStoreSelector($todoProgressBySession, values => card ? values[session.id] : undefined)

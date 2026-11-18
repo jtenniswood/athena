@@ -8,12 +8,12 @@ import { createGatewayCompatibility } from './gateway-compatibility.mjs'
 import { createOpenCodeGoUsageHandler } from './opencode-go-usage.mjs'
 
 /** Identical route owners and lifecycle in Vite, preview and the container. */
-export function createAthenaServices({ target, identityUrl = target, directory, home, openCodeGoApiKey, fetch, now, sender = createFirebaseSender(), browserSender = createBrowserPushSender(directory) }) {
+export function createAthenaServices({ target, identityUrl = target, directory, home, replyFeedFile, openCodeGoApiKey, fetch, now, sender = createFirebaseSender(), browserSender = createBrowserPushSender(directory) }) {
   const plugins = createPluginAssets({ home })
   const preferences = createPreferencesHandler({ target, identityUrl, directory, fetch })
   const androidAuth = createAndroidAuthHandler({ target, fetch, now })
   const gateway = createGatewayCompatibility({ target, now, fetch })
-  const push = createAndroidPush({ target, identityUrl, directory, fetch, now, sender, browserSender, consumeTokenTicket: gateway.consumeTokenTicket })
+  const push = createAndroidPush({ target, identityUrl, directory, fetch, now, sender, browserSender, replyFeedFile, consumeTokenTicket: gateway.consumeTokenTicket })
   const openCodeGoUsage = createOpenCodeGoUsageHandler({ target, apiKey: openCodeGoApiKey, directory, fetch, now })
   let closed = false
   const attached = new WeakSet()

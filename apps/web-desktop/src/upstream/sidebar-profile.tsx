@@ -17,8 +17,8 @@ import { useI18n } from '@/i18n'
 import { $sidebarGrouping, $sidebarRowMeta } from '@/store/layout'
 import { $newProjectDropPlacement } from '@/store/projects'
 import { BrowserProfileGroup, BrowserProfileNesting } from '../experience/sidebar-profile'
-import { BrowserHideProfileItem } from '../experience/profile-list-visibility'
-import { useBrowserProfileSection } from './profile-section'
+import { BrowserHideProfileItem, useHiddenProfileGroups } from '../experience/profile-list-visibility'
+import { useBrowserProfileGrouping, useBrowserProfileSection } from './profile-section'
 import { openBrowserProfileProjectCreate } from './project-create'
 
 export function useBrowserSidebarFigures(totals?: { tokens: number; costUsd: number }) {
@@ -123,4 +123,17 @@ export function BrowserProfileGroupControllerSurface({ model }: { model: Profile
       icon: group.profile ? browserProfile?.picture ?? <ProfileGlyph className="size-full" color={group.color ?? null} isDefault={group.profile === 'default'} name={group.profile} /> : <Codicon name="remote" /> }}>
     {model.children}{model.contribution}{model.open && model.renderRows(sessions)}
   </BrowserProfileGroup>
+}
+
+
+export const includeBrowserProfileHeader = (id: string) => id !== 'hermes-bots:screen-portal'
+
+export function useBrowserProfileGroupPresentation() {
+  return {
+    flatten: useBrowserProfileGrouping(),
+    hiddenProfiles: useHiddenProfileGroups(),
+    filterHeaderContribution: includeBrowserProfileHeader,
+    Groups: BrowserProfileGroupsControllerSurface,
+    Group: BrowserProfileGroupControllerSurface
+  }
 }

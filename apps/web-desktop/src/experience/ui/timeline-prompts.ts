@@ -3,7 +3,7 @@ import {
   EARLIER_TIMELINE_ID,
   type TimelineEntry,
   type TimelineSourceMessage
-} from '@/components/assistant-ui/thread/timeline-data'
+} from '../../upstream/browser-api'
 
 const MAX_LANDMARKS = 16
 

@@ -24,7 +24,7 @@ class NativeNotificationsTest {
             .put("chatTitle", "Weekend plans").put("focusProfile", "research & writing")
         assertTrue(notifications.show("https://athena.example", payload))
         val manager = app.getSystemService(NotificationManager::class.java)
-        val notification = shadowOf(manager).getNotification("reply-1", 0)
+        val notification = shadowOf(manager).allNotifications.single()
         assertEquals("Weekend plans", notification.extras.getString(Notification.EXTRA_TITLE))
         assertEquals("Ready", notification.extras.getString(Notification.EXTRA_TEXT))
         assertEquals("https://athena.example/#/chat%2Fid?profile=research%20%26%20writing", shadowOf(notification.contentIntent).savedIntent.dataString)
@@ -72,6 +72,27 @@ class NativeNotificationsTest {
         assertTrue(notifications.show(origin, payload))
         payload.remove("chatAliases")
         payload.put("eventId", "push-2")
+        assertTrue(notifications.show(origin, payload))
+        assertTrue(shadowOf(manager).allNotifications.isEmpty())
+    }
+
+    @Test fun identicalChatIdsInDifferentProfilesKeepSeparateAlertsAndReceipts() {
+        val origin = "https://athena.example"
+        val manager = app.getSystemService(NotificationManager::class.java)
+        val notifications = NativeNotifications(app)
+        val payload = JSONObject().put("kind", "turnDone").put("focusSessionId", "shared")
+            .put("chatAliases", JSONArray(listOf("root"))).put("tag", "android:shared")
+        assertTrue(notifications.show(origin, payload.put("focusProfile", "research")))
+        assertTrue(notifications.show(origin, payload.put("focusProfile", "writing")))
+        val destinations = shadowOf(manager).allNotifications.map {
+            shadowOf(it.contentIntent).savedIntent.dataString
+        }.toSet()
+        assertEquals(setOf(
+            "$origin/#/shared?profile=research", "$origin/#/shared?profile=writing"
+        ), destinations)
+
+        manager.cancelAll()
+        payload.put("focusProfile", "research").put("focusSessionId", "root").remove("chatAliases")
         assertTrue(notifications.show(origin, payload))
         assertTrue(shadowOf(manager).allNotifications.isEmpty())
     }

@@ -16,6 +16,8 @@ export { avatarColor, botAppearance, BotFace } from '@/plugins/hermes-bots/avata
 export { DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from '@/components/ui/dropdown-menu'
 export { Brain, Power, ShieldLock } from '@/lib/icons'
 export { useI18n } from '@/i18n'
+export { usePaneVisible } from '@/components/pane-shell/pane-visibility'
+export { deriveTimelineEntries, EARLIER_TIMELINE_ID, type TimelineEntry, type TimelineSourceMessage } from '@/components/assistant-ui/thread/timeline-data'
 export { registerAppLocale, type Translations } from '@/i18n'
 export { notifyError } from '@/store/notifications'
 export { botSourceStatus } from '@/plugins/hermes-bots/data'

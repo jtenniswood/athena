@@ -39,13 +39,15 @@ function registration(network = { pause: async () => true, resume() {} }) {
   const load = file => {
     const source = readFileSync(new URL(`../apps/web-desktop/src/${file}`, import.meta.url), 'utf8').replaceAll('import.meta.env.DEV', 'false')
     context.exports = {}
-    vm.runInContext(ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText, context)
+    const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText
+    vm.runInContext(`(function (exports, require) { ${compiled}\n})(exports, require)`, context)
     return context.exports
   }
   context.require = name => {
     if (name === './pending-work') return { flushPendingBrowserWork: async () => ({ ready: true }) }
     if (name === './draft-safety') return draftSafety
     if (name === './update-network') return { installUpdateNetworkBarrier: () => network }
+    if (name === './reload-safety') return safety
     return context.exports
   }
   const safety = load('platform/reload-safety.ts')

@@ -5,7 +5,7 @@ import { notificationChatTitle, notificationSnippet } from '../../server/android
 import { $hapticsMuted } from '@/store/haptics'
 import { $nativeNotifyPrefs } from '@/store/native-notifications'
 import { $cronSessions, $messagingSessions, $sessions, $unreadFinishedSessionIds, sessionMatchesStoredId, sessionPinId } from '@/store/session'
-import { androidVisibleSession, showAndroidNotification } from '../platform/android'
+import { androidVisibleConversation, showAndroidNotification } from '../platform/android'
 import { WEB_CONNECTION_ID } from '../platform/connection'
 
 /** Watch the same unread state as the sidebar, including updates from outside this WebView's chat socket. */
@@ -14,6 +14,12 @@ export function installAndroidUnreadNotifications(): () => void {
   const sources = [$sessions, $cronSessions, $messagingSessions]
   const rows = () => sources.flatMap(source => source.get())
   const key = (row: ReturnType<typeof rows>[number]) => JSON.stringify([row.connection_id || WEB_CONNECTION_ID, row.profile || 'default', sessionPinId(row)])
+  const matchesVisible = (row: ReturnType<typeof rows>[number]) => {
+    if (document.visibilityState !== 'visible' || !document.hasFocus()) return false
+    const visible = androidVisibleConversation()
+    return visible && (!visible.profile || visible.profile === (row.profile || 'default')) &&
+      sessionMatchesStoredId(row, visible.sessionId)
+  }
   const observed = new Map<string, { id: string; messages: number; activity: number }>()
   const lastAlertedReply = new Map<string, string>()
   const pending = new Map<string, { expires: number; reading: boolean }>()
@@ -32,13 +38,12 @@ export function installAndroidUnreadNotifications(): () => void {
     const finished = new Set($unreadFinishedSessionIds.get())
     const current = new Map(rows().map(row => [key(row), row]))
     const prefs = $nativeNotifyPrefs.get()
-    const visible = document.visibilityState === 'visible' && document.hasFocus() ? androidVisibleSession() : null
 
     const enabled = prefs.enabled && prefs.kinds.turnDone
     if (!enabled) pending.clear()
     if (enabled) {
       for (const [owner, row] of current) {
-        if (row.archived || (visible && sessionMatchesStoredId(row, visible))) continue
+        if (row.archived || matchesVisible(row)) continue
         const previous = observed.get(owner)
         const liveCompletion = finished.has(row.id) && !previousFinished.has(row.id)
         const newMessages = previous?.id === row.id
@@ -53,7 +58,7 @@ export function installAndroidUnreadNotifications(): () => void {
     for (const [owner, alert] of pending) {
       const row = current.get(owner)
       if (alert.expires <= Date.now() || row?.archived ||
-          (row && ((visible && sessionMatchesStoredId(row, visible)) || (!row.unread && !finished.has(row.id))))) {
+          (row && (matchesVisible(row) || (!row.unread && !finished.has(row.id))))) {
         pending.delete(owner)
         continue
       }
@@ -72,10 +77,9 @@ export function installAndroidUnreadNotifications(): () => void {
         }
         pending.delete(owner)
         const settings = $nativeNotifyPrefs.get()
-        const visibleNow = document.visibilityState === 'visible' && document.hasFocus() ? androidVisibleSession() : null
         const title = notificationChatTitle(latest.title)
         if (!settings.enabled || !settings.kinds.turnDone || !title || latest.archived ||
-            (visibleNow && sessionMatchesStoredId(latest, visibleNow)) ||
+            matchesVisible(latest) ||
             (!latest.unread && !$unreadFinishedSessionIds.get().includes(latest.id))) return
         if (page.pagination?.order !== 'latest' && row.message_count > page.messages.length) return
         const message = page.messages.at(-1)

@@ -1,6 +1,6 @@
 import type { RefObject } from 'react'
 import type { useSensors } from '@dnd-kit/core'
-import type { ChatSidebarProps } from '@/app/chat/sidebar'
+import type { ChatSidebar } from '@/app/chat/sidebar'
 import type { SidebarNavItem } from '@/app/types'
 import type { AppView } from '@/app/routes'
 import type { DesktopConnectionsRegistry, HermesGitWorktree } from '@/global'
@@ -34,9 +34,12 @@ import { $newProjectDropPlacement, openProjectCreate } from '@/store/projects'
 import { markAllSessionsRead } from '@/store/session'
 import { ackAllSessionsRead } from '@/store/session-unread'
 import { BrowserSidebar, type BrowserSidebarModel } from '../experience/sidebar'
+import { useBrowserSidebarChannels } from '../experience/sidebar-sections'
+import { useBrowserProfileGroupProjection } from './profile-groups'
+import { useBrowserProfileGrouping } from './profile-section'
 
 interface MessagingSection { sourceId: string; label: string; sessions: SessionInfo[]; total: number; hasMore: boolean }
-interface SidebarController extends Pick<ChatSidebarProps, 'onNavigate' | 'onResumeSession' | 'onDeleteSession' | 'onArchiveSession' | 'onBranchSession' | 'onNewSessionInWorkspace' | 'onNewSessionSplit' | 'onRetrySessions' | 'onManageCronJob' | 'onTriggerCronJob'> {
+interface SidebarController extends Pick<Parameters<typeof ChatSidebar>[0], 'onNavigate' | 'onResumeSession' | 'onDeleteSession' | 'onArchiveSession' | 'onBranchSession' | 'onNewSessionInWorkspace' | 'onNewSessionSplit' | 'onRetrySessions' | 'onManageCronJob' | 'onTriggerCronJob'> {
   labels: Translations['sidebar']
   navItems: SidebarNavItem[]
   pathname: string
@@ -118,6 +121,7 @@ const headerButton = 'text-(--ui-text-tertiary) opacity-0 hover:bg-(--ui-control
 
 /** Only view composition crosses this boundary; the upstream controller owns every query and cache. */
 export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarController }) {
+  useBrowserSidebarChannels()
   const s = c.labels
   const shared = {
     activeSessionId: c.activeSidebarSessionId, onArchiveSession: c.onArchiveSession, onBranchSession: c.onBranchSession,
@@ -130,7 +134,8 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
     run: () => { if (item.keybindActionId) recordAction(item.keybindActionId, 'click'); c.onNavigate(item) }
   }))
   const model: BrowserSidebarModel = {
-    navigation, flipped: c.panesFlipped, showSections: c.showSessionSections,
+    navigation, flipped: c.panesFlipped,
+    showSections: c.showSessionSections || Boolean(c.displayAgentGroups?.length) || c.cronJobs.length > 0,
     search: { value: c.searchQuery, change: c.setSearchQuery, input: c.searchInputRef }, mode: c.sessionsMode,
     project: c.inProject ? c.enteredProjectId : undefined, notice: <SidebarStorageCorruptNotice />,
     empty: <SidebarBlankState onNewProject={openProjectCreate} />,
@@ -203,4 +208,15 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
         onOpenRun={c.onResumeSession} onToggle={() => setSidebarCronOpen(!c.cronOpen)} onTriggerJob={c.onTriggerCronJob} open={c.cronOpen} />}
     </>}
   </BrowserSidebar>
+}
+
+/** Adapt the upstream presentation context without depending on its private bindings. */
+export function useBrowserSidebarPresentation() {
+  const groupAcrossProfiles = useBrowserProfileGrouping()
+  const projectProfileGroups = useBrowserProfileGroupProjection()
+  return {
+    groupAcrossProfiles,
+    projectProfileGroups,
+    render: (model: SidebarController) => <BrowserSidebarControllerSurface model={model} />
+  }
 }

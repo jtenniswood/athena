@@ -566,16 +566,20 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "profile layout composes with content grouping and preserves the draft"
+      },
+      {
+        "file": "scripts/sidebar-controller.test.mjs",
+        "scenario": "a renderer with the sidebar presentation context keeps its controller body intact"
       }
     ],
-    "removal": "Remove when Hermes exposes the same sidebar controller through a public host contract.",
+    "removal": "Remove the private controller projection once the pinned Hermes release provides the sidebar presentation context.",
     "handlers": [
       "useBrowserSidebarController"
     ],
     "sourceHash": "851f2833257195fcf6a4020d5f6f606dbe565de213062de22e5ebcd981f6c0dc",
     "sourceRoot": "renderer",
     "inputHash": "851f2833257195fcf6a4020d5f6f606dbe565de213062de22e5ebcd981f6c0dc",
-    "outputHash": "86c1bfa43d253c4cfbdb4b479cc28bff229697d733a5a4c0cd184645b3a549b8"
+    "outputHash": "25303eee1bdb1430b371c57097a072ed2d664a29d6663402613ae16dca39e6ef"
   },
   {
     "name": "single-conversation-wiring",
@@ -2102,9 +2106,13 @@
       {
         "file": "tests/browser/sidebar-gestures.spec.mjs",
         "scenario": "cancelling a title reorder"
+      },
+      {
+        "file": "scripts/sidebar-controller.test.mjs",
+        "scenario": "the section presentation leaves Hermes row grouping and ordering code intact"
       }
     ],
-    "removal": "Remove when the renderer exposes the same section controller through a public host contract.",
+    "removal": "Remove the private section rewrites once the pinned Hermes release provides the section presentation interface.",
     "handlers": [
       "useBrowserSessionSection",
       "sessionReorderingSection"
@@ -2112,7 +2120,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "4ad9d7cafd540d92128f291c5d4a77051d91845db753a1b07bf19b348f39a691",
     "inputHash": "4ad9d7cafd540d92128f291c5d4a77051d91845db753a1b07bf19b348f39a691",
-    "outputHash": "7e326a2c6af8414ca50fefc0f6693d863ec7ddde883e75df610ff019dd5f6691"
+    "outputHash": "958994c2e3b38e6b130c4bf49f040530d1024e93958e2e5b3b5313ffe958566d"
   },
   {
     "name": "browser-cron-jobs-section-styling",
@@ -2147,7 +2155,7 @@
         "scenario": "scheduled tasks retain each endpoint profile from a Research chat"
       }
     ],
-    "removal": "Remove when a public renderer controller contract supplies the same job and live-run projections.",
+    "removal": "Remove the private cron view rewrites once the pinned Hermes release provides the cron sidebar presentation interface.",
     "handlers": [
       "useBrowserCronController"
     ],
@@ -2700,7 +2708,7 @@
         "scenario": "project groups show all sessions without clipping"
       }
     ],
-    "removal": "Remove when the renderer exports a public project controller with owner-scoped commands.",
+    "removal": "Remove the private project row rewrite once the pinned Hermes release provides its presentation interface.",
     "sourceRoot": "renderer",
     "sourceHash": "e2cba07ac9067e609b355d6c850597e7e06432210d6d583a7fa9ad97579ac268",
     "inputHash": "e2cba07ac9067e609b355d6c850597e7e06432210d6d583a7fa9ad97579ac268",
@@ -3223,7 +3231,7 @@
         "scenario": "profile layout composes with content grouping and preserves the draft"
       }
     ],
-    "removal": "Remove when upstream profile headers use the configured profile picture and support a single shared-gateway list.",
+    "removal": "Remove the private profile-group rewrite once the pinned Hermes release provides its presentation interface.",
     "handlers": [
       "useBrowserProfileControllers",
       "sessionReorderingGroups"
@@ -3558,7 +3566,7 @@
         "scenario": "worktree creation retains the captured lane owner and refuses creation after a failed branch switch"
       }
     ],
-    "removal": "Remove when a public renderer controller contract supplies the same worktree facts and commands.",
+    "removal": "Remove the private workspace group rewrite once the pinned Hermes release provides its presentation interface.",
     "handlers": [
       "useBrowserWorkspaceController"
     ],
@@ -3584,7 +3592,7 @@
         "scenario": "worktree creation retains the captured lane owner and refuses creation after a failed branch switch"
       }
     ],
-    "removal": "Remove when a public renderer controller contract supplies the same worktree facts and commands.",
+    "removal": "Remove the private workspace control rewrites once the pinned Hermes release provides the workspace chrome presentation interface.",
     "handlers": [
       "useBrowserWorkspacePresentation"
     ],
@@ -3610,7 +3618,7 @@
         "scenario": "worktree creation retains the captured lane owner and refuses creation after a failed branch switch"
       }
     ],
-    "removal": "Remove when a public renderer controller contract supplies the same worktree facts and commands.",
+    "removal": "Remove the private repository rewrite once the pinned Hermes release provides its presentation interface.",
     "handlers": [
       "useBrowserRepositoryController"
     ],

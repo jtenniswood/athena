@@ -35,6 +35,6 @@ export const browserEngine = Object.freeze({
   projects: { eligibleDrop: browserDropProjectId, move: moveBrowserSessionToProject, reportFailure: reportBrowserProjectMoveFailure },
   useEnvironment(conversation: BrowserConversationModel, visible: boolean) {
     useRendererMenuCompatibility()
-    useAndroidVisibleConversation(conversation.status === 'ready' ? conversation.sessionId : null, visible)
+    useAndroidVisibleConversation(conversation.status === 'ready' ? conversation.sessionId : null, conversation.profile, visible)
   }
 } satisfies BrowserEngine)
