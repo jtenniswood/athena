@@ -25,7 +25,7 @@
   "packageManager": "pnpm@12.21.0",
   "devDependencies": {
     "@playwright/test": "1.65.1",
-    "web-push": "3.6.7",
+    "web-push": "4.0.0",
     "ws": "8.23.0"
   }
 }
