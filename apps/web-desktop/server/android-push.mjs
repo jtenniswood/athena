@@ -5,7 +5,7 @@ import { notificationChatTitle, notificationSnippet } from './android-notificati
 import { WebSocket, WebSocketServer } from 'ws'
 import { accountIdentity, probeIdentity, requestOrigin } from './identity.mjs'
 import { browserSubscription } from './browser-push.mjs'
-import { readReplyFeedGrants, readReplyFeedPage } from './reply-completion-feed.mjs'
+import { readReplyRecoveryGrants } from './reply-recovery-grants.mjs'
 import { replyLifetimeMs, replyNotificationHeaders, scanRecentReplies } from './reply-notifications.mjs'
 
 const root = '/api/athena/android/'
@@ -43,13 +43,12 @@ function describeAlert(type, payload) {
 
 /** Retain the authenticated gateway transport while Android suspends its WebView.
  * This forwards Hermes's own RPC protocol and stores no conversation history. */
-export function createAndroidPush({ target, identityUrl = target, sender, fetch: request = globalThis.fetch, now = Date.now, directory, browserSender, consumeTokenTicket, replyFeedFile = process.env.ATHENA_REPLY_FEED_GRANTS_FILE }) {
+export function createAndroidPush({ target, identityUrl = target, sender, fetch: request = globalThis.fetch, now = Date.now, directory, browserSender, consumeTokenTicket, replyRecoveryFile = process.env.ATHENA_REPLY_RECOVERY_GRANTS_FILE }) {
   const store = createAndroidPushStore(directory), relays = new Set()
   const titleLookups = new Set(), shutdown = new AbortController()
   const watches = new Map()
   let closed = false, pumping, scanning
-  let feedOwners = new Map()
-  const liveFeeds = new Set()
+  const recoveryProfiles = new Map()
   const removeDevice = (state, key) => {
     state.devices.delete(key)
     for (const [id, event] of state.events) if (event.key === key) state.events.delete(id)
@@ -122,8 +121,11 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
     if (!response.ok) throw new Error('Sign in required')
     return { id: accountIdentity(identityUrl, await response.json()), cookies: response.headers.getSetCookie() }
   }
-  const feedCovers = (key, profile) => feedOwners.get(profile || 'default') === key.slice(0, 64)
-  const watchesReplies = key => watches.has(key) || [...liveFeeds].some(profile => feedCovers(key, profile))
+  const recoveryCovers = (key, profile) => {
+    const recovery = recoveryProfiles.get(profile)
+    return recovery?.live && key.startsWith(recovery.account + ':')
+  }
+  const watchesReplies = key => watches.has(key) || [...recoveryProfiles.keys()].some(profile => recoveryCovers(key, profile))
   const keyFor = (account, deviceId) => `${account}:${deviceId}`
   const unregister = key => {
     watches.delete(key)
@@ -170,69 +172,73 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
   }
   const androidReplyId = (key, bindingId, profile, sessionId) =>
     createHash('sha256').update(JSON.stringify([key, bindingId, profile || 'default', sessionId, 'reply'])).digest('hex')
-  async function scanReplyFeed() {
+  const inspectionKey = row => JSON.stringify([row.profile, row.id])
+  const inspectionRevision = row => JSON.stringify([row.message_count, row.last_active, row.last_read_at, row.end_reason])
+  const rememberInspection = (inspected, row) => {
+    if (inspected.size >= 1000) inspected.clear()
+    inspected.set(inspectionKey(row), inspectionRevision(row))
+  }
+  const enqueueRecoveredReply = (key, device, row, reply, showDetails) => {
+    const current = store.devices.get(key)
+    const aliases = Array.isArray(row._lineage_ids) ? row._lineage_ids : []
+    if (current?.subscription && current.activeUntil > now() &&
+        (!current.visibleProfile || current.visibleProfile === row.profile) &&
+        [row.id, row._lineage_root_id, ...aliases].includes(current.visibleSession)) return
+    const sessionId = row._lineage_root_id || row.id
+    const id = device.subscription
+      ? createHash('sha256').update(JSON.stringify([key, device.bindingId, row.profile, sessionId, reply.replyId])).digest('hex')
+      : androidReplyId(key, device.bindingId, row.profile, sessionId)
+    const alert = { kind: 'turnDone', title: 'Athena · Response ready',
+      body: showDetails ? reply.body : 'Your response is ready.' }
+    enqueue({ key, bindingId: device.bindingId, id, alert, sessionId, profile: row.profile,
+      chatTitle: showDetails ? reply.chatTitle : undefined, background: true, completedAt: reply.timestamp })
+  }
+  async function scanConfiguredRecovery() {
+    if (!replyRecoveryFile) return
     let grants
     try {
-      grants = await readReplyFeedGrants(replyFeedFile, identityUrl)
+      grants = await readReplyRecoveryGrants(replyRecoveryFile, identityUrl)
     } catch {
-      // Keep the last routing decision during a failed credential-file replacement.
+      // Retry a failed file replacement and let any signed-in watch take over.
+      for (const recovery of recoveryProfiles.values()) recovery.live = false
       return
     }
     if (closed) return
     const owners = new Map(grants.map(({ profile, account }) => [profile, account]))
-    for (const profile of liveFeeds) if (owners.get(profile) !== feedOwners.get(profile)) liveFeeds.delete(profile)
-    feedOwners = owners
-    const obsolete = [...store.replyCursors.keys()].filter(profile => !feedOwners.has(profile))
-    if (obsolete.length) store.update(state => {
-      for (const profile of obsolete) state.replyCursors.delete(profile)
-    })
-
+    for (const [profile, recovery] of recoveryProfiles) {
+      if (owners.get(profile) !== recovery.account) recoveryProfiles.delete(profile)
+    }
     for (const grant of grants) {
-      const eligible = (device, key) => key.startsWith(grant.account + ':') && device.enabled && device.kinds.turnDone &&
-        Number.isFinite(device.repliesSince) && now() - device.updated <= retentionMs &&
-        (device.subscription ? browserSender?.enabled : sender.enabled)
-      if (closed || ![...store.devices].some(([key, device]) => eligible(device, key))) continue
-      const saved = store.replyCursors.get(grant.profile)
-      let after = saved?.account === grant.account && Number.isSafeInteger(saved.sequence) && saved.sequence >= 0
-        ? saved.sequence : 0
+      if (closed) break
+      const eligible = [...store.devices].filter(([key, device]) => key.startsWith(grant.account + ':') &&
+        device.enabled && device.kinds.turnDone && Number.isFinite(device.repliesSince) &&
+        now() - device.updated <= retentionMs && (device.subscription ? browserSender?.enabled : sender.enabled))
+      if (!eligible.length) {
+        recoveryProfiles.delete(grant.profile)
+        continue
+      }
+      const recovery = recoveryProfiles.get(grant.profile) || { account: grant.account, live: false, inspected: new Map() }
+      recoveryProfiles.set(grant.profile, recovery)
+      const since = Math.max(now() - replyLifetimeMs, Math.min(...eligible.map(([, device]) => device.repliesSince)))
       try {
-        // Bound one pass so a busy profile cannot prevent the next profile from being polled.
-        for (let pageNumber = 0; pageNumber < 8 && !closed; pageNumber++) {
-          const page = await readReplyFeedPage({ target, grant, after, request, signal: shutdown.signal })
-          if (closed) return
-          liveFeeds.add(grant.profile)
-          for (const event of page.events) {
-            const completedAt = event.completed_at * 1000
-            const sessionId = event.conversation_id
-            for (const [key, device] of store.devices) {
-              if (!eligible(device, key) || completedAt < device.repliesSince) continue
-              if (device.subscription && device.activeUntil > now() &&
-                  (!device.visibleProfile || device.visibleProfile === grant.profile) &&
-                  [sessionId, event.session_id].includes(device.visibleSession)) continue
-              const id = device.subscription
-                ? createHash('sha256').update(JSON.stringify([key, device.bindingId, grant.profile, sessionId, event.sequence, completedAt])).digest('hex')
-                : androidReplyId(key, device.bindingId, grant.profile, sessionId)
-              enqueue({ key, bindingId: device.bindingId, id, sessionId, profile: grant.profile, background: true,
-                completedAt, alert: { kind: 'turnDone', title: 'Athena · Response ready', body: 'Your response is ready.' } })
+        recovery.live = await scanRecentReplies({
+          target, request, since, signal: shutdown.signal, profile: grant.profile,
+          headers: { 'x-hermes-session-token': grant.token },
+          shouldInspect: row => recovery.inspected.get(inspectionKey(row)) !== inspectionRevision(row),
+          onInspected: row => rememberInspection(recovery.inspected, row),
+          onReply(row, reply) {
+            for (const [key, device] of eligible) {
+              if (reply.timestamp >= device.repliesSince) enqueueRecoveredReply(key, device, row, reply, false)
             }
           }
-          // A failed queue write leaves the cursor behind, and replay uses the same delivery IDs.
-          if (page.next !== after) store.update(state => {
-            state.replyCursors.set(grant.profile, { account: grant.account, sequence: page.next })
-          })
-          after = page.next
-          if (!page.more) break
-        }
-      } catch {
-        liveFeeds.delete(grant.profile)
-        // A transient gateway or storage failure can be retried from the saved cursor.
-      }
+        })
+      } catch { recovery.live = false }
     }
   }
   function scanReplies() {
     if (closed || scanning) return scanning
     scanning = (async () => {
-      await scanReplyFeed()
+      await scanConfiguredRecovery()
       for (const [key, watch] of watches) {
         const device = store.devices.get(key)
         if (closed) break
@@ -242,31 +248,11 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
         try {
           const authenticated = await scanRecentReplies({
             target, headers, request, since, signal: shutdown.signal,
-            shouldInspect: row => {
-              if (watches.get(key) !== watch || feedCovers(key, row.profile)) return false
-              const owner = JSON.stringify([row.profile, row.id])
-              const revision = JSON.stringify([row.message_count, row.last_active, row.last_read_at, row.end_reason])
-              return watch.inspected.get(owner) !== revision
-            },
-            onInspected(row) {
-              if (watch.inspected.size >= 1000) watch.inspected.clear()
-              watch.inspected.set(JSON.stringify([row.profile, row.id]),
-                JSON.stringify([row.message_count, row.last_active, row.last_read_at, row.end_reason]))
-            },
+            shouldInspect: row => watches.get(key) === watch && !recoveryCovers(key, row.profile) &&
+              watch.inspected.get(inspectionKey(row)) !== inspectionRevision(row),
+            onInspected: row => rememberInspection(watch.inspected, row),
             onReply(row, reply) {
-              if (watches.get(key) !== watch) return
-              const registered = store.devices.get(key)
-              const aliases = Array.isArray(row._lineage_ids) ? row._lineage_ids : []
-              if (registered?.subscription && registered.activeUntil > now() &&
-                  (!registered.visibleProfile || registered.visibleProfile === row.profile) &&
-                  [row.id, row._lineage_root_id, ...aliases].includes(registered.visibleSession)) return
-              const sessionId = row._lineage_root_id || row.id
-              const id = device.subscription
-                ? createHash('sha256').update(JSON.stringify([key, watch.bindingId, row.profile, sessionId, reply.replyId])).digest('hex')
-                : androidReplyId(key, watch.bindingId, row.profile, sessionId)
-              const alert = { kind: 'turnDone', title: 'Athena · Response ready', body: reply.body }
-              enqueue({ key, bindingId: watch.bindingId, id, alert, sessionId, profile: row.profile,
-                chatTitle: reply.chatTitle, background: true, completedAt: reply.timestamp })
+              if (watches.get(key) === watch) enqueueRecoveredReply(key, device, row, reply, true)
             }
           })
           if (!authenticated && watches.get(key) === watch && watch.headers === headers) watches.delete(key)
@@ -293,7 +279,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
     }
   }, 15000)
   timer.unref()
-  if (replyFeedFile) queueMicrotask(() => {
+  if (replyRecoveryFile) queueMicrotask(() => {
     void scanReplies().catch(() => console.error('Athena reply scan failed'))
   })
 
@@ -572,7 +558,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
             return
           }
           const alert = describeAlert(event.type, payload)
-          if (!alert || !current.kinds[alert.kind] || (alert.kind === 'turnDone' && (!sessionId || feedCovers(key, profile)))) return
+          if (!alert || !current.kinds[alert.kind] || (alert.kind === 'turnDone' && !sessionId)) return
           const eventKey = promptId ?? payload.persisted_turn?.submission_id ?? event.seq ?? event.rpcId ?? Math.floor(now() / 1000)
           const id = alert.kind === 'turnDone'
             ? androidReplyId(key, current.bindingId, profile, sessionId)
