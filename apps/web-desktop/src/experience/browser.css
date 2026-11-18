@@ -312,6 +312,11 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
   z-index:10;
 }
 
+.browser-shell [data-approval-stack] [data-approval-activity] {
+  background:var(--ui-chat-surface-background);
+  border-radius:0.25rem;
+}
+
 /* The pinned approval is already in reach. */
 .browser-shell [data-slot="composer-bounds"]:has([data-approval-stack] [data-slot="card-stack"]:not([data-stack-count="0"])) > .thread-jump-button {
   display:none;

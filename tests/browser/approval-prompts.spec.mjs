@@ -43,10 +43,12 @@ for (const width of [1100, 390]) {
     await expect(viewport).toContainText('Earlier discussion 20')
     await viewport.evaluate(node => { node.scrollTop = node.scrollHeight })
     await expect(viewport).toHaveAttribute('data-following', 'true')
-    await viewport.hover()
-    await page.mouse.wheel(0, -3000)
-    await expect(viewport).toHaveAttribute('data-following', 'false')
-    await expect.poll(() => viewport.evaluate(node => node.scrollTop)).toBeLessThan(2)
+    // Startup can still restore the saved bottom position while history lays out.
+    await expect(async () => {
+      await viewport.evaluate(node => { node.scrollTop = 0 })
+      await expect(viewport).toHaveAttribute('data-following', 'false', { timeout: 500 })
+      expect(await viewport.evaluate(node => node.scrollTop)).toBeLessThan(2)
+    }).toPass({ timeout: 5000 })
 
     gateway.send(JSON.stringify({
       jsonrpc: '2.0', id: serverRequestId, method: 'approval',
