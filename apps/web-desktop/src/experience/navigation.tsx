@@ -10,12 +10,12 @@ import { $conversationOpenRequest, $preserveNavigationRequest } from './conversa
 import { clampNavigationWidth, DEFAULT_NAVIGATION_WIDTH, MAX_NAVIGATION_WIDTH, MIN_NAVIGATION_WIDTH, NAVIGATION_TAB_LABELS, NAVIGATION_TABS, readNavigationTab, readNavigationWidth, readVisibleNavigationTabs, type NavigationTab, writeBrowserPreference } from './browser-preferences'
 
 /** Browser navigation preferences and focus never own the conversation state. */
-export function useBrowserNavigation({ selectionKey, path, main, trigger, archiveFooter }: {
+export function useBrowserNavigation({ selectionKey, path, main, trigger, archiveToasts }: {
   selectionKey: string
   path: string
   main: RefObject<HTMLElement | null>
   trigger: RefObject<HTMLButtonElement | null>
-  archiveFooter: RefObject<HTMLDivElement | null>
+  archiveToasts: RefObject<HTMLDivElement | null>
 }) {
   const sections = useBrowserSidebarSections()
   const actionsTrigger = useRef<HTMLButtonElement>(null)
@@ -107,7 +107,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, archiv
       if (event.key !== 'Tab') return
       const items = [
         ...(drawer.current?.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input,select,[tabindex="0"]') ?? []),
-        ...(archiveFooter.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? []),
+        ...(archiveToasts.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? []),
       ].filter(el => Boolean(el.getClientRects().length))
       const first = items[0], last = items.at(-1)
       if (event.shiftKey && (document.activeElement === first || document.activeElement === drawer.current)) { event.preventDefault(); last?.focus() }
@@ -115,7 +115,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, archiv
     }
     document.addEventListener('keydown', keydown)
     return () => document.removeEventListener('keydown', keydown)
-  }, [archiveFooter, drawerOpen, mobile])
+  }, [archiveToasts, drawerOpen, mobile])
   useEffect(() => {
     if (searchFocusRequest) drawer.current?.querySelector<HTMLInputElement>('.browser-session-search input')?.focus({ preventScroll: true })
   }, [searchFocusRequest])
