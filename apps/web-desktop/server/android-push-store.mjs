@@ -5,16 +5,15 @@ import path from 'node:path'
 /** One server process owns this bounded store, alongside account preferences. Short-lived previews are served only to the registered installation. */
 export function createAndroidPushStore(directory) {
   const file = directory && path.join(directory, 'android-push.json')
-  let state = { devices: new Map(), events: new Map(), replyCursors: new Map() }
+  let state = { devices: new Map(), events: new Map() }
   if (file) {
     try {
       const raw = readFileSync(file, 'utf8')
       if (raw.length > 64 * 1024 * 1024) throw new Error('Android push store is too large')
       const saved = JSON.parse(raw)
       if (saved.version !== 1 || !Array.isArray(saved.devices) || !Array.isArray(saved.events) ||
-          saved.devices.length > 500 || saved.events.length > 5000 ||
-          (saved.replyCursors != null && (!Array.isArray(saved.replyCursors) || saved.replyCursors.length > 100))) throw new Error('Invalid Android push store')
-      state = { devices: new Map(saved.devices), events: new Map(saved.events), replyCursors: new Map(saved.replyCursors) }
+          saved.devices.length > 500 || saved.events.length > 5000) throw new Error('Invalid Android push store')
+      state = { devices: new Map(saved.devices), events: new Map(saved.events) }
     } catch (error) {
       if (error.code !== 'ENOENT') throw error
     }
@@ -26,7 +25,7 @@ export function createAndroidPushStore(directory) {
     let descriptor
     try {
       descriptor = openSync(temporary, 'wx', 0o600)
-      writeFileSync(descriptor, JSON.stringify({ version: 1, devices: [...next.devices], events: [...next.events], replyCursors: [...next.replyCursors] }))
+      writeFileSync(descriptor, JSON.stringify({ version: 1, devices: [...next.devices], events: [...next.events] }))
       fsyncSync(descriptor)
       closeSync(descriptor); descriptor = undefined
       renameSync(temporary, file)
@@ -40,11 +39,10 @@ export function createAndroidPushStore(directory) {
   return {
     get devices() { return state.devices },
     get events() { return state.events },
-    get replyCursors() { return state.replyCursors },
     update(change) {
       const next = structuredClone(state)
       const result = change(next)
-      if (next.devices.size > 500 || next.events.size > 5000 || next.replyCursors.size > 100) throw new Error('Android push storage limit reached')
+      if (next.devices.size > 500 || next.events.size > 5000) throw new Error('Android push storage limit reached')
       persist(next)
       state = next
       return result

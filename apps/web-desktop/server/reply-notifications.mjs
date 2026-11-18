@@ -28,7 +28,7 @@ function replyText(message) {
   return ''
 }
 
-export async function scanRecentReplies({ target, headers, request, since, signal, shouldInspect, onInspected, onReply }) {
+export async function scanRecentReplies({ target, headers, request, since, signal, profile: scope = 'all', shouldInspect, onInspected, onReply }) {
   const read = async path => {
     const response = await request(target + path, {
       headers, redirect: 'manual', signal: AbortSignal.any([signal, AbortSignal.timeout(6000)])
@@ -39,7 +39,7 @@ export async function scanRecentReplies({ target, headers, request, since, signa
   }
   const limit = 100
   for (let offset = 0; !signal.aborted; offset += limit) {
-    const query = new URLSearchParams({ profile: 'all', order: 'recent', limit: String(limit), min_messages: '1', offset: String(offset) })
+    const query = new URLSearchParams({ profile: scope, order: 'recent', limit: String(limit), min_messages: '1', offset: String(offset) })
     const list = await read('/api/profiles/sessions?' + query)
     if (!list) return false
     if (!Array.isArray(list.sessions)) throw new Error('Hermes returned an invalid chat list')
@@ -48,7 +48,7 @@ export async function scanRecentReplies({ target, headers, request, since, signa
     for (const row of list.sessions) {
       if (signal.aborted) break
       if (!row || typeof row.id !== 'string' || !row.id || typeof row.profile !== 'string' || !row.profile ||
-          row.archived || row.hidden || !(row.last_active * 1000 >= since) ||
+          (scope !== 'all' && row.profile !== scope) || row.archived || row.hidden || !(row.last_active * 1000 >= since) ||
           (row.source === 'cron' && row.end_reason !== 'cron_complete')) continue
       if (!shouldInspect(row)) continue
       const profile = new URLSearchParams({ profile: row.profile, order: 'latest', limit: '4', inline_images: 'false' })

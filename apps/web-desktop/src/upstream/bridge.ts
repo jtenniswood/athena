@@ -28,6 +28,8 @@ function nativeOwner(connectionId?: string | null): 'local' {
   return 'local'
 }
 
+const sharedStartupReadPaths = new Set(['/api/status', '/api/config', '/api/config/defaults', '/api/model/info'])
+
 export function createWebBridge(): Window['hermesDesktop'] {
   // Keep drafts and the recovery screen mounted; Athena offers sign-in in its settings.
   window.addEventListener('hermes:browser-reauth-required', event => event.preventDefault())
@@ -43,6 +45,20 @@ export function createWebBridge(): Window['hermesDesktop'] {
   ])) as typeof native
   window.__HERMES_WEB_BRIDGE__ = true
   const listeners = new Set<() => void | Promise<void>>()
+  const startupReads = new Map<string, Promise<unknown>>()
+  const readStartup = async <T>(request: HermesApiRequest): Promise<T> => {
+    const key = JSON.stringify([request.path, request.profile, request.connectionId,
+      request.timeoutMs, request.passive, request.priority])
+    let pending = startupReads.get(key)
+    if (!pending) {
+      pending = native.api(request).finally(() => {
+        if (startupReads.get(key) === pending) startupReads.delete(key)
+      })
+      startupReads.set(key, pending)
+    }
+    // Each caller receives its own JSON data, as it would from a separate fetch.
+    return structuredClone(await pending) as T
+  }
   const upload = async <T>(work: () => Promise<T>): Promise<T> => {
     const finish = beginOperation()
     try { return await work() } finally { finish() }
@@ -115,11 +131,19 @@ export function createWebBridge(): Window['hermesDesktop'] {
     saveClipboardImage: () => upload(() => native.saveClipboardImage()),
     selectPaths: async options => Promise.all((await pickBrowserFiles(options)).map(file => bridge.stageFileForAttach!(file))),
     api: async <T>(request: HermesApiRequest): Promise<T> => {
-      const finish = (request.method || 'GET').toUpperCase() === 'GET' ? () => {} : beginOperation()
+      const read = (request.method || 'GET').toUpperCase() === 'GET'
+      const finish = read ? () => {} : beginOperation()
+      if (!read) startupReads.clear()
       try {
-        const response = await native.api<T>(request)
+        const share = read && request.body === undefined && !request.upload &&
+          sharedStartupReadPaths.has(request.path.split('?')[0])
+        const response = share ? await readStartup<T>(request) : await native.api<T>(request)
         return tagRegistrySessionResponse(request.path, response, WEB_CONNECTION_ID) as T
-      } finally { finish() }
+      } finally {
+        // A read begun during a write must not be shared with a later caller.
+        if (!read) startupReads.clear()
+        finish()
+      }
     },
     // Keep synced preferences and draft ownership through the transport migration.
     profile: { ...native.profile, getDefault: browserDefaultProfile.getDefault,
@@ -132,6 +156,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
       if (!release) throw new Error('Wait for the current page transition to finish.')
       try {
         await assertSafeConnectionChange()
+        startupReads.clear()
         const next = persistConnection(input)
         const nextToken = resolveToken()
         if (nextToken !== nativeToken) {
@@ -153,8 +178,10 @@ export function createWebBridge(): Window['hermesDesktop'] {
     },
     onConnectionApplied: callback => { listeners.add(callback); return () => { listeners.delete(callback) } },
     oauthLoginConnectionConfig: async () => {
+      startupReads.clear()
       syncDevGatewayCookie()
-      return openOauthLoginPopup(baseUrl(), activeUpstreamOrigin(), browserSignInTarget().path)
+      try { return await openOauthLoginPopup(baseUrl(), activeUpstreamOrigin(), browserSignInTarget().path) }
+      finally { startupReads.clear() }
     },
     oauthLogoutConnectionConfig: async () => {
       await stopAndroidPush()
@@ -163,6 +190,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
         const response = await fetch(withGatewayRoute(`${baseUrl()}/auth/logout`, activeUpstreamOrigin()), { method: 'POST', credentials: 'same-origin', signal: AbortSignal.timeout(10_000) })
         if (!response.ok) throw new Error(`Sign-out failed (${response.status}). Try again.`)
         sessionStorage.removeItem(webappSessionKey(''))
+        startupReads.clear()
         return { ok: true, connected: false }
       } catch (error) { await resumeAndroidPush(); throw error }
     },
