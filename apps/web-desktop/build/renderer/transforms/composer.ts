@@ -239,14 +239,25 @@ export function useBrowserComposerPredictions(source: string, root: string): str
   const owner = JSON.stringify(path.join(root, 'src/upstream/composer-prediction'))
   const controls = '  const controls = ('
   const keyboard = '    // Undo/redo before anything else — we own the stack (see useComposerUndo),'
+  const undo = '  const { recordUndoPoint, redo, resetUndoHistory, undo, withUndoPoint } = useComposerUndo({\n    editorRef,\n    syncDraftFromEditor\n  })'
   return `import { useBrowserComposerPrediction } from ${owner}\nimport { useComposerVisible } from './visibility'\nimport { composerPlainText as browserComposerPlainText } from './rich-editor'\n` +
     replaceBrowserContract(source, [
+      [undo, `  const browserPredictionHistory = useRef<((text: string) => void) | undefined>(undefined)
+  const syncBrowserComposerHistory = useCallback(() => {
+    const text = syncDraftFromEditor()
+    browserPredictionHistory.current?.(text)
+    return text
+  }, [syncDraftFromEditor])
+
+${undo.replace('    syncDraftFromEditor\n', '    syncDraftFromEditor: syncBrowserComposerHistory\n')}`],
       [controls, `  const browserComposerVisible = useComposerVisible()
-  const { prediction: browserPrediction, dismiss: dismissBrowserPrediction } = useBrowserComposerPrediction(
+  const { prediction: browserPrediction, accept: markBrowserPredictionAccepted,
+    edit: editBrowserPrediction, restoreFromHistory: restoreBrowserPrediction } = useBrowserComposerPrediction(
     gateway, sessionId, profile,
     browserComposerVisible && !guidedChat && !inputDisabled && !voiceConversationActive && voiceStatus === 'idle',
     hasComposerPayload
   )
+  browserPredictionHistory.current = restoreBrowserPrediction
   const showBrowserPrediction = Boolean(browserPrediction && !busy && !awaitingInput && !blockingPrompt &&
     !compacting && !hasComposerPayload && !trigger && !queueEditRef.current)
 
@@ -256,8 +267,8 @@ export function useBrowserComposerPredictions(source: string, root: string): str
       draftRef.current || scope.attachments.$attachments.get().length) return false
 
     recordUndoPoint()
+    markBrowserPredictionAccepted()
     insertText(browserPrediction)
-    dismissBrowserPrediction()
     return true
   }
 
@@ -275,10 +286,10 @@ ${keyboard}`],
         data-browser-prediction={showBrowserPrediction ? '' : undefined}
         data-placeholder={showBrowserPrediction ? browserPrediction : placeholder}`],
       ['        onInput={handleEditorInput}', `        onInput={event => {
-          dismissBrowserPrediction()
+          editBrowserPrediction()
           handleEditorInput(event)
         }}`],
-      ['        onCompositionStart={event => {', '        onCompositionStart={event => {\n          dismissBrowserPrediction()']
+      ['        onCompositionStart={event => {', '        onCompositionStart={event => {\n          editBrowserPrediction()']
     ])
 }
 

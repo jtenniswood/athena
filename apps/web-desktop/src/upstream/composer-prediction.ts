@@ -22,7 +22,7 @@ function predictionInput(sessionId: string, reply: string): string | undefined {
   return JSON.stringify([...context, { role: 'assistant', text: reply.trim().slice(-4000) }])
 }
 
-/** A prediction belongs to one visible composer and is discarded as soon as its draft or turn changes. */
+/** Keep an accepted prediction available to the current draft's undo history. */
 export function useBrowserComposerPrediction(
   gateway: HermesGateway | null | undefined,
   sessionId: string | null | undefined,
@@ -31,22 +31,40 @@ export function useBrowserComposerPrediction(
   hasPayload: boolean
 ) {
   const [prediction, setPrediction] = useState('')
+  const accepted = useRef('')
   const pending = useRef<AbortController | null>(null)
   const dismiss = useCallback(() => {
     pending.current?.abort()
     pending.current = null
+    accepted.current = ''
     setPrediction('')
+  }, [])
+
+  const accept = () => {
+    accepted.current = prediction
+    setPrediction('')
+  }
+  const edit = () => {
+    if (!accepted.current || prediction) dismiss()
+  }
+  const restoreFromHistory = useCallback((text: string) => {
+    if (accepted.current) setPrediction(text ? '' : accepted.current)
   }, [])
 
   useLayoutEffect(() => {
     dismiss()
-    if (!gateway || !sessionId || !enabled || hasPayload) return
+  }, [dismiss, enabled, gateway, profile, sessionId])
+
+  useLayoutEffect(() => {
+    if (hasPayload && !accepted.current) dismiss()
+    if (!gateway || !sessionId || !enabled) return
     const off = gateway.onEvent(event => {
       if (event.replayed || event.session_id !== sessionId) return
       if (event.profile && profile && event.profile !== profile) return
       if (event.type === 'message.start') dismiss()
       if (event.type !== 'message.complete') return
       dismiss()
+      if (hasPayload) return
       const reply = (event as GatewayEvent<'message.complete'>).payload
       if (reply?.status !== 'complete' || typeof reply.text !== 'string' || !reply.text.trim()) return
       const input = predictionInput(sessionId, reply.text)
@@ -78,5 +96,5 @@ export function useBrowserComposerPrediction(
     }
   }, [dismiss, enabled, gateway, hasPayload, profile, sessionId])
 
-  return { prediction, dismiss }
+  return { prediction, accept, edit, restoreFromHistory }
 }
