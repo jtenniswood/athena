@@ -3713,7 +3713,7 @@
     "removal": "Remove when the renderer supports browser line breaks, transcript quote insertion, composer predictions, and explicit Send during touch keyboard composition.",
     "sourceHash": "ef66387bcbe1a3cda559eb1790d1e7ef0142b1221010bb2cb65b7086f96b359d",
     "inputHash": "6b7f1713f6d9badfc639d77684d7ba2544590d9fba50f3e4c2d3d9f1d2e99bf6",
-    "outputHash": "375dd4918712af56162b49e2bb61ee15e5310b7d3378f2d685c33ae84389f37f",
+    "outputHash": "501b17bce12a2e684dc66d192fb0f40635bf0c3c3543e20ad319054e7e404f24",
     "handlers": [
       "useBrowserComposerLineBreak",
       "useBrowserComposerCompositionSubmit",
