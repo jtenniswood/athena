@@ -129,7 +129,6 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
                 >
                   <Icon className="browser-settings-category-icon" />
                   <span>{group.label}</span>
-                  <Codicon name="chevron-right" className="browser-settings-category-chevron" />
                 </button>
                 {group.active && activeChildren.map(child => {
                   const ChildIcon = child.icon
