@@ -304,6 +304,24 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
    replies under browser UI scaling. Disable its paint clip along with pinning. */
 .browser-shell [data-slot="aui_thread-viewport"] [data-slot="aui_user-message-root"].sticky { position:static !important; }
 .browser-shell [data-slot="aui_thread-viewport"] [data-sticky-prompt-clip] { clip-path:none; }
+
+/* Keep the live approval above the composer when the reader is away from the latest turn. */
+.browser-shell [data-approval-stack]:has([data-slot="card-stack"]:not([data-stack-count="0"])) {
+  position:sticky;
+  bottom:calc(var(--composer-surface-measured-height) + 0.5rem);
+  z-index:10;
+}
+
+.browser-shell [data-approval-stack] [data-approval-activity] {
+  background:var(--ui-chat-surface-background);
+  border-radius:0.25rem;
+}
+
+/* The pinned approval is already in reach. */
+.browser-shell [data-slot="composer-bounds"]:has([data-approval-stack] [data-slot="card-stack"]:not([data-stack-count="0"])) > .thread-jump-button {
+  display:none;
+}
+
 .browser-upstream-workspace [data-tree-group] header[class*="h-(--titlebar-height)"] { display:none; }
 .browser-upstream-workspace [data-zone-tabstrip]:has([data-tree-tab="workspace"]) { display:none; }
 /* The mobile picker has no workspace tab marker. Hide its whole header so
