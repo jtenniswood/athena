@@ -326,6 +326,30 @@ body > [data-slot='fan-menu'] {
       font-size: var(--conversation-text-font-size);
     }
 
+    /* The empty editor shares a row with quick actions on phones. Keep the
+       full toolbar during focus and menu interactions, including portalled menus. */
+    [data-slot='composer-fade']:not(:focus-within, :has([aria-expanded='true'], [data-slot='composer-attachments']))
+      > div.grid.w-full:has([data-slot='composer-rich-input']:is(:empty, [data-empty])) {
+      grid-template-columns: auto minmax(0, 1fr) auto !important;
+      grid-template-areas: 'menu input controls' !important;
+      align-items: center;
+      column-gap: var(--composer-control-gap);
+
+      [data-slot='composer-rich-input'] {
+        min-height: var(--browser-composer-touch-size);
+        padding-block: max(.25rem, calc((var(--browser-composer-touch-size) - 1lh) / 2));
+
+        &::before {
+          display: block;
+          white-space: nowrap;
+        }
+      }
+
+      :is([data-browser-model-pill], [data-testid='reasoning-pill'], .browser-approval-control) {
+        display: none;
+      }
+    }
+
     button:has(> .codicon-add) {
       margin-inline-end: 0;
     }
