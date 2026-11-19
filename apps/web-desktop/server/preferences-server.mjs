@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, open, readFile, rename, unlink } from 'node:fs/promises'
 import path from 'node:path'
-import { MAX_PREFERENCE_BYTES, validatePreferenceValues } from '../../../scripts/preference-schema.mjs'
+import { MAX_PREFERENCE_BYTES, validatePreferenceValues, visibleModelsKey, knownModelsKey } from '../../../scripts/preference-schema.mjs'
 import { accountIdentity, probeIdentity, requestOrigin } from './identity.mjs'
 
 export const preferencesPath = '/api/athena/preferences'
@@ -26,7 +26,17 @@ export function createPreferenceStore(directory) {
       const previous = await read(accountId)
       const values = { ...previous.values }
       for (const [key, value] of Object.entries(changes)) {
+        if (seed && key === knownModelsKey) continue
         if (!seed || !Object.hasOwn(values, key)) values[key] = value
+      }
+      if (seed && Object.hasOwn(changes, knownModelsKey) && !Object.hasOwn(values, knownModelsKey) &&
+        Object.hasOwn(changes, visibleModelsKey) && changes[visibleModelsKey] === values[visibleModelsKey]) {
+        values[knownModelsKey] = changes[knownModelsKey]
+      }
+      // An older browser can still change the visible list on its own.
+      // Its new list cannot use the previous list's catalog snapshot.
+      if (!seed && values[visibleModelsKey] !== previous.values[visibleModelsKey] && !Object.hasOwn(changes, knownModelsKey)) {
+        delete values[knownModelsKey]
       }
       validatePreferenceValues(values)
       if (JSON.stringify(values) === JSON.stringify(previous.values)) return previous
