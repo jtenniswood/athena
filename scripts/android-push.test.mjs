@@ -257,6 +257,16 @@ test('a legacy streaming receipt targets the stored conversation and clears only
   await ended
   assert.equal(app.sent[1][1].kind, 'workingEnd')
   assert.equal(app.sent[1][1].runId, app.sent[0][1].runId)
+
+  await sendRunRpc(client, 3, 'prompt.submit')
+  const secondStarted = app.nextPush()
+  app.event('message.start', 4, { turn_id: 'failed-turn' })
+  await secondStarted
+  const secondEnded = app.nextPush()
+  app.event('session.info', 5, { running: false })
+  await secondEnded
+  assert.equal(app.sent[3][1].kind, 'workingEnd')
+  assert.equal(app.sent[3][1].runId, app.sent[2][1].runId)
 })
 
 test('Firebase briefly waits for the title and only the registered installation can fetch the preview from Athena', async t => {

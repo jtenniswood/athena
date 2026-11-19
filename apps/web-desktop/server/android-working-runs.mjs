@@ -51,6 +51,13 @@ export function androidWorkingRuns({ sessionFor, onStart, onEnd }) {
           remember(starts, key, event)
           start(key)
         }
+      } else if (!canonical && event.type === 'session.info' && event.payload?.running === false) {
+        // The legacy gateway publishes this when an error prevents a terminal frame.
+        const current = active.get(key)
+        if (current) {
+          active.delete(key)
+          onEnd(current.run)
+        }
       } else if (event.type === 'message.complete') {
         if (canonical && [...requests.values()].some(request => request.session === event.session_id)) {
           // The owner can publish both events before its prompt.submit receipt.
