@@ -7,9 +7,13 @@ import org.json.JSONObject
 /** FCM runs independently of the WebView, including after Android reclaims the app process. */
 class PushService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
+        val data = message.data
+        if (data["kind"] == "workingStart" || data["kind"] == "workingEnd") {
+            WorkingNotification.receive(this, data)
+            return
+        }
         val prefs = getSharedPreferences("athena", MODE_PRIVATE)
         val origin = prefs.getString("origin", "") ?: return
-        val data = message.data
         val binding = data["bindingId"] ?: return
         fun eligible() = !MainActivity.visibility.shouldSuppress(MainActivity.foreground, data["focusSessionId"], data["focusProfile"]) &&
             origin.isNotEmpty() && data["origin"] == origin && prefs.getString("origin", "") == origin &&

@@ -29,7 +29,10 @@ async function fixture(t, options = {}) {
     peer = socket
     socket.on('message', raw => {
       const frame = JSON.parse(raw)
-      socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, result: { session_id: 'runtime-1', stored_session_id: 'chat-1' } }))
+      const result = frame.method === 'prompt.submit'
+        ? options.promptResult?.(frame)
+        : { session_id: 'runtime-1', stored_session_id: 'chat-1' }
+      if (result) socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, result }))
     })
     socket.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: { type: 'gateway.ready' } }))
   })
@@ -108,8 +111,8 @@ async function fixture(t, options = {}) {
   const mint = async () => (await (await fetch(origin + '/api/athena/gateway/token-ticket?socket=gateway', {
     method: 'POST', headers: { Origin: origin, 'X-Hermes-Session-Token': 'private-existing-token' }
   })).json()).ticket
-  const event = (type, seq, payload, session = 'runtime-1') => peer.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: {
-    type, session_id: session, seq, payload
+  const event = (type, seq, payload, session = 'runtime-1', admissionId) => peer.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: {
+    type, session_id: session, seq, payload, ...(admissionId ? { admission_id: admissionId } : {})
   } }))
   const emit = (seq, status) => event('message.complete', seq, { status, text: 'Private chat content must not reach Firebase' })
   const preview = (eventId, changes = {}) => fetch(origin + '/api/athena/android/push/preview', {
@@ -172,6 +175,78 @@ test('response completion reaches Firebase after the Android WebView disconnects
   await final
   assert.equal(sent.length, 2, 'duplicates and interrupted responses produce no additional alerts')
   assert.equal(sent[1][1].kind, 'turnError')
+})
+
+test('a locally submitted run posts a Working update and clears it after the WebView disconnects', { timeout: 10000 }, async t => {
+  const app = await fixture(t, { promptResult: ({ id }) => ({
+    status: 'queued', admission_id: 'admission-' + id, ref: { session_id: 'saved-chat' }
+  }) })
+  assert.equal((await app.register({ workingUpdates: true, kinds: { turnDone: false, turnError: false } })).status, 200)
+  const client = app.connect()
+  await once(client, 'open')
+  for (const id of [1, 2]) {
+    const receipt = once(client, 'message')
+    client.send(JSON.stringify({ jsonrpc: '2.0', id, method: 'prompt.submit', params: { session_id: 'runtime-1', profile: 'research' } }))
+    assert.equal(JSON.parse((await receipt)[0]).id, id)
+  }
+  const observedStart = once(client, 'message')
+  app.event('message.start', 1, {}, 'runtime-1', 'unrelated-admission')
+  await observedStart
+  await app.drain()
+  assert.equal(app.sent.length, 0, 'observed work from other clients does not create a chip')
+  const started = app.nextPush()
+  app.event('message.start', 2, { text: 'Private prompt' }, 'runtime-1', 'admission-1')
+  await started
+  const [, start] = app.sent[0]
+  assert.equal(start.kind, 'workingStart')
+  assert.equal(start.focusSessionId, 'saved-chat')
+  assert.equal(start.focusProfile, 'research')
+  assert.ok(!JSON.stringify(start).includes('Private prompt'))
+
+  const queuedCancelled = once(client, 'message')
+  app.event('message.complete', 3, { status: 'cancelled' }, 'runtime-1', 'admission-2')
+  await queuedCancelled
+  await app.drain()
+  assert.equal(app.sent.length, 1, 'cancelling a queued turn leaves the running turn visible')
+  client.close()
+  await once(client, 'close')
+
+  const ended = app.nextPush()
+  app.event('message.complete', 4, { status: 'interrupted' }, 'runtime-1', 'admission-1')
+  await ended
+  const [, end] = app.sent[1]
+  assert.equal(end.kind, 'workingEnd')
+  assert.equal(end.runId, start.runId)
+  assert.equal(end.expiresAt, start.expiresAt)
+  assert.equal(end.bindingId, start.bindingId)
+  assert.equal(app.sent[1][2], 'HIGH')
+  assert.equal((await app.status()).lastDelivery, null, 'run updates are separate from reply delivery diagnostics')
+})
+
+test('a legacy streaming receipt targets the stored conversation and clears only its own turn', { timeout: 10000 }, async t => {
+  const app = await fixture(t, { promptResult: () => ({ status: 'streaming' }) })
+  assert.equal((await app.register({ workingUpdates: true, kinds: { turnDone: false, turnError: false } })).status, 200)
+  const client = app.connect()
+  await once(client, 'open')
+  for (const [id, method] of [[1, 'session.resume'], [2, 'prompt.submit']]) {
+    const receipt = once(client, 'message')
+    client.send(JSON.stringify({ jsonrpc: '2.0', id, method, params: { session_id: 'runtime-1', profile: 'research' } }))
+    assert.equal(JSON.parse((await receipt)[0]).id, id)
+  }
+  const started = app.nextPush()
+  app.event('message.start', 1, { turn_id: 'local-turn' })
+  await started
+  assert.equal(app.sent[0][1].focusSessionId, 'chat-1')
+  const prior = once(client, 'message')
+  app.event('message.complete', 2, { status: 'error', turn_id: 'other-turn' })
+  await prior
+  await app.drain()
+  assert.equal(app.sent.length, 1)
+  const ended = app.nextPush()
+  app.event('message.complete', 3, { status: 'error', turn_id: 'local-turn' })
+  await ended
+  assert.equal(app.sent[1][1].kind, 'workingEnd')
+  assert.equal(app.sent[1][1].runId, app.sent[0][1].runId)
 })
 
 test('Firebase briefly waits for the title and only the registered installation can fetch the preview from Athena', async t => {

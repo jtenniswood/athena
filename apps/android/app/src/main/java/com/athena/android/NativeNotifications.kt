@@ -16,6 +16,14 @@ class NativeNotifications(private val context: Context) {
         const val OPEN_APP_UPDATE = "com.athena.android.OPEN_APP_UPDATE"
         private const val UPDATE_TAG = "athena-app-update"
         private val receiptsLock = Any()
+
+        fun conversationIntent(context: Context, target: String): PendingIntent {
+            val intent = Intent(context, MainActivity::class.java)
+                .setAction("com.athena.android.OPEN_CONVERSATION")
+                .setData(android.net.Uri.parse(target))
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        }
     }
     private val manager = context.getSystemService(NotificationManager::class.java)
     private val notifiedChats = context.getSharedPreferences("notified-chats", Context.MODE_PRIVATE)
@@ -79,11 +87,7 @@ class NativeNotifications(private val context: Context) {
         val target = ServerAddress.conversationUrl(origin, sessionId, profile)
         val tag = if (profile.isNotEmpty() && chatKeys.isNotEmpty()) target
             else payload.optString("tag").take(256).ifBlank { "athena" }
-        val intent = Intent(context, MainActivity::class.java)
-            .setAction("com.athena.android.OPEN_CONVERSATION")
-            .setData(android.net.Uri.parse(target))
-            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        val pending = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val pending = conversationIntent(context, target)
         val title = (payload.opt("chatTitle") as? String).orEmpty().trim().ifBlank {
             if (kind == "turnDone") "Athena · Response ready" else payload.optString("title", "Athena")
         }
