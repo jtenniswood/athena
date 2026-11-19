@@ -338,9 +338,10 @@ push test through Firebase.
 
 On supported Android 16 and later devices, the **Working** status chip appears
 when you leave Athena during a Hermes run started from the app. Tap it to return
-to that conversation. The chip clears when the run finishes, fails, or is stopped.
-It uses the Firebase background delivery setup below and Android's Live Updates
-notification permission.
+to the conversation. If Android shows the notification first, tap that
+notification to open the conversation. The chip clears when the run finishes,
+fails, or is stopped. It uses the Firebase background delivery setup below and
+Android's Live Updates notification permission.
 
 Native alerts work without Firebase while the web app is running. In Android **App settings → Test notification**, send a local test alert to check notification permission and on-device display. This test does not contact Firebase or verify background push delivery. To receive
 reply, approval, input, error and system alerts after Android suspends or closes
