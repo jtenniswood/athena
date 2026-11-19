@@ -188,6 +188,64 @@ test('a completed reply suggests an editable follow-up that Tab accepts and Ente
   await expect(userMessages.last()).toContainText(edited)
 })
 
+test.describe('mobile composer', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+
+  test('keeps quick actions available and expands for editing and attachments', async ({ page }) => {
+    await openComposer(page, true)
+    const editor = composer(page)
+    const surface = page.locator('[data-slot="composer-surface"]:visible')
+    const add = surface.getByRole('button', { name: 'Add context', exact: true })
+    const model = surface.locator('[data-browser-model-pill]')
+    const approval = surface.locator('[data-browser-approval-control]')
+    const mic = surface.getByRole('button', { name: 'Voice dictation', exact: true })
+    const surfaceHeight = () => surface.evaluate(node => node.getBoundingClientRect().height)
+    const blurComposer = () => surface.evaluate(node => {
+      const focused = document.activeElement
+      if (focused instanceof HTMLElement && node.contains(focused)) focused.blur()
+    })
+
+    await expect(model).toBeHidden()
+    await expect(add).toBeVisible()
+    await expect(mic).toBeVisible()
+    const compactHeight = await surfaceHeight()
+
+    await editor.tap()
+    await expect(editor).toBeFocused()
+    await expect(model).toBeVisible()
+    await expect(approval).toBeVisible()
+    expect(await surfaceHeight()).toBeGreaterThan(compactHeight)
+    await model.tap()
+    await expect(page.getByRole('textbox', { name: 'Search models' })).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    await editor.fill('A draft worth keeping')
+    await editor.press('Shift+Enter')
+    await editor.pressSequentially('Second line')
+    await blurComposer()
+    await expect(model).toBeVisible()
+    await expect.poll(() => editor.innerText()).toBe('A draft worth keeping\nSecond line')
+
+    await editor.fill('')
+    await blurComposer()
+    await expect(model).toBeHidden()
+    await expect.poll(surfaceHeight).toBeCloseTo(compactHeight)
+
+    await add.tap()
+    const picker = page.waitForEvent('filechooser')
+    await page.getByRole('menuitem', { name: 'Files…', exact: true }).tap()
+    await (await picker).setFiles({
+      name: 'mobile-draft.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from('Keep the attachment visible')
+    })
+    await expect(surface.locator('[data-slot="composer-attachments"]')).toContainText('mobile-draft.txt')
+    await blurComposer()
+    await expect(model).toBeVisible()
+    await expect(surface.locator('[data-browser-send-action]')).toBeEnabled()
+  })
+})
+
 test.describe('touch composer predictions', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 
@@ -197,10 +255,16 @@ test.describe('touch composer predictions', () => {
     const accept = page.getByRole('button', { name: 'Accept suggested prompt' })
     const send = page.locator('[data-browser-send-action]:visible')
     const userMessages = page.locator('[data-slot="aui_user-message-root"]')
+    const editorHeight = () => editor.evaluate(node => node.getBoundingClientRect().height)
+    const compactHeight = await editorHeight()
+
     await editor.fill('Outline the launch checklist.')
     await send.tap()
+    await editor.evaluate(node => node.blur())
     await expect.poll(() => requests.length).toBe(1)
     requests[0].resolve(followup)
+    await expect(editor).toHaveAttribute('data-placeholder', followup)
+    await expect.poll(editorHeight).toBeCloseTo(compactHeight)
     await expect(accept).toBeVisible()
     await accept.tap()
     await expect(editor).toHaveText(followup)
