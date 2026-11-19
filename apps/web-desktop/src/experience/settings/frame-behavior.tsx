@@ -38,7 +38,7 @@ export function useSettingsFrame(variant: SettingsFrameVariant, activeIdentity: 
     if (!compact || !focus.current) return
     focus.current = false
     if (showingDetail) heading.current?.focus()
-    else navigation.current?.querySelector<HTMLButtonElement>('[aria-current="page"]')?.focus()
+    else navigation.current?.querySelector<HTMLButtonElement>('[data-settings-focus-target], [aria-current="page"]')?.focus()
   }, [compact, showingDetail, activeIdentity])
   return {
     compact, showingDetail, navigation, heading,
