@@ -6,13 +6,14 @@ test.beforeAll(async () => { application = await createBuiltApplication(); origi
 test.afterAll(async () => { await application?.close() })
 
 const composer = page => page.locator('[data-slot="composer-rich-input"]:visible').first()
-test.beforeEach(async ({ page, isMobile }) => {
+async function openComposer(page, isMobile = false) {
   await page.goto(`${origin}/#/preview-week`)
   if (isMobile) await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).tap()
   await expect(composer(page)).toBeVisible({ timeout: 30000 })
-})
+}
 
 test('composer line breaks preserve undo, draft persistence and ordinary submission', async ({ page }) => {
+  await openComposer(page)
   const editor = composer(page)
   await editor.fill('First line')
   await editor.press('End')
@@ -31,6 +32,7 @@ test('composer line breaks preserve undo, draft persistence and ordinary submiss
 })
 
 test('composer line breaks respect IME commits, selection and unrelated editors', async ({ page }) => {
+  await openComposer(page)
   const editor = composer(page)
   await editor.fill('Keep this text')
   const ime = await editor.evaluate(node => {
@@ -63,6 +65,7 @@ test('composer line breaks respect IME commits, selection and unrelated editors'
 })
 
 test('accepted sends position their real mounted renderer transcript', async ({ page }) => {
+  await openComposer(page)
   for (const [text, fresh] of [['Position this accepted prompt', false], ['First prompt in a fresh chat', true]]) {
     if (fresh) await page.getByRole('button', { name: 'New session in Hermes', exact: true }).click()
     const editor = composer(page)
@@ -90,6 +93,7 @@ test.describe('Android keyboard dictation', () => {
     ['tapping Send commits keyboard dictation after typing', 'Typed first. ']
   ]) {
     test(scenario, async ({ page }) => {
+      await openComposer(page, true)
       const editor = composer(page)
       const send = page.locator('[data-browser-send-action]:visible')
       if (initialText) {
@@ -118,4 +122,101 @@ test.describe('Android keyboard dictation', () => {
       await expect(editor).toBeEmpty()
     })
   }
+})
+
+const followup = 'Try a shorter version of the plan and verify it still covers Friday.'
+
+async function interceptPredictions(page, isMobile = false) {
+  const requests = []
+  await page.routeWebSocket(/\/api\/ws/, socket => {
+    const server = socket.connectToServer()
+    server.onMessage(message => socket.send(message))
+    socket.onMessage(message => {
+      const frame = JSON.parse(String(message))
+      if (frame.method === 'llm.oneshot' && frame.params.max_tokens === 160 &&
+          frame.params.instructions?.startsWith('Suggest one useful next prompt')) {
+        requests.push({
+          params: frame.params,
+          resolve: text => socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, result: { text } }))
+        })
+        return
+      }
+      server.send(message)
+    })
+  })
+  await openComposer(page, isMobile)
+  return requests
+}
+
+test('a completed reply suggests an editable follow-up that Tab accepts and Enter sends', async ({ page }) => {
+  const requests = await interceptPredictions(page)
+  const editor = composer(page)
+  const userMessages = page.locator('[data-slot="aui_user-message-root"]')
+  const previousPrompt = 'Rework the weekly plan around a Friday deadline.'
+  await editor.fill(previousPrompt)
+  await editor.press('Enter')
+  await expect.poll(() => requests.length).toBe(1)
+  const context = JSON.parse(requests[0].params.input)
+  expect(context).toContainEqual({ role: 'user', text: previousPrompt })
+  expect(context.at(-1)).toMatchObject({ role: 'assistant', text: expect.stringContaining('synthetic response') })
+  requests[0].resolve(followup)
+
+  await expect(editor).toHaveAttribute('data-placeholder', followup)
+  await expect(editor).toHaveText('')
+  await editor.press('Enter')
+  await expect(userMessages.last()).toContainText(previousPrompt)
+  await editor.press('Tab')
+  await expect(editor).toHaveText(followup)
+  await expect(userMessages.last()).toContainText(previousPrompt)
+  const edited = 'Verify that the shortened plan still covers Friday.'
+  await editor.fill(edited)
+  await editor.press('Enter')
+  await expect(userMessages.last()).toContainText(edited)
+})
+
+test.describe('touch composer predictions', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+
+  test('touch users can accept the suggestion or type their own message in the same composer', async ({ page }) => {
+    const requests = await interceptPredictions(page, true)
+    const editor = composer(page)
+    const accept = page.getByRole('button', { name: 'Accept suggested prompt' })
+    const send = page.locator('[data-browser-send-action]:visible')
+    const userMessages = page.locator('[data-slot="aui_user-message-root"]')
+    await editor.fill('Outline the launch checklist.')
+    await send.tap()
+    await expect.poll(() => requests.length).toBe(1)
+    requests[0].resolve(followup)
+    await expect(accept).toBeVisible()
+    await accept.tap()
+    await expect(editor).toHaveText(followup)
+    await expect(userMessages.last()).toContainText('Outline the launch checklist.')
+    await expect(send).toBeVisible()
+    await send.tap()
+    await expect(userMessages.last()).toContainText(followup)
+
+    await expect.poll(() => requests.length).toBe(2)
+    requests[1].resolve('Share the revised checklist with the team.')
+    await expect(accept).toBeVisible()
+    await editor.fill('Check the rollout date first.')
+    await expect(accept).toBeHidden()
+    await expect(send).toBeVisible()
+    await send.tap()
+    await expect(userMessages.last()).toContainText('Check the rollout date first.')
+  })
+})
+
+test('a prediction that arrives after typing starts leaves the draft alone', async ({ page }) => {
+  const requests = await interceptPredictions(page)
+  const editor = composer(page)
+  await editor.fill('Draft an agenda for Friday.')
+  await editor.press('Enter')
+  await expect.poll(() => requests.length).toBe(1)
+  await editor.fill('My own follow-up')
+  requests[0].resolve(followup)
+  await expect(editor).toHaveText('My own follow-up')
+  await editor.fill('')
+  await expect(editor).not.toHaveAttribute('data-placeholder', followup)
+  await editor.press('Tab')
+  await expect(editor).toHaveText('')
 })

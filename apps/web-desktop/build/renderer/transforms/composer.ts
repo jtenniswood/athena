@@ -234,3 +234,71 @@ export function useBrowserCodingActionHooks(source: string): string {
     ['aria-label={s.newBranch}', 'data-browser-coding-action="branch" aria-label={s.newBranch}']
   ])
 }
+
+export function useBrowserComposerPredictions(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/upstream/composer-prediction'))
+  const controls = '  const controls = ('
+  const keyboard = '    // Undo/redo before anything else — we own the stack (see useComposerUndo),'
+  return `import { useBrowserComposerPrediction } from ${owner}\nimport { useComposerVisible } from './visibility'\nimport { composerPlainText as browserComposerPlainText } from './rich-editor'\n` +
+    replaceBrowserContract(source, [
+      [controls, `  const browserComposerVisible = useComposerVisible()
+  const { prediction: browserPrediction, dismiss: dismissBrowserPrediction } = useBrowserComposerPrediction(
+    gateway, sessionId, profile,
+    browserComposerVisible && !guidedChat && !inputDisabled && !voiceConversationActive && voiceStatus === 'idle',
+    hasComposerPayload
+  )
+  const showBrowserPrediction = Boolean(browserPrediction && !busy && !awaitingInput && !blockingPrompt &&
+    !compacting && !hasComposerPayload && !trigger && !queueEditRef.current)
+
+  const acceptBrowserPrediction = () => {
+    const editor = editorRef.current
+    if (!showBrowserPrediction || !editor || composingRef.current || browserComposerPlainText(editor) ||
+      draftRef.current || scope.attachments.$attachments.get().length) return false
+
+    recordUndoPoint()
+    insertText(browserPrediction)
+    dismissBrowserPrediction()
+    return true
+  }
+
+${controls}`],
+      [keyboard, `    if (event.key === 'Tab' && !event.defaultPrevented && !event.repeat && !event.shiftKey &&
+      !event.altKey && !event.ctrlKey && !event.metaKey && event.keyCode !== 229 && acceptBrowserPrediction()) {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
+
+${keyboard}`],
+      ['    <ComposerControls\n', '    <ComposerControls\n      onAcceptPrediction={showBrowserPrediction ? acceptBrowserPrediction : undefined}\n'],
+      ['        data-placeholder={placeholder}', `        aria-placeholder={showBrowserPrediction ? browserPrediction : undefined}
+        data-browser-prediction={showBrowserPrediction ? '' : undefined}
+        data-placeholder={showBrowserPrediction ? browserPrediction : placeholder}`],
+      ['        onInput={handleEditorInput}', `        onInput={event => {
+          dismissBrowserPrediction()
+          handleEditorInput(event)
+        }}`],
+      ['        onCompositionStart={event => {', '        onCompositionStart={event => {\n          dismissBrowserPrediction()']
+    ])
+}
+
+export function useBrowserPredictionControl(source: string): string {
+  return replaceBrowserContract(source, [
+    ['  onDictate,\n  onQueue,', '  onAcceptPrediction,\n  onDictate,\n  onQueue,'],
+    ['  onDictate: () => void\n  onQueue:', '  onAcceptPrediction?: () => boolean\n  onDictate: () => void\n  onQueue:'],
+    ['      {showVoicePrimary ? (', `      {onAcceptPrediction ? (
+        <Button
+          aria-label="Accept suggested prompt"
+          data-browser-composer-action=""
+          className={GHOST_ICON_BTN}
+          onClick={onAcceptPrediction}
+          onMouseDown={keepEditorFocus}
+          size="icon"
+          type="button"
+          variant="ghost"
+        >
+          Tab
+        </Button>
+      ) : showVoicePrimary ? (`]
+  ])
+}
