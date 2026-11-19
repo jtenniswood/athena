@@ -11,7 +11,7 @@ import { createGatewayCompatibility } from '../apps/web-desktop/server/gateway-c
 async function fixture(t) {
   let clock = Date.now()
   const calls = [], upstream = createServer((req, res) => {
-    res.writeHead(req.url === '/api/profiles' && req.headers['x-hermes-session-token'] === 'private-existing-token' ? 200 : 401)
+    res.writeHead(req.url === '/api/profiles' && req.headers.authorization === 'Bearer private-existing-token' ? 200 : 401)
     res.end('{}')
   }), sockets = new WebSocketServer({ server: upstream })
   await new Promise(resolve => upstream.listen(0, '127.0.0.1', resolve))

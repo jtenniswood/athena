@@ -3,7 +3,7 @@ import { useBrowserNotificationAlertsEnabled } from '../../upstream/settings-int
 import { Button } from '../../upstream/ui'
 import { browserNotificationPermission, requestBrowserNotificationPermission } from '../../platform/notifications'
 import { androidPushActive, isAndroidApp, refreshAndroidNotificationPermission } from '../../platform/android'
-import { androidBackgroundAlerts, setAndroidBackgroundAlerts, testAndroidPush } from '../../platform/android-push'
+import { AndroidPushRegistrationError, androidBackgroundAlerts, setAndroidBackgroundAlerts, testAndroidPush } from '../../platform/android-push'
 import { browserPushEnabled, browserPushReady, browserPushSupported, prepareBrowserPush, setBrowserPushEnabled, testBrowserPush } from '../../platform/browser-push'
 import { useSettingsPresentation } from './presentation'
 
@@ -44,7 +44,8 @@ export function BrowserNotificationPermissionSetting() {
     } catch (error) {
       const response = error instanceof Error ? error.message.match(/^\d+: (.+)$/)?.[1] : undefined
       let message = native ? 'Could not send a push test. Check the Android push status in App settings.' : 'Could not send a browser push test.'
-      if (response) {
+      if (error instanceof AndroidPushRegistrationError) message = error.message
+      else if (response) {
         try { message = (JSON.parse(response) as { error?: string }).error || message } catch { /* Use the default message for proxy errors. */ }
       }
       setDeliveryMessage(message)
