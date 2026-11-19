@@ -1,4 +1,8 @@
 import { wrapperSyncPreferenceKeys } from './browser-preference-contract.mjs'
+
+export const visibleModelsKey = 'hermes.desktop.visible-models'
+export const knownModelsKey = 'hermes.desktop.known-models'
+
 // Only user preferences belong here. Never include credentials, composer
 // drafts, queued messages, transcript caches, or current conversation state.
 const rendererKeys = [
@@ -27,9 +31,10 @@ const rendererKeys = [
     'statusbarHidden.v2', 'statusbarVisible.v2', 'tabStripDefault', 'textDirection',
     'titlebarAppActions', 'toolView.hideCodeDiffs', 'toolView.technical',
     'translucency.v2', 'user-bubble-transparency.v1', 'userPlacedPanes.v1',
-    'videoPlaybackSpeed', 'visible-models', 'workspaceCollapsed', 'workspaceNodeOpen',
+    'videoPlaybackSpeed', 'workspaceCollapsed', 'workspaceNodeOpen',
     'workspaceOrder', 'workspaceParentOrder'
-  ].map(key => `hermes.desktop.${key}`)
+  ].map(key => `hermes.desktop.${key}`),
+  visibleModelsKey, knownModelsKey
 ]
 // Match the existing browser storage adapter's namespace, without changing it.
 const scoped = /^hermes\.desktop\.(?:layout|pane|sidebar|fileBrowser|rightRail|profileRail|terminal|statusbar|hiddenStrip|dismissedPanes|userPlaced)/
