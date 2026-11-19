@@ -170,8 +170,9 @@ proxy; check the separate Hermes Gateway logs for agent execution details.
 
 ### Settings sync
 
-Athena saves your appearance, user preferences, and sidebar layout to the server
-and loads them when you open Athena on another device using the same account.
+Athena saves your appearance, user preferences, sidebar layout, and enabled model
+list to the server and loads them when you open Athena on another device using
+the same account.
 The first device imports its existing preferences. Changes to different settings
 merge; when two devices change the same setting, the last server save wins.
 
