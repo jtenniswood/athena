@@ -137,7 +137,6 @@
 .browser-settings-heading > .codicon { color: var(--web-text-muted); font-size: var(--web-icon-size); }
 .browser-settings-heading h1:focus { outline: none; }
 .browser-settings-search { width: var(--web-control-regular); flex: 0 0 auto; margin-left: auto; }
-.browser-settings-search > button > svg { stroke-width: 1.5; }
 
 .browser-settings-layout { display: grid; min-height: 0; flex: 1; grid-template-columns: 16rem minmax(0, 1fr); overflow: hidden; }
 .browser-settings-navigation { display: flex; min-height: 0; flex-direction: column; background: var(--web-sidebar); border-right: 1px solid var(--web-border-subtle); }
