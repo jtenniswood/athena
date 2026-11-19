@@ -106,7 +106,8 @@
   --web-text-body: .875rem;
   --settings-text-caption: calc(var(--web-text-caption) - .0625rem);
   --settings-text-body: calc(var(--web-text-body) - .0625rem);
-  --settings-navigation-padding-start: max(.625rem, calc(env(safe-area-inset-left, 0px) / var(--web-ui-scale, 1)));
+  --settings-safe-left: calc(env(safe-area-inset-left, 0px) / var(--web-ui-scale, 1));
+  --settings-navigation-padding-start: max(.625rem, var(--settings-safe-left));
   box-sizing: border-box;
   display: flex;
   width: 100%;
@@ -402,6 +403,13 @@ body:has([data-browser-settings-frame]) [data-slot='select-item'][data-highlight
 /* Match chat navigation's touch density without enlarging mouse layouts. */
 @media (pointer: coarse) {
   .browser-settings-category-button { height: auto; padding-block: var(--web-space-2); }
+}
+
+@media (hover: none) {
+  .browser-settings-heading [data-browser-toolbar-button]:hover:not(:focus-visible) {
+    background: transparent;
+    color: var(--web-text-muted);
+  }
 }
 
 .browser-configuration-page > .browser-settings-page-notice { max-width: none; margin: 0; }

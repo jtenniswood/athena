@@ -31,6 +31,10 @@
   --settings-header-height: max(3.25rem, var(--web-touch-min));
 }
 
+.browser-settings-fullscreen-card:has(.browser-settings-mobile-title) {
+  --settings-header-height: var(--web-touch-target);
+}
+
 /* Android's native host already applies system-bar insets around the WebView. */
 :root[data-android-app] .browser-settings-fullscreen-card {
   --settings-safe-top: 0px;
@@ -54,6 +58,15 @@
 }
 .browser-settings-heading { display: flex; min-width: 0; align-items: center; gap: var(--web-space-2); }
 .browser-settings-heading h1 { margin: 0; font-size: var(--web-text-title); font-weight: 600; line-height: var(--web-line-body); }
+
+.browser-settings-header:has(.browser-settings-mobile-title) {
+  min-height: var(--settings-header-height);
+  padding-block: 0;
+  padding-inline-start: max(var(--web-space-1), var(--settings-safe-left));
+  border-bottom: 0;
+  background: var(--web-bg);
+}
+.browser-settings-heading:has(.browser-settings-mobile-title) { gap: var(--web-space-1); }
 
 .browser-settings-search > button,
 .browser-settings-fullscreen-card > .pointer-events-none button {

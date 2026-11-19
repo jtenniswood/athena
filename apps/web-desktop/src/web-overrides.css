@@ -514,7 +514,7 @@ body > [data-slot='fan-menu'] {
 .browser-settings-header-actions > button:first-child { min-height: 2.75rem; }
 
 .browser-settings-close,
-.browser-settings-back {
+.browser-settings-surface .browser-settings-back {
   display: inline-flex;
   min-width: 2.75rem;
   min-height: 2.75rem;
@@ -528,8 +528,8 @@ body > [data-slot='fan-menu'] {
   color: var(--foreground);
 }
 
-.browser-settings-back { padding: 0 0.65rem; }
-.browser-settings-back span { font-size: 0.85rem; }
+.browser-settings-surface .browser-settings-back { padding: 0 0.65rem; }
+.browser-settings-surface .browser-settings-back span { font-size: 0.85rem; }
 .browser-settings-detail-title { display: none; }
 
 .browser-settings-body {
@@ -608,7 +608,7 @@ body > [data-slot='fan-menu'] {
 @media (max-width: 47.99rem), (pointer: coarse) and (max-height: 27rem) {
   .browser-settings-header { gap: 0.5rem; padding-left: 0.75rem; }
   .browser-settings-header h1 { font-size: 0.95rem; }
-  .browser-settings-back { min-width: 2.75rem; padding: 0 0.5rem; }
+  .browser-settings-surface .browser-settings-back { min-width: 2.75rem; padding: 0 0.5rem; }
   .browser-settings-detail-title { display: block; }
   .browser-settings-navigation { width: 100%; min-width: 0; border-right: 0; }
   .browser-settings-nav-list { padding: 0.75rem; }
