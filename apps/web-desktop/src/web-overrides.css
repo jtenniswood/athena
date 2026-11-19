@@ -676,3 +676,15 @@ body > [data-slot='fan-menu'] {
 [data-slot='aui_assistant-message-root'] [data-slot='aui_msg-reactions']:not([data-reacted]) {
   display: none !important;
 }
+
+/* Leave the caret at the start of the empty editor while previewing the draft. */
+[data-slot='composer-rich-input'][data-browser-prediction]:is(:empty, [data-empty]) {
+  min-height: 4.75em;
+}
+
+[data-slot='composer-rich-input'][data-browser-prediction]:is(:empty, [data-empty])::before {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  white-space: normal;
+}
