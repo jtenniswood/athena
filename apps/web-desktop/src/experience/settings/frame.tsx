@@ -76,7 +76,7 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
       { kind: 'heading', label: section.label },
       ...section.items.flatMap(group => [group, ...(group.active ? activeChildren : [])]).map(item => ({
         id: `${section.id}:${item.id}`, kind: 'action' as const, presentation: 'navigation' as const,
-        label: item.label, checked: item.active, run: () => select(item.onSelect)
+        label: item.label, checked: showDetail && item.active, run: () => select(item.onSelect)
       }))
     ]),
     { kind: 'heading', label: 'Panels' },
@@ -117,11 +117,13 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
             <h2 className="browser-settings-group-heading" id={`settings-group-${section.id}`}>{section.label}</h2>
             {section.items.map(group => {
               const Icon = group.icon
+              const current = showDetail && group.active
               return <div className="browser-settings-category" key={group.id}>
                 <button
                   type="button"
-                  className={`browser-settings-category-button${group.active ? ' is-active' : ''}`}
-                  aria-current={group.active ? 'page' : undefined}
+                  className={`browser-settings-category-button${current ? ' is-active' : ''}`}
+                  aria-current={current ? 'page' : undefined}
+                  data-settings-focus-target={group.active ? '' : undefined}
                   data-tour={`nav-${group.id}`}
                   onClick={() => select(group.onSelect)}
                 >
@@ -131,10 +133,11 @@ export function BrowserSettingsPresentation({ activeView, backLabel, closeLabel,
                 </button>
                 {group.active && activeChildren.map(child => {
                   const ChildIcon = child.icon
+                  const current = showDetail && child.active
                   return <button
                     type="button"
-                    className={`browser-settings-category-button is-child${child.active ? ' is-active' : ''}`}
-                    aria-current={child.active ? 'page' : undefined}
+                    className={`browser-settings-category-button is-child${current ? ' is-active' : ''}`}
+                    aria-current={current ? 'page' : undefined}
                     key={child.id}
                     data-tour={`nav-${child.id}`}
                     onClick={() => select(child.onSelect)}
