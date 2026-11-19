@@ -177,6 +177,22 @@ test('response completion reaches Firebase after the Android WebView disconnects
   assert.equal(sent[1][1].kind, 'turnError')
 })
 
+async function sendRunRpc(client, id, method) {
+  const receipt = new Promise(resolve => {
+    const listener = raw => {
+      for (const line of raw.toString().split('\n')) {
+        if (JSON.parse(line).id !== id) continue
+        client.off('message', listener)
+        resolve()
+        break
+      }
+    }
+    client.on('message', listener)
+  })
+  client.send(JSON.stringify({ jsonrpc: '2.0', id, method, params: { session_id: 'runtime-1', profile: 'research' } }))
+  await receipt
+}
+
 test('a locally submitted run posts a Working update and clears it after the WebView disconnects', { timeout: 10000 }, async t => {
   const app = await fixture(t, { promptResult: ({ id }) => ({
     status: 'queued', admission_id: 'admission-' + id, ref: { session_id: 'saved-chat' }
@@ -184,11 +200,8 @@ test('a locally submitted run posts a Working update and clears it after the Web
   assert.equal((await app.register({ workingUpdates: true, kinds: { turnDone: false, turnError: false } })).status, 200)
   const client = app.connect()
   await once(client, 'open')
-  for (const id of [1, 2]) {
-    const receipt = once(client, 'message')
-    client.send(JSON.stringify({ jsonrpc: '2.0', id, method: 'prompt.submit', params: { session_id: 'runtime-1', profile: 'research' } }))
-    assert.equal(JSON.parse((await receipt)[0]).id, id)
-  }
+  await sendRunRpc(client, 1, 'prompt.submit')
+  await sendRunRpc(client, 2, 'prompt.submit')
   const observedStart = once(client, 'message')
   app.event('message.start', 1, {}, 'runtime-1', 'unrelated-admission')
   await observedStart
@@ -228,11 +241,8 @@ test('a legacy streaming receipt targets the stored conversation and clears only
   assert.equal((await app.register({ workingUpdates: true, kinds: { turnDone: false, turnError: false } })).status, 200)
   const client = app.connect()
   await once(client, 'open')
-  for (const [id, method] of [[1, 'session.resume'], [2, 'prompt.submit']]) {
-    const receipt = once(client, 'message')
-    client.send(JSON.stringify({ jsonrpc: '2.0', id, method, params: { session_id: 'runtime-1', profile: 'research' } }))
-    assert.equal(JSON.parse((await receipt)[0]).id, id)
-  }
+  await sendRunRpc(client, 1, 'session.resume')
+  await sendRunRpc(client, 2, 'prompt.submit')
   const started = app.nextPush()
   app.event('message.start', 1, { turn_id: 'local-turn' })
   await started
