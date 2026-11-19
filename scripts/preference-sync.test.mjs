@@ -15,6 +15,7 @@ vm.runInContext(ts.transpileModule(readFileSync(new URL('../apps/web-desktop/src
 }).outputText, context)
 const { createPreferenceSync } = context.exports
 const theme = 'hermes-desktop-theme-v2', sidebar = 'hermes-web.browser.navigation-width'
+const { visibleModelsKey: visibleModels, knownModelsKey: knownModels } = schema
 const accountA = 'a'.repeat(64), accountB = 'b'.repeat(64)
 function storage(initial = {}) {
   const values = new Map(Object.entries(initial))
@@ -119,6 +120,66 @@ test('two first-device imports cannot overwrite existing keys or revive deleted 
   await c.initialize(); await c.flush()
   assert.equal(fresh.getItem(theme), null)
   assert.equal((await f.server.read(accountA)).values[theme], null)
+})
+
+test('model visibility migrates and syncs with its catalog through edits and reset', async t => {
+  const f = await fixture(t)
+  const enabled = JSON.stringify(['provider::first', 'disabled::'])
+  const catalog = JSON.stringify(['provider::first', 'provider::second', 'disabled::third'])
+  const first = storage({ 'athena.preferences.owner.gateway': accountA, [visibleModels]: enabled, [knownModels]: catalog })
+  await f.server.patch(accountA, { [visibleModels]: enabled })
+  const a = createPreferenceSync(first, 'gateway', f.request, () => {})
+  await a.initialize()
+  await a.flush()
+
+  const second = storage()
+  const b = createPreferenceSync(second, 'gateway', f.request, () => {})
+  await b.initialize()
+  assert.equal(second.getItem(visibleModels), enabled)
+  assert.equal(second.getItem(knownModels), catalog)
+
+  const newSelection = JSON.stringify(['provider::', 'disabled::'])
+  first.setItem(visibleModels, newSelection); a.capture()
+  let release
+  f.hold(new Promise(resolve => { release = resolve }))
+  const saving = a.flush()
+  first.setItem(knownModels, JSON.stringify(['provider::first'])); a.capture()
+  release()
+  await saving
+  await b.refresh()
+  assert.equal(b.status().remoteChanges, true)
+  await b.applyRemote()
+  assert.equal(second.getItem(visibleModels), newSelection)
+  assert.equal(second.getItem(knownModels), first.getItem(knownModels))
+
+  first.removeItem(visibleModels); a.capture()
+  first.removeItem(knownModels); a.capture()
+  await a.flush()
+  await b.applyRemote()
+  assert.equal(second.getItem(visibleModels), null)
+  assert.equal(second.getItem(knownModels), null)
+  assert.deepEqual((await f.server.read(accountA)).values, { [visibleModels]: null, [knownModels]: null })
+})
+
+test('a catalog seed cannot replace a newer or mismatched shared model selection', async t => {
+  const f = await fixture(t)
+  const enabled = JSON.stringify(['provider::first'])
+  const staleCatalog = JSON.stringify(['provider::first'])
+  const currentCatalog = JSON.stringify(['provider::first', 'provider::second'])
+  await f.server.patch(accountA, { [visibleModels]: enabled })
+  const local = storage()
+  const a = createPreferenceSync(local, 'gateway', f.request, () => {})
+  await a.initialize()
+
+  local.setItem(knownModels, staleCatalog); a.capture()
+  await f.server.patch(accountA, { [visibleModels]: enabled, [knownModels]: currentCatalog })
+  await a.flush()
+  assert.equal((await f.server.read(accountA)).values[knownModels], currentCatalog)
+
+  const otherSelection = JSON.stringify(['provider::second'])
+  await f.server.patch(accountA, { [visibleModels]: otherSelection })
+  await f.server.patch(accountA, { [visibleModels]: enabled, [knownModels]: staleCatalog }, true)
+  assert.deepEqual((await f.server.read(accountA)).values, { [visibleModels]: otherSelection })
 })
 
 test('applying remote preferences respects a late safety refusal and edits made while fetching', async t => {
