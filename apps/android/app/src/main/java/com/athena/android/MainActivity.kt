@@ -174,6 +174,7 @@ class MainActivity : AppCompatActivity() {
                     authentication.cancel()
                     prefs.edit().putBoolean("pushEnabled", false).remove("pushRefreshKey").remove("pushPreviewKey")
                         .remove("pushBinding").remove("pushSyncedToken").remove("pushSyncedTokenVersion").remove("pushSyncStatus").apply()
+                    WorkingNotification.refresh(this)
                 }
                 prefs.edit().putString("origin", next).apply()
                 origin = next
@@ -468,7 +469,8 @@ class MainActivity : AppCompatActivity() {
                         prefs.edit().putString("deviceId", it).apply()
                     }
                     respond(pushRegistration.registration(task.result, tokenVersion).put("deviceId", deviceId)
-                        .put("refreshKey", pushRegistration.refreshKey()).put("previewKey", pushRegistration.previewKey()))
+                        .put("refreshKey", pushRegistration.refreshKey()).put("previewKey", pushRegistration.previewKey())
+                        .put("workingUpdates", Build.VERSION.SDK_INT >= 36))
                 }
             }
             "pushEnabled" -> {
@@ -476,6 +478,7 @@ class MainActivity : AppCompatActivity() {
                 prefs.edit().putBoolean("pushEnabled", state.optBoolean("enabled"))
                     .putBoolean("pushVersioned", state.has("tokenVersion"))
                     .putString("pushBinding", state.optString("bindingId")).apply()
+                WorkingNotification.refresh(this)
                 val token = state.optString("token")
                 if (state.optBoolean("enabled") && token.isNotEmpty()) {
                     pushRegistration.acknowledged(token, if (state.has("tokenVersion")) state.getLong("tokenVersion") else null)
@@ -774,6 +777,16 @@ class MainActivity : AppCompatActivity() {
         intent.action = Intent.ACTION_MAIN
         appUpdates.check(manual = true)
         return true
+    }
+
+    override fun onStart() {
+        super.onStart()
+        WorkingNotification.setBackground(this, false)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (!isChangingConfigurations) WorkingNotification.setBackground(this, true)
     }
 
     override fun onResume() {

@@ -77,11 +77,11 @@ export async function showAndroidNotification(payload: HermesNotification & { ch
   catch { return false }
 }
 
-export async function androidPushRegistration(): Promise<{ deviceId: string; token: string; refreshKey?: string; tokenVersion?: number; previewKey?: string } | null> {
+export async function androidPushRegistration(): Promise<{ deviceId: string; token: string; refreshKey?: string; tokenVersion?: number; previewKey?: string; workingUpdates?: boolean } | null> {
   try {
-    const value = await call('pushRegistration') as { deviceId?: unknown; token?: unknown; refreshKey?: unknown; tokenVersion?: unknown; previewKey?: unknown } | null
+    const value = await call('pushRegistration') as { deviceId?: unknown; token?: unknown; refreshKey?: unknown; tokenVersion?: unknown; previewKey?: unknown; workingUpdates?: unknown } | null
     return value && typeof value.deviceId === 'string' && typeof value.token === 'string'
-      ? { deviceId: value.deviceId, token: value.token, ...(typeof value.refreshKey === 'string' ? { refreshKey: value.refreshKey } : {}), ...(typeof value.tokenVersion === 'number' ? { tokenVersion: value.tokenVersion } : {}), ...(typeof value.previewKey === 'string' ? { previewKey: value.previewKey } : {}) } : null
+      ? { deviceId: value.deviceId, token: value.token, ...(typeof value.refreshKey === 'string' ? { refreshKey: value.refreshKey } : {}), ...(typeof value.tokenVersion === 'number' ? { tokenVersion: value.tokenVersion } : {}), ...(typeof value.previewKey === 'string' ? { previewKey: value.previewKey } : {}), ...(value.workingUpdates === true ? { workingUpdates: true } : {}) } : null
   } catch { return null }
 }
 
