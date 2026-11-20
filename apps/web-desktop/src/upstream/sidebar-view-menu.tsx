@@ -5,6 +5,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSub,
@@ -15,12 +16,14 @@ import {
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { $sidebarGrouping, $sidebarShowArchived, setSidebarGrouping, setSidebarShowArchived } from '@/store/layout'
+import { restoreProfileGroups, useHiddenProfileGroups } from '../experience/profile-list-visibility'
 import { browserArchivedLabel, useBrowserArchivedShortcut } from '../experience/sidebar-shortcuts'
 
 export function SidebarFilterMenu({ className }: { className?: string }) {
   const { t: { sidebar: { filter } } } = useI18n()
   const grouping = useStore($sidebarGrouping)
   const archived = useStore($sidebarShowArchived)
+  const hiddenProfiles = useHiddenProfileGroups()
   const toggleArchived = () => setSidebarShowArchived(!archived)
   useBrowserArchivedShortcut(toggleArchived)
 
@@ -49,6 +52,9 @@ export function SidebarFilterMenu({ className }: { className?: string }) {
       <DropdownMenuCheckboxItem checked={archived} onSelect={event => { event.preventDefault(); toggleArchived() }}>
         <Codicon name="archive" size="0.8125rem" />{browserArchivedLabel(filter.archived)}
       </DropdownMenuCheckboxItem>
+      {hiddenProfiles.length > 0 && <DropdownMenuItem onSelect={restoreProfileGroups}>
+        <Codicon name="eye" size="0.8125rem" />Restore hidden profiles
+      </DropdownMenuItem>}
     </DropdownMenuContent>
   </DropdownMenu>
 }

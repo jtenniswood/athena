@@ -66,11 +66,13 @@ test('profile sections reuse configured pictures and keep exact owner routes', (
 
 test('profile grouping keeps empty configured profiles as new conversation entry points', () => {
   let profiles = [{ name: 'default' }, { name: 'research' }]
+  let hidden = []
   const { useBrowserProfileGroups } = load('src/upstream/profile-groups.ts', id => {
     if (id === '@nanostores/react') return { useStore: store => store === 'profiles' ? profiles : {} }
     if (id === '@/store/profile') return { $profiles: 'profiles', $profileColors: 'colors' }
     if (id === '@/lib/profile-color') return { resolveProfileColor: name => `${name}-color` }
     if (id === '../platform/connection') return { WEB_CONNECTION_ID: 'web-single' }
+    if (id === '../experience/profile-list-visibility') return { useHiddenProfileGroups: () => hidden }
     throw new Error(`Unexpected import: ${id}`)
   })
   assert.equal(useBrowserProfileGroups(undefined), undefined)
@@ -91,6 +93,10 @@ test('profile grouping keeps empty configured profiles as new conversation entry
   assert.equal(useBrowserProfileGroups([legacy])[1], legacy)
   profiles = [...profiles, { name: 'writing' }]
   assert.equal(useBrowserProfileGroups(input).length, 3)
+  hidden = ['research', 'writing']
+  assert.deepEqual(Array.from(useBrowserProfileGroups(input), group => group.profile), ['default'])
+  hidden = [...hidden, 'default']
+  assert.equal(useBrowserProfileGroups(input).length, 0)
 
   const { useBrowserSessionReordering } = load('build/renderer/browser-plugin.ts')
   const section = readFileSync(path.join(root, '../desktop/src/app/chat/sidebar/sessions-section.tsx'), 'utf8')
