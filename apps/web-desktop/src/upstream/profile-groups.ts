@@ -2,12 +2,14 @@ import { useStore } from '@nanostores/react'
 import type { SidebarSessionGroup } from '@/app/chat/sidebar/projects/workspace-groups'
 import { resolveProfileColor } from '@/lib/profile-color'
 import { $profileColors, $profiles } from '@/store/profile'
+import { useHiddenProfileGroups } from '../experience/profile-list-visibility'
 import { WEB_CONNECTION_ID } from '../platform/connection'
 
 /** Configured profiles remain entry points even before their first conversation. */
 export function useBrowserProfileGroupProjection() {
   const profiles = useStore($profiles)
   const colors = useStore($profileColors)
+  const hidden = useHiddenProfileGroups()
   return (groups: SidebarSessionGroup[] | undefined): SidebarSessionGroup[] | undefined => {
     if (!groups) return undefined
 
@@ -26,7 +28,7 @@ export function useBrowserProfileGroupProjection() {
         sessions: []
       })
     }
-    return result.sort((a, b) => (a.profile ?? a.label).localeCompare(b.profile ?? b.label) || a.id.localeCompare(b.id))
+    return result.filter(group => !group.profile || !hidden.includes(group.profile)).sort((a, b) => (a.profile ?? a.label).localeCompare(b.profile ?? b.label) || a.id.localeCompare(b.id))
   }
 }
 

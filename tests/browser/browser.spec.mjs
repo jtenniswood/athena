@@ -3755,7 +3755,7 @@ test('the simplified sidebar restores combined profiles and keeps grouping and a
     if (sessionStorage.getItem('legacy-sidebar-seeded')) return
     sessionStorage.setItem('legacy-sidebar-seeded', 'true')
     localStorage.setItem('hermes-web.browser.combined-profiles', 'false')
-    localStorage.setItem('hermes-web.browser.hidden-profile-groups', JSON.stringify(['default', 'research']))
+    localStorage.setItem('hermes-web.browser.hidden-profile-groups', JSON.stringify(['default', 'research', 'writer']))
     const prefix = 'hermes-web.browser.hermes.desktop.'
     for (const [key, value] of Object.entries({
       showAllProfiles: 'false',
@@ -3778,8 +3778,26 @@ test('the simplified sidebar restores combined profiles and keeps grouping and a
   const groups = sidebar.locator('[data-gateway-group]')
   const selected = sidebar.getByRole('button', { name: 'Plan a calmer working week', exact: true })
   const filters = page.getByRole('button', { name: 'Filters', exact: true })
+  await expect(groups).toHaveCount(0)
+  await expect(selected).toHaveCount(0)
+  await filters.click()
+  const restore = page.getByRole('menuitem', { name: 'Restore hidden profiles', exact: true })
+  await restore.click()
   await expect(groups).toHaveCount(3)
   await expect(selected).toBeVisible()
+
+  const research = groups.filter({ has: page.locator('[data-browser-profile-picture="research"]') })
+  await research.getByRole('button', { name: /: Research$/ }).click()
+  await page.getByRole('menuitem', { name: 'Hide profile', exact: true }).click()
+  await expect(research).toHaveCount(0)
+  await expect(groups).toHaveCount(2)
+  await page.reload()
+  await expect(groups).toHaveCount(2)
+  await expect(research).toHaveCount(0)
+  await filters.click()
+  await restore.click()
+  await expect(research).toBeVisible()
+  await expect(editor(page)).toHaveText(draft)
   await expect(sidebar.locator('[data-sessions-project]')).toHaveCount(0)
   await filters.click()
   const menu = page.getByRole('menu')

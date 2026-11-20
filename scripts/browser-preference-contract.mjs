@@ -24,6 +24,7 @@ const list = raw => { const value = json(raw); return Array.isArray(value) ? str
 const scale = raw => { const value = Number(raw); return Number.isFinite(value) && value > 0 ? value : 125 }
 export const browserPreferences = Object.freeze({
   activeTab: definition('hermes-web.browser.navigation', 'experience/browser-preferences', 'sessions', raw => raw === 'bots' ? 'bots' : 'sessions'),
+  hiddenProfileGroups: definition('hermes-web.browser.hidden-profile-groups', 'experience/profile-list-visibility', empty, list, JSON.stringify, { memoryOnFailure: true }),
   hiddenProfiles: definition('hermes-web.browser.hidden-profiles', 'experience/browser-preferences', empty, list, JSON.stringify),
   navigationTabs: definition('hermes-web.browser.navigation-tabs', 'experience/browser-preferences', NAVIGATION_TABS, raw => {
     const value = json(raw)
