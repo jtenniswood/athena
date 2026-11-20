@@ -6,13 +6,14 @@ test.beforeAll(async () => { application = await createBuiltApplication(); origi
 test.afterAll(async () => { await application?.close() })
 
 const composer = page => page.locator('[data-slot="composer-rich-input"]:visible').first()
-test.beforeEach(async ({ page, isMobile }) => {
+async function openComposer(page, isMobile = false) {
   await page.goto(`${origin}/#/preview-week`)
   if (isMobile) await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).tap()
   await expect(composer(page)).toBeVisible({ timeout: 30000 })
-})
+}
 
 test('composer line breaks preserve undo, draft persistence and ordinary submission', async ({ page }) => {
+  await openComposer(page)
   const editor = composer(page)
   await editor.fill('First line')
   await editor.press('End')
@@ -31,6 +32,7 @@ test('composer line breaks preserve undo, draft persistence and ordinary submiss
 })
 
 test('composer line breaks respect IME commits, selection and unrelated editors', async ({ page }) => {
+  await openComposer(page)
   const editor = composer(page)
   await editor.fill('Keep this text')
   const ime = await editor.evaluate(node => {
@@ -63,6 +65,7 @@ test('composer line breaks respect IME commits, selection and unrelated editors'
 })
 
 test('accepted sends position their real mounted renderer transcript', async ({ page }) => {
+  await openComposer(page)
   for (const [text, fresh] of [['Position this accepted prompt', false], ['First prompt in a fresh chat', true]]) {
     if (fresh) await page.getByRole('button', { name: 'New session in Hermes', exact: true }).click()
     const editor = composer(page)
@@ -90,6 +93,7 @@ test.describe('Android keyboard dictation', () => {
     ['tapping Send commits keyboard dictation after typing', 'Typed first. ']
   ]) {
     test(scenario, async ({ page }) => {
+      await openComposer(page, true)
       const editor = composer(page)
       const send = page.locator('[data-browser-send-action]:visible')
       if (initialText) {
@@ -118,4 +122,187 @@ test.describe('Android keyboard dictation', () => {
       await expect(editor).toBeEmpty()
     })
   }
+})
+
+const followup = 'Try a shorter version of the plan and verify it still covers Friday.'
+
+async function interceptPredictions(page, isMobile = false) {
+  const requests = []
+  await page.routeWebSocket(/\/api\/ws/, socket => {
+    const server = socket.connectToServer()
+    server.onMessage(message => socket.send(message))
+    socket.onMessage(message => {
+      const frame = JSON.parse(String(message))
+      if (frame.method === 'llm.oneshot' && frame.params.max_tokens === 160 &&
+          frame.params.instructions?.startsWith('Suggest one useful next prompt')) {
+        requests.push({
+          params: frame.params,
+          resolve: text => socket.send(JSON.stringify({ jsonrpc: '2.0', id: frame.id, result: { text } }))
+        })
+        return
+      }
+      server.send(message)
+    })
+  })
+  await openComposer(page, isMobile)
+  return requests
+}
+
+test('a completed reply suggests an editable follow-up that Tab accepts and Enter sends', async ({ page }) => {
+  const requests = await interceptPredictions(page)
+  const editor = composer(page)
+  const userMessages = page.locator('[data-slot="aui_user-message-root"]')
+  const previousPrompt = 'Rework the weekly plan around a Friday deadline.'
+  await editor.fill(previousPrompt)
+  await editor.press('Enter')
+  await expect.poll(() => requests.length).toBe(1)
+  const context = JSON.parse(requests[0].params.input)
+  expect(context).toContainEqual({ role: 'user', text: previousPrompt })
+  expect(context.at(-1)).toMatchObject({ role: 'assistant', text: expect.stringContaining('synthetic response') })
+  requests[0].resolve(followup)
+
+  await expect(editor).toHaveAttribute('data-placeholder', followup)
+  await expect(editor).toHaveText('')
+  await editor.press('Enter')
+  await expect(userMessages.last()).toContainText(previousPrompt)
+  await editor.press('Tab')
+  await expect(editor).toHaveText(followup)
+  await expect(userMessages.last()).toContainText(previousPrompt)
+
+  const modifier = await page.evaluate(() => /Mac/i.test(navigator.platform) ? 'Meta' : 'Control')
+  await editor.press(`${modifier}+z`)
+  await expect(editor).toHaveText('')
+  await expect(editor).toHaveAttribute('data-placeholder', followup)
+  await expect(page.getByRole('button', { name: 'Accept suggested prompt' })).toBeVisible()
+  await editor.press(`${modifier}+Shift+z`)
+  await expect(editor).toHaveText(followup)
+  await expect(editor).not.toHaveAttribute('data-placeholder', followup)
+  await editor.press(`${modifier}+z`)
+  await editor.press('Tab')
+  await expect(editor).toHaveText(followup)
+  expect(requests).toHaveLength(1)
+
+  const edited = 'Verify that the shortened plan still covers Friday.'
+  await editor.fill(edited)
+  await editor.press('Enter')
+  await expect(userMessages.last()).toContainText(edited)
+})
+
+test.describe('mobile composer', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+
+  test('keeps quick actions available and expands for editing and attachments', async ({ page }) => {
+    await openComposer(page, true)
+    const editor = composer(page)
+    const surface = page.locator('[data-slot="composer-surface"]:visible')
+    const add = surface.getByRole('button', { name: 'Add context', exact: true })
+    const model = surface.locator('[data-browser-model-pill]')
+    const approval = surface.locator('[data-browser-approval-control]')
+    const mic = surface.getByRole('button', { name: 'Voice dictation', exact: true })
+    const surfaceHeight = () => surface.evaluate(node => node.getBoundingClientRect().height)
+    const blurComposer = () => surface.evaluate(node => {
+      const focused = document.activeElement
+      if (focused instanceof HTMLElement && node.contains(focused)) focused.blur()
+    })
+
+    await expect(model).toBeHidden()
+    await expect(add).toBeVisible()
+    await expect(mic).toBeVisible()
+    const compactHeight = await surfaceHeight()
+
+    await editor.tap()
+    await expect(editor).toBeFocused()
+    await expect(model).toBeVisible()
+    await expect(approval).toBeVisible()
+    expect(await surfaceHeight()).toBeGreaterThan(compactHeight)
+    await model.tap()
+    await expect(page.getByRole('textbox', { name: 'Search models' })).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    await editor.fill('A draft worth keeping')
+    await editor.press('Shift+Enter')
+    await editor.pressSequentially('Second line')
+    await blurComposer()
+    await expect(model).toBeVisible()
+    await expect.poll(() => editor.innerText()).toBe('A draft worth keeping\nSecond line')
+
+    await editor.fill('')
+    await blurComposer()
+    await expect(model).toBeHidden()
+    await expect.poll(surfaceHeight).toBeCloseTo(compactHeight)
+
+    await add.tap()
+    const picker = page.waitForEvent('filechooser')
+    await page.getByRole('menuitem', { name: 'Files…', exact: true }).tap()
+    await (await picker).setFiles({
+      name: 'mobile-draft.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from('Keep the attachment visible')
+    })
+    await expect(surface.locator('[data-slot="composer-attachments"]')).toContainText('mobile-draft.txt')
+    await blurComposer()
+    await expect(model).toBeVisible()
+    await expect(surface.locator('[data-browser-send-action]')).toBeEnabled()
+  })
+})
+
+test.describe('touch composer predictions', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+
+  test('touch users can accept the suggestion or type their own message in the same composer', async ({ page }) => {
+    const requests = await interceptPredictions(page, true)
+    const editor = composer(page)
+    const accept = page.getByRole('button', { name: 'Accept suggested prompt' })
+    const send = page.locator('[data-browser-send-action]:visible')
+    const userMessages = page.locator('[data-slot="aui_user-message-root"]')
+    const editorHeight = () => editor.evaluate(node => node.getBoundingClientRect().height)
+    const compactHeight = await editorHeight()
+
+    await editor.fill('Outline the launch checklist.')
+    await send.tap()
+    await editor.evaluate(node => node.blur())
+    await expect.poll(() => requests.length).toBe(1)
+    requests[0].resolve(followup)
+    await expect(editor).toHaveAttribute('data-placeholder', followup)
+    await expect.poll(editorHeight).toBeCloseTo(compactHeight)
+    await expect(accept).toBeVisible()
+    await accept.tap()
+    await expect(editor).toHaveText(followup)
+    await expect(userMessages.last()).toContainText('Outline the launch checklist.')
+    await editor.evaluate(node => {
+      node.focus()
+      node.dispatchEvent(new InputEvent('beforeinput', { inputType: 'historyUndo', bubbles: true, cancelable: true }))
+    })
+    await expect(editor).toHaveText('')
+    await expect(accept).toBeVisible()
+    await accept.tap()
+    await expect(editor).toHaveText(followup)
+    await expect(send).toBeVisible()
+    await send.tap()
+    await expect(userMessages.last()).toContainText(followup)
+
+    await expect.poll(() => requests.length).toBe(2)
+    requests[1].resolve('Share the revised checklist with the team.')
+    await expect(accept).toBeVisible()
+    await editor.fill('Check the rollout date first.')
+    await expect(accept).toBeHidden()
+    await expect(send).toBeVisible()
+    await send.tap()
+    await expect(userMessages.last()).toContainText('Check the rollout date first.')
+  })
+})
+
+test('a prediction that arrives after typing starts leaves the draft alone', async ({ page }) => {
+  const requests = await interceptPredictions(page)
+  const editor = composer(page)
+  await editor.fill('Draft an agenda for Friday.')
+  await editor.press('Enter')
+  await expect.poll(() => requests.length).toBe(1)
+  await editor.fill('My own follow-up')
+  requests[0].resolve(followup)
+  await expect(editor).toHaveText('My own follow-up')
+  await editor.fill('')
+  await expect(editor).not.toHaveAttribute('data-placeholder', followup)
+  await editor.press('Tab')
+  await expect(editor).toHaveText('')
 })

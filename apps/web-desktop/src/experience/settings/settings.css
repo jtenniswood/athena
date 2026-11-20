@@ -106,7 +106,8 @@
   --web-text-body: .875rem;
   --settings-text-caption: calc(var(--web-text-caption) - .0625rem);
   --settings-text-body: calc(var(--web-text-body) - .0625rem);
-  --settings-navigation-padding-start: max(.625rem, calc(env(safe-area-inset-left, 0px) / var(--web-ui-scale, 1)));
+  --settings-safe-left: calc(env(safe-area-inset-left, 0px) / var(--web-ui-scale, 1));
+  --settings-navigation-padding-start: max(.625rem, var(--settings-safe-left));
   box-sizing: border-box;
   display: flex;
   width: 100%;
@@ -137,7 +138,6 @@
 .browser-settings-heading > .codicon { color: var(--web-text-muted); font-size: var(--web-icon-size); }
 .browser-settings-heading h1:focus { outline: none; }
 .browser-settings-search { width: var(--web-control-regular); flex: 0 0 auto; margin-left: auto; }
-.browser-settings-search > button > svg { stroke-width: 1.5; }
 
 .browser-settings-layout { display: grid; min-height: 0; flex: 1; grid-template-columns: 16rem minmax(0, 1fr); overflow: hidden; }
 .browser-settings-navigation { display: flex; min-height: 0; flex-direction: column; background: var(--web-sidebar); border-right: 1px solid var(--web-border-subtle); }
@@ -177,7 +177,9 @@
   cursor: pointer;
 }
 .browser-settings-category-button > span:not(.codicon) { min-width: 0; flex: 1; overflow-wrap: anywhere; }
-.browser-settings-category-button:hover { background: var(--web-hover); color: var(--web-text); }
+@media (hover: hover) {
+  .browser-settings-category-button:hover { background: var(--web-hover); color: var(--web-text); }
+}
 .browser-settings-category-button.is-active { color: var(--web-text); background: var(--web-active); font-weight: 500; }
 .browser-settings-category-button.is-child { margin-left: var(--web-space-6); width: calc(100% - var(--web-space-6)); font-size: var(--settings-text-caption); }
 .browser-settings-category-icon { width: var(--web-icon-size); height: var(--web-icon-size); flex: 0 0 auto; color: var(--web-text-subtle); }
@@ -188,7 +190,6 @@
   font-size: calc(var(--web-icon-size) * .8125) !important;
 }
 .browser-settings-category-button.is-active .browser-settings-category-icon { color: var(--web-text); }
-.browser-settings-category-chevron { display: none !important; }
 .browser-settings-panel-icon { flex: 0 0 auto; color: var(--web-text-subtle); }
 
 .browser-settings-detail { display: flex; min-width: 0; min-height: 0; flex-direction: column; overflow: hidden; padding: var(--web-space-6) clamp(1rem, 3vw, 3rem) var(--web-sheet-padding-bottom); }
@@ -391,9 +392,6 @@ body:has([data-browser-settings-frame]) [data-slot='select-item'][data-highlight
   .browser-settings-layout.is-compact { display: flex; flex-direction: column; }
   .browser-settings-navigation { flex: 1; border-right: 0; }
   .browser-settings-navigation[hidden] { display: none; }
-  .browser-settings-category-button.is-active { background: transparent; }
-  .browser-settings-category-button:hover { background: var(--web-hover); }
-  .browser-settings-category-chevron { display: inline-flex !important; margin-left: auto; color: var(--web-text-subtle); font-size: var(--web-icon-small); }
   .browser-settings-detail { display: none; }
   .browser-settings-layout.is-compact.show-detail .browser-settings-detail { display: flex; flex: 1; padding: var(--web-space-3) var(--web-sheet-padding-end) var(--web-sheet-padding-bottom) var(--web-sheet-padding-start); }
   .browser-settings-back[data-browser-toolbar-button] { width: var(--web-touch-min); height: var(--web-touch-min); }
@@ -405,6 +403,13 @@ body:has([data-browser-settings-frame]) [data-slot='select-item'][data-highlight
 /* Match chat navigation's touch density without enlarging mouse layouts. */
 @media (pointer: coarse) {
   .browser-settings-category-button { height: auto; padding-block: var(--web-space-2); }
+}
+
+@media (hover: none) {
+  .browser-settings-heading [data-browser-toolbar-button]:hover:not(:focus-visible) {
+    background: transparent;
+    color: var(--web-text-muted);
+  }
 }
 
 .browser-configuration-page > .browser-settings-page-notice { max-width: none; margin: 0; }

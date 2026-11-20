@@ -170,8 +170,9 @@ proxy; check the separate Hermes Gateway logs for agent execution details.
 
 ### Settings sync
 
-Athena saves your appearance, user preferences, and sidebar layout to the server
-and loads them when you open Athena on another device using the same account.
+Athena saves your appearance, user preferences, sidebar layout, and enabled model
+list to the server and loads them when you open Athena on another device using
+the same account.
 The first device imports its existing preferences. Changes to different settings
 merge; when two devices change the same setting, the last server save wins.
 
@@ -335,6 +336,13 @@ input alerts open the conversation so you can respond there.
 Open **Athena Settings → Notifications** to choose which
 alerts to receive, control background delivery on this device, or send an Android
 push test through Firebase.
+
+On supported Android 16 and later devices, the **Working** status chip appears
+when you leave Athena during a Hermes run started from the app. Tap it to return
+to the conversation. If Android shows the notification first, tap that
+notification to open the conversation. The chip clears when the run finishes,
+fails, or is stopped. It uses the Firebase background delivery setup below and
+Android's Live Updates notification permission.
 
 Native alerts work without Firebase while the web app is running. In Android **App settings → Test notification**, send a local test alert to check notification permission and on-device display. This test does not contact Firebase or verify background push delivery. To receive
 reply, approval, input, error and system alerts after Android suspends or closes

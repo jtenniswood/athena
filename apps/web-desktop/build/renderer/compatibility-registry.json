@@ -2277,9 +2277,13 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/composer/controls.tsx",
-    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout. Show Queue only while busy so the default follow-up preference cannot intercept idle sends.",
+    "reason": "Use explicit browser behavior and styling contracts instead of rendered labels, icons, or layout. Show Queue only while busy and put the prediction accept button in the primary action slot.",
     "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
     "tests": [
+      {
+        "file": "tests/browser/composer-keyboard.spec.mjs",
+        "scenario": "touch users can accept the suggestion or type their own message in the same composer"
+      },
       {
         "file": "scripts/sidebar-contracts.test.mjs",
         "scenario": "semantic adapters preserve identity and reject upstream drift"
@@ -2295,12 +2299,13 @@
     ],
     "removal": "Remove when upstream exposes equivalent stable browser hooks.",
     "handlers": [
-      "useBrowserTouchHooks"
+      "useBrowserTouchHooks",
+      "useBrowserPredictionControl"
     ],
     "sourceRoot": "renderer",
     "sourceHash": "b8a7a28284bcdac3f7ef0122c0e04d50b8ed364cae6a1425c1f1f32940a154e1",
     "inputHash": "b8a7a28284bcdac3f7ef0122c0e04d50b8ed364cae6a1425c1f1f32940a154e1",
-    "outputHash": "2361e65a9a5c3dbf98cd2cc247aed6b38e4008a8c523a78a254cb0537c4c2927"
+    "outputHash": "95c941bfedfa7535c6b9807e046e151fdfae9565326c41dea62a5aedf83ea9d1"
   },
   {
     "name": "browser-semantic-context-menu",
@@ -3673,9 +3678,17 @@
     "after": [
       "browser-alternate-composer-submit"
     ],
-    "reason": "Handle Shift+Enter and transcript quotes through the existing editor lifecycle, and commit touch keyboard composition on explicit Send.",
+    "reason": "Handle Shift+Enter, transcript quotes, and prediction acceptance through the editor lifecycle, and commit touch keyboard composition on explicit Send.",
     "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
     "tests": [
+      {
+        "file": "tests/browser/composer-keyboard.spec.mjs",
+        "scenario": "a completed reply suggests an editable follow-up that Tab accepts and Enter sends"
+      },
+      {
+        "file": "tests/browser/composer-keyboard.spec.mjs",
+        "scenario": "a prediction that arrives after typing starts leaves the draft alone"
+      },
       {
         "file": "tests/browser/composer-keyboard.spec.mjs",
         "scenario": "composer line breaks preserve undo, draft persistence and ordinary submission"
@@ -3697,14 +3710,15 @@
         "scenario": "adding selected transcript text appends an undoable quote to the unsent draft"
       }
     ],
-    "removal": "Remove when the renderer supports browser line breaks, transcript quote insertion, and explicit Send during touch keyboard composition.",
+    "removal": "Remove when the renderer supports browser line breaks, transcript quote insertion, composer predictions, and explicit Send during touch keyboard composition.",
     "sourceHash": "ef66387bcbe1a3cda559eb1790d1e7ef0142b1221010bb2cb65b7086f96b359d",
     "inputHash": "6b7f1713f6d9badfc639d77684d7ba2544590d9fba50f3e4c2d3d9f1d2e99bf6",
-    "outputHash": "3690742de5049068095cc2ba6582dfcff203465c422258515c70c08da2607389",
+    "outputHash": "501b17bce12a2e684dc66d192fb0f40635bf0c3c3543e20ad319054e7e404f24",
     "handlers": [
       "useBrowserComposerLineBreak",
       "useBrowserComposerCompositionSubmit",
-      "useBrowserQuoteInsertion"
+      "useBrowserQuoteInsertion",
+      "useBrowserComposerPredictions"
     ],
     "sourceRoot": "renderer"
   },

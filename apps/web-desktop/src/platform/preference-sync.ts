@@ -1,4 +1,4 @@
-import { preferenceKeys, isPreferenceKey, validatePreferenceValues } from '../../../../scripts/preference-schema.mjs'
+import { preferenceKeys, isPreferenceKey, validatePreferenceValues, visibleModelsKey, knownModelsKey } from '../../../../scripts/preference-schema.mjs'
 import { connectionState } from './connection-state'
 import { beginBrowserTransition } from './browser-transition'
 import { runtimeConfig } from './runtime'
@@ -10,6 +10,7 @@ export type PreferenceSnapshot = { version: 1; accountId: string; revision: numb
 export type PreferenceSyncStatus = { state: 'loading' | 'saved' | 'saving' | 'offline' | 'account-changed'; remoteChanges: boolean }
 type Transport = (body?: { version: 1; accountId: string; seed: boolean; changes: Values }) => Promise<PreferenceSnapshot>
 type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
+const modelVisibilityKeys = [visibleModelsKey, knownModelsKey]
 
 /** Local values remain synchronous; the outbox contains only allowlisted preferences. */
 export function createPreferenceSync(storage: Store, scope: string, request: Transport, changed: () => void) {
@@ -78,7 +79,20 @@ export function createPreferenceSync(storage: Store, scope: string, request: Tra
       // Only the first account can import unowned legacy settings. Switching
       // accounts never uploads the previous person's local preferences.
       if (snapshot.revision === 0 && (!previousOwner || previousOwner === accountId)) {
-        for (const [key, value] of Object.entries(initial)) if (value !== null && !Object.hasOwn(seed, key)) seed[key] = value
+        for (const [key, value] of Object.entries(initial)) {
+          if (key !== knownModelsKey && value !== null && !Object.hasOwn(seed, key)) seed[key] = value
+        }
+      }
+      // Older Athena versions synced only the visible list. Import its local
+      // catalog snapshot only when it still belongs to the shared list.
+      const visible = initial[visibleModelsKey]
+      const ownsLocalSettings = previousOwner === accountId || (!previousOwner && snapshot.revision === 0)
+      if (ownsLocalSettings &&
+        visible !== null && initial[knownModelsKey] !== null &&
+        visible === (seed[visibleModelsKey] ?? snapshot.values[visibleModelsKey]) &&
+        !Object.hasOwn(snapshot.values, knownModelsKey) && !Object.hasOwn(seed, knownModelsKey)) {
+        seed[visibleModelsKey] = visible
+        seed[knownModelsKey] = initial[knownModelsKey]
       }
       storage.setItem(ownerKey, accountId)
       if (hydrate) applyValues(snapshot)
@@ -92,13 +106,19 @@ export function createPreferenceSync(storage: Store, scope: string, request: Tra
     try {
       if (storage.getItem(ownerKey) !== accountId) { report('account-changed'); return false }
       const current = local()
-      let edited = false
-      for (const key of preferenceKeys) {
-        if (current[key] !== observed[key]) { pending[key] = current[key]; edited = true }
+      const edited = preferenceKeys.filter(key => current[key] !== observed[key])
+      for (const key of edited) if (!modelVisibilityKeys.includes(key)) pending[key] = current[key]
+      if (edited.some(key => modelVisibilityKeys.includes(key))) {
+        // The renderer writes these keys separately. A catalog snapshot
+        // created on first load is a seed, while user edits replace the pair.
+        const adoptingCatalog = !edited.includes(visibleModelsKey) && current[visibleModelsKey] !== null &&
+          observed[knownModelsKey] === null && current[knownModelsKey] !== null && !Object.hasOwn(pending, visibleModelsKey)
+        const target = adoptingCatalog ? seed : pending
+        for (const key of modelVisibilityKeys) target[key] = current[key]
       }
       observed = current
-      if (edited) { persist(); report('saving') }
-      return edited
+      if (edited.length) { persist(); report('saving') }
+      return edited.length > 0
     } catch { report('offline'); return false }
   }
   const flush = (): Promise<void> => {
@@ -114,7 +134,10 @@ export function createPreferenceSync(storage: Store, scope: string, request: Tra
           const submitted = { ...source }
           const snapshot = await request({ version: 1, accountId: accountId!, seed: seeding, changes: submitted })
           verify(snapshot)
-          for (const [key, value] of Object.entries(submitted)) if (source[key] === value) delete source[key]
+          const modelsUnchanged = modelVisibilityKeys.every(key => source[key] === submitted[key])
+          for (const [key, value] of Object.entries(submitted)) {
+            if (source[key] === value && (modelsUnchanged || !modelVisibilityKeys.includes(key))) delete source[key]
+          }
           persist()
           capture()
         }

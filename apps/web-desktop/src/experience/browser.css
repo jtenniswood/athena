@@ -253,7 +253,52 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
 }
 @media (pointer: coarse) and (width < 48rem), (pointer: coarse) and (max-height: 27rem) {
  .browser-navigation { inset-inline-end:0; width:100%; box-shadow:none; }
- .browser-chat-toolbar { min-height:var(--web-touch-target); }
+ .browser-main {
+   --chat-toolbar-padding:var(--web-space-2);
+   --chat-toolbar-safe-top:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1));
+   --chat-toolbar-height:calc(var(--web-control-regular) + 2 * var(--chat-toolbar-padding) + var(--chat-toolbar-safe-top));
+ }
+ /* The Android WebView already starts below the system status bar. */
+ .browser-shell[data-android-app] .browser-main { --chat-toolbar-safe-top:0px; }
+ .browser-chat-toolbar {
+   min-height:var(--chat-toolbar-height);
+   padding-block:calc(var(--chat-toolbar-padding) + var(--chat-toolbar-safe-top)) var(--chat-toolbar-padding);
+   padding-inline:max(1rem, calc(env(safe-area-inset-left,0px) / var(--web-ui-scale,1))) max(1rem, calc(env(safe-area-inset-right,0px) / var(--web-ui-scale,1)));
+   background:none;
+ }
+ /* Let the transcript scroll under the controls, with room for the first
+    message and for focused transcript controls to scroll clear of the fade. */
+ .browser-main:has([data-slot="aui_thread-viewport"]) > .browser-chat-toolbar {
+   position:absolute;
+   inset:0 0 auto;
+   z-index:20;
+   pointer-events:none;
+ }
+ .browser-main:has([data-slot="aui_thread-viewport"]) > .browser-chat-toolbar::before {
+   content:"";
+   position:absolute;
+   z-index:-1;
+   inset:0 0 calc(-1 * var(--web-space-3));
+   background:linear-gradient(to bottom, var(--web-bg), color-mix(in srgb,var(--web-bg) 62%,transparent) 65%, transparent);
+ }
+ .browser-main [data-slot="aui_thread-viewport"] {
+   scroll-padding-block-start:calc(var(--chat-toolbar-height) + var(--web-space-3));
+ }
+ .browser-main [data-slot="aui_thread-viewport"] > [data-slot="aui_thread-content"] {
+   padding-block-start:calc(var(--chat-toolbar-height) + var(--web-space-3));
+ }
+ .browser-chat-toolbar > :is(.browser-menu, .browser-actions) {
+   border-radius:999px;
+   background:color-mix(in srgb,var(--web-text) 12%,var(--web-bg));
+   box-shadow:inset 0 0 0 1px var(--web-border);
+ }
+ .browser-chat-toolbar button {
+   border-radius:999px;
+   pointer-events:auto;
+ }
+ .browser-chat-toolbar > button.browser-menu:is(:hover,:focus-visible):not(:disabled) {
+   background:color-mix(in srgb,var(--web-text) 18%,var(--web-bg));
+ }
  .browser-navigation-heading { min-height:var(--web-touch-target); }
  .browser-navigation-tabs button { min-width:var(--web-touch-target); min-height:var(--web-touch-target); font-size:var(--web-text-caption); }
  .browser-navigation .browser-profile-actions-trigger { width:var(--web-touch-target); height:var(--web-touch-target); flex-basis:var(--web-touch-target); }

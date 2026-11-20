@@ -5,6 +5,7 @@ import { notificationChatTitle, notificationSnippet } from './android-notificati
 import { WebSocket, WebSocketServer } from 'ws'
 import { accountIdentity, probeIdentity, requestOrigin } from './identity.mjs'
 import { browserSubscription } from './browser-push.mjs'
+import { androidWorkingRuns } from './android-working-runs.mjs'
 import { readReplyRecoveryGrants } from './reply-recovery-grants.mjs'
 import { replyLifetimeMs, replyNotificationHeaders, scanRecentReplies } from './reply-notifications.mjs'
 
@@ -12,6 +13,8 @@ const root = '/api/athena/android/'
 const browserRoot = '/api/athena/browser/push'
 const retentionMs = 24 * 60 * 60 * 1000
 const titleRetryMs = [0, 1000, 2000]
+const workingLifetimeMs = 60 * 60 * 1000
+const isWorkingUpdate = kind => kind === 'workingStart' || kind === 'workingEnd'
 const creditNotices = new Set(['credits.depleted', 'credits.window_limit', 'credits.restored'])
 const inputRequests = new Set(['clarify', 'sudo', 'secret', 'vault.code', 'vault.unlock', 'vault.save_login', 'display.install.sudo'])
 
@@ -56,8 +59,10 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
   async function drain() {
     if (closed || pumping) return pumping
     pumping = (async () => {
-      for (const [id, event] of store.events) {
+      for (const id of store.events.keys()) {
         if (closed) break
+        const event = store.events.get(id)
+        if (!event) continue
         if (event.expires <= now()) {
           if (event.status === 'pending') store.update(state => {
             const current = state.events.get(id)
@@ -68,7 +73,8 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
         }
         if (event.status !== 'pending' || event.nextAttempt > now()) continue
         const device = store.devices.get(event.key)
-        if (!device?.enabled || !device.kinds[event.data.kind] || device.bindingId !== event.bindingId) {
+        const allowed = isWorkingUpdate(event.data.kind) ? device?.workingUpdates : device?.kinds[event.data.kind]
+        if (!device?.enabled || !allowed || device.bindingId !== event.bindingId) {
           store.update(state => state.events.delete(id)); continue
         }
         if (device.subscription && !browserSender?.enabled) continue
@@ -149,6 +155,26 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
     const watch = same ? previous : { bindingId: device.bindingId, since: device.repliesSince, inspected: new Map() }
     watch.headers = headers
     watches.set(key, watch)
+  }
+  function enqueueWorkingUpdate(key, bindingId, run, ending) {
+    const device = store.devices.get(key)
+    const timestamp = now()
+    if (closed || !device?.enabled || !device.workingUpdates || device.bindingId !== bindingId || run.expires <= timestamp) return
+    const startId = run.id + ':start'
+    const id = ending ? run.id + ':end' : startId
+    const prior = store.events.get(startId)
+    if (store.events.has(id) || (!ending && store.events.has(run.id + ':end')) || (ending && !prior)) return
+    const data = { origin: device.origin, bindingId, runId: run.id, expiresAt: String(run.expires),
+      kind: ending ? 'workingEnd' : 'workingStart',
+      ...(!ending ? { focusSessionId: run.sessionId, ...(run.profile ? { focusProfile: run.profile } : {}) } : {}) }
+    store.update(state => {
+      if (ending) state.events.delete(startId)
+      // If Firebase has never been contacted for the start, neither update needs delivery.
+      state.events.set(id, { key, bindingId, data, background: ending,
+        status: ending && !prior.attempts ? 'skipped' : 'pending', attempts: 0,
+        created: timestamp, updated: timestamp, nextAttempt: timestamp, expires: run.expires })
+    })
+    deliver()
   }
   function enqueue({ key, bindingId, id, alert, sessionId, profile, chatTitle, promptId, background = false, completedAt = now() }) {
     const current = store.devices.get(key)
@@ -270,7 +296,10 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
       for (const id of expired) state.events.delete(id)
     })
     for (const key of stale) watches.delete(key)
-    for (const relay of relays) if (!relay.client && now() - relay.detached > (relay.running.size ? retentionMs : 60000)) relay.close()
+    for (const relay of relays) {
+      const retention = relay.running.size || relay.working?.hasActive() ? retentionMs : 60000
+      if (!relay.client && now() - relay.detached > retention) relay.close()
+    }
   }
   const timer = setInterval(() => {
     try { prune() } catch { console.error('Athena push storage maintenance failed') }
@@ -359,7 +388,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
       if (req.method === 'GET') {
         const key = keyFor(account, url.searchParams.get('device'))
         const device = store.devices.get(key)
-        const events = [...store.events.values()].filter(event => event.key === key)
+        const events = [...store.events.values()].filter(event => event.key === key && !isWorkingUpdate(event.data.kind))
         const latest = events.sort((a, b) => b.created - a.created)[0]
         json(200, { registered: Boolean(device?.enabled), persistent: Boolean(directory),
           watchingReplies: Boolean(device?.enabled && device.kinds.turnDone && watchesReplies(key)),
@@ -389,7 +418,8 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
           const keepToken = body.tokenVersion != null && old?.bindingId === body.bindingId && (tokenVersion < (old.tokenVersion || 0) ||
             (tokenVersion > 0 && tokenVersion === old.tokenVersion && body.token !== old.token))
           state.devices.set(key, { deviceId: body.deviceId, token: keepToken ? old.token : body.token,
-            tokenVersion: keepToken ? old.tokenVersion : tokenVersion, bindingId: body.bindingId, enabled: body.enabled === true, kinds, silent: body.silent === true,
+            tokenVersion: keepToken ? old.tokenVersion : tokenVersion, bindingId: body.bindingId, enabled: body.enabled === true, kinds,
+            workingUpdates: body.workingUpdates === true, silent: body.silent === true,
             refreshHash: body.tokenVersion != null && typeof body.refreshKey === 'string' && /^[A-Za-z0-9_-]{43}$/.test(body.refreshKey)
               ? createHash('sha256').update(body.refreshKey).digest('hex') : null,
             lastTest: old?.lastTest,
@@ -517,6 +547,18 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
           close() { upstream.terminate(); relay.client?.terminate(); relays.delete(relay) } }
         relays.add(relay)
         const profileOnSocket = url.searchParams.get('profile')
+        const working = relay.working = device.workingUpdates ? androidWorkingRuns({
+          sessionFor: id => relay.sessions.get(id),
+          onStart(event, target) {
+            const id = createHash('sha256').update(JSON.stringify([
+              key, device.bindingId, target.id, target.profile || profileOnSocket, event.admission_id || randomUUID()
+            ])).digest('hex')
+            const run = { id, sessionId: target.id, profile: target.profile || profileOnSocket, expires: now() + workingLifetimeMs }
+            enqueueWorkingUpdate(key, device.bindingId, run, false)
+            return run
+          },
+          onEnd: run => enqueueWorkingUpdate(key, device.bindingId, run, true)
+        }) : null
         const authHeaders = replyNotificationHeaders({
           headers: { ...req.headers, 'x-hermes-session-token': url.searchParams.get('token') || req.headers['x-hermes-session-token'] }
         }, requestOrigin(req), authenticated.cookies)
@@ -595,6 +637,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
                 for (const line of data.toString().split('\n')) {
                   if (!line) continue
                   const frame = JSON.parse(line)
+                  working?.request(frame)
                   if (['session.resume', 'session.create', 'session.activate'].includes(frame.method) && frame.id != null) {
                     relay.pending.set(frame.id, { id: frame.method === 'session.activate' ? undefined : frame.params?.session_id,
                       profile: frame.params?.profile })
@@ -623,7 +666,12 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
                 relay.sessions.set(frame.result.session_id, { id, profile, title: title || previous?.title })
                 if (frame.result.running === true) relay.running.add(frame.result.session_id)
               }
-              if (frame.id != null) relay.pending.delete(frame.id)
+              if (frame.id != null) {
+                relay.pending.delete(frame.id)
+                if (working && typeof frame.method !== 'string') {
+                  try { working.response(frame) } catch { console.error('Athena could not queue an Android Live Update') }
+                }
+              }
               if (frame.method === 'event') {
                 const event = frame.params || {}
                 if (event.type === 'message.start') relay.running.add(event.session_id)
@@ -638,6 +686,9 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
                   }
                 }
                 handleAlert(event)
+                if (working) {
+                  try { working.event(event) } catch { console.error('Athena could not queue an Android Live Update') }
+                }
               } else if (frame.id != null && typeof frame.method === 'string') {
                 handleAlert({ type: frame.method, session_id: frame.params?.session_id, payload: frame.params, rpcId: frame.id })
               }
@@ -650,7 +701,12 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
           }
         })
         upstream.on('error', () => { socket.destroy(); relay.close() })
-        upstream.on('close', () => { socket.destroy(); relay.client?.close(1012, 'Gateway disconnected'); relays.delete(relay) })
+        upstream.on('close', () => {
+          socket.destroy()
+          relay.client?.close(1012, 'Gateway disconnected')
+          relays.delete(relay)
+          try { working?.close() } catch { console.error('Athena could not clear Android Live Updates') }
+        })
       } catch { socket.destroy() }
     })
   }

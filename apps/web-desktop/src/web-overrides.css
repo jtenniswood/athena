@@ -326,6 +326,30 @@ body > [data-slot='fan-menu'] {
       font-size: var(--conversation-text-font-size);
     }
 
+    /* The empty editor shares a row with quick actions on phones. Keep the
+       full toolbar during focus and menu interactions, including portalled menus. */
+    [data-slot='composer-fade']:not(:focus-within, :has([aria-expanded='true'], [data-slot='composer-attachments']))
+      > div.grid.w-full:has([data-slot='composer-rich-input']:is(:empty, [data-empty])) {
+      grid-template-columns: auto minmax(0, 1fr) auto !important;
+      grid-template-areas: 'menu input controls' !important;
+      align-items: center;
+      column-gap: var(--composer-control-gap);
+
+      [data-slot='composer-rich-input'] {
+        min-height: var(--browser-composer-touch-size);
+        padding-block: max(.25rem, calc((var(--browser-composer-touch-size) - 1lh) / 2));
+
+        &::before {
+          display: block;
+          white-space: nowrap;
+        }
+      }
+
+      :is([data-browser-model-pill], [data-testid='reasoning-pill'], .browser-approval-control) {
+        display: none;
+      }
+    }
+
     button:has(> .codicon-add) {
       margin-inline-end: 0;
     }
@@ -514,7 +538,7 @@ body > [data-slot='fan-menu'] {
 .browser-settings-header-actions > button:first-child { min-height: 2.75rem; }
 
 .browser-settings-close,
-.browser-settings-back {
+.browser-settings-surface .browser-settings-back {
   display: inline-flex;
   min-width: 2.75rem;
   min-height: 2.75rem;
@@ -528,8 +552,8 @@ body > [data-slot='fan-menu'] {
   color: var(--foreground);
 }
 
-.browser-settings-back { padding: 0 0.65rem; }
-.browser-settings-back span { font-size: 0.85rem; }
+.browser-settings-surface .browser-settings-back { padding: 0 0.65rem; }
+.browser-settings-surface .browser-settings-back span { font-size: 0.85rem; }
 .browser-settings-detail-title { display: none; }
 
 .browser-settings-body {
@@ -608,7 +632,7 @@ body > [data-slot='fan-menu'] {
 @media (max-width: 47.99rem), (pointer: coarse) and (max-height: 27rem) {
   .browser-settings-header { gap: 0.5rem; padding-left: 0.75rem; }
   .browser-settings-header h1 { font-size: 0.95rem; }
-  .browser-settings-back { min-width: 2.75rem; padding: 0 0.5rem; }
+  .browser-settings-surface .browser-settings-back { min-width: 2.75rem; padding: 0 0.5rem; }
   .browser-settings-detail-title { display: block; }
   .browser-settings-navigation { width: 100%; min-width: 0; border-right: 0; }
   .browser-settings-nav-list { padding: 0.75rem; }
@@ -675,4 +699,16 @@ body > [data-slot='fan-menu'] {
 [data-slot='aui_assistant-message-root'] [data-slot='aui_msg-actions'],
 [data-slot='aui_assistant-message-root'] [data-slot='aui_msg-reactions']:not([data-reacted]) {
   display: none !important;
+}
+
+/* Leave the caret at the start of the empty editor while previewing the draft. */
+[data-slot='composer-rich-input'][data-browser-prediction]:is(:empty, [data-empty]) {
+  min-height: 4.75em;
+}
+
+[data-slot='composer-rich-input'][data-browser-prediction]:is(:empty, [data-empty])::before {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  white-space: normal;
 }
