@@ -17,6 +17,28 @@ test('queued follow-ups show their message and Steer action by default', async (
   const held = []
   await page.routeWebSocket(/\/api\/ws/, socket => {
     const server = socket.connectToServer()
+    socket.onMessage(message => {
+      const { id, method, params } = JSON.parse(String(message))
+      if (method !== 'prompt.submit' || params.queued !== true) {
+        server.send(message)
+        return
+      }
+
+      // The preview gateway streams ordinary prompts. Model the owner's queue receipt
+      // and pending list here so a queued follow-up stays behind the running turn.
+      const { session_id, submission_id, text, profile } = params
+      const admission_id = 'preview-queued-follow-up'
+      socket.send(JSON.stringify({ jsonrpc: '2.0', id, result: {
+        status: 'queued', session_id, submission_id, admission_id, ref: { session_id, profile }
+      } }))
+      socket.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: {
+        type: 'session.info', session_id, timestamp: Date.now(),
+        payload: {
+          stored_session_id: session_id, running: true,
+          pending_submissions: [{ admission_id, input_id: submission_id, status: 'queued', user: text, controls: ['steer', 'replace'] }]
+        }
+      } }))
+    })
     server.onMessage(message => {
       const frame = JSON.parse(String(message))
       if (frame.params?.type === 'message.complete' && frame.params.session_id === 'preview-week') {
