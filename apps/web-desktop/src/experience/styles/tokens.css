@@ -21,19 +21,19 @@
   --web-space-3: .75rem;
   --web-space-4: 1rem;
   --web-space-6: 1.5rem;
-  --web-text-label: .6875rem;
+  --web-text-label: .75rem;
   --web-text-caption: .75rem;
-  --web-text-body: .8125rem;
+  --web-text-body: .875rem;
   --web-text-title: .875rem;
   --web-text-heading: 1rem;
   --web-line-compact: 1rem;
   --web-line-body: 1.4;
   --web-icon-size: 1rem;
   --web-icon-small: .75rem;
-  --web-radius-control: .25rem;
-  --web-radius-panel: .5rem;
+  --web-radius-control: .375rem;
+  --web-radius-panel: .75rem;
   --web-radius-sheet: 1rem;
-  --web-radius-item: .125rem;
+  --web-radius-item: .5rem;
   --web-shadow-menu: 0 0 0 1px var(--web-border-subtle), 0 .25rem .75rem #0003;
   --web-shadow-panel: 0 .5rem 1.5rem #0003;
   /* Short, shared motion for a frequently used chat workspace. */
@@ -50,9 +50,9 @@
   --web-control-regular: 2.25rem;
   --web-control-compact: 1.5rem;
   --web-toolbar-height: 2.75rem;
-  --web-navigation-row: 1.75rem;
-  --web-menu-row: 1.5rem;
-  --web-menu-font: var(--web-text-caption);
+  --web-navigation-row: 2rem;
+  --web-menu-row: 1.75rem;
+  --web-menu-font: var(--web-text-body);
   --web-menu-row-padding: var(--web-space-1);
   --web-sheet-max-height: calc(82dvh / var(--web-ui-scale, 1));
   --web-sheet-padding-start: max(var(--web-space-3), calc(env(safe-area-inset-left, 0px) / var(--web-ui-scale, 1)));
@@ -67,7 +67,7 @@
     --web-control-regular: max(2.25rem, var(--web-touch-target));
     --web-control-compact: max(1.5rem, var(--web-touch-target));
     --web-toolbar-height: max(2.75rem, var(--web-touch-target));
-    --web-navigation-row: max(1.75rem, var(--web-touch-min));
+    --web-navigation-row: max(2rem, var(--web-touch-min));
     --web-menu-row: var(--web-touch-target);
     --web-menu-font: var(--web-text-body);
     --web-menu-row-padding: var(--web-space-1);

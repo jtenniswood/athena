@@ -161,6 +161,8 @@ body > [data-slot='fan-menu'] {
    a little more room in the narrow sidebar. */
 [data-zone-tabstrip]:has([data-tree-tab='sessions']) [data-tree-tab] {
   font-size: 1.25rem !important;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 /* The web composer owns these touch controls; the upstream desktop titlebar
@@ -168,6 +170,32 @@ body > [data-slot='fan-menu'] {
    and give their glyphs a little more separation. */
 [data-slot='composer-root']:not([data-popped-out]) {
   background: var(--ui-chat-surface-background) !important;
+}
+
+/* The docked input and its attached menus share the same themed fill. */
+.browser-shell [data-slot='composer-root']:not([data-popped-out]) {
+  --web-composer-surface: color-mix(in srgb, var(--dt-card) 95%, var(--web-text));
+  --composer-fill: color-mix(in srgb, var(--web-composer-surface) 88%, transparent);
+}
+
+.browser-shell [data-slot='composer-root']:not([data-popped-out])[data-thread-scrolled-up] {
+  --composer-fill: color-mix(in srgb, var(--web-composer-surface) 80%, transparent);
+}
+
+.browser-shell [data-slot='composer-dock']:is(:hover, :focus-within) [data-slot='composer-root']:not([data-popped-out])[data-thread-scrolled-up] {
+  --composer-fill: color-mix(in srgb, var(--web-composer-surface) 88%, transparent);
+}
+
+.browser-shell [data-slot='composer-root']:not([data-popped-out]) [data-slot='composer-surface'] {
+  border-radius: var(--web-radius-sheet);
+}
+
+@media (pointer: fine) and (width >= 48rem) {
+  .browser-shell [data-slot='composer-root']:not([data-popped-out]) {
+    --composer-surface-pad-x: var(--web-space-3);
+    --composer-surface-pad-y: var(--web-space-2);
+    --composer-row-gap: var(--web-space-2);
+  }
 }
 
 [data-slot='composer-root'] button:has(> .codicon-add) {

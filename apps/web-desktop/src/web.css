@@ -9,36 +9,30 @@
 @source "./";
 @import "../../desktop/src/styles.css";
 
-/* Extend row backgrounds through the sidebar gutters while preserving text insets. */
+/* Inset the row fill while keeping the title aligned with its section. */
 .browser-sessions-pane [data-sessions-mode] [data-browser-section-header] {
   padding-inline: .625rem;
 }
 .browser-sessions-pane [data-web-session-id] {
-  width: 100%;
+  width: calc(100% - var(--web-space-2));
   min-width: 0;
-  padding-inline-start: .625rem;
-  padding-inline-end: .625rem;
-  border-radius: 0;
+  margin-inline: var(--web-space-1);
+  padding-inline: .375rem;
+  border-radius: var(--web-radius-item);
 }
 .browser-sessions-pane [data-web-session-selected] {
-  background-color: var(--ui-row-active-background);
+  background-color: color-mix(in srgb, var(--web-text) 9%, var(--ui-row-active-background));
+  box-shadow: inset 2px 0 var(--web-accent);
 }
-.browser-sessions-pane [data-web-session-selected]::before {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: 3px;
-  border-radius: 0;
-  background: var(--theme-primary);
-  pointer-events: none;
+.browser-sessions-pane [data-web-session-selected] .browser-session-title {
+  color: var(--web-text);
 }
 
 .browser-sessions-pane button[data-slot="row-button"] .browser-session-title {
+  font-size: var(--web-text-body);
   overflow: hidden;
   white-space: nowrap;
-  text-overflow: clip !important;
-  mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent calc(100% - .5rem));
+  text-overflow: ellipsis;
 }
 
 body > [data-radix-popper-content-wrapper] > .tooltip-bubble.browser-session-preview {
