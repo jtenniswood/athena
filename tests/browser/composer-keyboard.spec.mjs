@@ -30,7 +30,8 @@ test('queued follow-ups show their message and Steer action by default', async (
   const editor = composer(page)
   await editor.fill('Start a reply')
   await editor.press('Enter')
-  await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
+  const composerRoot = page.locator('[data-slot="composer-root"]')
+  await expect(composerRoot.getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
 
   const followup = 'Make the plan shorter'
   await editor.fill(followup)
