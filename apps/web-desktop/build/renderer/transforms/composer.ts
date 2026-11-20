@@ -313,3 +313,12 @@ export function useBrowserPredictionControl(source: string): string {
       ) : showVoicePrimary ? (`]
   ])
 }
+
+export function showBrowserQueuedFollowups(source: string): string {
+  return replaceBrowserContract(source, [
+    ['    <StatusSection\n', '    <StatusSection\n      defaultCollapsed={false}\n'],
+    ['trailingVisible={isEditing || lost}', 'trailingVisible'],
+    ['            aria-label={c.queueSteer}', '            aria-label={c.queueSteer}\n            data-browser-queue-steer=""'],
+    ['            <SteeringWheel className={iconSize.xs} />', "            <SteeringWheel className={iconSize.xs} />\n            <span>{c.queueSteer.split(' — ', 1)[0]}</span>"]
+  ])
+}

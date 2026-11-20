@@ -740,3 +740,11 @@ body > [data-slot='fan-menu'] {
   -webkit-line-clamp: 3;
   white-space: normal;
 }
+
+/* Keep the queued follow-up action readable beside its message preview. */
+[data-slot='composer-status-stack'] button[data-browser-queue-steer] {
+  width: auto;
+  gap: 0.25rem;
+  padding-inline: 0.375rem;
+  font-size: 0.73rem;
+}
