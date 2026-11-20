@@ -2,7 +2,7 @@ import { androidPushRegistration, androidPushDiagnostics, androidVisibleSession,
 import { apiFetch } from './connection'
 
 let registration: Awaited<ReturnType<typeof androidPushRegistration>> = null
-let registering: Promise<boolean> | undefined
+let registering: Promise<AndroidPushRegistrationError | null> | undefined
 let timer: number | undefined
 let stopped = false
 let bindingId: string | undefined
@@ -26,18 +26,23 @@ export async function syncAndroidPushPreferences(): Promise<boolean> {
   if (!isAndroidApp()) return false
   // An in-flight heartbeat may already have read the previous settings.
   await registering
-  return register()
+  return (await register()) === null
 }
 
-async function register(): Promise<boolean> {
-  if (stopped) return false
+export class AndroidPushRegistrationError extends Error {}
+
+const registrationUnavailable = () => new AndroidPushRegistrationError('Push registration is unavailable. Open Athena to retry.')
+
+async function register(): Promise<AndroidPushRegistrationError | null> {
+  if (stopped) return registrationUnavailable()
   if (registering) return registering
   registering = (async () => {
     const device = await androidPushRegistration()
-    if (stopped) return false
+    if (stopped) return registrationUnavailable()
     if (!device) {
-      await androidPushDiagnostics('Firebase registration unavailable on this device')
-      return false
+      const error = new AndroidPushRegistrationError('Firebase registration is unavailable on this device.')
+      await androidPushDiagnostics(error.message)
+      return error
     }
     registration = device
     // The binding survives reloads; explicit sign-out revokes it.
@@ -57,13 +62,20 @@ async function register(): Promise<boolean> {
         ...registration, bindingId, accountScopedBinding: true, enabled, kinds: prefs?.kinds,
         foreground: Boolean(androidVisibleSession()), silent
       } })
-      if (stopped) return false
+      if (stopped) return registrationUnavailable()
       await setAndroidPushActive(enabled, bound.bindingId || bindingId, registration.token, registration.tokenVersion)
       const generation = ++diagnosticsGeneration
       if (enabled) void reportDelivery(registration.deviceId, generation)
       else void androidPushDiagnostics('Background delivery is off')
-      return true
-    } catch { await setAndroidPushActive(false, bindingId); await androidPushDiagnostics('Registration unavailable; open Athena to retry'); return false }
+      return null
+    } catch (error) {
+      const failure = error instanceof Error && error.message === '503: {"error":"Firebase push is not configured"}'
+        ? new AndroidPushRegistrationError('Firebase push is not configured on the Athena server.')
+        : registrationUnavailable()
+      await setAndroidPushActive(false, bindingId)
+      await androidPushDiagnostics(failure.message)
+      return failure
+    }
   })().finally(() => { registering = undefined })
   return registering
 }
@@ -82,14 +94,17 @@ async function reportDelivery(deviceId: string, generation: number): Promise<voi
 }
 
 export async function testAndroidPush(): Promise<void> {
-  if (!await syncAndroidPushPreferences() || !registration) throw new Error('Push registration is unavailable.')
+  await registering
+  const failure = isAndroidApp() ? await register() : registrationUnavailable()
+  if (failure) throw failure
+  if (!registration) throw registrationUnavailable()
   await apiFetch({ method: 'POST', path: '/api/athena/android/push/test', body: { deviceId: registration.deviceId } })
 }
 
 /** Fall back to the normal gateway when the optional push service is unconfigured. */
 export async function androidPushGatewayUrl(url: string): Promise<string> {
   if (!isAndroidApp()) return url
-  if (!await register() || !registration) return url
+  if (await register() || !registration) return url
   if (!timer) {
     timer = window.setInterval(() => { void register() }, 15000)
     document.addEventListener('visibilitychange', () => { void register() })

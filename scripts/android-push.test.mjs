@@ -42,7 +42,7 @@ async function fixture(t, options = {}) {
     sender: { enabled: true, send: async (...args) => { attempts.push(args); if (failures-- > 0) throw new Error("Temporary sender outage"); sent.push(args); waiters.shift()?.() } },
     fetch: async (url, { headers }) => {
       const address = new URL(url)
-      const authorized = headers.cookie === 'hermes_session_at=A' || headers['x-hermes-session-token'] === 'private-existing-token'
+      const authorized = headers.cookie === 'hermes_session_at=A' || headers.Authorization === 'Bearer private-existing-token'
       const configuredRecovery = options.recovery?.grants.some(grant => headers.Authorization === 'Bearer ' + grant.session_token)
       const canReadHistory = configuredRecovery ? options.recovery.authorize(address, headers) : authorized && !options.authExpired?.()
       if (address.pathname === '/api/profiles/sessions') {
@@ -65,7 +65,7 @@ async function fixture(t, options = {}) {
         options.onTitleRead?.(address)
         return Response.json({ title })
       }
-      return options.tokenTicket && (headers['X-Hermes-Session-Token'] || headers['x-hermes-session-token']) === 'private-existing-token'
+      return options.tokenTicket && headers.Authorization === 'Bearer private-existing-token'
       ? Response.json({ user_id: 'static-token-account', provider: 'test' })
       : headers.cookie === 'hermes_session_at=A' || headers.cookie === 'hermes_session_at=B'
       ? Response.json({ user_id: headers.cookie, provider: 'test' }) : Response.json({}, { status: 401 })

@@ -49,7 +49,7 @@ export function createGatewayCompatibility({ target, now = Date.now, fetch: requ
       catch { send(400, { error: 'Invalid socket scope' }); return true }
       try {
         const verified = await request(target + '/api/profiles', {
-          headers: { 'X-Hermes-Session-Token': token }, redirect: 'manual', signal: AbortSignal.timeout(6000)
+          headers: { Authorization: 'Bearer ' + token }, redirect: 'manual', signal: AbortSignal.timeout(6000)
         })
         await verified.body?.cancel()
         if (closed) { send(503, { error: 'Gateway transport is closing' }); return true }

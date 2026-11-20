@@ -119,8 +119,9 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
   })
   const identity = async req => {
     const url = new URL(req.url, 'http://local.invalid')
+    const token = req.headers['x-hermes-session-token'] || url.searchParams.get('token')
     const headers = { cookie: req.headers.cookie || '',
-      'x-hermes-session-token': req.headers['x-hermes-session-token'] || url.searchParams.get('token') || '',
+      ...(typeof token === 'string' && token ? { Authorization: 'Bearer ' + token } : {}),
       'x-forwarded-host': req.headers['x-forwarded-host'] || req.headers.host,
       'x-forwarded-proto': req.headers['x-forwarded-proto'] || (req.socket.encrypted ? 'https' : 'http') }
     const response = await probeIdentity(target, headers, request)
@@ -145,7 +146,7 @@ export function createAndroidPush({ target, identityUrl = target, sender, fetch:
       return
     }
     const headers = replyNotificationHeaders(req, device.origin, cookies)
-    if (!headers.cookie && !headers['x-hermes-session-token']) {
+    if (!headers.cookie && !headers.Authorization) {
       watches.delete(key)
       return
     }

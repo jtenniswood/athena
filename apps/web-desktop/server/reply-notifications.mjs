@@ -14,9 +14,10 @@ export function replyNotificationHeaders(req, origin, cookies = []) {
     }
   }
   const url = new URL(origin)
+  const token = req.headers['x-hermes-session-token']
   return {
     cookie: [...jar].filter(([, value]) => value).map(([name, value]) => name + '=' + value).join('; '),
-    'x-hermes-session-token': req.headers['x-hermes-session-token'] || '',
+    ...(typeof token === 'string' && token ? { Authorization: 'Bearer ' + token } : {}),
     'x-forwarded-host': url.host,
     'x-forwarded-proto': url.protocol.slice(0, -1)
   }
