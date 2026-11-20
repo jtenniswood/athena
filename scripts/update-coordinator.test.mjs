@@ -10,9 +10,10 @@ async function run(replies, options = {}) {
   const clients = replies.map((reply, index) => ({ id: String(index), url: 'https://app.test/', postMessage(message, ports) {
     messages.push(message.type)
     requests.push({ client: index, ...message })
-    if (ports && reply !== null) ports[0].respond(message.type === 'HERMES_VERIFY_UPDATE'
+    const response = typeof reply === 'function' ? reply(transactions) : reply
+    if (ports && response !== null) ports[0].respond(message.type === 'HERMES_VERIFY_UPDATE'
       ? { ready: typeof options.verify === 'function' ? options.verify(transactions, index) : options.verify !== false }
-      : typeof reply === 'function' ? reply(transactions) : reply)
+      : response)
   } }))
   class Channel {
     port1 = { close() {}, onmessage: undefined }
@@ -38,6 +39,24 @@ test('an update activates only after every tab flushes and verifies', async () =
   const result = await run([{ ready: true, texts: { a: 'one' } }, { ready: true, texts: { b: 'two' } }])
   assert.equal(result.activate, 1)
   assert.equal(result.messages.filter(type => type === 'HERMES_VERIFY_UPDATE').length, 2)
+})
+
+test('a timed-out tab can recover on the second handshake', async () => {
+  const result = await run([{ ready: true }, attempt => attempt === 1 ? null : { ready: true }])
+  assert.equal(result.activate, 1)
+  assert.equal(result.transactions, 2)
+  assert.equal(result.requests.find(request => request.type === 'HERMES_ABORT_UPDATE').retrying, true)
+})
+
+test('the initiating tab receives the other tab’s specific browser-work blocker', async () => {
+  const reason = 'Finish recording or transcribing first.'
+  const result = await run([{ ready: true }, { ready: false, reason }])
+  assert.equal(result.activate, 0)
+  assert.equal(result.transactions, 1)
+  const aborts = result.requests.filter(request => request.type === 'HERMES_ABORT_UPDATE')
+  assert.deepEqual(aborts.map(({ reason, anotherTab, retrying }) => [reason, anotherTab, retrying]), [
+    [reason, true, false], [reason, false, false]
+  ])
 })
 
 test('a verification refusal gets one fresh all-tab handshake after aborting the first', async () => {
@@ -106,6 +125,6 @@ test('busy, older, conflicting, newly opened and failed-verification tabs preven
     const result = await run(replies, options)
     assert.equal(result.activate, 0)
     assert.ok(result.messages.includes('HERMES_ABORT_UPDATE'))
-    assert.equal(result.transactions, options?.verify === false ? 2 : 1)
+    assert.equal(result.transactions, options?.verify === false || replies.includes(null) ? 2 : 1)
   }
 })
