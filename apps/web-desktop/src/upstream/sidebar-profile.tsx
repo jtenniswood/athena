@@ -16,6 +16,7 @@ import type { SessionInfo } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { $sidebarGrouping, $sidebarRowMeta } from '@/store/layout'
 import { $newProjectDropPlacement } from '@/store/projects'
+import { hideProfileGroup } from '../experience/profile-list-visibility'
 import { BrowserProfileGroup, BrowserProfileNesting } from '../experience/sidebar-profile'
 import { useBrowserProfileSection } from './profile-section'
 import { openBrowserProfileProjectCreate } from './project-create'
@@ -73,6 +74,7 @@ interface ProfileGroupController {
 export function BrowserProfileGroupControllerSurface({ model }: { model: ProfileGroupController }) {
   const { t } = useI18n(), s = t.sidebar, copy = s.gatewayGroups
   const { group, sessions, sortable } = model
+  const profile = group.profile
   const grouping = useStore($sidebarGrouping)
   const renameLabel = group.profile ? 'Rename profile' : copy.rename
   const browserProfile = useBrowserProfileSection(group.profile)
@@ -85,6 +87,9 @@ export function BrowserProfileGroupControllerSurface({ model }: { model: Profile
         <DropdownMenuItem onSelect={() => { model.setDraft(model.alias || ''); model.setRenaming(true) }}>{renameLabel}</DropdownMenuItem>
         <DropdownMenuItem disabled={model.first} onSelect={() => model.onMove(-1)}>{copy.moveUp}</DropdownMenuItem>
         <DropdownMenuItem disabled={model.last} onSelect={() => model.onMove(1)}>{copy.moveDown}</DropdownMenuItem>
+        {profile && !model.embedded && <DropdownMenuItem onSelect={() => hideProfileGroup(profile)}>
+          Hide profile
+        </DropdownMenuItem>}
       </DropdownMenuContent>
     </DropdownMenu>
     {browserProfile && group.profile && !model.embedded && grouping === 'project' && <Button

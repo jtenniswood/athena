@@ -120,9 +120,10 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
       (c.currentView === 'extension' && Boolean(item.route) && c.pathname === item.route), disabled: !item.action && !item.route,
     run: () => { if (item.keybindActionId) recordAction(item.keybindActionId, 'click'); c.onNavigate(item) }
   }))
+  const profileGroupsEmpty = c.ownerGrouped && c.displayAgentGroups?.length === 0
   const model: BrowserSidebarModel = {
     navigation, flipped: c.panesFlipped,
-    showSections: c.showSessionSections || Boolean(c.displayAgentGroups?.length) || c.cronJobs.length > 0,
+    showSections: c.showSessionSections || profileGroupsEmpty || Boolean(c.displayAgentGroups?.length) || c.cronJobs.length > 0,
     search: { value: c.searchQuery, change: c.setSearchQuery, input: c.searchInputRef }, mode: c.sessionsMode,
     project: c.inProject ? c.enteredProjectId : undefined, notice: <SidebarStorageCorruptNotice />,
     empty: <SidebarBlankState onNewProject={openProjectCreate} />,
@@ -169,7 +170,7 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
         projectContent={c.inProject ? c.enteredProjectContent : undefined} projectOverview={c.projectOverview}
         projectOverviewHidden={c.overviewHidden} projectOverviewPreviews={c.overviewPreviews} projectRepoWorktrees={c.inProject ? c.scopedRepoWorktrees : undefined}
         projectsLoading={c.worktreeGroupingActive ? c.projectTreeLoading : false} removedSessionIds={c.inProject ? c.removedSessionIds : undefined}
-        sessions={c.displayAgentSessions} sortable={c.sessionsMode !== 'archived' && c.agentSessions.length > 1} />
+        sessions={profileGroupsEmpty ? [] : c.displayAgentSessions} sortable={c.sessionsMode !== 'archived' && c.agentSessions.length > 1} />
       {c.messagingGroups.map(group => {
         const sessions = group.sessions
         const groups = c.ownerGrouped ? scopeGatewaySessionGroups(buildGatewaySessionGroups(sessions, c.connectionsRegistry, c.profileColors), `messaging:${group.sourceId}`) : undefined
