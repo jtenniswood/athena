@@ -13,50 +13,6 @@ function load(file, dependencies, globals = {}) {
   return context.exports
 }
 
-function navigation({ active = 'default', all = false, hidden = ['archived'], names = ['archived', 'default', 'writer', 'research'] } = {}) {
-  const selections = []
-  const element = (type, props) => ({ type, props })
-  const model = { active, all, items: names.map(key => ({ key, appearance: {} })), select: value => selections.push(value) }
-  const { BrowserProfileNavigation } = load('experience/profile-navigation.tsx', {
-    jsx: element, jsxs: element,
-    useRef: value => ({ current: value }),
-    useState: value => [typeof value === 'function' ? value() : value, () => {}],
-    useEffect: () => {},
-    useBrowserEngine: () => ({ profiles: { useProfiles: () => model }, surfaces: { ProfileEditor: 'editor' } }),
-    useMobileBrowser: () => false,
-    readHiddenProfiles: () => hidden,
-    readHideAllProfilesButton: () => false,
-    BrowserActionSurface: 'surface',
-    avatarColor: () => null
-  })
-  const tree = BrowserProfileNavigation({})
-  const surface = tree.props.children.find(child => child.type === 'surface')
-  return {
-    selections,
-    toggle: name => surface.props.groups.flatMap(group => group.actions).find(action => action.key === `profile-${name}`).run()
-  }
-}
-
-test('hiding the active default selects the first unhidden profile in rail order', () => {
-  const ui = navigation()
-  ui.toggle('default')
-  assert.deepEqual(ui.selections, ['writer'])
-})
-
-test('hiding the last visible profile falls back to All profiles', () => {
-  const ui = navigation({ names: ['default'] })
-  ui.toggle('default')
-  assert.deepEqual(ui.selections, [null])
-})
-
-test('visibility changes preserve a different active profile or an explicit All profiles scope', () => {
-  for (const options of [{ active: 'writer' }, { all: true }, { hidden: ['default'] }]) {
-    const ui = navigation(options)
-    ui.toggle('default')
-    assert.deepEqual(ui.selections, [])
-  }
-})
-
 function atom(initial) {
   let value = initial
   const listeners = new Set()
@@ -68,64 +24,28 @@ function atom(initial) {
   }
 }
 
-function restoration({ saved = null, active = 'default', all = false, hidden = ['default'], order = ['research', 'writer'] } = {}) {
-  const profiles = atom([]), current = atom(active), scope = atom(all)
-  const storage = new Map(saved ? [['hermes-web.browser.profile', saved]] : [])
-  const selections = []
-  const window = {}
+test('profile restoration keeps the sidebar combined and restores the tab profile without selecting a chat', () => {
+  const current = atom('default')
+  const scope = atom(false)
+  const savedProfiles = []
   const { restoreBrowserProfile } = load('upstream/profiles.ts', {
-    $profiles: profiles, $activeGatewayProfile: current, $showAllProfiles: scope,
-    $profileOrder: atom(order),
-    readHiddenProfiles: () => hidden,
-    browserPreference: () => ({ read: () => all, write: () => {} }),
-    readBrowserTabProfile: () => saved,
-    rememberBrowserTabProfile: value => storage.set('hermes-web.browser.profile', value),
-    setShowAllProfiles: value => scope.set(value),
-    selectProfile: name => { selections.push(name); scope.set(false); current.set(name) },
-    sortByProfileOrder: (items, keys) => [...items].sort((a, b) => keys.indexOf(a.name) - keys.indexOf(b.name))
-  }, {
-    window,
-    sessionStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) }
-  })
+    $activeGatewayProfile: current,
+    $showAllProfiles: scope,
+    readBrowserTabProfile: () => 'writer',
+    rememberBrowserTabProfile: value => savedProfiles.push(value),
+    setShowAllProfiles: value => scope.set(value)
+  }, { window: {} })
+
   const stop = restoreBrowserProfile()
-  const publish = () => profiles.set([
-    { name: 'default', is_default: true }, { name: 'writer' }, { name: 'research' }
-  ])
-  return { selections, publish, stop, current, scope, storage, window }
-}
+  assert.equal(scope.get(), true)
+  assert.equal(current.get(), 'writer')
+  assert.deepEqual(savedProfiles, ['writer'])
 
-test('profile arrival restores the first visible profile when the default or saved profile is hidden', () => {
-  for (const options of [{}, { saved: 'default' }, { saved: 'writer', hidden: ['default', 'writer'] }]) {
-    const state = restoration(options)
-    state.publish()
-    assert.deepEqual(state.selections, ['research'])
-    assert.equal(state.scope.get(), false)
-    assert.equal(state.window.__HERMES_WEB_ACTIVE_PROFILE__, 'research')
-    assert.equal(state.storage.get('hermes-web.browser.profile'), 'research')
-    state.publish()
-    assert.equal(state.selections.length, 1)
-    state.stop()
-  }
-})
-
-test('restoration preserves a visible saved profile and tolerates all profiles being hidden', () => {
-  for (const options of [{ saved: 'writer' }, { hidden: ['default', 'writer', 'research'] }, { hidden: [] }]) {
-    const state = restoration(options)
-    state.publish()
-    assert.deepEqual(state.selections, [])
-    state.stop()
-  }
-})
-
-test('restoration keeps saved all-profile grouping when the default profile is hidden', () => {
-  for (const saved of [null, 'default', 'writer']) {
-    const state = restoration({ saved, all: true })
-    state.publish()
-    assert.deepEqual(state.selections, [])
-    assert.equal(state.scope.get(), true)
-    assert.equal(state.window.__HERMES_WEB_ACTIVE_PROFILE__, null)
-    state.publish()
-    assert.equal(state.scope.get(), true)
-    state.stop()
-  }
+  scope.set(false)
+  assert.equal(scope.get(), true)
+  current.set('research')
+  assert.deepEqual(savedProfiles, ['writer', 'research'])
+  stop()
+  scope.set(false)
+  assert.equal(scope.get(), false)
 })

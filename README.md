@@ -10,10 +10,10 @@ build time.
 
 > This is intended for private networks such as Tailscale and is not hardened for the public internet.
 
-In the sidebar Filters menu, choose **Profiles → Combined** to show profiles together,
-or **Separate** to use the profile switcher. Choose **Grouping** independently:
-None, Updated, Project, or Status. For example, Combined + Status groups chats by
-status within each profile.
+The sidebar shows all profiles together. Open **Filters → Grouping** and choose
+**Project** to group chats within each profile or **None** to list them without
+project headings. Drag chats to set their order. Use **Filters → Archived** to
+browse archived chats.
 
 With Project grouping, drag a chat by its title onto another project to move it.
 The destination highlights before you drop; press Escape
@@ -225,7 +225,6 @@ Chat actions apply to the current chat.
 | Archive chat | **Mod+Shift+A** |
 | Open the delete confirmation | **Mod+Shift+Backspace** |
 | Toggle the archived chats filter | **Mod+Alt+A** |
-| Mark all chats read | **Mod+Alt+R** |
 
 Use **Option** for **Alt** on macOS. If your browser or operating system takes
 a shortcut first, use the corresponding menu action or rebind it in Settings
@@ -479,13 +478,12 @@ container. Keep `/login`, `/auth`, and `/api` on Athena's browser-facing HTTPS
 origin; the bundled nginx proxies these routes. Hermes handles credentials and
 session refresh.
 
-### New sessions in All profiles
+### Starting a chat in a profile
 
-New sessions in **All profiles** use the first enabled profile in the profile
-rail's saved order. Profiles hidden through **Profile actions** are skipped;
-reordering the rail changes which profile is used first. When viewing a single
-profile, new sessions use that profile; starting a session explicitly for a
-profile keeps that choice.
+With **None** grouping, use the add button next to a profile to start a chat there.
+You can also choose **Chat profile** in the toolbar of a new draft before sending
+the first message.
+The new chat shortcut uses the first eligible profile in your saved profile order.
 
 ### Development
 

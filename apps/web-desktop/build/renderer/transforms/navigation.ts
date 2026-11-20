@@ -268,93 +268,6 @@ export async function renameProject(id: string, name: string): Promise<void> {`]
   return `import { browserProjectOwnerProfile } from ${owner}\n` + output
 }
 
-export function filterBrowserSessionMenu(source: string, root: string): string {
-  const target = 'function OptionCheckbox({ checked, onCheck, option }: { checked: boolean; onCheck: () => void; option: Option }) {'
-  if (source.split(target).length !== 2) throw new Error('Browser session filter menu target changed')
-  const replacements: [string, string][] = [
-    ["option.id === 'profile' ? { ...option, label: t.sidebar.gatewayGroups.grouping } : option", "option.id === 'profile' ? { ...option, label: 'Profile' } : option"],
-    ['  const groupingLabel = groupings.find(option => option.id === grouping)?.label\n', ''],
-    [
-      "      {option.label}\n    </DropdownMenuCheckboxItem>",
-      "      {option.id === 'archived' ? browserSidebarActionLabel('archived', option.label) : option.label}\n    </DropdownMenuCheckboxItem>"
-    ],
-    [
-      '  const unreadIds = useStore($unreadFinishedSessionIds)',
-      `  const unreadIds = useStore($unreadFinishedSessionIds)
-  useBrowserSidebarShortcuts({
-    archived: { run: () => setSidebarShowArchived(!showArchived) },
-    read: { disabled: unreadIds.length === 0, run: markAllSessionsRead }
-  })`
-    ],
-    [
-      'function OptionGlyph({ option }: { option: Option }) {',
-      `const OPTION_ICONS: Record<string, string> = { 'all-profiles': 'account', archived: 'archive' }
-
-function OptionGlyph({ option }: { option: Option }) {`
-    ],
-    [
-      "  return option.icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={option.icon} size=\"0.8125rem\" /> : null",
-      "  const icon = option.icon || OPTION_ICONS[option.id]\n  return icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={icon} size=\"0.8125rem\" /> : null"
-    ],
-    [
-      `<DropdownMenuSubTrigger hideChevron>
-              {f.grouping}
-              <span className="ml-auto flex items-center gap-1 pl-4 text-(--ui-text-tertiary)">
-                {groupingLabel}
-                <Codicon name="chevron-right" size="1rem" />
-              </span>
-            </DropdownMenuSubTrigger>`,
-      '<DropdownMenuSubTrigger><Codicon name="list-tree" size="0.8125rem" />{f.grouping}</DropdownMenuSubTrigger>'
-    ],
-    ['<DropdownMenuSubTrigger>{f.ordering}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="list-ordered" size="0.8125rem" />{f.ordering}</DropdownMenuSubTrigger>'],
-    ['<DropdownMenuSubTrigger>{f.show}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="eye" size="0.8125rem" />{f.show}</DropdownMenuSubTrigger>'],
-    ['<DropdownMenuSubTrigger>{f.status}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="pulse" size="0.8125rem" />{f.status}</DropdownMenuSubTrigger>'],
-    ['<DropdownMenuSubTrigger>{f.pullRequest}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="git-pull-request" size="0.8125rem" />{f.pullRequest}</DropdownMenuSubTrigger>'],
-    ['<DropdownMenuSubTrigger>{f.profile}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="account" size="0.8125rem" />{f.profile}</DropdownMenuSubTrigger>'],
-    ['<DropdownMenuSubTrigger>{f.project}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="root-folder" size="0.8125rem" />{f.project}</DropdownMenuSubTrigger>'],
-    ['<DropdownMenuItem onSelect={requestProfileCreate}>{t.profiles.newProfile}</DropdownMenuItem>', '<DropdownMenuItem onSelect={requestProfileCreate}><Codicon name="add" size="0.8125rem" />{t.profiles.newProfile}</DropdownMenuItem>'],
-    ['<DropdownMenuItem onSelect={() => void runImportProfileFlow()}>\n                {t.profiles.importProfile}', '<DropdownMenuItem onSelect={() => void runImportProfileFlow()}>\n                <Codicon name="cloud-download" size="0.8125rem" />\n                {t.profiles.importProfile}'],
-    ['<DropdownMenuItem onSelect={resetSidebarView}>{f.resetToDefaults}</DropdownMenuItem>', '<DropdownMenuItem onSelect={resetSidebarView}><Codicon name="refresh" size="0.8125rem" />{f.resetToDefaults}</DropdownMenuItem>'],
-    ['            {foldCollapsed ? f.expandAll : f.collapseAll}', '            <Codicon name={foldCollapsed ? "expand-all" : "collapse-all"} size="0.8125rem" />\n            {foldCollapsed ? f.expandAll : f.collapseAll}'],
-    ['          {t.sidebar.markAllRead}\n', '          <Codicon name="check-all" size="0.8125rem" />\n          {browserSidebarActionLabel(\'read\', t.sidebar.markAllRead)}\n'],
-    ['        {foldIds.length > 0 && (', '        <BrowserRestoreProfilesItem />\n        {foldIds.length > 0 && (']
-  ]
-  let output = source
-  for (const [before, after] of replacements) {
-    if (output.split(before).length !== 2) throw new Error(`Browser session menu icon contract changed: ${before.slice(0, 48)}`)
-    output = output.replace(before, after)
-  }
-  const hideDesktopOnlyRows = "\n  if (['card-rows', 'profile-rail', 'all-profiles'].includes(option.id)) return null\n"
-  const manualOrdering = "      return ordering === 'manual'"
-  if (output.split(manualOrdering).length !== 2) throw new Error('Browser manual ordering option contract changed')
-  output = output.replace(manualOrdering, '      return true')
-  const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-shortcuts'))
-  const profilesOwner = JSON.stringify(path.join(root, 'src/experience/profile-list-visibility'))
-  output = replaceBrowserContract(output, [
-    ['onValueChange={value => setSidebarOrdering(value as SidebarOrdering)}', 'onValueChange={value => setBrowserSidebarOrdering(value as SidebarOrdering)}'],
-    ["  const grouping = useStore($sidebarGrouping)", "  const savedGrouping = useStore($sidebarGrouping)\n  const grouping = savedGrouping === 'profile' ? 'none' : savedGrouping\n  const combinedProfiles = useBrowserProfileGrouping()"],
-    ["? projects.map(project => project.id)", "? combinedProfiles ? listGroupIds : projects.map(project => project.id)"],
-    ['  const groupings = GROUPINGS.map(option =>', "  const groupings = GROUPINGS.filter(option => option.id !== 'profile').map(option =>"],
-    ['        <DropdownMenuGroup>\n          <DropdownMenuSub>', '        <DropdownMenuGroup>\n          <BrowserProfileLayoutMenu combined={combinedProfiles} />\n          <DropdownMenuSub>'],
-    [`          {grouping === 'project' && (
-            <OptionCheckbox
-              checked={showAllSessions}
-              onCheck={() => setSidebarShowAllSessions(!showAllSessions)}
-              option={{ icon: 'list-unordered', id: 'all-sessions', label: t.sidebar.projects.showAllSessions }}
-            />
-          )}`, ''],
-    ['  setSidebarShowAllSessions,\n', ''],
-    ['  $sidebarShowAllSessions,\n', ''],
-    ['  const showAllSessions = useStore($sidebarShowAllSessions)\n', ''],
-    ['{viewCustomized && <DropdownMenuItem onSelect={resetSidebarView}', '{(viewCustomized || !combinedProfiles) && <DropdownMenuItem onSelect={() => resetBrowserSidebarView(resetSidebarView)}']
-  ])
-  const layoutOwner = JSON.stringify(path.join(root, 'src/upstream/profile-layout-menu'))
-  const orderingOwner = JSON.stringify(path.join(root, 'src/upstream/sidebar-ordering'))
-  const sectionOwner = JSON.stringify(path.join(root, 'src/upstream/profile-section'))
-  return `import { setBrowserSidebarOrdering } from ${orderingOwner}\nimport { BrowserProfileLayoutMenu } from ${layoutOwner}\nimport { useBrowserProfileGrouping, resetBrowserSidebarView } from ${sectionOwner}\n` +
-    `import { BrowserRestoreProfilesItem } from ${profilesOwner}\nimport { browserSidebarActionLabel, useBrowserSidebarShortcuts } from ${owner}\n` + output.replace(target, target + hideDesktopOnlyRows)
-}
-
 export function useBrowserSessionReordering(source: string, surface: 'section' | 'groups'): string {
   const replacements: [string, string][] = surface === 'section' ? [
     [`    (items: SessionInfo[]) =>
@@ -394,35 +307,49 @@ export function useBrowserSessionReordering(source: string, surface: 'section' |
   return output
 }
 
-export function enableBrowserUngroupedSessions(source: string, surface: 'store' | 'menu'): string {
-  const replacements: Record<typeof surface, [string, string][]> = {
-    store: [
-      ["const SIDEBAR_SHOW_ALL_SESSIONS_STORAGE_KEY = 'hermes.desktop.sidebarShowAllSessions'\n", ""],
-      ["    $sidebarShowAllSessions,\n", ""],
-      ["(grouping, ordering, rowMeta, cardRows, showAllSessions, filtersActive)", "(grouping, ordering, rowMeta, cardRows, filtersActive)"],
-      ["export const $sidebarShowAllSessions = persistentAtom(SIDEBAR_SHOW_ALL_SESSIONS_STORAGE_KEY, false, Codecs.bool)", "// Browser groups always show every available session, regardless of saved preview preferences.\nexport const $sidebarShowAllSessions = atom(true)"],
-      ["export function setSidebarShowAllSessions(on: boolean) {\n  $sidebarShowAllSessions.set(on)\n}", ""],
-      ["  $sidebarShowAllSessions.set(false)\n", ""],
-      ["    showAllSessions ||\n", ""],
-      ["export const SIDEBAR_GROUPING_ORDER = ['date', 'project', 'status', 'profile'] as const", "export const SIDEBAR_GROUPING_ORDER = ['none', 'date', 'project', 'status', 'profile'] as const"],
-      ["const currentIndex = SIDEBAR_GROUPING_ORDER.indexOf($sidebarGrouping.get())", "const choices = SIDEBAR_GROUPING_ORDER.filter(grouping => grouping !== 'profile')\n  const currentIndex = choices.indexOf($sidebarGrouping.get() as Exclude<SidebarGrouping, 'profile'>)"],
-      ["setSidebarGrouping(SIDEBAR_GROUPING_ORDER[(currentIndex + 1) % SIDEBAR_GROUPING_ORDER.length])", "setSidebarGrouping(choices[(currentIndex + 1) % choices.length])"],
-      ["SIDEBAR_GROUPING_STORAGE_KEY,\n  'date',", "SIDEBAR_GROUPING_STORAGE_KEY,\n  'none',"],
-      ["oneOf(['date', 'status'], 'date')", "oneOf(['none', 'date', 'status'], 'none')"],
-      ["SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY,\n  'date',", "SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY,\n  'none',"],
-      ["oneOf(['date', 'profile', 'status'], 'date')", "oneOf(['none', 'date', 'profile', 'status'], 'none')"],
-      ["const SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'date'", "const SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'none'"],
-      ["$sidebarFlatGrouping.set(SIDEBAR_DEFAULT_GROUPING)", "$sidebarFlatGrouping.set('none')"],
-      ["// reset the choice every time the user flips the rail. Both scopes still ship\n// by day — grouping by owner is something you go and pick.", "// reset the choice every time the user flips the rail. Browser content\n// defaults to an ungrouped list independently of its profile layout."]
-    ],
-    menu: [["  const GROUPING_OPTIONS: Record<SidebarGrouping, Omit<Option<SidebarGrouping>, 'id'>> = {", "  const GROUPING_OPTIONS: Record<SidebarGrouping, Omit<Option<SidebarGrouping>, 'id'>> = {\n    none: { icon: 'list-unordered', label: 'None' },"]]
-  }
-  let output = source
-  for (const [target, replacement] of replacements[surface]) {
-    if (output.split(target).length !== 2) throw new Error(`Browser ungrouped sessions ${surface} target changed`)
-    output = output.replace(target, replacement)
-  }
-  return output
+export function simplifyBrowserSidebarStore(source: string): string {
+  return replaceBrowserContract(source, [
+    ["const SIDEBAR_SHOW_ALL_SESSIONS_STORAGE_KEY = 'hermes.desktop.sidebarShowAllSessions'\n", ""],
+    ["    $sidebarShowAllSessions,\n", ""],
+    ["(grouping, ordering, rowMeta, cardRows, showAllSessions, filtersActive)", "(grouping, ordering, rowMeta, cardRows, filtersActive)"],
+    ["export const $sidebarShowAllSessions = persistentAtom(SIDEBAR_SHOW_ALL_SESSIONS_STORAGE_KEY, false, Codecs.bool)", "// Browser groups always show every available session, regardless of saved preview preferences.\nexport const $sidebarShowAllSessions = atom(true)"],
+    ["export function setSidebarShowAllSessions(on: boolean) {\n  $sidebarShowAllSessions.set(on)\n}", ""],
+    ["  $sidebarShowAllSessions.set(false)\n", ""],
+    ["    showAllSessions ||\n", ""],
+    ["export const SIDEBAR_GROUPING_ORDER = ['date', 'project', 'status', 'profile'] as const", "export const SIDEBAR_GROUPING_ORDER = ['none', 'project'] as const satisfies readonly SidebarGrouping[]"],
+    ["export type SidebarGrouping = (typeof SIDEBAR_GROUPING_ORDER)[number]", "export type SidebarGrouping = 'none' | 'project' | 'date' | 'status' | 'profile'"],
+    ["SIDEBAR_GROUPING_STORAGE_KEY,\n  'date',\n  oneOf(['date', 'status'], 'date')", "SIDEBAR_GROUPING_STORAGE_KEY,\n  'none',\n  oneOf(['none'], 'none')"],
+    ["SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY,\n  'date',\n  oneOf(['date', 'profile', 'status'], 'date')", "SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY,\n  'none',\n  oneOf(['none'], 'none')"],
+    ["(grouped, flat, allProfiles, showAll) => (grouped ? 'project' : showAll ? allProfiles : flat)", "grouped => grouped ? 'project' : 'none'"],
+    ["SIDEBAR_GROUPING_ORDER.indexOf($sidebarGrouping.get())", "SIDEBAR_GROUPING_ORDER.findIndex(grouping => grouping === $sidebarGrouping.get())"],
+    ["const SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'date'", "const SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'none'"],
+    ["const SIDEBAR_DEFAULT_ORDERING: SidebarOrdering = 'updated'", "const SIDEBAR_DEFAULT_ORDERING: SidebarOrdering = 'manual'"],
+    [`export const $sidebarOrdering: ReadableAtom<SidebarOrdering> = computed(
+  [$sidebarSessionOrderManual, $sidebarSortKey],
+  (manual, key) => (manual ? 'manual' : key)
+)`, `// Keep the existing order IDs and drag behavior, with recency as the initial row order.
+export const $sidebarOrdering: ReadableAtom<SidebarOrdering> = atom('manual')`],
+    [`export const $sidebarStatusFilter = persistentAtom<SessionStatusBucket[]>(
+  SIDEBAR_STATUS_FILTER_STORAGE_KEY,
+  [],
+  listOf(STATUS_FILTERS)
+)`, 'export const $sidebarStatusFilter = atom<SessionStatusBucket[]>([])'],
+    [`export const $sidebarProjectFilter = persistentAtom(
+  SIDEBAR_PROJECT_FILTER_STORAGE_KEY,
+  [] as string[],
+  Codecs.stringArray
+)`, 'export const $sidebarProjectFilter = atom<string[]>([])'],
+    [`export const $sidebarProfileFilter = persistentAtom(
+  SIDEBAR_PROFILE_FILTER_STORAGE_KEY,
+  [] as string[],
+  Codecs.stringArray
+)`, 'export const $sidebarProfileFilter = atom<string[]>([])'],
+    [`export const $sidebarPrFilter = persistentAtom<PullRequestBucket[]>(
+  SIDEBAR_PR_FILTER_STORAGE_KEY,
+  [],
+  listOf(PR_FILTERS)
+)`, 'export const $sidebarPrFilter = atom<PullRequestBucket[]>([])']
+  ])
 }
 
 export function disableBrowserSessionTabs(source: string): string {

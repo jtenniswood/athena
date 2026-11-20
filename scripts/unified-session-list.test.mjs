@@ -49,24 +49,19 @@ test('profile sections reuse configured pictures and keep exact owner routes', (
     })), [contributions[1]])
     assert.match(output, /BrowserProfileGroupControllerSurface/)
     assert.match(output, /sessions, renderRows, children,/)
-    assert.match(output, /!owner \|\| presentationMode/)
     assert.throws(() => useBrowserProfileControllers(source.replace('function GatewayProfileGroup(', 'function ChangedGroup('), root), /controller changed/)
   }
   assert.match(output, /newSessionInAgent\(\{ connectionId: group.connectionId, profile \}\)/)
   assert.equal(ts.createSourceFile(module, output, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX).parseDiagnostics.length, 0)
   const element = (type, props) => ({ type, props })
-  let enabled = true
   const { useBrowserProfileSection } = load('src/upstream/profile-section.tsx', () => ({
-    useStore: () => enabled ? 'profile' : 'none',
-    useBrowserPreference: key => key === 'combinedProfiles' ? enabled : false, useEffect: () => {},
     useBrowserProfiles: () => ({ items: [{ key: 'research', label: 'Researcher', botName: 'Research', appearance: { color: 'blue', image: 'https://example.invalid/profile.png', shape: 'circle' } }] }),
     jsx: element, jsxs: element, avatarColor: color => color, BotFace: 'face'
   }))
   assert.equal(useBrowserProfileSection('research').label, 'Researcher')
   assert.equal(useBrowserProfileSection('research').picture.props.children.props.image, 'https://example.invalid/profile.png')
   assert.equal(useBrowserProfileSection('unknown').label, 'unknown')
-  enabled = false
-  assert.equal(useBrowserProfileSection('research'), null)
+  assert.equal(useBrowserProfileSection(undefined), null)
 })
 
 test('profile grouping keeps empty configured profiles as new conversation entry points', () => {
@@ -105,26 +100,6 @@ test('profile grouping keeps empty configured profiles as new conversation entry
   assert.equal(vm.runInNewContext(expression, { groups: [{ mode: 'project', sessions: [] }] }), false)
 })
 
-
-test('profile layout switches scope without changing grouping or selecting a fresh conversation', () => {
-  let grouping = 'status', combined = true, all = true
-  const { setBrowserProfilesCombined } = load('src/upstream/profile-section.tsx', id => ({
-    $sidebarGrouping: { get: () => grouping }, setSidebarGrouping: value => { grouping = value },
-    browserPreference: () => ({ write: value => { combined = value } }),
-    setShowAllProfiles: value => { all = value }
-  }))
-  setBrowserProfilesCombined(false)
-  assert.equal(grouping, 'status')
-  assert.equal(combined, false)
-  assert.equal(all, false)
-  setBrowserProfilesCombined(true)
-  assert.equal(grouping, 'status')
-  assert.equal(combined, true)
-  assert.equal(all, true)
-  grouping = 'profile'
-  setBrowserProfilesCombined(false)
-  assert.equal(grouping, 'none')
-})
 
 test('combined profiles keep backend project membership and isolate disclosure identities', () => {
   const { browserProfileProjectGroups } = load('src/upstream/profile-projects.tsx', () => ({}))

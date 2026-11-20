@@ -76,12 +76,7 @@ test('Android Back shows chat history after cold and warm notification opens', a
 
 test('the live profile can refuse a stale worker client URL without losing its draft', async ({ page }) => {
   const original = page.url()
-  await page.getByRole('button', { name: 'Filters', exact: true }).click()
-  await page.getByRole('menuitem', { name: 'Profiles', exact: true }).hover()
-  await page.getByRole('menuitemradio', { name: 'Separate', exact: true }).click()
-  await page.keyboard.press('Escape')
-  await page.keyboard.press('Escape')
-  await page.locator('[data-profile-key="writer"]').click()
+  await page.locator('[data-gateway-group]').filter({ has: page.locator('[data-browser-profile-picture="writer"]') }).getByRole('button', { name: /^New (?:session|conversation) in Writer$/ }).click()
   await expect.poll(() => new URL(page.url()).searchParams.get('profile')).toBe('writer')
   await composer(page).fill('Keep the newly selected profile draft')
   const current = page.url()
