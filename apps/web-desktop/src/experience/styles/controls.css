@@ -57,7 +57,7 @@
 }
 
 /* Secondary navigation controls share the same keyboard focus treatment. */
-:is(.browser-navigation-tabs button, .browser-navigation-section-trigger, .browser-navigation-section-list button, .browser-profile-choice, .browser-bot-section-heading):focus-visible {
+:is(.browser-navigation-tabs button, .browser-navigation-section-trigger, .browser-navigation-section-list button, .browser-bot-section-heading):focus-visible {
   outline: var(--web-focus-ring);
   outline-offset: -2px;
 }

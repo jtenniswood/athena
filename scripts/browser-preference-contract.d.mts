@@ -7,8 +7,7 @@ export const MAX_NAVIGATION_WIDTH: number
 export const DEFAULT_NAVIGATION_WIDTH: number
 export function clampNavigationWidth(width: number): number
 export type PreferenceValues = {
-  combinedProfiles: boolean; presentationMode: boolean; activeTab: NavigationTab; hiddenProfiles: string[]; hideAllProfilesButton: boolean;
-  hiddenProfileGroups: string[];
+  activeTab: NavigationTab; hiddenProfiles: string[];
   navigationTabs: NavigationTab[]; navigationWidth: number; followupBehavior: FollowupBehavior;
   auxiliaryTranscript: boolean; hiddenSections: string[]; desktopScale: number; mobileScale: number;
   defaultProfile: ProfileRoute | null; sessionProfile: string | null

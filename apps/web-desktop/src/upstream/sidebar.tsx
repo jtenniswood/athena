@@ -8,12 +8,10 @@ import type { SessionInfo } from '@/hermes'
 import type { Translations } from '@/i18n'
 import type { SidebarProjectTree, SidebarSessionGroup } from '@/app/chat/sidebar/projects'
 import type { $cronJobs } from '@/store/cron'
-import type { SidebarGrouping } from '@/store/layout'
 import { PlatformAvatar } from '@/app/messaging/platform-icon'
 import { SidebarSessionsSection } from '@/app/chat/sidebar/sessions-section'
 import { SidebarCronJobsSection } from '@/app/chat/sidebar/cron-jobs-section'
 import { SidebarLoadMoreRow } from '@/app/chat/sidebar/load-more-row'
-import { SidebarSectionAddButton } from '@/app/chat/sidebar/chrome'
 import { SidebarFilterMenu } from '@/app/chat/sidebar/filter-menu'
 import { SidebarBlankState, SidebarLoadErrorState, SidebarPinnedEmptyState, SidebarSessionSkeletons, SidebarStorageCorruptNotice } from '@/app/chat/sidebar/section-states'
 import { ProjectBackRow, ProjectMenu, StartWorkButton } from '@/app/chat/sidebar/projects'
@@ -21,7 +19,6 @@ import { ProjectDialog } from '@/app/chat/sidebar/project-dialog'
 import { WorktreeDialog } from '@/app/chat/sidebar/projects/worktree-dialog'
 import { ProfileRail } from '@/app/chat/sidebar/profile-switcher'
 import { buildGatewaySessionGroups, scopeGatewaySessionGroups } from '@/app/chat/sidebar/gateway-group-model'
-import { startNewProjectDrag } from '@/app/chat/new-session-drag'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { GlyphSpinner } from '@/components/ui/glyph-spinner'
@@ -30,13 +27,10 @@ import { cn } from '@/lib/utils'
 import { recordAction } from '@/store/desktop-metrics'
 import { pinSession, unpinSession, setSidebarPinsOpen, setSidebarRecentsOpen, toggleSidebarMessagingOpen, setSidebarCronOpen } from '@/store/layout'
 import { exitProjectScope } from '@/store/project-scope'
-import { $newProjectDropPlacement, openProjectCreate } from '@/store/projects'
-import { markAllSessionsRead } from '@/store/session'
-import { ackAllSessionsRead } from '@/store/session-unread'
+import { openProjectCreate } from '@/store/projects'
 import { BrowserSidebar, type BrowserSidebarModel } from '../experience/sidebar'
 import { useBrowserSidebarChannels } from '../experience/sidebar-sections'
 import { useBrowserProfileGroupProjection } from './profile-groups'
-import { useBrowserProfileGrouping } from './profile-section'
 
 interface MessagingSection { sourceId: string; label: string; sessions: SessionInfo[]; total: number; hasMore: boolean }
 interface SidebarController extends Pick<Parameters<typeof ChatSidebar>[0], 'onNavigate' | 'onResumeSession' | 'onDeleteSession' | 'onArchiveSession' | 'onBranchSession' | 'onNewSessionInWorkspace' | 'onNewSessionSplit' | 'onRetrySessions' | 'onManageCronJob' | 'onTriggerCronJob'> {
@@ -67,14 +61,10 @@ interface SidebarController extends Pick<Parameters<typeof ChatSidebar>[0], 'onN
   retryProject(): void
   showSessionSkeletons: boolean
   sessionsLoadError: boolean
-  filtersActive: boolean
   filtersNarrow: boolean
   sessionsLoading: boolean
   recentsLoadMorePending: boolean
   hasMoreSessions: boolean
-  rankedGlobally: boolean
-  combinedProfiles: boolean
-  grouping: SidebarGrouping
   displayAgentGroups?: SidebarSessionGroup[]
   worktreeGroupingActive: boolean
   reposScanning: boolean
@@ -82,9 +72,7 @@ interface SidebarController extends Pick<Parameters<typeof ChatSidebar>[0], 'onN
   enteredProject?: SidebarProjectTree
   activeProjectId: string | null
   enteredProjectOverlaySessions: SessionInfo[]
-  agentOrderManual: boolean
   agentOrderIds: string[]
-  sortOrderIds: string[]
   projectOverview?: SidebarProjectTree[]
   overviewHidden: { isHidden(session: SessionInfo): boolean; counts: Record<string, number> }
   overviewPreviews: Record<string, SessionInfo[]>
@@ -105,7 +93,6 @@ interface SidebarController extends Pick<Parameters<typeof ChatSidebar>[0], 'onN
   messagingOpenIds: string[]
   cronJobs: ReturnType<typeof $cronJobs.get>
   profileRailVisible: boolean
-  unreadCount: number
   toggleUnread(id: string): void
   reorderPinned(ids: string[]): void
   reorderSessions(ids: string[]): void
@@ -143,22 +130,12 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
     dialogs: <><ProjectDialog /><WorktreeDialog /></>
   }
   const controls = <div className="flex shrink-0 items-center gap-0.5">
-    {c.unreadCount > 0 && <Tip label={s.markAllRead}><Button aria-label={s.markAllRead} className={headerButton} size="icon-xs" variant="ghost"
-      onClick={event => { event.stopPropagation(); markAllSessionsRead(); ackAllSessionsRead() }}><Codicon name="check-all" size="0.75rem" /></Button></Tip>}
     {c.inProject && c.enteredProject ? <div className="group/workspace flex shrink-0 items-center gap-0.5">
       {c.enteredProject.path && <StartWorkButton project={c.enteredProject} />}
       {!c.enteredProject.isNoProject && <ProjectMenu isActive={c.enteredProject.id === c.activeProjectId} onExitScope={exitProjectScope} project={c.enteredProject} scoped />}
       <div className="grid size-6 place-items-center"><Tip label={s.showProjects}><Button aria-label={s.showProjects} className={headerButton} size="icon-xs" variant="ghost"
         onClick={event => { event.stopPropagation(); exitProjectScope() }}><Codicon name="list-unordered" size="0.75rem" /></Button></Tip></div>
     </div> : <>
-      {c.grouping === 'project' ? !c.combinedProfiles && <Tip label={s.projects.newButton}>
-        <Button aria-label={s.projects.newButton} className={`${headerButton} transition-opacity`} size="icon-xs" variant="ghost"
-          onClick={event => { event.stopPropagation(); openProjectCreate() }}
-          onPointerDown={event => startNewProjectDrag(placement => $newProjectDropPlacement.set(placement), event, { onTap: openProjectCreate })}>
-          <Codicon name="new-folder" size="0.75rem" />
-        </Button>
-      </Tip> : !c.combinedProfiles && <SidebarSectionAddButton ariaLabel={s.nav['new-session']}
-        onNewSessionSplit={c.onNewSessionSplit} onPlainClick={() => c.onNewSessionInWorkspace(null)} />}
       <div className="grid size-6 place-items-center"><SidebarFilterMenu className={headerButton} /></div>
     </>}
   </div>
@@ -173,26 +150,26 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
         rootClassName="browser-pinned-section shrink-0 p-0 pb-1" contentClassName="flex flex-col gap-px rounded-lg pb-2 pt-1"
         emptyState={<SidebarPinnedEmptyState archived={c.sessionsMode === 'archived'} filtered={c.filtersNarrow} />} />}
       {c.inProject && c.projectLoadFailed && <SidebarLoadErrorState onRetry={c.retryProject} />}
-      <SidebarSessionsSection {...shared} browserSectionId="sessions" label={c.combinedProfiles ? 'Profiles' : c.sessionsLabel}
+      <SidebarSessionsSection {...shared} browserSectionId="sessions" label={c.sessionsMode === 'archived' ? c.sessionsLabel : 'Profiles'}
         open={c.agentsOpen} onToggle={() => setSidebarRecentsOpen(!c.agentsOpen)} pinned={false} onTogglePin={pinSession}
         card={c.cardRows} collapsible={!c.inProject} dndSensors={c.dndSensors} activeProjectId={c.activeProjectId}
         contentClassName={cn('flex min-h-0 flex-1 flex-col gap-px pb-1.75', scroll, !c.recentsVirtualizes && compactFlat)}
-        rootClassName={cn('browser-session-list-section min-h-32 flex-1 overflow-hidden p-0', c.combinedProfiles && 'browser-combined-profiles-section', !c.recentsVirtualizes && 'compact:min-h-0 compact:flex-none compact:overflow-visible')}
+        rootClassName={cn('browser-session-list-section min-h-32 flex-1 overflow-hidden p-0', 'browser-combined-profiles-section', !c.recentsVirtualizes && 'compact:min-h-0 compact:flex-none compact:overflow-visible')}
         emptyState={c.inProject && c.projectLoadFailed ? null : c.showSessionSkeletons || (c.inProject && c.projectLoading) ? <SidebarSessionSkeletons /> :
           !c.inProject && c.sessionsLoadError ? <SidebarLoadErrorState onRetry={() => void c.onRetrySessions()} /> :
-          <div className="grid min-h-16 place-items-center rounded-lg px-2 text-center text-xs text-(--ui-text-tertiary)">{c.inProject ? s.projectEmpty : c.filtersActive ? s.noFilterMatches : c.pinnedSessions.length ? s.allPinned : s.noSessions}</div>}
-        footer={(c.combinedProfiles || c.grouping !== 'project') && !c.showSessionSkeletons && c.hasMoreSessions ? <SidebarLoadMoreRow loading={c.sessionsLoading || c.recentsLoadMorePending} onClick={() => void c.onLoadMoreRecents()} step={0} /> : null}
+          <div className="grid min-h-16 place-items-center rounded-lg px-2 text-center text-xs text-(--ui-text-tertiary)">{c.inProject ? s.projectEmpty : c.sessionsMode === 'archived' ? s.noFilterMatches : c.pinnedSessions.length ? s.allPinned : s.noSessions}</div>}
+        footer={!c.showSessionSkeletons && c.hasMoreSessions ? <SidebarLoadMoreRow loading={c.sessionsLoading || c.recentsLoadMorePending} onClick={() => void c.onLoadMoreRecents()} step={0} /> : null}
         forceEmptyState={c.showSessionSkeletons && !c.displayAgentGroups?.length}
-        grouping={c.agentOrderManual || (c.combinedProfiles && c.grouping === 'project') || c.grouping === 'profile' || c.grouping === 'none' || c.sessionsMode === 'archived' || c.rankedGlobally ? 'none' : c.grouping === 'status' ? 'status' : 'date'}
+        grouping="none"
         groups={c.displayAgentGroups} headerAction={controls} labelMeta={c.worktreeGroupingActive && c.reposScanning && !c.projectsSkeletonVisible ? <GlyphSpinner ariaLabel={s.loading} className="text-[0.6875rem] text-(--ui-text-quaternary)" /> : undefined}
-        liveSessions={c.inProject ? c.enteredProjectOverlaySessions : undefined} manualOrderIds={c.agentOrderManual ? c.agentOrderIds : c.sortOrderIds}
+        liveSessions={c.inProject ? c.enteredProjectOverlaySessions : undefined} manualOrderIds={c.agentOrderIds}
         onEnterProject={c.onEnterProject} onNewSessionInWorkspace={c.onNewSessionInWorkspace} onNewSessionSplit={c.onNewSessionSplit}
-        onReorderProjects={c.showAllProfiles ? undefined : c.reorderProjects} onReorderSessions={c.reorderSessions}
+        onReorderProjects={c.showAllProfiles ? undefined : c.reorderProjects} onReorderSessions={c.sessionsMode === 'archived' ? undefined : c.reorderSessions}
         projectBackRow={c.inProject ? <ProjectBackRow label={s.projects.back} onClick={exitProjectScope} /> : undefined}
         projectContent={c.inProject ? c.enteredProjectContent : undefined} projectOverview={c.projectOverview}
         projectOverviewHidden={c.overviewHidden} projectOverviewPreviews={c.overviewPreviews} projectRepoWorktrees={c.inProject ? c.scopedRepoWorktrees : undefined}
         projectsLoading={c.worktreeGroupingActive ? c.projectTreeLoading : false} removedSessionIds={c.inProject ? c.removedSessionIds : undefined}
-        sessions={c.displayAgentSessions} sortable={c.agentSessions.length > 1} />
+        sessions={c.displayAgentSessions} sortable={c.sessionsMode !== 'archived' && c.agentSessions.length > 1} />
       {c.messagingGroups.map(group => {
         const sessions = group.sessions
         const groups = c.ownerGrouped ? scopeGatewaySessionGroups(buildGatewaySessionGroups(sessions, c.connectionsRegistry, c.profileColors), `messaging:${group.sourceId}`) : undefined
@@ -212,10 +189,9 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
 
 /** Adapt the upstream presentation context without depending on its private bindings. */
 export function useBrowserSidebarPresentation() {
-  const groupAcrossProfiles = useBrowserProfileGrouping()
   const projectProfileGroups = useBrowserProfileGroupProjection()
   return {
-    groupAcrossProfiles,
+    groupAcrossProfiles: true,
     projectProfileGroups,
     render: (model: SidebarController) => <BrowserSidebarControllerSurface model={model} />
   }

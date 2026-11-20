@@ -10,8 +10,6 @@ export interface BrowserProfiles {
   all: boolean
   items: readonly BrowserProfile[]
   fallback: BrowserProfile | null
-  select(profile: string | null): void
-  reorder(source: string, target: string, after: boolean): void
 }
 
 export interface BrowserNewChatProfile {

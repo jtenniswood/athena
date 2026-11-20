@@ -16,7 +16,6 @@ export interface BrowserEngine {
     Conversation: ComponentType
     Status: ComponentType
     Page: ComponentType
-    ProfileEditor: ComponentType<{ profile: string | null; onClose(): void }>
   }
   readonly conversations: {
     useCurrent(): BrowserConversationModel
@@ -27,7 +26,6 @@ export interface BrowserEngine {
     useProfiles(): BrowserProfiles
     useNewChat(): BrowserNewChatProfile
     useActive(): string
-    useGrouping(): boolean
   }
   readonly navigation: {
     usePanels(): readonly BrowserHostPanel[]
