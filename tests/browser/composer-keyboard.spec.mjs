@@ -12,6 +12,68 @@ async function openComposer(page, isMobile = false) {
   await expect(composer(page)).toBeVisible({ timeout: 30000 })
 }
 
+test('queued follow-ups show their message and Steer action by default', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('hermes-web.browser.followup-behavior', 'queue'))
+  const held = []
+  await page.routeWebSocket(/\/api\/ws/, socket => {
+    const server = socket.connectToServer()
+    socket.onMessage(message => {
+      const { id, method, params } = JSON.parse(String(message))
+      if (method !== 'prompt.submit' || params.queued !== true) {
+        server.send(message)
+        return
+      }
+
+      // The preview gateway streams ordinary prompts. Model the owner's queue receipt
+      // and pending list here so a queued follow-up stays behind the running turn.
+      const { session_id, submission_id, text, profile } = params
+      const admission_id = 'preview-queued-follow-up'
+      socket.send(JSON.stringify({ jsonrpc: '2.0', id, result: {
+        status: 'queued', session_id, submission_id, admission_id, ref: { session_id, profile }
+      } }))
+      socket.send(JSON.stringify({ jsonrpc: '2.0', method: 'event', params: {
+        type: 'session.info', session_id, timestamp: Date.now(),
+        payload: {
+          stored_session_id: session_id, running: true,
+          pending_submissions: [{ admission_id, input_id: submission_id, status: 'queued', user: text, controls: ['steer', 'replace'] }]
+        }
+      } }))
+    })
+    server.onMessage(message => {
+      const frame = JSON.parse(String(message))
+      if (frame.params?.type === 'message.complete' && frame.params.session_id === 'preview-week') {
+        held.push(() => socket.send(message))
+      } else {
+        socket.send(message)
+      }
+    })
+  })
+  await openComposer(page)
+  const editor = composer(page)
+  await editor.fill('Start a reply')
+  await editor.press('Enter')
+  const composerRoot = page.locator('[data-slot="composer-root"]')
+  await expect(composerRoot.getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
+
+  const followup = 'Make the plan shorter'
+  await editor.fill(followup)
+  await editor.press('Enter')
+
+  const stack = page.locator('[data-slot="composer-status-stack"]')
+  const header = stack.getByRole('button', { name: '1 Queued', exact: true })
+  const preview = stack.getByText(followup, { exact: true })
+  await expect(header).toHaveAttribute('aria-expanded', 'true')
+  await expect(preview).toBeVisible()
+  await expect(stack.getByRole('button', { name: /^Steer —/ })).toHaveText('Steer')
+  await expect(stack.locator('.status-row-actions')).toHaveCSS('opacity', '1')
+
+  await header.click()
+  await expect(preview).toBeHidden()
+  await header.click()
+  await expect(preview).toBeVisible()
+  for (const release of held) release()
+})
+
 test('composer line breaks preserve undo, draft persistence and ordinary submission', async ({ page }) => {
   await openComposer(page)
   const editor = composer(page)
