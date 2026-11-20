@@ -18,7 +18,7 @@
 .browser-shell [data-testid="reasoning-pill"]::before { mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 3a3 3 0 0 0-3 3v.3A3.5 3.5 0 0 0 4 12a3.5 3.5 0 0 0 2 5.7V18a3 3 0 0 0 5 2.2V5a3 3 0 0 0-2-2.8ZM15 3a3 3 0 0 1 3 3v.3a3.5 3.5 0 0 1 2 5.7 3.5 3.5 0 0 1-2 5.7v.3a3 3 0 0 1-5 2.2V5a3 3 0 0 1 2-2.8Z'/%3E%3C/svg%3E"); }
 .browser-tool-title button { border:1px solid var(--web-border); border-radius:var(--web-radius-panel); padding:var(--web-space-2) var(--web-space-3); font-size:var(--web-text-caption); background:var(--web-bg); cursor:pointer; }
 .browser-workspace { flex:1; min-height:0; display:flex; position:relative; }
-.browser-navigation { --sidebar:var(--web-sidebar); position:relative; width:var(--browser-navigation-width,19rem); flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid transparent; background:var(--web-sidebar); overflow:hidden; }
+.browser-navigation { --sidebar:var(--web-sidebar); position:relative; width:var(--browser-navigation-width,19rem); flex-shrink:0; display:flex; flex-direction:column; border-inline-end:1px solid var(--web-border-subtle); background:var(--web-sidebar); overflow:hidden; }
 /* The shell owns the divider so it continues alongside the profile footer. */
 .browser-navigation [data-slot="sidebar"] { border-right-width:0; background:var(--web-sidebar); }
 .browser-navigation[hidden],.browser-navigation-resizer[hidden] { display:none; }
@@ -68,7 +68,7 @@
    the visible gap change from one section to the next. The session scroller
    reserves a stable scrollbar gutter, so extend its box into the gutter to
    give rows more room without moving the scrollbar. */
-.browser-sessions-pane [data-sessions-mode] { row-gap:var(--web-space-2); padding-top:var(--web-space-2); width:calc(100% + 1.75rem); margin-inline-start:-.625rem; margin-inline-end:-1.125rem; }
+.browser-sessions-pane [data-sessions-mode] { row-gap:var(--web-space-3); padding-top:var(--web-space-2); width:calc(100% + 1.75rem); margin-inline-start:-.625rem; margin-inline-end:-1.125rem; }
 .browser-sessions-pane [data-sessions-mode] > [data-sidebar="group"] > [data-browser-section-header] { min-height:2rem; padding-block:var(--web-space-1); }
 .browser-sessions-pane [data-sessions-mode] > [data-sidebar="group"] { padding-bottom:0 !important; }
 .browser-sessions-pane [data-sessions-mode] > [data-sidebar="group"] > [data-sidebar="group-content"] { padding-bottom:0 !important; }
@@ -124,7 +124,9 @@
 .browser-sessions-pane :is(button[aria-label="New session"],[data-browser-section-header] button[data-size="icon-xs"]) { color:var(--web-text-muted); opacity:1 !important; }
 .browser-sessions-pane button[aria-label="New session"] { visibility:visible !important; pointer-events:auto !important; }
 /* Match the chat action columns, including nested profile/project controls. */
-.browser-sessions-pane [data-browser-group-header] { min-height:1.625rem; padding-block:0; padding-inline-end:.625rem; }
+.browser-sessions-pane [data-browser-group-header] { min-height:1.875rem; padding-block:0; padding-inline-end:.625rem; }
+.browser-sessions-pane [data-browser-group-header] > button:first-child { font-size:var(--web-text-caption); }
+.browser-sessions-pane [data-browser-group-header] [data-slot="row-button"] > span { font-size:var(--web-text-body); }
 .browser-sessions-pane [data-browser-group-actions] { margin-inline-end:0; }
 .browser-sessions-pane [data-browser-group-actions],
 .browser-sessions-pane [data-browser-group-actions] div:has(> button) { gap:var(--web-space-1); }

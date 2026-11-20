@@ -20,8 +20,7 @@ export interface BrowserSidebarSectionModel {
 /** Stable identity and disclosure belong to the browser; list state stays in Hermes. */
 export function BrowserSidebarSection({ model, children, footer }: { model: BrowserSidebarSectionModel; children: ReactNode; footer?: ReactNode }) {
   const identity = useBrowserSidebarSection(model.id, model.label)
-  const label = <>{model.icon}<span className="flex min-w-0 items-center gap-2 pl-2 text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-(--theme-primary)">
-    <span aria-hidden="true" className="dither inline-block size-2 shrink-0 rounded-[1px]" />
+  const label = <>{model.icon}<span className="flex min-w-0 items-center pl-2 text-[length:var(--web-text-caption)] font-medium text-(--web-text-muted)">
     <span className="min-w-0 truncate leading-none">{model.label}</span>
   </span>{model.meta && <span className="shrink-0 text-[0.6875rem] font-medium text-(--ui-text-quaternary)">{model.meta}</span>}</>
   return <div {...identity} data-sidebar="group" data-slot="sidebar-group" data-session-pin-drop={model.acceptsSessionDrops !== false && model.pinned ? '' : undefined}
