@@ -2817,6 +2817,28 @@
     "outputHash": "36f503c1f53dc42df7e45ed6fe83dd24e8ec02ba9ecc38750025576aef1bd90c"
   },
   {
+    "name": "browser-queued-followups",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "app/chat/composer/queue-panel.tsx",
+    "reason": "Show queued follow-ups and their available actions by default in the browser composer.",
+    "owner": "apps/web-desktop/build/renderer/transforms/composer.ts",
+    "tests": [
+      {
+        "file": "tests/browser/composer-keyboard.spec.mjs",
+        "scenario": "queued follow-ups show their message and Steer action by default"
+      }
+    ],
+    "removal": "Remove when the renderer displays queued follow-ups and their actions by default.",
+    "handlers": [
+      "showBrowserQueuedFollowups"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "be3e1a9b90d9da013ba9a0f379e6e4687d29a955dec5880dcb6a181ba196179b",
+    "inputHash": "be3e1a9b90d9da013ba9a0f379e6e4687d29a955dec5880dcb6a181ba196179b",
+    "outputHash": "0539e9d2c334862aa7364ed495001eae267d39ac33e38af436b4d36ffd4e45a5"
+  },
+  {
     "name": "browser-draft-safety-alias",
     "kind": "alias",
     "order": 0,

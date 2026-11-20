@@ -12,6 +12,45 @@ async function openComposer(page, isMobile = false) {
   await expect(composer(page)).toBeVisible({ timeout: 30000 })
 }
 
+test('queued follow-ups show their message and Steer action by default', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('hermes-web.browser.followup-behavior', 'queue'))
+  const held = []
+  await page.routeWebSocket(/\/api\/ws/, socket => {
+    const server = socket.connectToServer()
+    server.onMessage(message => {
+      const frame = JSON.parse(String(message))
+      if (frame.params?.type === 'message.complete' && frame.params.session_id === 'preview-week') {
+        held.push(() => socket.send(message))
+      } else {
+        socket.send(message)
+      }
+    })
+  })
+  await openComposer(page)
+  const editor = composer(page)
+  await editor.fill('Start a reply')
+  await editor.press('Enter')
+  await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
+
+  const followup = 'Make the plan shorter'
+  await editor.fill(followup)
+  await editor.press('Enter')
+
+  const stack = page.locator('[data-slot="composer-status-stack"]')
+  const header = stack.getByRole('button', { name: '1 Queued', exact: true })
+  const preview = stack.getByText(followup, { exact: true })
+  await expect(header).toHaveAttribute('aria-expanded', 'true')
+  await expect(preview).toBeVisible()
+  await expect(stack.getByRole('button', { name: /^Steer —/ })).toHaveText('Steer')
+  await expect(stack.locator('.status-row-actions')).toHaveCSS('opacity', '1')
+
+  await header.click()
+  await expect(preview).toBeHidden()
+  await header.click()
+  await expect(preview).toBeVisible()
+  for (const release of held) release()
+})
+
 test('composer line breaks preserve undo, draft persistence and ordinary submission', async ({ page }) => {
   await openComposer(page)
   const editor = composer(page)
