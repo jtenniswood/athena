@@ -83,9 +83,9 @@ function registration(network = { pause: async () => true, resume() {} }) {
       await listeners.get('message')({ data: { type, url }, ports: [{ postMessage: value => { reply = value } }] })
       return reply
     },
-    async ask(type, transaction = 'update') {
+    async ask(type, transaction = 'update', details = {}) {
       let reply
-      await listeners.get('message')({ data: { type, transaction }, ports: [{ postMessage: value => { reply = value } }] })
+      await listeners.get('message')({ data: { type, transaction, ...details }, ports: [{ postMessage: value => { reply = value } }] })
       return reply
     }
   }
@@ -226,6 +226,45 @@ test('a failed update check can retry after proxy sign-in or connectivity recove
   await app.event('online')
   assert.equal(app.updates(), 2)
   assert.equal(app.reloads(), 0)
+})
+
+test('update notices keep progress during a retry and show the final cross-tab blocker', async () => {
+  const app = registration()
+  app.worker.waiting = { postMessage() {} }
+  await waitFor(() => !!app.notice())
+  app.safety.setActiveWork({ count: 1 })
+  await app.notice().update()
+  assert.equal(app.notice().phase, 'updating')
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true)
+  await app.ask('HERMES_ABORT_UPDATE', 'update', { retrying: true })
+  assert.equal(app.notice().phase, 'updating')
+  assert.equal(app.root.inert, false)
+  await app.ask('HERMES_ABORT_UPDATE', 'retry', { reason: 'Finish recording or transcribing first.', anotherTab: true })
+  assert.equal(app.notice().phase, 'available')
+  assert.equal(app.notice().message, 'Update postponed. Another Hermes tab needs attention. Finish recording or transcribing first.')
+})
+
+test('a tab reports the pending-network blocker and preserves it with an older coordinator', async () => {
+  const app = registration({ pause: async () => false, resume() {} })
+  app.worker.waiting = { postMessage() {} }
+  await waitFor(() => !!app.notice())
+  const reply = await app.ask('HERMES_FLUSH_UPDATE')
+  assert.equal(reply.ready, false)
+  assert.match(reply.reason, /pending browser requests/)
+  await app.ask('HERMES_ABORT_UPDATE')
+  assert.equal(app.notice().message, reply.reason)
+})
+
+test('an update with no worker response times out and can be retried', async () => {
+  const app = registration()
+  let requests = 0
+  app.worker.waiting = { postMessage() { requests++ } }
+  await waitFor(() => !!app.notice())
+  await app.notice().update()
+  app.expire()
+  assert.match(app.notice().message, /took too long/)
+  await app.notice().update()
+  assert.equal(requests, 2)
 })
 
 test('update verification accepts unchanged draft entries after their insertion order changes', async () => {

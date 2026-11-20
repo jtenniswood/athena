@@ -55,6 +55,10 @@ export function registerPwa(): void {
     clearTimeout(timer); transaction = undefined; snapshot = undefined
     network.resume()
   }
+  const prepareTimeout = () => {
+    unlock()
+    setStatus('Reload postponed. The update took too long to prepare. Try again.')
+  }
   navigator.serviceWorker.addEventListener('message', async event => {
     const message = event.data
     if (message?.type === 'ATHENA_NOTIFICATION_ACTIVATE') {
@@ -72,22 +76,33 @@ export function registerPwa(): void {
       return
     }
     if (message?.type === 'HERMES_ABORT_UPDATE') {
+      if (transaction && message.transaction !== transaction) return
       if (message.transaction === transaction) unlock()
-      setStatus('Update postponed. Save pending changes in all Hermes tabs, or close older tabs, then try again.')
+      clearTimeout(timer)
+      if (message.retrying) {
+        if (notice?.phase === 'updating') timer = setTimeout(prepareTimeout, 15000)
+        return
+      }
+      if (typeof message.reason === 'string' && message.reason) {
+        const scope = message.anotherTab ? 'Another Hermes tab needs attention. ' : ''
+        setStatus(`Update postponed. ${scope}${message.reason}`)
+      } else if (notice?.phase === 'updating') {
+        setStatus('Update postponed. Save pending changes in all Hermes tabs, or close older tabs, then try again.')
+      }
       return
     }
     if (!['HERMES_FLUSH_UPDATE', 'HERMES_VERIFY_UPDATE'].includes(message?.type)) return
     if (message.type === 'HERMES_FLUSH_UPDATE') {
       if (transaction && transaction !== message.transaction) { event.ports[0]?.postMessage({ ready: false }); return }
       releaseInteraction ??= beginBrowserTransition()
-      if (!releaseInteraction) { event.ports[0]?.postMessage({ ready: false }); return }
+      if (!releaseInteraction) {
+        event.ports[0]?.postMessage({ ready: false, reason: 'Wait for the current page action to finish, then try again.' })
+        return
+      }
       transaction = message.transaction
       snapshot = undefined
       setStatus('Saving drafts and preparing open tabs. Running tasks will continue.', 'updating')
-      clearTimeout(timer); timer = setTimeout(() => {
-        unlock()
-        setStatus('Reload postponed. The update took too long to prepare. Try again.')
-      }, 15000)
+      clearTimeout(timer); timer = setTimeout(prepareTimeout, 15000)
       const state = await reloadReadinessAfterSaving('ui-update')
       // A worker timeout/abort must not leave a late save holding the UI locked.
       if (transaction !== message.transaction) { event.ports[0]?.postMessage({ ready: false }); return }
@@ -98,11 +113,13 @@ export function registerPwa(): void {
       const verified = drained ? reloadReadiness(true, 'ui-update') : state
       if (verified.ready && drained) {
         snapshot = verified.drafts
+        event.ports[0]?.postMessage({ ready: true, texts: snapshot?.texts })
       } else {
         unlock()
-        setStatus(verified.reason || 'Update postponed. Wait for pending requests to finish, then try again.')
+        const reason = verified.reason || 'Wait for pending browser requests to finish, then try again.'
+        setStatus(reason)
+        event.ports[0]?.postMessage({ ready: false, reason })
       }
-      event.ports[0]?.postMessage({ ready: verified.ready && drained, texts: snapshot?.texts })
     } else {
       let ready = transaction === message.transaction && !!snapshot
       try {
@@ -118,7 +135,7 @@ export function registerPwa(): void {
       ready = ready && transaction === message.transaction && state.ready && !!current && !!snapshot &&
         current.storageKey === snapshot.storageKey &&
         Object.entries(snapshot.texts).every(([key, text]) => current.texts[key] === text)
-      event.ports[0]?.postMessage({ ready })
+      event.ports[0]?.postMessage({ ready, reason: state.reason })
     }
   })
   navigator.serviceWorker.addEventListener('controllerchange', async () => {
@@ -141,6 +158,7 @@ export function registerPwa(): void {
         if (!state.ready) { setStatus(state.reason || 'Reload postponed. Try again.'); return }
         if (!registration.waiting) { setStatus('The update is no longer ready. Check for updates again.'); return }
         registration.waiting.postMessage({ type: 'HERMES_PREPARE_UPDATE' })
+        timer = setTimeout(prepareTimeout, 15000)
       } catch { setStatus('The interface could not reload. Try again.') }
     }
     notice = { update, phase: 'available', message: 'Your running tasks will continue.' }
