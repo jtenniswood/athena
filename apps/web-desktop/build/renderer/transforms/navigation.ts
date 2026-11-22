@@ -400,8 +400,10 @@ export function useBrowserSessionReordering(source: string, surface: 'section' |
   }, [renderListRow, sessionsDraggable, manualOrderIds, sessions, dndSensors, onReorderSessions, isListGroupOpen])
 
   const renderRows = useCallback(`],
-    ['return hideCollapsedGroupRows(ordered, isListGroupOpen).map(row => renderListRow(row, false))', 'return renderBrowserRows(ordered)'],
-    ['[isListGroupOpen, manualOrderIds, renderListRow, showAllSessions]', '[manualOrderIds, renderBrowserRows, showAllSessions]'],
+    [sidebarSourceBlock(source, '  // Limit complete groups, not sessions', '  // Same as `renderRows`'), ''],
+    ['renderRows={showAllSessions ? items => renderPreviewRows(items, project.id) : renderRows}', 'renderRows={renderRows}'],
+    ['  const showAllSessions = useStore($sidebarShowAllSessions)\n', ''],
+    ['  $sidebarShowAllSessions,\n', ''],
     ['return hideCollapsedGroupRows(rows, isListGroupOpen).map(row => renderListRow(row, false))', 'return renderBrowserRows(rows)'],
     ['[grouping, isListGroupOpen, renderListRow]', '[grouping, renderBrowserRows]']
   ] : [

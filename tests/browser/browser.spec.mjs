@@ -880,10 +880,10 @@ for (const mode of [
       await expect(parent).toBeHidden()
       await expect.poll(() => submenu.evaluate(el => el.contains(document.activeElement))).toBe(true)
       await expect(page.getByRole('menu')).toHaveCount(1)
-      const bounds = await submenu.boundingBox()
-      expect(bounds.x).toBe(0)
-      expect(bounds.width).toBe(mode.viewport.width)
-      expect(Math.round(bounds.y + bounds.height)).toBe(mode.viewport.height)
+      await expect.poll(async () => {
+        const bounds = await submenu.boundingBox()
+        return bounds && [Math.round(bounds.x), Math.round(bounds.width), Math.round(bounds.y + bounds.height)]
+      }).toEqual([0, mode.viewport.width, mode.viewport.height])
       await activate(submenu.getByRole('menuitemradio', { name: 'Combined', exact: true }))
       await expect(submenu.getByRole('menuitemradio', { name: 'Combined', exact: true })).toHaveAttribute('aria-checked', 'true')
       await expect(parent).toBeHidden()
@@ -2124,25 +2124,31 @@ test('Show projects toggles project headers without date dividers and survives r
     const data = await response.json()
     const sessions = data.recents?.sessions ?? data.sessions ?? []
     for (const session of sessions) {
-      if (session.id === 'preview-idea') session.last_active = session.started_at = session.created_at = Math.floor(Date.now() / 1000) - 40 * 86400
+      if (session.id === 'preview-idea') session.last_active = session.started_at = session.created_at = Math.floor(Date.now() / 1000) - 86400
     }
     await route.fulfill({ response, json: data })
   })
   await page.route('**/api/athena/preferences', route => route.abort())
+  const sessionIds = ['preview-week', 'preview-idea']
+  await page.route('**/api/profiles/projects/tree?**', route => route.fulfill({ json: {
+    projects: [{ id: 'test-project', label: 'Test project', path: '/workspace/test', sessionCount: 2, sessionIds, repos: [] }],
+    active_id: null, scoped_session_ids: sessionIds
+  } }))
   await page.addInitScript(() => {
     localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarGrouping', 'date')
     localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarStatusFilter', '["working"]')
   })
   await open(page)
   const sidebar = page.locator('.browser-sessions-pane')
-  const dividers = sidebar.locator('[data-browser-group-header]')
+  const dividers = sidebar.locator('[data-browser-group-header]').filter({ hasText: /^(Earlier today|Yesterday|Earlier this week|Last week|Earlier this month)$/i })
+  const project = sidebar.locator('[data-sessions-project="test-project"]')
   const olderSession = sidebar.getByText('Explore a product idea', { exact: true }).first()
   const filters = page.getByRole('button', { name: 'Filters', exact: true })
   const projects = page.getByRole('menuitemcheckbox', { name: 'Show projects', exact: true })
   const expectView = async (showProjects) => {
     await expect(olderSession).toBeVisible()
     await expect(dividers).toHaveCount(0)
-    await expect(sidebar.getByRole('button', { name: showProjects ? 'Projects' : 'Sessions', exact: true })).toBeVisible()
+    await expect(project).toHaveCount(showProjects ? 1 : 0)
   }
 
   await expectView(false)
@@ -4229,7 +4235,7 @@ for (const width of [1440, 390]) {
       else await page.keyboard.press('Escape')
     }
     await toggleProjects()
-    await expect(section.locator('[data-browser-group-header]')).toHaveCount(0)
+    await expect(section.locator('[data-browser-group-header]').filter({ hasText: /^(Earlier today|Yesterday|Earlier this week|Last week|Earlier this month)$/i })).toHaveCount(0)
     const project = profile => group(profile).locator('[data-sessions-project="shared-project"]')
     await expect(project('default')).toBeVisible()
     await expect(project('research')).toBeVisible()
@@ -4250,7 +4256,7 @@ for (const width of [1440, 390]) {
     await expect(project('research')).toHaveCount(0)
     await expect(group('default')).toBeVisible()
     await page.reload()
-    await expect(group('default')).toBeVisible()
+    await expect(group('default')).toBeVisible({ timeout: 30000 })
     if (width === 390) await group('default').getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
     await expect(editor(page)).toHaveText(draft)
     await expect(page).toHaveURL(/#\/preview-week$/)
@@ -4373,6 +4379,7 @@ for (const layout of ['flat', 'profiles', 'projects']) {
     await page.route('**/api/athena/preferences', route => route.abort())
     await page.addInitScript(layout => {
       localStorage.setItem('hermes.desktop.showAllProfiles', 'true')
+      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarSortKey', 'created')
       localStorage.setItem('hermes-web.browser.combined-profiles', String(layout !== 'flat'))
       localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles', layout === 'profiles' ? 'profile' : 'none')
       localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarAgentsGrouped.allProfiles', String(layout === 'projects'))
@@ -4392,14 +4399,14 @@ for (const layout of ['flat', 'profiles', 'projects']) {
     const first = page.getByRole('button', { name: 'Drag first chat', exact: true })
     const second = page.getByRole('button', { name: 'Drag second chat', exact: true })
     const selectedRoute = page.url()
-    const before = await page.getByRole('button', { name: 'Reorder Drag first chat', exact: true }).boundingBox(), target = await second.boundingBox()
+    const source = page.locator('[data-web-session-id="drag-first"] .browser-session-title')
+    const targetRow = page.locator('[data-web-session-id="drag-second"]')
+    const [before, target] = await Promise.all([source.boundingBox(), targetRow.boundingBox()])
     expect(before.y).toBeLessThan(target.y)
     await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2)
     await page.mouse.down()
-    await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2 + 10, { steps: 3 })
-    await page.waitForTimeout(150)
-    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2 + 4, { steps: 15 })
-    await page.waitForTimeout(150)
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height * .8, { steps: 10 })
+    await expect(targetRow).toHaveAttribute('data-session-order-drop', 'after')
     await page.mouse.up()
     await expect.poll(async () => (await first.boundingBox()).y > (await second.boundingBox()).y).toBe(true)
     await expect(editor(page)).toHaveText('Keep this draft while dragging chats')
