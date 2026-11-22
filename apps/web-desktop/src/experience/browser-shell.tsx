@@ -6,12 +6,13 @@ import { BrowserProfileNavigation } from './profile-navigation'
 import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
 import { KANBAN_ROUTE } from './tool-routes'
+import { AppSettingsRegistration, SettingsLink } from './settings-menu'
 import { BrowserToolbarButton } from './ui/toolbar-button'
-import { BrowserNavigationTabs, BrowserNavigationSettings, BrowserNavigationResizer, useBrowserNavigation } from './navigation'
+import { BrowserNavigationTabs, BrowserNavigationResizer, useBrowserNavigation } from './navigation'
 import { BrowserActionError } from './action-errors'
 import { ARCHIVE_TOASTS_ID, BrowserArchiveToasts } from './archive-toast'
 import { BrowserArchiveConfirmation } from './archive-confirmation'
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 import { BrowserSidebarNavigation } from './sidebar-extras'
 import { BrowserSessionsPane } from './sidebar-sections'
@@ -32,24 +33,35 @@ export function BrowserShell() {
 }
 function BrowserLayout() {
   const engine = useBrowserEngine()
-  const { Sessions: BrowserSessionsSurface, Bots: BrowserBotsSurface, Conversation: BrowserConversationSurface, Status: BrowserStatusSurface } = engine.surfaces
+  const { Sessions: BrowserSessionsSurface, Bots: BrowserBotsSurface, Conversation: BrowserConversationSurface, Status: BrowserStatusSurface, Page: BrowserPageSurface } = engine.surfaces
   const presentationMode = engine.profiles.useGrouping()
   useEffect(() => installTranscriptPreferences(), [])
   const navigate = useNavigate(), location = useLocation()
+  const kanban = location.pathname === KANBAN_ROUTE.path
+  const settings = location.pathname === '/settings'
+  const coversWorkspace = engine.navigation.coversWorkspace(location.pathname)
+  const lastChat = useRef<{ url: string; state: unknown }>({ url: '/', state: null })
+  useLayoutEffect(() => {
+    if (!coversWorkspace) lastChat.current = { url: location.pathname + location.search + location.hash, state: location.state }
+  }, [coversWorkspace, location])
   const conversation = engine.conversations.useCurrent()
   const sessionActions = engine.conversations.useActions(conversation)
   const chatTitle = conversation.displayName || ''
   const panels = engine.navigation.usePanels()
   const main = useRef<HTMLElement>(null), menu = useRef<HTMLButtonElement>(null)
+  const rail = useRef<HTMLElement>(null)
   const archiveToasts = useRef<HTMLDivElement>(null)
-  const navigation = useBrowserNavigation({ selectionKey: conversation.selectionKey, path: location.pathname, main, trigger: menu, archiveToasts })
+  const navigation = useBrowserNavigation({ selectionKey: conversation.selectionKey, path: location.pathname, main, trigger: menu, rail, archiveToasts })
+  const inlineKanban = kanban && !navigation.mobile
   const profiles = engine.profiles.useProfiles()
   const preventSessionPaneDrag = useSidebarGestures(navigation.drawer, engine.projects,
     JSON.stringify([profiles.active, profiles.all, presentationMode, navigation.tab, navigation.open, location.pathname]))
   useChatPanelSettings(navigation)
   engine.useEnvironment(conversation,
-    !((navigation.mobile || navigation.compact) && navigation.drawerOpen) && !location.pathname.startsWith('/settings'))
+    !(navigation.compact && navigation.drawerOpen) && !settings && !kanban)
   const { tab } = navigation
+  const drawerModal = navigation.compact && navigation.drawerOpen
+  const drawerOwnedElements = navigation.mobile ? ARCHIVE_TOASTS_ID : `browser-app-navigation ${ARCHIVE_TOASTS_ID}`
   const [updateNotice, setUpdateNotice] = useState<PwaUpdateNotice | null>(() => currentPwaUpdate())
   const [updateDismissed, setUpdateDismissed] = useState(false)
   useEffect(() => subscribePwaUpdate(notice => {
@@ -60,20 +72,36 @@ function BrowserLayout() {
     engine.navigation.openPage(navigate, path)
     navigation.closeDrawer()
   }
+  const openChat = () => {
+    if (coversWorkspace) void navigate(lastChat.current.url, { state: lastChat.current.state })
+    else navigation.showHistory()
+  }
   return <div className="browser-shell" data-browser-shell="" data-android-app={isAndroidApp() || undefined} data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined}>
     <BrowserActionError />
     <BrowserArchiveConfirmation />
+    <AppSettingsRegistration />
     <div className="browser-workspace">
+      {!navigation.mobile && <nav id="browser-app-navigation" className="browser-app-navigation" aria-label="App navigation" ref={rail}>
+        <BrowserToolbarButton tooltip="Chat" aria-label="Chat" aria-current={!kanban && !settings ? 'page' : undefined} onClick={openChat}>
+          <Codicon name="comment" />
+        </BrowserToolbarButton>
+        <BrowserToolbarButton tooltip={KANBAN_ROUTE.label} aria-label={KANBAN_ROUTE.label} aria-current={kanban ? 'page' : undefined} onClick={() => { if (!kanban) openRoute(KANBAN_ROUTE.path) }}>
+          <Codicon name={KANBAN_ROUTE.icon} />
+        </BrowserToolbarButton>
+        <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} active={settings} />
+      </nav>}
       {navigation.compact && !navigation.mobile && navigation.drawerOpen && <button type="button" className="browser-scrim" aria-label="Dismiss navigation" tabIndex={-1} onClick={navigation.dismissDrawer} />}
-      <aside id="browser-navigation" ref={navigation.drawer} tabIndex={navigation.mobile ? -1 : undefined} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={navigation.compact && navigation.drawerOpen ? 'dialog' : undefined} aria-modal={navigation.compact && navigation.drawerOpen ? true : undefined} aria-owns={navigation.compact && navigation.drawerOpen ? ARCHIVE_TOASTS_ID : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
-        <BrowserNavigationTabs navigation={navigation} actions={tab !== 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} /> : undefined} />
+      <aside id="browser-navigation" ref={navigation.drawer} tabIndex={navigation.compact ? -1 : undefined} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={drawerModal ? 'dialog' : undefined} aria-modal={drawerModal || undefined} aria-owns={drawerModal ? drawerOwnedElements : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
+        <BrowserNavigationTabs navigation={navigation} actions={navigation.mobile && tab !== 'sessions'
+          ? <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} className="browser-navigation-actions-trigger" />
+          : undefined} />
         <div className="browser-navigation-body" data-profile-layout={presentationMode ? 'combined' : 'separate'} role="tabpanel" aria-label={tab}>
           <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}>
-            <BrowserSidebarNavigation searchFocusRequest={navigation.searchFocusRequest} footerActions={tab === 'sessions' ? <>
+            <BrowserSidebarNavigation searchFocusRequest={navigation.searchFocusRequest} footerActions={navigation.mobile && tab === 'sessions' ? <>
               <BrowserToolbarButton className="browser-sidebar-footer-row" onClick={() => openRoute(KANBAN_ROUTE.path)}>
                 <Codicon name={KANBAN_ROUTE.icon} /><span>{KANBAN_ROUTE.label}</span>
               </BrowserToolbarButton>
-              <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} row />
+              <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} className="browser-sidebar-footer-row" row />
             </> : null}>
               <BrowserSessionsSurface />
             </BrowserSidebarNavigation>
@@ -91,8 +119,8 @@ function BrowserLayout() {
         {!presentationMode && <BrowserProfileNavigation hidden={tab !== 'sessions'} />}
       </aside>
       <BrowserNavigationResizer navigation={navigation} />
-      <main className="browser-main" ref={main} hidden={navigation.mobile && navigation.drawerOpen} inert={navigation.compact && !navigation.mobile && navigation.drawerOpen} tabIndex={-1} aria-label="Conversation and workspace">
-        <div className="browser-chat-toolbar" aria-label="Chat toolbar">
+      <main className="browser-main" ref={main} hidden={navigation.mobile && navigation.drawerOpen} inert={navigation.compact && !navigation.mobile && navigation.drawerOpen} tabIndex={-1} aria-label={inlineKanban ? KANBAN_ROUTE.label : 'Conversation and workspace'}>
+        {!inlineKanban && <div className="browser-chat-toolbar" aria-label="Chat toolbar">
           <BrowserToolbarButton tooltip={navigation.mobile ? 'Back to chat history' : navigation.open ? 'Hide sidebar' : 'Show sidebar'} className="browser-menu" ref={menu} aria-label={navigation.mobile ? 'Back to chat history' : navigation.open ? 'Hide navigation' : 'Open navigation'} aria-expanded={navigation.mobile ? undefined : navigation.open} aria-controls="browser-navigation" onClick={navigation.mobile ? navigation.backToHistory : navigation.toggle}>
             <Codicon name={navigation.mobile ? 'arrow-left' : 'layout-sidebar-left'} />
           </BrowserToolbarButton>
@@ -100,11 +128,14 @@ function BrowserLayout() {
             {location.pathname === '/' && <BrowserNewChatProfileSelector iconOnly={navigation.mobile} />}
             <BrowserChatActionsMenu actions={sessionActions} title={chatTitle} panels={panels} main={main} />
           </div>
+        </div>}
+        <div className="browser-chat-workspace" hidden={inlineKanban}>
+          <BrowserConversationSurface />
+          <div className="browser-status"><BrowserStatusSurface /></div>
         </div>
-        <BrowserConversationSurface />
-        <div className="browser-status"><BrowserStatusSurface /></div>
+        {inlineKanban && <div className="browser-page"><BrowserPageSurface /></div>}
       </main>
-      <BrowserToolModal />
+      <BrowserToolModal mobile={navigation.mobile} chatUrl={lastChat.current.url} />
       <BrowserArchiveToasts ref={archiveToasts} />
     </div>
   </div>

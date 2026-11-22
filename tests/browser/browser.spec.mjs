@@ -826,17 +826,18 @@ touchTest('phone navigation and contextual sheets stay tappable at 320px and 200
   await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
   await expect(page.locator('.browser-navigation')).toBeVisible()
   await expect(page.locator('.browser-main')).toBeHidden()
+  await expect(page.getByRole('navigation', { name: 'App navigation' })).toHaveCount(0)
   expect((await page.locator('.browser-navigation').boundingBox()).width).toBe(320)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320)
   await page.keyboard.press('Escape')
   await expect(editor(page)).toHaveText('Check the phone composer controls')
   await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
-  const sheet = page.locator('[data-slot="dropdown-menu-content"]:visible').last()
+  const sheet = page.getByRole('dialog', { name: 'Chat actions', exact: true })
   await expect(sheet).toBeVisible()
-  const bounds = await sheet.boundingBox()
-  expect(bounds.x).toBe(0)
-  expect(bounds.width).toBe(320)
-  expect(bounds.y + bounds.height).toBe(700)
+  await expect.poll(async () => {
+    const bounds = await sheet.boundingBox()
+    return bounds && [Math.round(bounds.x), Math.round(bounds.width), Math.round(bounds.y + bounds.height)]
+  }).toEqual([0, 320, 700])
 })
 
 test('a touch context-menu gesture does not open sidebar sections', async ({ browser }) => {
@@ -3122,9 +3123,10 @@ test('phone profiles retain saved desktop order and reject drag operations', asy
   expect(await names()).toEqual(['Writer', 'Hermes', 'Research'])
 })
 
-for (const width of [1440, 390]) {
-  test.extend({ hasTouch: width === 390 })(`Kanban opens from navigation and preserves the mounted chat draft at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 960 })
+for (const width of [1440, 390, 844]) {
+  const mobile = width !== 1440
+  test.extend({ hasTouch: mobile })(`Kanban opens from navigation and preserves the mounted chat draft at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: width === 844 ? 390 : 960 })
     await page.route(/\/api\/plugins\/kanban\/board(?:\?|$)/, route => route.fulfill({
       json: { columns: [], tenants: [], assignees: [], latest_event_id: 0, now: 0 }
     }))
@@ -3141,35 +3143,53 @@ for (const width of [1440, 390]) {
     await editor(page).fill('Keep this Kanban draft')
     await editor(page).evaluate(node => { window.kanbanComposer = node })
 
-    const kanban = page.locator('#browser-navigation').getByRole('button', { name: 'Kanban', exact: true })
-    if (width === 390) await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
-    const settings = page.locator('#browser-navigation').getByRole('button', { name: 'Settings', exact: true })
-    await expect(kanban).toHaveClass(/browser-sidebar-footer-row/)
-    expect(await settings.evaluate(button => button.previousElementSibling?.textContent)).toBe('Kanban')
+    const openHistory = page.getByRole('button', { name: 'Back to chat history', exact: true })
+    if (mobile) await openHistory.click()
+    const rail = page.getByRole('navigation', { name: 'App navigation' })
+    const navigation = mobile ? page.locator('#browser-navigation') : rail
+    const kanban = navigation.getByRole('button', { name: 'Kanban', exact: true })
+    const chat = rail.getByRole('button', { name: 'Chat', exact: true })
+    const close = page.getByRole('button', { name: 'Close Kanban', exact: true })
+    const board = mobile
+      ? page.locator('[data-overlay-surface]').filter({ has: close })
+      : page.getByRole('main', { name: 'Kanban', exact: true })
+
+    if (mobile) await expect(rail).toHaveCount(0)
+    else {
+      await expect(chat).toHaveAttribute('aria-current', 'page')
+      const settings = rail.getByRole('button', { name: 'Settings', exact: true })
+      const railBounds = await rail.boundingBox(), settingsBounds = await settings.boundingBox()
+      expect(railBounds.y + railBounds.height - (settingsBounds.y + settingsBounds.height)).toBeLessThan(20)
+    }
 
     await kanban.click()
     await expect(page).toHaveURL(/#\/kanban$/)
-    const overlay = page.locator('[data-overlay-surface]').filter({ has: page.getByRole('button', { name: 'Close Kanban', exact: true }) })
-    const card = overlay.locator(':scope > div > [data-glass-raised]')
-    await expect(card).toBeVisible()
-    const bounds = await card.boundingBox()
-    expect(bounds.x).toBeCloseTo(0, 0)
-    expect(bounds.y).toBeCloseTo(0, 0)
-    expect(bounds.width).toBeCloseTo(width, 0)
-    expect(bounds.height).toBeCloseTo(960, 0)
-    await page.getByRole('button', { name: 'Enable Kanban', exact: true }).click()
-    await expect(page.getByText('No tasks on this board', { exact: true })).toBeVisible()
+    await expect(board).toBeVisible()
+    if (mobile) {
+      await expect(rail).toHaveCount(0)
+      await expect(close).toBeVisible()
+    } else {
+      await expect(rail).toBeVisible()
+      await expect(kanban).toHaveAttribute('aria-current', 'page')
+      const railBounds = await rail.boundingBox(), boardBounds = await board.boundingBox()
+      expect(boardBounds.x).toBeGreaterThanOrEqual(railBounds.x + railBounds.width)
+      await expect(close).toHaveCount(0)
+      await expect(editor(page)).toHaveCount(0)
+    }
+
+    await board.getByRole('button', { name: 'Enable Kanban', exact: true }).click()
+    await expect(board.getByText('No tasks on this board', { exact: true })).toBeVisible()
     await expect(page.locator('.browser-upstream-workspace')).toHaveAttribute('inert', '')
 
-    await page.getByRole('button', { name: 'Close Kanban', exact: true }).click()
+    await (mobile ? close : chat).click()
     await expect(page).toHaveURL(/#\/preview-week$/)
     await expect(editor(page)).toHaveText('Keep this Kanban draft')
     expect(await editor(page).evaluate(node => node === window.kanbanComposer)).toBe(true)
 
-    if (width === 390) await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
-    await expect(kanban).toHaveCount(1)
+    if (mobile) await openHistory.click()
+    else await expect(chat).toHaveAttribute('aria-current', 'page')
     await kanban.click()
-    await expect(page.getByText('No tasks on this board', { exact: true })).toBeVisible()
+    await expect(board.getByText('No tasks on this board', { exact: true })).toBeVisible()
   })
 }
 
