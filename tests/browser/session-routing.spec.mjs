@@ -196,14 +196,25 @@ test('owned session references preserve copied ids through sends and toolbar wri
   expect(backend.errors).toEqual([])
 })
 
-test('owned routes survive combined profile browsing and browser history', async ({ page, context }) => {
+test('owned routes survive profile filtering and browser history', async ({ page, context }) => {
   const backend = await copiedSessions(context)
   await openReferences(page)
   const popup = await openCopy(page)
   await editor(popup).fill('Research copy draft')
+  const configured = Promise.all(['/api/config', '/api/config/defaults'].map(path => popup.waitForResponse(response => {
+    const url = new URL(response.url())
+    return url.pathname === path && url.searchParams.get('profile') === 'writer'
+  }).then(response => response.finished())))
+  await popup.locator('[data-profile-key="writer"]').click()
+  await configured
+  await popup.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+  await expect.poll(() => new URL(popup.url()).searchParams.get('profile')).toBe('writer')
   await popup.reload()
   await expect(popup.getByText('research copied transcript', { exact: true })).toBeVisible()
   await expect(editor(popup)).toHaveText('Research copy draft')
+  expect(new URL(popup.url()).searchParams.get('profile')).toBe('writer')
+  expect((await popup.evaluate(() => window.hermesDesktop.getConnection())).profile).toBe('writer')
+  await popup.getByRole('button', { name: 'All profiles', exact: true }).click()
   await popup.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
   await expect(popup).toHaveURL(/#\/preview-week$/)
   await editor(popup).fill('Other conversation draft')
@@ -304,7 +315,7 @@ test('copied session notifications retain their emitted owner through delivery a
   await capturePageNotifications(context)
   await openReferences(page)
   const popup = await openCopy(page)
-  await popup.locator('[data-gateway-group]').filter({ has: popup.locator('[data-browser-profile-picture="writer"]') }).getByRole('button', { name: /^New (?:session|conversation) in Writer$/ }).click()
+  await popup.locator('[data-profile-key="writer"]').click()
   await expect.poll(() => new URL(popup.url()).searchParams.get('profile')).toBe('writer')
   await popup.evaluate(() => {
     window.notificationDelivery = window.hermesDesktop.notify({ kind: 'turnDone', tag: 'owned-route', sessionId: 'preview-idea', focusSessionId: 'preview-idea' })

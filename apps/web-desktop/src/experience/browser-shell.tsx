@@ -2,6 +2,7 @@ import { useSidebarGestures } from './sidebar-gestures'
 import { useBrowserEngine } from './engine'
 import { useChatPanelSettings } from './settings/chat-panel-page'
 import { BrowserNewChatProfileSelector } from './new-chat-profile-selector'
+import { BrowserProfileNavigation } from './profile-navigation'
 import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
 import { OpenCodeGoUsageProvider } from './opencode-go-usage'
@@ -29,6 +30,7 @@ export function BrowserShell() {
 function BrowserLayout() {
   const engine = useBrowserEngine()
   const { Sessions: BrowserSessionsSurface, Bots: BrowserBotsSurface, Conversation: BrowserConversationSurface, Status: BrowserStatusSurface } = engine.surfaces
+  const presentationMode = engine.profiles.useGrouping()
   useEffect(() => installTranscriptPreferences(), [])
   const navigate = useNavigate(), location = useLocation()
   const conversation = engine.conversations.useCurrent()
@@ -40,7 +42,7 @@ function BrowserLayout() {
   const navigation = useBrowserNavigation({ selectionKey: conversation.selectionKey, path: location.pathname, main, trigger: menu, archiveToasts })
   const profiles = engine.profiles.useProfiles()
   const preventSessionPaneDrag = useSidebarGestures(navigation.drawer, engine.projects,
-    JSON.stringify([profiles.active, profiles.all, navigation.tab, navigation.open, location.pathname]))
+    JSON.stringify([profiles.active, profiles.all, presentationMode, navigation.tab, navigation.open, location.pathname]))
   useChatPanelSettings(navigation)
   engine.useEnvironment(conversation,
     !((navigation.mobile || navigation.compact) && navigation.drawerOpen) && !location.pathname.startsWith('/settings'))
@@ -62,7 +64,7 @@ function BrowserLayout() {
       {navigation.compact && !navigation.mobile && navigation.drawerOpen && <button type="button" className="browser-scrim" aria-label="Dismiss navigation" tabIndex={-1} onClick={navigation.dismissDrawer} />}
       <aside id="browser-navigation" ref={navigation.drawer} tabIndex={navigation.mobile ? -1 : undefined} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={navigation.compact && navigation.drawerOpen ? 'dialog' : undefined} aria-modal={navigation.compact && navigation.drawerOpen ? true : undefined} aria-owns={navigation.compact && navigation.drawerOpen ? ARCHIVE_TOASTS_ID : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
         <BrowserNavigationTabs navigation={navigation} actions={tab !== 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} /> : undefined} />
-        <div className="browser-navigation-body" data-profile-layout="combined" role="tabpanel" aria-label={tab}>
+        <div className="browser-navigation-body" data-profile-layout={presentationMode ? 'combined' : 'separate'} role="tabpanel" aria-label={tab}>
           <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}><BrowserSidebarNavigation settings={tab === 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} row /> : null}><BrowserSessionsSurface /></BrowserSidebarNavigation></BrowserSessionsPane>
           <div hidden={tab !== 'bots'} className="browser-pane"><BrowserBotsSurface fallback={<BrowserBotsFallback />} /></div>
         </div>
@@ -74,6 +76,7 @@ function BrowserLayout() {
           <p>{updateNotice.message}</p>
           {updateNotice.phase === 'available' && <button type="button" className="browser-update-panel-action" onClick={updateNotice.update}>Update</button>}
         </div>}
+        {!presentationMode && <BrowserProfileNavigation hidden={tab !== 'sessions'} />}
       </aside>
       <BrowserNavigationResizer navigation={navigation} />
       <main className="browser-main" ref={main} hidden={navigation.mobile && navigation.drawerOpen} inert={navigation.compact && !navigation.mobile && navigation.drawerOpen} tabIndex={-1} aria-label="Conversation and workspace">

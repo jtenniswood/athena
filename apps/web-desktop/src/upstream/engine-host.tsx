@@ -5,8 +5,10 @@ import { BrowserEngineHost, BrowserSessionsSurface, BrowserBotsSurface, BrowserC
 import { useBrowserConversation } from './conversation'
 import { useBrowserSessionActions } from './conversation-actions'
 import { selectBrowserSession } from './selection'
+import { BrowserProfileEditor } from './profile-editor'
 import { useBrowserProfiles, useBrowserActiveProfile } from './profiles'
 import { useBrowserNewChatProfile } from './new-chat-profile'
+import { useBrowserProfileGrouping } from './profile-section'
 import { browserRouteCoversWorkspace } from './browser-routes'
 import { useBrowserGatewayRequest } from './gateway-request'
 import { useBrowserApproval } from './approval'
@@ -22,10 +24,11 @@ export const browserEngine = Object.freeze({
   protocol: 1,
   surfaces: {
     Host: BrowserEngineHost, Sessions: BrowserSessionsSurface, Bots: BrowserBotsSurface,
-    Conversation: BrowserConversationSurface, Status: BrowserStatusSurface, Page: BrowserPageSurface
+    Conversation: BrowserConversationSurface, Status: BrowserStatusSurface, Page: BrowserPageSurface,
+    ProfileEditor: BrowserProfileEditor
   },
   conversations: { useCurrent: useBrowserConversation, useActions: useBrowserSessionActions, select: selectBrowserSession },
-  profiles: { useProfiles: useBrowserProfiles, useNewChat: useBrowserNewChatProfile, useActive: useBrowserActiveProfile },
+  profiles: { useProfiles: useBrowserProfiles, useNewChat: useBrowserNewChatProfile, useActive: useBrowserActiveProfile, useGrouping: useBrowserProfileGrouping },
   navigation: { usePanels: useBrowserHostPanels, useSidebar: useBrowserSidebarCommands, openPage: openBrowserPage, coversWorkspace: browserRouteCoversWorkspace },
   settings: { Controller: props => <Suspense fallback={<p role="status">Loading settings…</p>}><SettingsController {...props} /></Suspense> },
   approval: { useRequest: useBrowserGatewayRequest, useMode: useBrowserApproval },
