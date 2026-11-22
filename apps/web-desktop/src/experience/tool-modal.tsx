@@ -22,7 +22,7 @@ export function BrowserToolModal({ mobile, chatUrl }: { mobile: boolean; chatUrl
   const close = () => { void navigate(fullScreenKanban ? chatUrl : previous.current, { replace: true }) }
   return <OverlayView closeLabel={closeLabel} onClose={close}
     rootClassName={fullScreenKanban ? 'browser-fullscreen-overlay-card' : undefined}
-    contentClassName={fullScreenKanban ? 'pt-(--titlebar-height)' : undefined}>
+    contentClassName={fullScreenKanban ? 'pt-[calc(var(--titlebar-height)+0.5rem)]' : undefined}>
     <BrowserPageSurface />
   </OverlayView>
 }
