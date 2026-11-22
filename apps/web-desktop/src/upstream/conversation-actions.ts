@@ -11,6 +11,7 @@ import type { SessionOwnerRoute } from '@/store/session-request-router'
 import { deleteSession, renameSession, setSessionArchived } from '@/api/sessions'
 import { $unreadWriteGuard, markSessionUnread, pendingUnreadValue } from './browser-unread'
 import { reportActionFailure } from '../experience/action-errors'
+import { notifyConversationArchived } from '../experience/conversation-navigation'
 import { prepareBrowserArchiveUndo } from './archive-undo'
 import { confirmAndStopBrowserArchive } from './archive-running'
 import type { BrowserSessionActions } from '../experience/contracts/actions'
@@ -60,7 +61,10 @@ export function useBrowserSessionActions(conversation: BrowserConversationModel)
       setSessions(rows => rows.filter(row => !matches(row)))
       offerUndo?.()
       // Completion belongs to this command; a newer selection keeps its route.
-      if ($selectedStoredSessionId.get() === selected && $sessionResumeRequest.get() === resume) navigate('/')
+      if ($selectedStoredSessionId.get() === selected && $sessionResumeRequest.get() === resume) {
+        navigate('/')
+        if (action === 'archive') notifyConversationArchived()
+      }
     } catch {
       reportActionFailure(`Could not ${action} conversation.`)
     }

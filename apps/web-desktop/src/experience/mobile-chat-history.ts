@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useLocation, useNavigate, useNavigationType } from 'react-router'
+import { $conversationArchiveRequest } from './conversation-navigation'
 
 const CHAT_ENTRY = 'athenaMobileChat'
 
@@ -37,8 +38,12 @@ export function useMobileChatHistory({ mobile, drawerOpen, covered, showHistory,
       backToHistory()
     }
     window.addEventListener('athena:native-back', onBack)
-    return () => window.removeEventListener('athena:native-back', onBack)
-  }, [mobile, covered, drawerOpen, backToHistory])
+    const unsubscribeArchive = $conversationArchiveRequest.listen(showHistory)
+    return () => {
+      window.removeEventListener('athena:native-back', onBack)
+      unsubscribeArchive()
+    }
+  }, [mobile, covered, drawerOpen, backToHistory, showHistory])
 
   useEffect(() => {
     const before = previous.current
