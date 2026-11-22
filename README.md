@@ -19,6 +19,9 @@ With Project grouping, drag a chat by its title onto another project to move it.
 The destination highlights before you drop; press Escape
 to cancel. Destinations need a working folder, so Home is not a drop target.
 
+Open **Kanban** in the Sessions sidebar to view your Hermes task board.
+On first use, select **Enable Kanban** to load the bundled plugin.
+
 ## Deliver scheduled results to a dedicated chat
 
 With the optional gateway extension installed, set **Cron Jobs → Deliver to**

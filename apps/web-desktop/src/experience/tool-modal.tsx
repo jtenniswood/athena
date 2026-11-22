@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router'
 import { OverlayView } from '../upstream/browser-api'
 import { useBrowserEngine } from './engine'
 import { SettingsFrameSurface } from './settings/frame-behavior'
-import { BROWSER_PAGE_ROUTES, USAGE_ROUTE } from './tool-routes'
+import { BROWSER_PAGE_ROUTES, KANBAN_ROUTE, USAGE_ROUTE } from './tool-routes'
 
 /** Tool routes cover the workspace; closing returns to the complete prior URL. */
 export function BrowserToolModal() {
@@ -32,7 +32,7 @@ export function BrowserToolModal() {
       </SettingsFrameSurface>
     </div>
   }
-  return <OverlayView closeLabel={closeLabel} onClose={close}>
+  return <OverlayView closeLabel={closeLabel} onClose={close} contentClassName={route === KANBAN_ROUTE ? 'pt-(--titlebar-height)' : undefined}>
     <BrowserPageSurface />
   </OverlayView>
 }
