@@ -136,12 +136,13 @@ test('accepted sends position their real mounted renderer transcript', async ({ 
     const prompt = page.locator('[data-slot="aui_user-message-root"]').last()
     await expect(prompt).toContainText(text)
     await expect.poll(() => prompt.evaluate(node => node.closest('[data-slot="aui_turn-pair"]').style.minHeight)).not.toBe('')
-    // The first turn starts at scrollTop zero; it cannot scroll above its natural top.
+    // Both turns stay below the floating header. The first turn stops at its natural top.
     await expect.poll(() => prompt.evaluate(node => {
       const turn = node.closest('[data-slot="aui_turn-pair"]')
       const viewport = node.closest('[data-slot="aui_thread-viewport"]')
       const scale = viewport.getBoundingClientRect().height / viewport.offsetHeight
-      return (turn.getBoundingClientRect().top - viewport.getBoundingClientRect().top) / scale
+      const headerClearance = Number.parseFloat(getComputedStyle(viewport).scrollPaddingBlockStart) || 0
+      return (turn.getBoundingClientRect().top - viewport.getBoundingClientRect().top) / scale - headerClearance
     })).toBeCloseTo(fresh ? 0 : 12, 0)
   }
 })

@@ -14,6 +14,10 @@ function viewportScale(viewport: HTMLElement): number {
   return viewport.getBoundingClientRect().height / viewport.offsetHeight || 1
 }
 
+function submittedTurnTopGap(viewport: HTMLElement): number {
+  return (Number.parseFloat(getComputedStyle(viewport).scrollPaddingBlockStart) || 0) + TOP_GAP_PX
+}
+
 function reserveResponseSpace(viewport: HTMLElement, content: HTMLElement, prompt: HTMLElement) {
   const initialTurn = prompt.closest<HTMLElement>(TURN)
   if (!initialTurn) return null
@@ -32,7 +36,7 @@ function reserveResponseSpace(viewport: HTMLElement, content: HTMLElement, promp
     // content's min-height can include unused space in a short conversation.
     const trailingHeight = Math.max(0, (tail.getBoundingClientRect().bottom - turn.getBoundingClientRect().bottom) / scale)
       + (Number.parseFloat(getComputedStyle(content).paddingBottom) || 0)
-    const minimum = `${Math.max(0, Math.ceil(viewport.clientHeight - TOP_GAP_PX - trailingHeight))}px`
+    const minimum = `${Math.max(0, Math.ceil(viewport.clientHeight - submittedTurnTopGap(viewport) - trailingHeight))}px`
     if (turn.style.minHeight !== minimum) turn.style.minHeight = minimum
   }
   const sizes = new ResizeObserver(resize)
@@ -80,7 +84,7 @@ function reserveResponseSpace(viewport: HTMLElement, content: HTMLElement, promp
       resize()
       // The prompt is sticky; its containing turn gives its natural position.
       const delta = (turn.getBoundingClientRect().top - viewport.getBoundingClientRect().top) / viewportScale(viewport)
-      viewport.scrollTop = Math.max(0, viewport.scrollTop + delta - TOP_GAP_PX)
+      viewport.scrollTop = Math.max(0, viewport.scrollTop + delta - submittedTurnTopGap(viewport))
     }
   }
 }
