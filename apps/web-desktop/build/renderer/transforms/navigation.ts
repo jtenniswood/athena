@@ -268,12 +268,17 @@ export async function renameProject(id: string, name: string): Promise<void> {`]
   return `import { browserProjectOwnerProfile } from ${owner}\n` + output
 }
 
+function sidebarSourceBlock(source: string, first: string, next: string): string {
+  const start = source.indexOf(first)
+  const end = source.indexOf(next, start + first.length)
+  if (start < 0 || end < 0) throw new Error('Browser sidebar source block changed: ' + first)
+  return source.slice(start, end)
+}
+
 export function filterBrowserSessionMenu(source: string, root: string): string {
   const target = 'function OptionCheckbox({ checked, onCheck, option }: { checked: boolean; onCheck: () => void; option: Option }) {'
   if (source.split(target).length !== 2) throw new Error('Browser session filter menu target changed')
   const replacements: [string, string][] = [
-    ["option.id === 'profile' ? { ...option, label: t.sidebar.gatewayGroups.grouping } : option", "option.id === 'profile' ? { ...option, label: 'Profile' } : option"],
-    ['  const groupingLabel = groupings.find(option => option.id === grouping)?.label\n', ''],
     [
       "      {option.label}\n    </DropdownMenuCheckboxItem>",
       "      {option.id === 'archived' ? browserSidebarActionLabel('archived', option.label) : option.label}\n    </DropdownMenuCheckboxItem>"
@@ -296,19 +301,7 @@ function OptionGlyph({ option }: { option: Option }) {`
       "  return option.icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={option.icon} size=\"0.8125rem\" /> : null",
       "  const icon = option.icon || OPTION_ICONS[option.id]\n  return icon ? <Codicon className=\"text-(--ui-text-tertiary)\" name={icon} size=\"0.8125rem\" /> : null"
     ],
-    [
-      `<DropdownMenuSubTrigger hideChevron>
-              {f.grouping}
-              <span className="ml-auto flex items-center gap-1 pl-4 text-(--ui-text-tertiary)">
-                {groupingLabel}
-                <Codicon name="chevron-right" size="1rem" />
-              </span>
-            </DropdownMenuSubTrigger>`,
-      '<DropdownMenuSubTrigger><Codicon name="list-tree" size="0.8125rem" />{f.grouping}</DropdownMenuSubTrigger>'
-    ],
-    ['<DropdownMenuSubTrigger>{f.ordering}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="list-ordered" size="0.8125rem" />{f.ordering}</DropdownMenuSubTrigger>'],
     ['<DropdownMenuSubTrigger>{f.show}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="eye" size="0.8125rem" />{f.show}</DropdownMenuSubTrigger>'],
-    ['<DropdownMenuSubTrigger>{f.status}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="pulse" size="0.8125rem" />{f.status}</DropdownMenuSubTrigger>'],
     ['<DropdownMenuSubTrigger>{f.pullRequest}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="git-pull-request" size="0.8125rem" />{f.pullRequest}</DropdownMenuSubTrigger>'],
     ['<DropdownMenuSubTrigger>{f.profile}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="account" size="0.8125rem" />{f.profile}</DropdownMenuSubTrigger>'],
     ['<DropdownMenuSubTrigger>{f.project}</DropdownMenuSubTrigger>', '<DropdownMenuSubTrigger><Codicon name="root-folder" size="0.8125rem" />{f.project}</DropdownMenuSubTrigger>'],
@@ -325,17 +318,46 @@ function OptionGlyph({ option }: { option: Option }) {`
     output = output.replace(before, after)
   }
   const hideDesktopOnlyRows = "\n  if (['card-rows', 'profile-rail', 'all-profiles'].includes(option.id)) return null\n"
-  const manualOrdering = "      return ordering === 'manual'"
-  if (output.split(manualOrdering).length !== 2) throw new Error('Browser manual ordering option contract changed')
-  output = output.replace(manualOrdering, '      return true')
   const owner = JSON.stringify(path.join(root, 'src/experience/sidebar-shortcuts'))
   const profilesOwner = JSON.stringify(path.join(root, 'src/experience/profile-list-visibility'))
   output = replaceBrowserContract(output, [
-    ['onValueChange={value => setSidebarOrdering(value as SidebarOrdering)}', 'onValueChange={value => setBrowserSidebarOrdering(value as SidebarOrdering)}'],
-    ["  const grouping = useStore($sidebarGrouping)", "  const savedGrouping = useStore($sidebarGrouping)\n  const grouping = savedGrouping === 'profile' ? 'none' : savedGrouping\n  const combinedProfiles = useBrowserProfileGrouping()"],
+    ["  const grouping = useStore($sidebarGrouping)", "  const grouping = useStore($sidebarGrouping)\n  const combinedProfiles = useBrowserProfileGrouping()"],
     ["? projects.map(project => project.id)", "? combinedProfiles ? listGroupIds : projects.map(project => project.id)"],
-    ['  const groupings = GROUPINGS.map(option =>', "  const groupings = GROUPINGS.filter(option => option.id !== 'profile').map(option =>"],
-    ['        <DropdownMenuGroup>\n          <DropdownMenuSub>', '        <DropdownMenuGroup>\n          <BrowserProfileLayoutMenu combined={combinedProfiles} />\n          <DropdownMenuSub>'],
+    [sidebarSourceBlock(output, "  const GROUPING_OPTIONS", "  const ROW_META"), ""],
+    [sidebarSourceBlock(output, "  const groupings =", "  const rowMetaOptions"), ""],
+    [`function OptionRadio({ option }: { option: Option }) {
+  return (
+    <DropdownMenuRadioItem onSelect={keepOpen} value={option.id}>
+      <OptionGlyph option={option} />
+      {option.label}
+    </DropdownMenuRadioItem>
+  )
+}
+
+`, ""],
+    [sidebarSourceBlock(output, "          <DropdownMenuSub>\n            <DropdownMenuSubTrigger hideChevron>", "          {showsAdvancedChrome"), `          <BrowserProfileLayoutMenu combined={combinedProfiles} />
+          <OptionCheckbox
+            checked={grouping === 'project'}
+            onCheck={() => setSidebarGrouping(grouping === 'project' ? 'none' : 'project')}
+            option={{ icon: 'root-folder', id: 'show-projects', label: 'Show projects' }}
+          />
+
+`],
+    [sidebarSourceBlock(output, "  const STATUS_FILTERS:", "  const grouping"), ""],
+    [sidebarSourceBlock(output, "          <DropdownMenuSub>\n            <DropdownMenuSubTrigger>{f.status}", "          {/* `gh`"), ""],
+    ["import { sessionDotClassName } from '@/app/chat/session-status-dot'\n", ""],
+    ["  DropdownMenuRadioGroup,\n", ""],
+    ["  DropdownMenuRadioItem,\n", ""],
+    ["  $sidebarOrdering,\n", ""],
+    ["  $sidebarStatusFilter,\n", ""],
+    ["  setSidebarOrdering,\n", ""],
+    ["  SIDEBAR_GROUPING_ORDER,\n", ""],
+    ["  type SidebarGrouping,\n", ""],
+    ["  type SidebarOrdering,\n", ""],
+    ["import type { SessionStatusBucket } from '@/store/session-dot-state'\n", ""],
+    ["  const ordering = useStore($sidebarOrdering)\n", ""],
+    ["  const statusFilter = useStore($sidebarStatusFilter)\n", ""],
+    ["  toggleSidebarRowMeta,\n  toggleSidebarStatusFilter\n", "  toggleSidebarRowMeta\n"],
     [`          {grouping === 'project' && (
             <OptionCheckbox
               checked={showAllSessions}
@@ -349,9 +371,8 @@ function OptionGlyph({ option }: { option: Option }) {`
     ['{viewCustomized && <DropdownMenuItem onSelect={resetSidebarView}', '{(viewCustomized || !combinedProfiles) && <DropdownMenuItem onSelect={() => resetBrowserSidebarView(resetSidebarView)}']
   ])
   const layoutOwner = JSON.stringify(path.join(root, 'src/upstream/profile-layout-menu'))
-  const orderingOwner = JSON.stringify(path.join(root, 'src/upstream/sidebar-ordering'))
   const sectionOwner = JSON.stringify(path.join(root, 'src/upstream/profile-section'))
-  return `import { setBrowserSidebarOrdering } from ${orderingOwner}\nimport { BrowserProfileLayoutMenu } from ${layoutOwner}\nimport { useBrowserProfileGrouping, resetBrowserSidebarView } from ${sectionOwner}\n` +
+  return `import { BrowserProfileLayoutMenu } from ${layoutOwner}\nimport { useBrowserProfileGrouping, resetBrowserSidebarView } from ${sectionOwner}\n` +
     `import { BrowserRestoreProfilesItem } from ${profilesOwner}\nimport { browserSidebarActionLabel, useBrowserSidebarShortcuts } from ${owner}\n` + output.replace(target, target + hideDesktopOnlyRows)
 }
 
@@ -394,35 +415,57 @@ export function useBrowserSessionReordering(source: string, surface: 'section' |
   return output
 }
 
-export function enableBrowserUngroupedSessions(source: string, surface: 'store' | 'menu'): string {
-  const replacements: Record<typeof surface, [string, string][]> = {
-    store: [
-      ["const SIDEBAR_SHOW_ALL_SESSIONS_STORAGE_KEY = 'hermes.desktop.sidebarShowAllSessions'\n", ""],
-      ["    $sidebarShowAllSessions,\n", ""],
-      ["(grouping, ordering, rowMeta, cardRows, showAllSessions, filtersActive)", "(grouping, ordering, rowMeta, cardRows, filtersActive)"],
-      ["export const $sidebarShowAllSessions = persistentAtom(SIDEBAR_SHOW_ALL_SESSIONS_STORAGE_KEY, false, Codecs.bool)", "// Browser groups always show every available session, regardless of saved preview preferences.\nexport const $sidebarShowAllSessions = atom(true)"],
-      ["export function setSidebarShowAllSessions(on: boolean) {\n  $sidebarShowAllSessions.set(on)\n}", ""],
-      ["  $sidebarShowAllSessions.set(false)\n", ""],
-      ["    showAllSessions ||\n", ""],
-      ["export const SIDEBAR_GROUPING_ORDER = ['date', 'project', 'status', 'profile'] as const", "export const SIDEBAR_GROUPING_ORDER = ['none', 'date', 'project', 'status', 'profile'] as const"],
-      ["const currentIndex = SIDEBAR_GROUPING_ORDER.indexOf($sidebarGrouping.get())", "const choices = SIDEBAR_GROUPING_ORDER.filter(grouping => grouping !== 'profile')\n  const currentIndex = choices.indexOf($sidebarGrouping.get() as Exclude<SidebarGrouping, 'profile'>)"],
-      ["setSidebarGrouping(SIDEBAR_GROUPING_ORDER[(currentIndex + 1) % SIDEBAR_GROUPING_ORDER.length])", "setSidebarGrouping(choices[(currentIndex + 1) % choices.length])"],
-      ["SIDEBAR_GROUPING_STORAGE_KEY,\n  'date',", "SIDEBAR_GROUPING_STORAGE_KEY,\n  'none',"],
-      ["oneOf(['date', 'status'], 'date')", "oneOf(['none', 'date', 'status'], 'none')"],
-      ["SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY,\n  'date',", "SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY,\n  'none',"],
-      ["oneOf(['date', 'profile', 'status'], 'date')", "oneOf(['none', 'date', 'profile', 'status'], 'none')"],
-      ["const SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'date'", "const SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'none'"],
-      ["$sidebarFlatGrouping.set(SIDEBAR_DEFAULT_GROUPING)", "$sidebarFlatGrouping.set('none')"],
-      ["// reset the choice every time the user flips the rail. Both scopes still ship\n// by day — grouping by owner is something you go and pick.", "// reset the choice every time the user flips the rail. Browser content\n// defaults to an ungrouped list independently of its profile layout."]
-    ],
-    menu: [["  const GROUPING_OPTIONS: Record<SidebarGrouping, Omit<Option<SidebarGrouping>, 'id'>> = {", "  const GROUPING_OPTIONS: Record<SidebarGrouping, Omit<Option<SidebarGrouping>, 'id'>> = {\n    none: { icon: 'list-unordered', label: 'None' },"]]
-  }
-  let output = source
-  for (const [target, replacement] of replacements[surface]) {
-    if (output.split(target).length !== 2) throw new Error(`Browser ungrouped sessions ${surface} target changed`)
-    output = output.replace(target, replacement)
-  }
-  return output
+export function enableBrowserUngroupedSessions(source: string): string {
+  return replaceBrowserContract(source, [
+    ["const SIDEBAR_SHOW_ALL_SESSIONS_STORAGE_KEY = 'hermes.desktop.sidebarShowAllSessions'\n", ""],
+    ["    $sidebarShowAllSessions,\n", ""],
+    ["(grouping, ordering, rowMeta, cardRows, showAllSessions, filtersActive)", "(grouping, ordering, rowMeta, cardRows, filtersActive)"],
+    ["export const $sidebarShowAllSessions = persistentAtom(SIDEBAR_SHOW_ALL_SESSIONS_STORAGE_KEY, false, Codecs.bool)", `// Browser groups always show every available session, regardless of saved preview preferences.
+export const $sidebarShowAllSessions = atom(true)`],
+    ["export function setSidebarShowAllSessions(on: boolean) {\n  $sidebarShowAllSessions.set(on)\n}", ""],
+    ["  $sidebarShowAllSessions.set(false)\n", ""],
+    ["    showAllSessions ||\n", ""],
+    ["const SIDEBAR_GROUPING_STORAGE_KEY = 'hermes.desktop.sidebarGrouping'\n", ""],
+    ["const SIDEBAR_ALL_PROFILES_GROUPING_STORAGE_KEY = 'hermes.desktop.sidebarGrouping.allProfiles'\n", ""],
+    ["const SIDEBAR_SORT_KEY_STORAGE_KEY = 'hermes.desktop.sidebarSortKey'\n", ""],
+    ["const SIDEBAR_STATUS_FILTER_STORAGE_KEY = 'hermes.desktop.sidebarStatusFilter'\n", ""],
+    ["const STATUS_FILTERS: readonly SessionStatusBucket[] = ['needs-input', 'working', 'unread', 'draft', 'idle']\n", ""],
+    ["import { $showAllProfiles, setShowAllProfiles } from './profile'\n", "import { $showAllProfiles } from './profile'\n"],
+    [sidebarSourceBlock(source, "/** How the recents list is divided.", "/** What ranks rows"), `export const SIDEBAR_GROUPING_ORDER = ['none', 'project'] as const
+export type SidebarGrouping = (typeof SIDEBAR_GROUPING_ORDER)[number] | 'date' | 'status' | 'profile'
+`],
+    [sidebarSourceBlock(source, "// `project` deliberately", "// Simple mode rests"), `const SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'none'
+const SIDEBAR_DEFAULT_ROW_META: SidebarRowMeta[] = ['preview', 'updated']
+
+`],
+    [sidebarSourceBlock(source, "export const $sidebarStatusFilter", "// Project ids as"),
+      "export const $sidebarStatusFilter = atom<SessionStatusBucket[]>([])\n\n"],
+    [sidebarSourceBlock(source, "export const $sidebarGrouping:", "export const $sidebarFiltersActive"), `export const $sidebarGrouping: ReadableAtom<SidebarGrouping> = computed(
+  $sidebarAgentsGrouped,
+  grouped => grouped ? 'project' : 'none'
+)
+
+export const $sidebarOrdering: ReadableAtom<SidebarOrdering> = atom('manual')
+
+`],
+    ["    $sidebarOrdering,\n", ""],
+    ["(grouping, ordering, rowMeta, cardRows, filtersActive)", "(grouping, rowMeta, cardRows, filtersActive)"],
+    ["    ordering !== SIDEBAR_DEFAULT_ORDERING ||\n", ""],
+    [sidebarSourceBlock(source, "export function setSidebarGrouping", "export function setSidebarShowArchived"), `export function setSidebarGrouping(grouping: SidebarGrouping) {
+  setSidebarAgentsGrouped(grouping === 'project')
+}
+
+export function cycleSidebarGrouping() {
+  setSidebarGrouping($sidebarAgentsGrouped.get() ? 'none' : 'project')
+}
+
+`],
+    [sidebarSourceBlock(source, "export function toggleSidebarStatusFilter", "export function toggleSidebarProjectFilter"), ""],
+    [sidebarSourceBlock(source, "/** Every knob the filter menu owns", "  $sidebarRowMeta.set(SIDEBAR_DEFAULT_ROW_META)"), `export function resetSidebarView() {
+  $sidebarFlatAgentsGrouped.set(false)
+  $sidebarAllProfilesAgentsGrouped.set(false)
+`],
+  ])
 }
 
 export function disableBrowserSessionTabs(source: string): string {
@@ -508,8 +551,24 @@ export function disableBrowserSessionOpenActions(source: string, root: string): 
   }
   const titleUpdate = JSON.stringify(path.join(root, 'src/upstream/update-session-title'))
   menu = replaceBrowserContract(menu, [
-    ["  const [renameOpen, setRenameOpen] = useState(false)", "  const [renameOpen, setRenameOpen] = useState(false)\n  const { updatingTitle, updateTitle } = useBrowserUpdateTitle(sessionId, profile)"],
-    ["          })\n        ]\n      : []),\n    spec({\n      disabled: !onPin,", "          }),\n          spec({\n            key: 'update-title',\n            disabled: !sessionId || updatingTitle,\n            icon: 'refresh',\n            label: browserSessionActionLabel('update-title', updatingTitle ? 'Updating title…' : 'Update title'),\n            onSelect: () => void updateTitle()\n          })\n        ]\n      : []),\n    spec({\n      disabled: !onPin,"]
+    ["  const [renameOpen, setRenameOpen] = useState(false)", `  const [renameOpen, setRenameOpen] = useState(false)
+  const { updatingTitle, updateTitle } = useBrowserUpdateTitle(sessionId, profile)`],
+    [`          })
+        ]
+      : []),
+    spec({
+      disabled: !onPin,`, `          }),
+          spec({
+            key: 'update-title',
+            disabled: !sessionId || updatingTitle,
+            icon: 'refresh',
+            label: browserSessionActionLabel('update-title', updatingTitle ? 'Updating title…' : 'Update title'),
+            onSelect: () => void updateTitle()
+          })
+        ]
+      : []),
+    spec({
+      disabled: !onPin,`],
   ])
   return `import { useBrowserUpdateTitle } from ${titleUpdate}\nimport { browserSessionActionLabel } from ${owner}\n` + menu
 }

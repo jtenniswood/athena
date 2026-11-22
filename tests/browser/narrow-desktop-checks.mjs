@@ -80,7 +80,7 @@ export function narrowDesktopChecks(test, open) {
 
       await page.getByRole('button', { name: 'Filters', exact: true }).click()
       const parent = page.locator('[data-slot="dropdown-menu-content"]').last()
-      await parent.getByRole('menuitem', { name: 'Ordering', exact: true }).hover()
+      await parent.getByRole('menuitem', { name: 'Profiles', exact: true }).hover()
       await expect(page.locator('[data-slot="dropdown-menu-sub-content"]')).toBeVisible()
       await expect(parent).toBeVisible()
       await page.keyboard.press('Escape')

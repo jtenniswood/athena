@@ -215,11 +215,6 @@ for (const [layout, combined, grouped] of [
     await expect(page).toHaveURL(/#\/preview-week$/)
     await expect(editor).toHaveText('Keep the draft through sidebar gestures')
     await expect(page.locator('[data-session-moving], [data-session-order-drop]')).toHaveCount(0)
-    await page.getByRole('button', { name: 'Filters', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Ordering', exact: true }).hover()
-    await expect(page.getByRole('menuitemradio', { name: 'Manual', exact: true })).toBeChecked()
-    await page.keyboard.press('Escape')
-    await page.keyboard.press('Escape')
     await page.reload()
     await expect(source).toBeVisible()
     await expect(target).toBeVisible()
@@ -247,27 +242,17 @@ for (const cancellation of ['Escape', 'pointercancel', 'outside', 'source remove
   })
 }
 
-for (const ordering of ['Updated', 'Created', 'Status', 'Tokens', 'Cost', 'Manual']) for (const handle of [false, true]) {
-  test(`${handle ? 'handle' : 'title'} drops override ${ordering} ordering across dates`, async ({ page }) => {
+for (const handle of [false, true]) {
+  test(`${handle ? 'handle' : 'title'} reorder chats across dates`, async ({ page }) => {
     const old = app.gateway.sessions.get('preview-idea')
     const original = { ...old }
     Object.assign(old, { started_at: old.started_at - 86400 * 4, last_active: old.last_active - 86400 * 4,
       input_tokens: 5000, output_tokens: 10000, actual_cost_usd: 2 })
     try {
       const { editor } = await openSidebar(page, { grouped: false, dateGrouping: true })
-      await page.getByRole('button', { name: 'Filters', exact: true }).click()
-      await page.getByRole('menuitem', { name: 'Ordering', exact: true }).hover()
-      await page.getByRole('menuitemradio', { name: ordering, exact: true }).click()
-      await page.keyboard.press('Escape')
-      await page.keyboard.press('Escape')
       const { source, target, after } = await aimOrder(page, { handle })
       await page.mouse.up()
       await expect.poll(async () => (await source.boundingBox()).y > (await target.boundingBox()).y).toBe(after)
-      await page.getByRole('button', { name: 'Filters', exact: true }).click()
-      await page.getByRole('menuitem', { name: 'Ordering', exact: true }).hover()
-      await expect(page.getByRole('menuitemradio', { name: 'Manual', exact: true })).toBeChecked()
-      await page.keyboard.press('Escape')
-      await page.keyboard.press('Escape')
       await expect(editor).toHaveText('Keep the draft through sidebar gestures')
       await expect(page).toHaveURL(/#\/preview-week$/)
       await page.reload()
