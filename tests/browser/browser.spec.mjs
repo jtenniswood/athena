@@ -3146,7 +3146,8 @@ for (const width of [1440, 390, 844]) {
     const openHistory = page.getByRole('button', { name: 'Back to chat history', exact: true })
     if (mobile) await openHistory.click()
     const rail = page.getByRole('navigation', { name: 'App navigation' })
-    const navigation = mobile ? page.locator('#browser-navigation') : rail
+    const chatHistory = page.locator('#browser-navigation')
+    const navigation = mobile ? chatHistory : rail
     const kanban = navigation.getByRole('button', { name: 'Kanban', exact: true })
     const chat = rail.getByRole('button', { name: 'Chat', exact: true })
     const close = page.getByRole('button', { name: 'Close Kanban', exact: true })
@@ -3157,6 +3158,7 @@ for (const width of [1440, 390, 844]) {
     if (mobile) await expect(rail).toHaveCount(0)
     else {
       await expect(chat).toHaveAttribute('aria-current', 'page')
+      await expect(chatHistory).toBeVisible()
       const settings = rail.getByRole('button', { name: 'Settings', exact: true })
       const railBounds = await rail.boundingBox(), settingsBounds = await settings.boundingBox()
       expect(railBounds.y + railBounds.height - (settingsBounds.y + settingsBounds.height)).toBeLessThan(20)
@@ -3171,8 +3173,9 @@ for (const width of [1440, 390, 844]) {
     } else {
       await expect(rail).toBeVisible()
       await expect(kanban).toHaveAttribute('aria-current', 'page')
+      await expect(chatHistory).toBeHidden()
       const railBounds = await rail.boundingBox(), boardBounds = await board.boundingBox()
-      expect(boardBounds.x).toBeGreaterThanOrEqual(railBounds.x + railBounds.width)
+      expect(boardBounds.x).toBeCloseTo(railBounds.x + railBounds.width, 0)
       await expect(close).toHaveCount(0)
       await expect(editor(page)).toHaveCount(0)
     }
@@ -3187,7 +3190,10 @@ for (const width of [1440, 390, 844]) {
     expect(await editor(page).evaluate(node => node === window.kanbanComposer)).toBe(true)
 
     if (mobile) await openHistory.click()
-    else await expect(chat).toHaveAttribute('aria-current', 'page')
+    else {
+      await expect(chat).toHaveAttribute('aria-current', 'page')
+      await expect(chatHistory).toBeVisible()
+    }
     await kanban.click()
     await expect(board.getByText('No tasks on this board', { exact: true })).toBeVisible()
   })
