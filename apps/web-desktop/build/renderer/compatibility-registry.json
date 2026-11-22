@@ -421,8 +421,8 @@
         "scenario": "profile layout composes with content grouping and preserves the draft"
       },
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "dragging chats selects manual ordering and preserves the draft in"
+        "file": "tests/browser/sidebar-gestures.spec.mjs",
+        "scenario": "chat title drops save the order and preserve the draft"
       }
     ],
     "removal": "The browser owns the filter menu or upstream offers composition flags.",
@@ -555,8 +555,8 @@
         "scenario": "profile grouping uses the native all-profile scope"
       },
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "dragging chats selects manual ordering and preserves the draft"
+        "file": "tests/browser/sidebar-gestures.spec.mjs",
+        "scenario": "chat title drops save the order and preserve the draft"
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
@@ -675,8 +675,8 @@
         "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
       },
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "dragging chats selects manual ordering and preserves the draft"
+        "file": "tests/browser/sidebar-gestures.spec.mjs",
+        "scenario": "chat title drops save the order and preserve the draft"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2087,10 +2087,6 @@
         "scenario": "sidebar visibility uses stable identity through markup changes and reload"
       },
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "dragging chats selects manual ordering and preserves the draft"
-      },
-      {
         "file": "scripts/unified-session-list.test.mjs",
         "scenario": "profile grouping keeps empty configured profiles as new conversation entry points"
       },
@@ -3241,8 +3237,8 @@
         "scenario": "Profile grouping replaces presentation controls and switches live without gateway nesting"
       },
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "dragging chats selects manual ordering and preserves the draft"
+        "file": "tests/browser/sidebar-gestures.spec.mjs",
+        "scenario": "chat title drops save the order and preserve the draft"
       },
       {
         "file": "tests/browser/browser.spec.mjs",

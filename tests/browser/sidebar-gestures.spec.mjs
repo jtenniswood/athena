@@ -13,14 +13,15 @@ test.beforeEach(async ({ page }) => {
 })
 test.afterEach(async ({ page }) => { expect(pageErrors.get(page)).toEqual([]) })
 
-async function openSidebar(page, { combined = false, occupied = false, failMove = false, sourceProfile = 'default', grouped = true, dateGrouping = false } = {}) {
+async function openSidebar(page, { combined = false, occupied = false, failMove = false, sourceProfile = 'default', grouped = true, legacyPreferences = false } = {}) {
   const moves = []
   await page.route('**/api/athena/preferences', route => route.abort())
-  await page.addInitScript(({ combined, grouped, dateGrouping }) => {
-    localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles', dateGrouping ? 'date' : combined ? 'project' : 'none')
+  await page.addInitScript(({ combined, grouped, legacyPreferences }) => {
+    localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles', legacyPreferences ? 'date' : 'none')
+    if (legacyPreferences) localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarSortKey', 'created')
     localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarAgentsGrouped.allProfiles', String(grouped))
     localStorage.setItem('hermes-web.browser.combined-profiles', String(combined))
-  }, { combined, grouped, dateGrouping })
+  }, { combined, grouped, legacyPreferences })
   const sessions = [...app.gateway.sessions.values()].filter(session => !session.hidden).map(session => ({
     ...session, profile: session.id === 'preview-idea' ? sourceProfile : session.profile
   }))
@@ -246,11 +247,12 @@ for (const handle of [false, true]) {
   test(`${handle ? 'handle' : 'title'} reorder chats across dates`, async ({ page }) => {
     const old = app.gateway.sessions.get('preview-idea')
     const original = { ...old }
-    Object.assign(old, { started_at: old.started_at - 86400 * 4, last_active: old.last_active - 86400 * 4,
+    Object.assign(old, { started_at: old.started_at + 86400 * 4, last_active: old.last_active - 86400 * 4,
       input_tokens: 5000, output_tokens: 10000, actual_cost_usd: 2 })
     try {
-      const { editor } = await openSidebar(page, { grouped: false, dateGrouping: true })
+      const { editor } = await openSidebar(page, { grouped: false, legacyPreferences: true })
       const { source, target, after } = await aimOrder(page, { handle })
+      expect(after).toBe(false)
       await page.mouse.up()
       await expect.poll(async () => (await source.boundingBox()).y > (await target.boundingBox()).y).toBe(after)
       await expect(editor).toHaveText('Keep the draft through sidebar gestures')

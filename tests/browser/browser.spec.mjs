@@ -4239,8 +4239,13 @@ for (const width of [1440, 390]) {
     const project = profile => group(profile).locator('[data-sessions-project="shared-project"]')
     await expect(project('default')).toBeVisible()
     await expect(project('research')).toBeVisible()
-    await project('research').hover()
-    await project('research').getByRole('button', { name: 'Actions', exact: true }).click()
+    const researchProject = project('research')
+    if (width === 390) {
+      await researchProject.locator('[data-browser-group-header]').first().dispatchEvent('contextmenu', { pointerType: 'touch' })
+    } else {
+      await researchProject.hover()
+      await researchProject.getByRole('button', { name: 'Actions', exact: true }).click()
+    }
     for (const name of ['Rename…', 'Appearance', 'Add folder', 'Set active', 'Copy path', 'Delete…']) {
       await expect(page.getByRole('menuitem', { name, exact: true })).toBeVisible()
     }
@@ -4372,51 +4377,6 @@ test('empty configured channels stay hidden and channel controls exclude unset p
   await page.keyboard.press('Escape')
   await expect(telegram).toHaveCount(0)
 })
-
-for (const layout of ['flat', 'profiles', 'projects']) {
-  test(`dragging chats selects manual ordering and preserves the draft in ${layout}`, async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 960 })
-    await page.route('**/api/athena/preferences', route => route.abort())
-    await page.addInitScript(layout => {
-      localStorage.setItem('hermes.desktop.showAllProfiles', 'true')
-      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarSortKey', 'created')
-      localStorage.setItem('hermes-web.browser.combined-profiles', String(layout !== 'flat'))
-      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles', layout === 'profiles' ? 'profile' : 'none')
-      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarAgentsGrouped.allProfiles', String(layout === 'projects'))
-    }, layout)
-    await page.route('**/api/profiles/sessions/sidebar**', async route => {
-      const response = await route.fetch()
-      const body = await response.json()
-      const template = body.recents.sessions.find(session => session.id === 'preview-week')
-      body.recents.sessions.push(
-        { ...template, id: 'drag-first', title: 'Drag first chat', cwd: '/workspace/drag-project', git_repo_root: '/workspace/drag-project', started_at: template.started_at - 1000, last_active: template.last_active - 1000 },
-        { ...template, id: 'drag-second', title: 'Drag second chat', cwd: '/workspace/drag-project', git_repo_root: '/workspace/drag-project', started_at: template.started_at - 500, last_active: template.last_active - 2000 }
-      )
-      await route.fulfill({ response, json: body })
-    })
-    await open(page)
-    await editor(page).fill('Keep this draft while dragging chats')
-    const first = page.getByRole('button', { name: 'Drag first chat', exact: true })
-    const second = page.getByRole('button', { name: 'Drag second chat', exact: true })
-    const selectedRoute = page.url()
-    const source = page.locator('[data-web-session-id="drag-first"] .browser-session-title')
-    const targetRow = page.locator('[data-web-session-id="drag-second"]')
-    const [before, target] = await Promise.all([source.boundingBox(), targetRow.boundingBox()])
-    expect(before.y).toBeLessThan(target.y)
-    await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2)
-    await page.mouse.down()
-    await page.mouse.move(target.x + target.width / 2, target.y + target.height * .8, { steps: 10 })
-    await expect(targetRow).toHaveAttribute('data-session-order-drop', 'after')
-    await page.mouse.up()
-    await expect.poll(async () => (await first.boundingBox()).y > (await second.boundingBox()).y).toBe(true)
-    await expect(editor(page)).toHaveText('Keep this draft while dragging chats')
-    await expect(page).toHaveURL(selectedRoute)
-    await page.reload()
-    await expect(first).toBeVisible()
-    await expect.poll(async () => (await first.boundingBox()).y > (await second.boundingBox()).y).toBe(true)
-    await expect(editor(page)).toHaveText('Keep this draft while dragging chats')
-  })
-}
 
 for (const width of [1440, 390]) {
   test.extend({ hasTouch: width === 390 })(`project deletion follows the owning profile and preserves failed confirmations at ${width}px`, async ({ page }) => {
