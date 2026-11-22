@@ -837,10 +837,10 @@ touchTest('phone navigation and contextual sheets stay tappable at 320px and 200
   await page.getByRole('button', { name: 'Chat actions', exact: true }).click()
   const sheet = page.getByRole('dialog', { name: 'Chat actions', exact: true })
   await expect(sheet).toBeVisible()
-  const bounds = await sheet.boundingBox()
-  expect(bounds.x).toBe(0)
-  expect(bounds.width).toBe(320)
-  expect(bounds.y + bounds.height).toBe(700)
+  await expect.poll(async () => {
+    const bounds = await sheet.boundingBox()
+    return bounds && [Math.round(bounds.x), Math.round(bounds.width), Math.round(bounds.y + bounds.height)]
+  }).toEqual([0, 320, 700])
 })
 
 test('a touch context-menu gesture does not open sidebar sections', async ({ browser }) => {
