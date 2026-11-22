@@ -756,6 +756,7 @@ touchTest('phone navigation and action sheets keep touch targets usable across U
     await trigger.click()
     const nav = page.getByRole('dialog', { name: 'Navigation' })
     await expect(nav).toBeVisible()
+    await expect(nav.getByRole('textbox', { name: 'Search', exact: true })).toBeHidden()
     await expect(page.getByRole('main', { name: 'Conversation and workspace' })).toBeHidden()
     if (scale === 50) {
       const backToChat = page.getByRole('button', { name: 'Back to chat', exact: true })
@@ -776,7 +777,6 @@ touchTest('phone navigation and action sheets keep touch targets usable across U
     for (const [name, controls] of [
       ['Navigation action', nav.locator('.browser-navigation-body [data-sidebar="menu-button"]:visible')],
       ['Session row', nav.locator('.browser-sessions-pane button[data-slot="row-button"]:visible')],
-      ['Session search', nav.locator('.browser-sessions-pane .browser-session-search:visible')],
       ['New session', nav.locator('.browser-sessions-pane button[aria-label="New session"]:visible')],
       ['Session filters', nav.locator('.browser-sessions-pane button[aria-label="Filters"]:visible')],
       ['Session reorder handle', nav.locator('.browser-sessions-pane [class*="group/handle"]:visible')]
@@ -1861,14 +1861,21 @@ for (const width of [1440, 700, 600]) {
       await page.keyboard.press(`${modifier}+b`)
       await expect(navigation).toBeVisible()
     }
+    const search = navigation.getByRole('textbox', { name: 'Search', exact: true })
+    await expect(search).toBeHidden()
     await navigation.getByRole('tab', { name: 'Bots' }).click()
     await page.keyboard.press(`${modifier}+b`)
     await expect(navigation).toBeHidden()
 
     await page.keyboard.press(`${modifier}+Shift+f`)
     await expect(navigation).toBeVisible()
-    await expect(navigation.getByRole('tab', { name: 'Sessions' })).toHaveAttribute('aria-selected', 'true')
-    await expect(navigation.getByRole('textbox', { name: 'Search', exact: true })).toBeFocused()
+    const sessions = navigation.getByRole('tab', { name: 'Sessions' })
+    await expect(sessions).toHaveAttribute('aria-selected', 'true')
+    await expect(search).toBeFocused()
+    await sessions.focus()
+    await expect(search).toBeHidden()
+    await page.keyboard.press(`${modifier}+Shift+f`)
+    await expect(search).toBeFocused()
     await page.keyboard.press(`${modifier}+b`)
     await expect(navigation).toBeHidden()
     await expect(draft).toHaveText('Keep my draft while using shortcuts')

@@ -1,9 +1,10 @@
 import { createContext, useContext, type ReactNode } from 'react'
 
-const SettingsContext = createContext<ReactNode>(null)
+type SidebarNavigationControls = { settings: ReactNode; searchFocusRequest: number }
+const SidebarNavigationContext = createContext<SidebarNavigationControls>({ settings: null, searchFocusRequest: 0 })
 
-export function BrowserSidebarSettings() { return useContext(SettingsContext) }
+export function useBrowserSidebarNavigation() { return useContext(SidebarNavigationContext) }
 
-export function BrowserSidebarNavigation({ settings, children }: { settings: ReactNode; children: ReactNode }) {
-  return <SettingsContext.Provider value={settings}>{children}</SettingsContext.Provider>
+export function BrowserSidebarNavigation({ settings, searchFocusRequest, children }: SidebarNavigationControls & { children: ReactNode }) {
+  return <SidebarNavigationContext.Provider value={{ settings, searchFocusRequest }}>{children}</SidebarNavigationContext.Provider>
 }
