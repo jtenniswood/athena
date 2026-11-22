@@ -65,7 +65,11 @@ function BrowserLayout() {
       <aside id="browser-navigation" ref={navigation.drawer} tabIndex={navigation.mobile ? -1 : undefined} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={navigation.compact && navigation.drawerOpen ? 'dialog' : undefined} aria-modal={navigation.compact && navigation.drawerOpen ? true : undefined} aria-owns={navigation.compact && navigation.drawerOpen ? ARCHIVE_TOASTS_ID : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
         <BrowserNavigationTabs navigation={navigation} actions={tab !== 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} /> : undefined} />
         <div className="browser-navigation-body" data-profile-layout={presentationMode ? 'combined' : 'separate'} role="tabpanel" aria-label={tab}>
-          <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}><BrowserSidebarNavigation settings={tab === 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} row /> : null}><BrowserSessionsSurface /></BrowserSidebarNavigation></BrowserSessionsPane>
+          <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}>
+            <BrowserSidebarNavigation settings={tab === 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} row /> : null} searchFocusRequest={navigation.searchFocusRequest}>
+              <BrowserSessionsSurface />
+            </BrowserSidebarNavigation>
+          </BrowserSessionsPane>
           <div hidden={tab !== 'bots'} className="browser-pane"><BrowserBotsSurface fallback={<BrowserBotsFallback />} /></div>
         </div>
         {updateNotice && !updateDismissed && <div className="browser-update-panel" role="status" aria-label="Application update">
