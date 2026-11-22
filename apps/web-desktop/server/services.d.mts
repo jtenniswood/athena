@@ -8,7 +8,6 @@ export function createAthenaServices(options: {
   replyRecoveryFile?: string
   directory: string
   home?: string
-  openCodeGoApiKey?: string
   fetch?: typeof fetch
   now?: () => number
   browserSender?: { enabled: boolean; publicKey(): string; send(subscription: object, data: Record<string, string>, ttl: number): Promise<unknown> }

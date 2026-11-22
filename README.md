@@ -136,20 +136,6 @@ the refresh. Text drafts are saved first; recordings, pending saves, and unsent
 attachments still postpone the update. This applies to UI updates, not gateway
 restarts or server changes.
 
-### OpenCode Go usage
-
-To show your subscription usage above **Settings** in the chat sidebar, add
-`OPENCODE_GO_API_KEY` to Athena's Docker environment and recreate the container.
-Use an API key from the subscribed workspace in the OpenCode Console. With
-`compose.example.yml`, put it in your local Compose `.env` file or pass that file
-with `docker compose --env-file`. For `docker run`, add it to `.env.hermes-web`
-alongside the gateway settings.
-
-The row shows the percentage remaining in the current subscription month. Hover
-over it or focus it with the keyboard to see the percentage remaining and time
-until reset for the 5-hour, weekly, and monthly windows. Athena keeps the key on
-the server and shares the configured subscription's usage with signed-in users.
-
 ### Container logs
 
 Follow startup and request diagnostics with:

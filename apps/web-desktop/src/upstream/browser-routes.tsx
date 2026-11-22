@@ -2,8 +2,7 @@ import { createContext, lazy, Suspense, useContext, useLayoutEffect, useRef, typ
 import { Routes, useLocation, type Location } from 'react-router'
 import { appViewForPath, isOverlayView } from '@/app/routes'
 import { registry } from '@/contrib/registry'
-import { OpenCodeGoUsagePage } from '../experience/opencode-go-usage'
-import { isBrowserPageRoute, SCHEDULED_TASKS_ROUTE, USAGE_ROUTE } from '../experience/tool-routes'
+import { isBrowserPageRoute, SCHEDULED_TASKS_ROUTE } from '../experience/tool-routes'
 
 const ScheduledTasksPage = lazy(() => import('../experience/scheduled-tasks-page'))
 // Register before wiring mounts so the session router never treats this path as a chat ID.
@@ -14,17 +13,7 @@ const disposeScheduledTasks = registry.register({
   data: { path: SCHEDULED_TASKS_ROUTE.path },
   render: () => <Suspense fallback={<p role="status">Loading scheduled tasks…</p>}><ScheduledTasksPage /></Suspense>
 })
-const disposeUsage = registry.register({
-  id: 'athena:usage',
-  area: 'routes',
-  title: USAGE_ROUTE.label,
-  data: { path: USAGE_ROUTE.path },
-  render: () => <OpenCodeGoUsagePage />
-})
-if (import.meta.hot) import.meta.hot.dispose(() => {
-  disposeScheduledTasks()
-  disposeUsage()
-})
+if (import.meta.hot) import.meta.hot.dispose(disposeScheduledTasks)
 
 const PageSurface = createContext(false)
 

@@ -1,7 +1,6 @@
 import type { ReactNode, RefObject } from 'react'
 import { SearchField } from '../upstream/browser-api'
 import { BrowserSidebarSettings } from './sidebar-extras'
-import { OpenCodeGoUsage } from './opencode-go-usage'
 import { browserClassNames as cn } from './ui/classnames'
 
 export interface BrowserSidebarModel {
@@ -40,7 +39,6 @@ export function BrowserSidebar({ model, children }: { model: BrowserSidebarModel
       {model.showSections ? <div data-sessions-mode={model.mode} data-sessions-project={model.project}
         className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain pb-1.75 [scrollbar-gutter:stable] scrollbar-fade">{children}</div> : model.empty}
       <div data-slot="sidebar-footer" className="mt-auto min-h-0 shrink overflow-y-auto overflow-x-hidden overscroll-contain pb-1 pt-1 scrollbar-fade">
-        <OpenCodeGoUsage />
         <BrowserSidebarSettings />
         {model.showSections && <SearchField containerClassName="browser-sidebar-footer-row browser-session-search" aria-label="Search" placeholder="Search" inputRef={model.search.input} value={model.search.value} onChange={model.search.change} />}
       </div>
