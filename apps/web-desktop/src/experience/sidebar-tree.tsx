@@ -108,5 +108,5 @@ export function BrowserTreeBody({ empty, emptyLabel, children, more }: { empty: 
 }
 
 export function BrowserRepository({ model, children, dialogs }: { model: BrowserTreeHeaderModel; children: ReactNode; dialogs: ReactNode }) {
-  return <BrowserTreeStack><BrowserTreeHeader model={model} />{model.open && <BrowserTreeStack className="pl-2.5">{children}</BrowserTreeStack>}{dialogs}</BrowserTreeStack>
+  return <BrowserTreeStack><BrowserTreeHeader model={model} />{model.open && <BrowserTreeStack className="pl-2.5 [--browser-session-tree-inset:.625rem]">{children}</BrowserTreeStack>}{dialogs}</BrowserTreeStack>
 }

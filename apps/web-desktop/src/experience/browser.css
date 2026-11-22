@@ -315,7 +315,7 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  /* Keep profile creation visible while hiding other row creation and overflow controls. */
  .browser-sessions-pane :is([data-browser-group-actions], [data-row-actions]) button:not([data-browser-profile-create]):has(:is(.codicon-add, .codicon-ellipsis, .codicon-kebab-vertical)) { display:none; }
  /* Match the profile header inset instead of adding a second row gutter. */
- .browser-sessions-pane [data-gateway-group] [data-web-session-id] { padding-inline-start:0; }
+ .browser-sessions-pane [data-gateway-group] [data-web-session-id] { --browser-session-row-padding-start:0px; }
  .browser-sessions-pane [data-browser-session-actions] { position:relative; opacity:1; pointer-events:auto; }
  .browser-sessions-pane [data-web-session-id]:is(:hover,:focus-within,:has([data-state="open"])) [data-row-actions]:has(> [data-browser-session-actions]) { min-width:0; }
  /* Keep the desktop status slot visible even when optional figures run out of room. */
