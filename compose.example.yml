@@ -14,7 +14,6 @@ services:
       # On migration, retain the previous gateway URL as its stable storage identity.
       HERMES_GATEWAY_IDENTITY_URL: ${HERMES_GATEWAY_IDENTITY_URL:-}
       HERMES_GATEWAY_NAME: ${HERMES_GATEWAY_NAME:-Hermes}
-      OPENCODE_GO_API_KEY: ${OPENCODE_GO_API_KEY:-}
       # Optional absolute path to a private reply recovery grants file mounted read-only.
       ATHENA_REPLY_RECOVERY_GRANTS_FILE: ${ATHENA_REPLY_RECOVERY_GRANTS_FILE:-}
 

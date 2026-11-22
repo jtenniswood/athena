@@ -8,8 +8,7 @@ const services = createAthenaServices({
   target: config.target,
   identityUrl: config.identityUrl,
   directory: config.preferencesDir,
-  home: config.home,
-  openCodeGoApiKey: config.openCodeGoApiKey
+  home: config.home
 })
 const server = createServer((req, res) => { void services.handle(req, res).then(handled => { if (!handled) { res.writeHead(404); res.end() } }) })
 services.attach(server)
