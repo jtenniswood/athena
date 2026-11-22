@@ -1086,7 +1086,7 @@ test('chat menu archive Undo restores the original chat without replacing a newe
   await expect(editor(page)).toHaveText('Keep this newer draft')
 })
 
-test('Android Back after archiving shows the chat list and leaves Undo explicit', async ({ browser }) => {
+test('archiving the open chat on mobile shows the chat list and leaves Undo explicit', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   try {
     const page = await context.newPage()
@@ -1099,11 +1099,8 @@ test('Android Back after archiving shows the chat list and leaves Undo explicit'
 
     await page.getByLabel('Chat toolbar').getByRole('button', { name: 'Archive', exact: true }).tap()
     await expect(toast).toContainText('Archived chat')
-    await expect(page).toHaveURL(/#\/$/)
-    const handled = await page.evaluate(() => !window.dispatchEvent(new Event('athena:native-back', { cancelable: true })))
-    if (!handled) await page.goBack()
-
     await expect(list).toBeVisible()
+    await expect(page.getByRole('main', { name: 'Conversation and workspace' })).toBeHidden()
     await expect(page).toHaveURL(/#\/$/)
     await expect(row).toHaveCount(0)
     expect(await getArchiveStatus()).toBe(true)
@@ -1111,6 +1108,7 @@ test('Android Back after archiving shows the chat list and leaves Undo explicit'
     await toast.getByRole('button', { name: 'Undo', exact: true }).tap()
     await expect(row).toBeVisible()
     expect(await getArchiveStatus()).toBe(false)
+    await expect(list).toBeVisible()
   } finally { await context.close() }
 })
 
