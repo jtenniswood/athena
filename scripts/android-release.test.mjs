@@ -18,10 +18,13 @@ test('release capabilities reject injected sensitive permissions, old targets an
   const badging = [
     "targetSdkVersion:'36'",
     "uses-permission: name='android.permission.INTERNET'",
+    "uses-permission: name='android.permission.POST_PROMOTED_NOTIFICATIONS'",
     "uses-permission: name='android.permission.RECORD_AUDIO'",
     "uses-permission: name='android.permission.RECEIVE_BOOT_COMPLETED'"
   ].join('\n')
-  assert.equal(verifyApkCapabilities(badging).targetSdk, 36)
+  const capabilities = verifyApkCapabilities(badging)
+  assert.equal(capabilities.targetSdk, 36)
+  assert.ok(capabilities.permissions.includes('android.permission.POST_PROMOTED_NOTIFICATIONS'))
   for (const name of ['android.permission.READ_SMS', 'android.permission.BIND_ACCESSIBILITY_SERVICE', 'android.permission.QUERY_ALL_PACKAGES', 'unexpected.library.permission']) {
     assert.throws(() => verifyApkCapabilities(badging + `\nuses-permission: name='${name}'`), /unexpected APK permissions/)
   }
