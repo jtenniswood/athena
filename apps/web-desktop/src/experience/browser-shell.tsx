@@ -133,7 +133,7 @@ function BrowserLayout() {
           <BrowserConversationSurface />
           <div className="browser-status"><BrowserStatusSurface /></div>
         </div>
-        {inlineKanban && <div className="browser-page"><BrowserPageSurface /></div>}
+        {inlineKanban && <div className="browser-page pt-2"><BrowserPageSurface /></div>}
       </main>
       <BrowserToolModal mobile={navigation.mobile} chatUrl={lastChat.current.url} />
       <BrowserArchiveToasts ref={archiveToasts} />
