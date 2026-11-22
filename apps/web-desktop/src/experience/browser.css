@@ -19,7 +19,7 @@
 .browser-tool-title button { border:1px solid var(--web-border); border-radius:var(--web-radius-panel); padding:var(--web-space-2) var(--web-space-3); font-size:var(--web-text-caption); background:var(--web-bg); cursor:pointer; }
 .browser-workspace { --browser-app-navigation-width:3.75rem; flex:1; min-height:0; display:flex; position:relative; }
 .browser-app-navigation {
-  --web-icon-size:1.25rem;
+  --web-icon-size:1.125rem;
   box-sizing:border-box;
   flex:0 0 var(--browser-app-navigation-width);
   display:flex;
@@ -30,7 +30,7 @@
   border-inline-end:1px solid var(--web-border-subtle);
   background:var(--web-sidebar);
 }
-.browser-app-navigation > [data-browser-toolbar-button] { width:2.75rem; height:2.75rem; border-radius:.75rem; }
+.browser-app-navigation > [data-browser-toolbar-button] { width:2.5rem; height:2.5rem; border-radius:.625rem; }
 .browser-app-navigation > [aria-current="page"] { color:var(--web-text); background:var(--web-active); }
 .browser-app-navigation > [data-browser-toolbar-button]:last-child { margin-block-start:auto; }
 .browser-navigation { --sidebar:var(--web-sidebar); position:relative; width:var(--browser-navigation-width,19rem); flex-shrink:0; display:flex; flex-direction:column; border-inline-end:1px solid var(--web-border-subtle); background:var(--web-sidebar); overflow:hidden; }
@@ -70,6 +70,12 @@
 .browser-profile-drop-end { position:relative; align-self:stretch; flex:1 0 1rem; min-height:2.5rem; }
 .browser-profile-drop-end > .browser-profile-drop-indicator { position:absolute; top:50%; left:0; transform:translateY(-50%); }
 .browser-profile-rail::-webkit-scrollbar { display:none; }
+.browser-profile-sidebar { display:flex; flex:0 1 auto; min-height:0; }
+.browser-profile-sidebar .browser-profile-rail { flex-direction:column; overflow:auto; }
+.browser-profile-sidebar .browser-profile-drop-end { flex:0 0 .5rem; min-height:0; }
+.browser-profile-sidebar .browser-profile-drop-indicator { width:2.25rem; height:.2rem; left:50%; transform:translateX(-50%); }
+.browser-profile-sidebar .browser-profile-slot > .browser-profile-drop-indicator { top:-.225rem; }
+.browser-profile-sidebar .browser-profile-drop-end > .browser-profile-drop-indicator { top:0; }
 .browser-profile-drop-indicator { width:.2rem; height:2.25rem; flex:0 0 .2rem; border-radius:999px; background:var(--web-accent); box-shadow:0 0 .45rem color-mix(in srgb,var(--web-accent) 70%,transparent); pointer-events:none; }
 .browser-profile-choice { width:2.5rem; height:2.5rem; flex:0 0 2.5rem; display:inline-flex; align-items:center; justify-content:center; padding:0; border:1px solid transparent; border-radius:.625rem; color:var(--web-text-subtle); background:transparent; cursor:pointer; }
 .browser-profile-choice[draggable="true"] { cursor:grab; }
