@@ -5,9 +5,61 @@
 .browser-sessions-pane [data-gateway-group]:has([data-browser-profile-picture]) + [data-gateway-group]:has([data-browser-profile-picture]) { margin-top:var(--web-space-3); }
 .browser-provider { height:100%; min-height:0; display:block; }
 .browser-shell { height:100%; display:flex; flex-direction:column; color:var(--web-text); background:var(--web-bg); font-family:var(--web-font); overflow:hidden; }
-.browser-chat-toolbar { height:var(--web-toolbar-height); flex-shrink:0; display:grid; grid-template-columns:minmax(2.25rem,1fr) minmax(2.25rem,1fr); align-items:center; gap:var(--web-space-1); padding:0 var(--web-space-3) 0 var(--web-space-1); background:var(--web-bg); }
+.browser-main {
+  --chat-toolbar-padding:var(--web-space-2);
+  --chat-toolbar-safe-top:0px;
+  --chat-toolbar-height:calc(var(--web-control-regular) + 2 * var(--chat-toolbar-padding) + var(--chat-toolbar-safe-top));
+  --chat-toolbar-clearance:calc(var(--chat-toolbar-height) + var(--web-space-3));
+}
+.browser-chat-toolbar {
+  position:relative;
+  z-index:2;
+  flex-shrink:0;
+  display:grid;
+  grid-template-columns:max-content minmax(0,1fr);
+  align-items:center;
+  gap:var(--web-space-1);
+  min-height:var(--chat-toolbar-height);
+  padding-block:calc(var(--chat-toolbar-padding) + var(--chat-toolbar-safe-top)) var(--chat-toolbar-padding);
+  padding-inline:max(1rem, calc(env(safe-area-inset-left,0px) / var(--web-ui-scale,1))) max(1rem, calc(env(safe-area-inset-right,0px) / var(--web-ui-scale,1)));
+}
 .browser-chat-toolbar > .browser-menu { grid-column:1; grid-row:1; }
-.browser-chat-toolbar .browser-actions { grid-column:2; grid-row:1; justify-self:end; margin-left:0; }
+.browser-chat-toolbar > .browser-actions { grid-column:2; grid-row:1; justify-self:end; min-width:0; }
+/* Let the transcript scroll under the controls and clear the fade on focus.
+   Docked tools share the workspace top edge and need room for their headers. */
+.browser-main:has([data-slot="aui_thread-viewport"]):not(:has(.browser-upstream-workspace > [data-tree-split] [data-tree-tab]:not([data-tree-tab="workspace"]))) {
+  > .browser-chat-toolbar {
+    position:absolute;
+    inset:0 0 auto;
+    z-index:20;
+    pointer-events:none;
+  }
+  > .browser-chat-toolbar::before {
+    content:"";
+    position:absolute;
+    z-index:-1;
+    inset:0 0 calc(-1 * var(--web-space-3));
+    background:linear-gradient(to bottom, var(--web-bg), color-mix(in srgb,var(--web-bg) 62%,transparent) 65%, transparent);
+  }
+  [data-slot="aui_thread-viewport"] {
+    scroll-padding-block-start:var(--chat-toolbar-clearance);
+  }
+  [data-slot="aui_thread-viewport"] > [data-slot="aui_thread-content"] {
+    padding-block-start:var(--chat-toolbar-clearance);
+  }
+}
+.browser-chat-toolbar > :is(.browser-menu, .browser-actions) {
+  border-radius:999px;
+  background:color-mix(in srgb,var(--web-text) 12%,var(--web-bg));
+  box-shadow:inset 0 0 0 1px var(--web-border);
+}
+.browser-chat-toolbar button {
+  border-radius:999px;
+  pointer-events:auto;
+}
+.browser-chat-toolbar > button.browser-menu:is(:hover,:focus-visible):not(:disabled) {
+  background:color-mix(in srgb,var(--web-text) 18%,var(--web-bg));
+}
 .browser-actions { display:flex; align-items:center; gap:var(--web-space-2); }
 .browser-approval-control { display:inline-flex; align-items:center; }
 .browser-approval-control:empty,.browser-status:empty { display:none; }
@@ -259,7 +311,6 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-shell [data-slot="aui_thread-content"]:not(:has([data-slot="aui_intro"])) { --message-text-indent:0px; padding-inline:1rem; }
  .browser-sessions-pane .browser-session-archive { display:none; }
  .browser-sessions-pane [data-web-session-id]:is(:hover,:focus-within,:has([data-state="open"])) [data-row-actions]:has(> [data-browser-session-actions]) { min-width:var(--web-control-compact); }
- .browser-chat-toolbar { position:relative; z-index:2; grid-template-columns:max-content minmax(0,1fr); gap:var(--web-space-1); height:auto; min-height:var(--web-toolbar-height); }
  .browser-chat-toolbar .browser-actions { min-width:0; gap:var(--web-space-1); }
  .browser-workspace { --browser-app-navigation-width:3.25rem; }
  .browser-navigation { box-sizing:border-box; position:absolute; inset:0; inset-inline-start:var(--browser-app-navigation-width); inset-inline-end:auto; z-index:61; width:min(var(--browser-navigation-width,19rem),calc(100% - var(--browser-app-navigation-width) - 3rem)); padding:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1)) calc(env(safe-area-inset-right,0px) / var(--web-ui-scale,1)) calc(env(safe-area-inset-bottom,0px) / var(--web-ui-scale,1)) calc(env(safe-area-inset-left,0px) / var(--web-ui-scale,1)); transform:translateY(.5rem); opacity:0; visibility:hidden; transition:transform 160ms ease,opacity 160ms ease,visibility 160ms; box-shadow:var(--web-shadow-panel); }
@@ -273,52 +324,9 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
 }
 @media (pointer: coarse) and (width < 48rem), (pointer: coarse) and (max-height: 27rem) {
  .browser-navigation { inset-inline-start:0; inset-inline-end:0; width:100%; box-shadow:none; }
- .browser-main {
-   --chat-toolbar-padding:var(--web-space-2);
-   --chat-toolbar-safe-top:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1));
-   --chat-toolbar-height:calc(var(--web-control-regular) + 2 * var(--chat-toolbar-padding) + var(--chat-toolbar-safe-top));
- }
+ .browser-main { --chat-toolbar-safe-top:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1)); }
  /* The Android WebView already starts below the system status bar. */
  .browser-shell[data-android-app] .browser-main { --chat-toolbar-safe-top:0px; }
- .browser-chat-toolbar {
-   min-height:var(--chat-toolbar-height);
-   padding-block:calc(var(--chat-toolbar-padding) + var(--chat-toolbar-safe-top)) var(--chat-toolbar-padding);
-   padding-inline:max(1rem, calc(env(safe-area-inset-left,0px) / var(--web-ui-scale,1))) max(1rem, calc(env(safe-area-inset-right,0px) / var(--web-ui-scale,1)));
-   background:none;
- }
- /* Let the transcript scroll under the controls, with room for the first
-    message and for focused transcript controls to scroll clear of the fade. */
- .browser-main:has([data-slot="aui_thread-viewport"]) > .browser-chat-toolbar {
-   position:absolute;
-   inset:0 0 auto;
-   z-index:20;
-   pointer-events:none;
- }
- .browser-main:has([data-slot="aui_thread-viewport"]) > .browser-chat-toolbar::before {
-   content:"";
-   position:absolute;
-   z-index:-1;
-   inset:0 0 calc(-1 * var(--web-space-3));
-   background:linear-gradient(to bottom, var(--web-bg), color-mix(in srgb,var(--web-bg) 62%,transparent) 65%, transparent);
- }
- .browser-main [data-slot="aui_thread-viewport"] {
-   scroll-padding-block-start:calc(var(--chat-toolbar-height) + var(--web-space-3));
- }
- .browser-main [data-slot="aui_thread-viewport"] > [data-slot="aui_thread-content"] {
-   padding-block-start:calc(var(--chat-toolbar-height) + var(--web-space-3));
- }
- .browser-chat-toolbar > :is(.browser-menu, .browser-actions) {
-   border-radius:999px;
-   background:color-mix(in srgb,var(--web-text) 12%,var(--web-bg));
-   box-shadow:inset 0 0 0 1px var(--web-border);
- }
- .browser-chat-toolbar button {
-   border-radius:999px;
-   pointer-events:auto;
- }
- .browser-chat-toolbar > button.browser-menu:is(:hover,:focus-visible):not(:disabled) {
-   background:color-mix(in srgb,var(--web-text) 18%,var(--web-bg));
- }
  .browser-navigation-heading { min-height:var(--web-touch-target); }
  .browser-navigation-tabs button { min-width:var(--web-touch-target); min-height:var(--web-touch-target); font-size:var(--web-text-caption); }
  .browser-navigation .browser-profile-actions-trigger { width:var(--web-touch-target); height:var(--web-touch-target); flex-basis:var(--web-touch-target); }
