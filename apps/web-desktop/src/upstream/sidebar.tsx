@@ -34,6 +34,7 @@ import { $newProjectDropPlacement, openProjectCreate } from '@/store/projects'
 import { markAllSessionsRead } from '@/store/session'
 import { ackAllSessionsRead } from '@/store/session-unread'
 import { BrowserSidebar, type BrowserSidebarModel } from '../experience/sidebar'
+import { KANBAN_ROUTE } from '../experience/tool-routes'
 import { useBrowserSidebarChannels } from '../experience/sidebar-sections'
 import { useBrowserProfileGroupProjection } from './profile-groups'
 import { useBrowserProfileGrouping } from './profile-section'
@@ -115,6 +116,13 @@ interface SidebarController extends Pick<Parameters<typeof ChatSidebar>[0], 'onN
   loadMoreForMessaging(platform: string): void
 }
 
+const kanbanNav: SidebarNavItem = {
+  id: 'kanban:nav',
+  label: KANBAN_ROUTE.label,
+  icon: props => <Codicon name={KANBAN_ROUTE.icon} {...props} />,
+  route: KANBAN_ROUTE.path
+}
+
 const scroll = 'overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-fade'
 const compactFlat = 'compact:max-h-none compact:overflow-visible'
 const headerButton = 'text-(--ui-text-tertiary) opacity-0 hover:bg-(--ui-control-hover-background) hover:text-foreground group-hover/section:opacity-100 focus-visible:opacity-100'
@@ -127,7 +135,8 @@ export function BrowserSidebarControllerSurface({ model: c }: { model: SidebarCo
     activeSessionId: c.activeSidebarSessionId, onArchiveSession: c.onArchiveSession, onBranchSession: c.onBranchSession,
     onDeleteSession: c.onDeleteSession, onResumeSession: c.onResumeSession, onToggleUnread: c.toggleUnread
   }
-  const navigation = c.navItems.filter(item => item.id !== 'capabilities' && item.id !== 'new-session').map(item => ({
+  const navItems = c.navItems.some(item => item.route === KANBAN_ROUTE.path) ? c.navItems : [...c.navItems, kanbanNav]
+  const navigation = navItems.filter(item => item.id !== 'capabilities' && item.id !== 'new-session').map(item => ({
     id: item.id, label: s.nav[item.id] ?? item.label, icon: <item.icon className="size-4 shrink-0 text-[color-mix(in_srgb,currentColor_72%,transparent)]" />,
     active: (['messaging', 'artifacts', 'cron'].includes(item.id) && c.currentView === item.id) ||
       (c.currentView === 'extension' && Boolean(item.route) && c.pathname === item.route), disabled: !item.action && !item.route,

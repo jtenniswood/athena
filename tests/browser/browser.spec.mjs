@@ -3122,6 +3122,45 @@ test('phone profiles retain saved desktop order and reject drag operations', asy
   expect(await names()).toEqual(['Writer', 'Hermes', 'Research'])
 })
 
+for (const width of [1440, 390]) {
+  test.extend({ hasTouch: width === 390 })(`Kanban opens from navigation and preserves the mounted chat draft at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 960 })
+    await page.route(/\/api\/plugins\/kanban\/board(?:\?|$)/, route => route.fulfill({
+      json: { columns: [], tenants: [], assignees: [], latest_event_id: 0, now: 0 }
+    }))
+    await page.route(/\/api\/plugins\/kanban\/boards(?:\?|$)/, route => route.fulfill({
+      json: { boards: [], current: 'default' }
+    }))
+    await page.route(/\/api\/plugins\/kanban\/orchestration(?:\?|$)/, route => route.fulfill({
+      json: {
+        orchestrator_profile: '', default_assignee: '', auto_decompose: false,
+        resolved_orchestrator_profile: '', resolved_default_assignee: ''
+      }
+    }))
+    await open(page)
+    await editor(page).fill('Keep this Kanban draft')
+    await editor(page).evaluate(node => { window.kanbanComposer = node })
+
+    const kanban = page.locator('#browser-navigation').getByRole('button', { name: 'Kanban', exact: true })
+    if (width === 390) await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+    await kanban.click()
+    await expect(page).toHaveURL(/#\/kanban$/)
+    await page.getByRole('button', { name: 'Enable Kanban', exact: true }).click()
+    await expect(page.getByText('No tasks on this board', { exact: true })).toBeVisible()
+    await expect(page.locator('.browser-upstream-workspace')).toHaveAttribute('inert', '')
+
+    await page.getByRole('button', { name: 'Close Kanban', exact: true }).click()
+    await expect(page).toHaveURL(/#\/preview-week$/)
+    await expect(editor(page)).toHaveText('Keep this Kanban draft')
+    expect(await editor(page).evaluate(node => node === window.kanbanComposer)).toBe(true)
+
+    if (width === 390) await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+    await expect(kanban).toHaveCount(1)
+    await kanban.click()
+    await expect(page.getByText('No tasks on this board', { exact: true })).toBeVisible()
+  })
+}
+
 test('Capabilities opens its page and returns to the same chat draft', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
   await open(page)
