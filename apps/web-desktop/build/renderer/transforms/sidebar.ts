@@ -28,7 +28,7 @@ export function ChatSidebar(props: ChatSidebarProps) {
     'activeSidebarSessionId', 'showAllProfiles', 'cardRows', 'dndSensors', 'pinnedSessions', 'pinsOpen', 'agentsOpen', 'cronOpen',
     'inProject', 'enteredProjectId', 'projectLoadFailed', 'projectLoading', 'retryProject', 'showSessionSkeletons',
     'sessionsLoadError', 'filtersActive', 'filtersNarrow', 'sessionsLoading', 'recentsLoadMorePending', 'hasMoreSessions',
-    'rankedGlobally', 'grouping', 'combinedProfiles', 'displayAgentGroups', 'worktreeGroupingActive', 'reposScanning', 'projectsSkeletonVisible',
+    'grouping', 'combinedProfiles', 'displayAgentGroups', 'worktreeGroupingActive', 'reposScanning', 'projectsSkeletonVisible',
     'enteredProject', 'activeProjectId', 'enteredProjectOverlaySessions', 'agentOrderManual', 'agentOrderIds', 'sortOrderIds',
     'projectOverview', 'overviewHidden', 'overviewPreviews', 'scopedRepoWorktrees', 'enteredProjectContent', 'projectTreeLoading',
     'removedSessionIds', 'displayAgentSessions', 'agentSessions', 'recentsVirtualizes', 'sessionsMode', 'sessionsLabel',

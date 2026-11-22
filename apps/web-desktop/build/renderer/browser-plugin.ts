@@ -361,8 +361,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserCronController: source => useBrowserCronController(source, root),
     sessionReorderingGroups: source => source.includes('useBrowserProfileGroupPresentation')
       ? source : useBrowserSessionReordering(source, 'groups'),
-    ungroupedStore: source => enableBrowserUngroupedSessions(source, 'store'),
-    ungroupedMenu: source => enableBrowserUngroupedSessions(source, 'menu'),
+    ungroupedStore: source => enableBrowserUngroupedSessions(source),
   }
   let output = code
   for (const handler of entry.handlers || []) {
