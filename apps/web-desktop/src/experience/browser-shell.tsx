@@ -77,6 +77,12 @@ function BrowserLayout() {
     if (coversWorkspace) void navigate(lastChat.current.url, { state: lastChat.current.state })
     else navigation.showHistory()
   }
+  const openProfileChat = (profile: string | null) => {
+    const switchingProfile = profile !== null && (profiles.all || profiles.active !== profile)
+    if (coversWorkspace && switchingProfile) void navigate('/')
+    else openChat()
+    profiles.select(profile)
+  }
   return <div className="browser-shell" data-browser-shell="" data-android-app={isAndroidApp() || undefined} data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined}>
     <BrowserActionError />
     <BrowserArchiveConfirmation />
@@ -84,9 +90,9 @@ function BrowserLayout() {
     <div className="browser-workspace">
       {!navigation.mobile && <nav id="browser-app-navigation" className="browser-app-navigation" aria-label="App navigation" ref={rail}>
         <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" />
-        <BrowserToolbarButton tooltip="Chat" aria-label="Chat" aria-current={chatSelected ? 'page' : undefined} onClick={openChat}>
+        {presentationMode ? <BrowserToolbarButton tooltip="Chat" aria-label="Chat" aria-current={chatSelected ? 'page' : undefined} onClick={openChat}>
           <Codicon name="comment" />
-        </BrowserToolbarButton>
+        </BrowserToolbarButton> : <BrowserProfileNavigation vertical active={chatSelected} onActivate={openProfileChat} />}
         <BrowserToolbarButton tooltip={KANBAN_ROUTE.label} aria-label={KANBAN_ROUTE.label} aria-current={kanban ? 'page' : undefined} onClick={() => { if (!kanban) openRoute(KANBAN_ROUTE.path) }}>
           <Codicon name={KANBAN_ROUTE.icon} />
         </BrowserToolbarButton>
@@ -118,7 +124,7 @@ function BrowserLayout() {
           <p>{updateNotice.message}</p>
           {updateNotice.phase === 'available' && <button type="button" className="browser-update-panel-action" onClick={updateNotice.update}>Update</button>}
         </div>}
-        {!presentationMode && <BrowserProfileNavigation hidden={tab !== 'sessions'} />}
+        {navigation.mobile && !presentationMode && <BrowserProfileNavigation hidden={tab !== 'sessions'} />}
       </aside>
       {chatSelected && <BrowserNavigationResizer navigation={navigation} />}
       <main className="browser-main" ref={main} hidden={navigation.mobile && navigation.drawerOpen} inert={navigation.compact && !navigation.mobile && navigation.drawerOpen} tabIndex={-1} aria-label={inlineKanban ? KANBAN_ROUTE.label : 'Conversation and workspace'}>

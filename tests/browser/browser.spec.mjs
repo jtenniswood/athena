@@ -2845,21 +2845,47 @@ test('navigation resizing follows the pointer at UI scale and persists keyboard 
   await expect(resizer).toHaveAttribute('aria-valuenow', '240')
 })
 
-test('profile context menus stay beside their originating profile', async ({ page }) => {
+test('separated profiles replace Chat in the desktop rail and open their own context menus', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
+  await page.route('**/api/athena/preferences', route => route.abort())
   await open(page)
-  const profile = page.locator('.browser-profile-choice[draggable="true"]').first()
-  await expect(profile).toBeVisible()
-  const origin = await profile.boundingBox()
-  await profile.click({ button: 'right' })
+  const rail = page.getByRole('navigation', { name: 'App navigation' })
+  const profiles = rail.getByRole('radiogroup', { name: 'Profiles' })
   const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
-  await expect(menu).toBeVisible()
-  const position = await menu.boundingBox()
-  expect(origin).not.toBeNull()
-  expect(position).not.toBeNull()
-  expect(Math.abs(position.x - origin.x)).toBeLessThan(120)
-  // Collision handling can place a taller menu above the bottom avatar rail.
-  expect(Math.min(Math.abs(position.y - origin.y), Math.abs(position.y + position.height - origin.y))).toBeLessThan(40)
+  await expect(rail.getByRole('button', { name: 'Chat', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Profile actions', exact: true })).toHaveCount(0)
+  await expect(page.locator('#browser-navigation .browser-profile-rail')).toHaveCount(0)
+  for (const name of ['Hermes', 'Research', 'Writer']) {
+    const profile = profiles.getByRole('button', { name, exact: true })
+    await expect(profile).toBeVisible()
+    const origin = await profile.boundingBox()
+    await profile.click({ button: 'right' })
+    await expect(menu.getByRole('menuitem', { name: 'Edit profile', exact: true })).toBeVisible()
+    await expect(menu.getByRole('menuitemcheckbox', { name, exact: true })).toBeVisible()
+    const position = await menu.boundingBox()
+    expect(Math.abs(position.x - origin.x)).toBeLessThan(120)
+    expect(Math.abs(position.y - origin.y)).toBeLessThan(40)
+    await page.keyboard.press('Escape')
+    await expect(profile).toBeFocused()
+  }
+
+  await editor(page).fill('Keep this draft while visiting Kanban')
+  const all = profiles.getByRole('button', { name: 'All profiles', exact: true })
+  await rail.getByRole('button', { name: 'Kanban', exact: true }).click()
+  await expect(page.getByRole('main', { name: 'Kanban', exact: true })).toBeVisible()
+  await expect(page.locator('#browser-navigation')).toBeHidden()
+  await expect(all).toHaveAttribute('aria-pressed', 'false')
+  await all.click()
+  await expect(page).toHaveURL(/#\/preview-week$/)
+  await expect(editor(page)).toHaveText('Keep this draft while visiting Kanban')
+  await expect(all).toHaveAttribute('aria-pressed', 'true')
+
+  await rail.getByRole('button', { name: 'Kanban', exact: true }).click()
+  await expect(page.getByRole('main', { name: 'Kanban', exact: true })).toBeVisible()
+  const writer = profiles.getByRole('button', { name: 'Writer', exact: true })
+  await writer.click()
+  await expect(page).toHaveURL(/#\/$/)
+  await expect(writer).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('Sessions avatar editing preserves the conversation and targets the clicked profile', async ({ page }) => {
@@ -2926,7 +2952,7 @@ test('profiles can reorder and hide the default Hermes profile', async ({ page }
   await expect(page.locator('[data-slot="tooltip-content"]', { hasText: 'Hermes' })).toBeVisible()
   await expect(hermes).toHaveAttribute('draggable', 'true')
   const writerSize = await writer.evaluate(el => ({ width: el.clientWidth, height: el.clientHeight }))
-  await hermes.dragTo(writer, { targetPosition: { x: writerSize.width * .8, y: writerSize.height / 2 } })
+  await hermes.dragTo(writer, { targetPosition: { x: writerSize.width / 2, y: writerSize.height * .8 } })
   const profileOrder = await page.locator('.browser-profile-choice[draggable="true"]').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))
   expect(profileOrder).toEqual(['Research', 'Writer', 'Hermes'])
 
@@ -2946,33 +2972,30 @@ for (const width of [1440]) {
   test(`profile gap drops stay stable and persist at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 960 })
     await open(page)
-    if (width === 390) await openNavigation(page)
     const profiles = page.locator('.browser-profile-choice[draggable="true"]')
     const rail = page.locator('.browser-profile-rail')
     const marker = rail.locator('.browser-profile-drop-indicator')
     const names = () => profiles.evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label')))
-    const beginDrag = async (source, x, y) => {
-      const bounds = await source.boundingBox()
-      await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
-      await page.mouse.down()
-      await page.mouse.move(x, y, { steps: 12 })
-      await page.mouse.move(x, y)
+    const dataTransfer = await page.evaluateHandle(() => new DataTransfer())
+    const hoverAt = (clientY) => rail.dispatchEvent('dragover', { dataTransfer, clientY })
+    const dropAt = (clientY) => rail.dispatchEvent('drop', { dataTransfer, clientY })
+    const beginDrag = async (source, y) => {
+      await source.dispatchEvent('dragstart', { dataTransfer })
+      await hoverAt(y)
     }
     let expected
     for (const scale of [100, 125, 150]) {
       await page.evaluate(percent => window.hermesDesktop.zoom.setPercent(percent), scale)
       const original = await names()
       const first = await profiles.nth(0).boundingBox(), second = await profiles.nth(1).boundingBox()
-      const gapX = (first.x + first.width + second.x) / 2
-      const y = second.y + second.height / 2
-      await beginDrag(profiles.nth(2), second.x + second.width * .2, y)
+      const gapY = (first.y + first.height + second.y) / 2
+      await beginDrag(profiles.nth(2), second.y + second.height * .2)
       await expect(marker).toBeVisible()
       // A preview must not shift the avatar or change which side the pointer is on.
-      expect((await profiles.nth(1).boundingBox()).x).toBeCloseTo(second.x, 1)
-      await page.mouse.move(gapX, y)
-      await page.mouse.move(gapX, y)
+      expect((await profiles.nth(1).boundingBox()).y).toBeCloseTo(second.y, 1)
+      await hoverAt(gapY)
       await expect(marker).toBeVisible()
-      await page.mouse.up()
+      await dropAt(gapY)
       expected = [original[0], original[2], original[1]]
       await expect.poll(names).toEqual(expected)
       await expect(marker).toHaveCount(0)
@@ -2980,55 +3003,51 @@ for (const width of [1440]) {
       // Reverse direction into the leading gap, then cancel a further drag.
       const all = await page.getByRole('button', { name: 'All profiles', exact: true }).boundingBox()
       const leading = await profiles.first().boundingBox()
-      await beginDrag(profiles.last(), (all.x + all.width + leading.x) / 2, y)
+      const leadingGap = (all.y + all.height + leading.y) / 2
+      await beginDrag(profiles.last(), leadingGap)
       await expect(marker).toBeVisible()
-      await page.mouse.up()
+      await dropAt(leadingGap)
       expected = [original[1], original[0], original[2]]
       await expect.poll(names).toEqual(expected)
       const end = await page.locator('.browser-profile-drop-end').boundingBox()
       // Aim inside the visible trailing space at every UI scale.
-      await beginDrag(profiles.first(), Math.min(end.x + end.width / 2, width - 2), y)
+      await beginDrag(profiles.first(), end.y + end.height / 2)
       await expect(marker).toBeVisible()
-      await page.keyboard.press('Escape')
-      await page.mouse.up()
+      await profiles.first().dispatchEvent('dragend', { dataTransfer })
       await expect(marker).toHaveCount(0)
       expect(await names()).toEqual(expected)
     }
     await page.reload()
     await expect(editor(page)).toBeVisible()
-    if (width === 390) await openNavigation(page)
     await expect.poll(names).toEqual(expected)
   })
 
   test(`profile end drop shows an indicator and saves the order at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 960 })
     await open(page)
-    if (width === 390) await openNavigation(page)
     const source = page.getByRole('button', { name: 'Hermes', exact: true })
     const writer = page.getByRole('button', { name: 'Writer', exact: true })
     const end = page.locator('.browser-profile-drop-end')
     const indicator = end.locator('.browser-profile-drop-indicator')
-    const from = await source.boundingBox(), last = await writer.boundingBox(), target = await end.boundingBox()
-    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
-    await page.mouse.down()
+    const last = await writer.boundingBox(), target = await end.boundingBox()
+    const rail = page.locator('.browser-profile-rail')
+    const dataTransfer = await page.evaluateHandle(() => new DataTransfer())
+    await source.dispatchEvent('dragstart', { dataTransfer })
     // Both the trailing half of the last avatar and the empty space after it
     // must preview the same insertion position.
-    await page.mouse.move(last.x + last.width * .8, last.y + last.height / 2, { steps: 10 })
-    await page.mouse.move(last.x + last.width * .8, last.y + last.height / 2)
+    await rail.dispatchEvent('dragover', { dataTransfer, clientY: last.y + last.height * .8 })
     await expect(indicator).toBeVisible()
-    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 5 })
-    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2)
+    await rail.dispatchEvent('dragover', { dataTransfer, clientY: target.y + target.height / 2 })
     await expect(indicator).toBeVisible()
     const marker = await indicator.boundingBox()
-    expect(marker.x).toBeGreaterThanOrEqual(last.x + last.width)
+    expect(marker.y).toBeGreaterThanOrEqual(last.y + last.height)
     await page.screenshot({ path: testInfo.outputPath('profile-end-indicator.png') })
-    await page.mouse.up()
+    await rail.dispatchEvent('drop', { dataTransfer, clientY: target.y + target.height / 2 })
     await expect(indicator).toHaveCount(0)
     const order = page.locator('.browser-profile-choice[draggable="true"]')
     expect(await order.evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))).toEqual(['Research', 'Writer', 'Hermes'])
     await page.reload()
     await expect(editor(page)).toBeVisible()
-    if (width === 390) await openNavigation(page)
     expect(await order.evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))).toEqual(['Research', 'Writer', 'Hermes'])
   })
 }
@@ -3040,39 +3059,34 @@ for (const width of [390, 1440]) {
       await open(page)
       await page.evaluate(percent => window.hermesDesktop.zoom.setPercent(percent), scale)
       await editor(page).fill('Keep this profile actions draft')
-      if (width === 390) await openNavigation(page)
-      const trigger = page.getByRole('button', { name: 'Profile actions', exact: true })
+      if (width === 390) await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+      const trigger = page.getByRole('button', { name: width === 390 ? 'Profile actions' : 'Hermes', exact: true })
       const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Profile actions', exact: true })
-      const actionRole = width === 390 ? 'button' : 'menuitem'
-      await trigger.click()
-      await expect(surface.getByRole(actionRole, { name: 'Show hidden', exact: true })).toBeDisabled()
+      const writer = surface.getByRole(width === 390 ? 'checkbox' : 'menuitemcheckbox', { name: 'Writer', exact: true })
+      const openActions = () => trigger.click({ button: width === 390 ? 'left' : 'right' })
+      await openActions()
+      await expect(writer).toHaveAttribute('aria-checked', 'true')
       await page.screenshot({ path: testInfo.outputPath('profile-actions.png') })
-      const bounds = await surface.boundingBox()
-      expect(bounds.x).toBeGreaterThanOrEqual(-1)
-      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width + 1)
-      expect(bounds.y).toBeGreaterThanOrEqual(0)
-      expect(bounds.y + bounds.height).toBeLessThanOrEqual(961)
-      if (width === 390) {
-        expect(bounds.y + bounds.height).toBeGreaterThan(950)
-        // The sheet traps Tab; its Escape must leave navigation open.
-        await surface.getByRole('button', { name: 'Cancel', exact: true }).focus()
-        await page.keyboard.press('Tab')
-        await expect(surface.getByRole('button', { name: 'Hide Hermes', exact: true })).toBeFocused()
-      }
+      await expect.poll(async () => {
+        const bounds = await surface.boundingBox()
+        return bounds && bounds.x >= -1 && bounds.x + bounds.width <= width + 1 &&
+          bounds.y >= 0 && bounds.y + bounds.height <= 961
+      }).toBe(true)
+      await writer.click()
+      await expect(page.locator('[data-profile-key="writer"]')).toHaveCount(0)
+      await expect(writer).toHaveAttribute('aria-checked', 'false')
       await page.keyboard.press('Escape')
       await expect(surface).toHaveCount(0)
       await expect(trigger).toBeFocused()
-      await trigger.click()
-      await surface.getByRole(actionRole, { name: 'Hide Writer', exact: true }).click()
-      await expect(page.locator('[data-profile-key="writer"]')).toHaveCount(0)
-      await expect(trigger).toBeFocused()
-      await trigger.click()
-      await surface.getByRole(actionRole, { name: 'Show hidden', exact: true }).click()
+      await openActions()
+      await writer.click()
       await expect(page.locator('[data-profile-key="writer"]')).toBeVisible()
+      await page.keyboard.press('Escape')
       await expect(trigger).toBeFocused()
-      if (width === 390) await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
-      else {
-        await trigger.click()
+      if (width === 390) {
+        await page.locator('#browser-navigation').getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().click()
+      } else {
+        await openActions()
         await editor(page).click()
         await expect(editor(page)).toBeFocused()
       }
@@ -3139,7 +3153,9 @@ for (const width of [1440, 390, 844]) {
         resolved_orchestrator_profile: '', resolved_default_assignee: ''
       }
     }))
-    await open(page)
+    await page.route('**/api/athena/preferences', route => route.abort())
+    await page.addInitScript(() => localStorage.setItem('hermes-web.browser.combined-profiles', 'true'))
+    await open(page, 'preview-week', { defaultGrouping: true })
     await editor(page).fill('Keep this Kanban draft')
     await editor(page).evaluate(node => { window.kanbanComposer = node })
 
@@ -4165,7 +4181,7 @@ test('Profile grouping replaces presentation controls and switches live without 
   await chooseGrouping('None')
   await expect(page.locator('[data-browser-profile-picture]')).toHaveCount(0)
   await expect(page.locator('[data-browser-section-id="sessions"] [data-browser-section-header]')).toContainText('Sessions')
-  await expect(page.locator('.browser-profile-footer')).toBeVisible()
+  await expect(page.getByRole('radiogroup', { name: 'Profiles', exact: true })).toBeVisible()
   await expect(sectionHeader.getByRole('button', { name: 'New session', exact: true })).toHaveCount(1)
   await expect(editor(page)).toHaveText('Keep my draft while grouping by profile')
   await page.reload()
@@ -4234,7 +4250,7 @@ for (const width of [1440, 390]) {
     await expect(group('default').getByRole('button', { name: 'Plan a calmer working week', exact: true })).toBeVisible()
     await choose('Grouping', 'Status')
     await choose('Profiles', 'Separate')
-    await expect(page.locator('.browser-profile-footer')).toBeVisible()
+    await expect(page.getByRole('radiogroup', { name: 'Profiles', exact: true })).toBeVisible()
     await expect(section.locator('[data-gateway-group]')).toHaveCount(0)
     await expect(section.getByRole('button', { name: 'Hide Done sessions', exact: true })).toBeVisible()
     await choose('Profiles', 'Combined')
