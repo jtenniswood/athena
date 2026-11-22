@@ -42,6 +42,7 @@ export function registerPwa(): void {
   let releaseInteraction: (() => void) | undefined
   let transaction: string | undefined
   let snapshot: DraftSnapshot | undefined
+  let verifiedForReload = false
   let timer: ReturnType<typeof setTimeout> | undefined
   let notice: PwaUpdateNotice | null = null
   const setStatus = (message: string, phase: PwaUpdateNotice['phase'] = 'available') => {
@@ -53,6 +54,7 @@ export function registerPwa(): void {
     releaseInteraction?.()
     releaseInteraction = undefined
     clearTimeout(timer); transaction = undefined; snapshot = undefined
+    verifiedForReload = false
     network.resume()
   }
   const prepareTimeout = () => {
@@ -101,6 +103,7 @@ export function registerPwa(): void {
       }
       transaction = message.transaction
       snapshot = undefined
+      verifiedForReload = false
       setStatus('Saving drafts and preparing open tabs. Running tasks will continue.', 'updating')
       clearTimeout(timer); timer = setTimeout(prepareTimeout, 15000)
       const state = await reloadReadinessAfterSaving('ui-update')
@@ -135,12 +138,14 @@ export function registerPwa(): void {
       ready = ready && transaction === message.transaction && state.ready && !!current && !!snapshot &&
         current.storageKey === snapshot.storageKey &&
         Object.entries(snapshot.texts).every(([key, text]) => current.texts[key] === text)
+      if (transaction === message.transaction) verifiedForReload = ready
       event.ports[0]?.postMessage({ ready, reason: state.reason })
     }
   })
   navigator.serviceWorker.addEventListener('controllerchange', async () => {
     const prepared = transaction
-    if (prepared && (await reloadReadinessAfterSaving('ui-update')).ready && transaction === prepared) {
+    // A background tab may finish an abandoned flush after another tab activates the worker.
+    if (prepared && verifiedForReload && (await reloadReadinessAfterSaving('ui-update')).ready && transaction === prepared) {
       setStatus('Your chats and saved drafts will return. Running tasks will continue.', 'updating')
       window.location.reload()
     } else {

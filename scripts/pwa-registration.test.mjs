@@ -139,6 +139,7 @@ test('updating is published before saving and repeated activation requests are i
   assert.equal(messages.length, 1)
   assert.equal(app.reloads(), 0)
   assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true)
+  assert.equal((await app.ask('HERMES_VERIFY_UPDATE')).ready, true)
   await app.controllerChange()
   assert.equal(app.reloads(), 1)
 })
@@ -179,6 +180,7 @@ test('a final safety refusal restores the action instead of leaving a reloading 
   await discoverUpdate(app)
   await app.notice().update()
   assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true)
+  assert.equal((await app.ask('HERMES_VERIFY_UPDATE')).ready, true)
   app.change({ first: 'one' }, { attachments: 1 })
   await app.controllerChange()
   assert.equal(app.notice().phase, 'available')
@@ -334,9 +336,18 @@ test('an aborted or expired asynchronous flush cannot relock the page or acknowl
   }
 })
 
+test('another tab can activate the worker without reloading this unverified tab', async () => {
+  const app = registration()
+  assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true)
+  await app.controllerChange()
+  assert.equal(app.reloads(), 0)
+  assert.equal(app.root.inert, false)
+})
+
 test('an abort during the final persistence check prevents controller-change reload', async () => {
   const app = registration()
   assert.equal((await app.ask('HERMES_FLUSH_UPDATE')).ready, true)
+  assert.equal((await app.ask('HERMES_VERIFY_UPDATE')).ready, true)
   let finish
   app.saveWith(() => new Promise(resolve => { finish = resolve }))
   const changed = app.controllerChange()
