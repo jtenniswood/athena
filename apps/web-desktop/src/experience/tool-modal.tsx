@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router'
 import { OverlayView } from '../upstream/browser-api'
 import { useBrowserEngine } from './engine'
 import { BROWSER_PAGE_ROUTES, KANBAN_ROUTE } from './tool-routes'
+import './ui/fullscreen-overlay.css'
 
 /** Tool routes cover the workspace; closing returns to the complete prior URL. */
 export function BrowserToolModal() {
@@ -18,7 +19,10 @@ export function BrowserToolModal() {
   if (!route) return null
   const closeLabel = `Close ${route.label}`
   const close = () => { void navigate(previous.current, { replace: true }) }
-  return <OverlayView closeLabel={closeLabel} onClose={close} contentClassName={route === KANBAN_ROUTE ? 'pt-(--titlebar-height)' : undefined}>
+  const fullscreen = route === KANBAN_ROUTE
+  return <OverlayView closeLabel={closeLabel} onClose={close}
+    rootClassName={fullscreen ? 'browser-fullscreen-overlay-card' : undefined}
+    contentClassName={fullscreen ? 'pt-(--titlebar-height)' : undefined}>
     <BrowserPageSurface />
   </OverlayView>
 }

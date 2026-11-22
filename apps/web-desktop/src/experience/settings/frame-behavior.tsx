@@ -3,6 +3,7 @@ import { useLocation } from 'react-router'
 import { useBrowserSettingsEscapeClose } from '../../upstream/settings-interactions'
 import { OverlayView } from '../../upstream/browser-api'
 import { useBrowserOverlayFocus } from '../ui/overlay-focus'
+import '../ui/fullscreen-overlay.css'
 import './fullscreen-overlay.css'
 
 export type SettingsFrameVariant = 'fullscreen' | 'embedded'
@@ -58,6 +59,6 @@ export function SettingsFrameSurface({ variant, title, closeLabel, onClose, chil
   variant: SettingsFrameVariant; title: string; closeLabel: string; onClose: () => void; children: ReactNode
 }) {
   return variant === 'fullscreen'
-    ? <OverlayView closeLabel={closeLabel} onClose={onClose} rootClassName="browser-settings-fullscreen-card" contentClassName="browser-settings-fullscreen-content">{children}</OverlayView>
+    ? <OverlayView closeLabel={closeLabel} onClose={onClose} rootClassName="browser-fullscreen-overlay-card browser-settings-fullscreen-card" contentClassName="browser-settings-fullscreen-content">{children}</OverlayView>
     : <EmbeddedSurface title={title} onClose={onClose}>{children}</EmbeddedSurface>
 }

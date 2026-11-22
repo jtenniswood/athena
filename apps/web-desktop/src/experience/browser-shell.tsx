@@ -5,6 +5,7 @@ import { BrowserNewChatProfileSelector } from './new-chat-profile-selector'
 import { BrowserProfileNavigation } from './profile-navigation'
 import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
+import { KANBAN_ROUTE } from './tool-routes'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { BrowserNavigationTabs, BrowserNavigationSettings, BrowserNavigationResizer, useBrowserNavigation } from './navigation'
 import { BrowserActionError } from './action-errors'
@@ -68,7 +69,12 @@ function BrowserLayout() {
         <BrowserNavigationTabs navigation={navigation} actions={tab !== 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} /> : undefined} />
         <div className="browser-navigation-body" data-profile-layout={presentationMode ? 'combined' : 'separate'} role="tabpanel" aria-label={tab}>
           <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}>
-            <BrowserSidebarNavigation settings={tab === 'sessions' ? <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} row /> : null} searchFocusRequest={navigation.searchFocusRequest}>
+            <BrowserSidebarNavigation searchFocusRequest={navigation.searchFocusRequest} footerActions={tab === 'sessions' ? <>
+              <BrowserToolbarButton className="browser-sidebar-footer-row" onClick={() => openRoute(KANBAN_ROUTE.path)}>
+                <Codicon name={KANBAN_ROUTE.icon} /><span>{KANBAN_ROUTE.label}</span>
+              </BrowserToolbarButton>
+              <BrowserNavigationSettings navigation={navigation} onOpenRoute={openRoute} row />
+            </> : null}>
               <BrowserSessionsSurface />
             </BrowserSidebarNavigation>
           </BrowserSessionsPane>
