@@ -17,10 +17,15 @@
   width: calc(100% - var(--web-space-2));
   min-width: 0;
   margin-inline: var(--web-space-1);
-  padding-inline: .375rem;
+  padding-inline: var(--browser-session-row-padding-start, .375rem) .375rem;
   border-radius: var(--web-radius-item);
 }
 .browser-sessions-pane [data-web-session-selected] {
+  /* Extend past the row gutter and any tree indentation while keeping the title in place. */
+  width: calc(100% - var(--web-space-1) + var(--browser-session-tree-inset, 0px));
+  margin-inline-start: calc(-1 * var(--browser-session-tree-inset, 0px));
+  padding-inline-start: calc(var(--browser-session-row-padding-start, .375rem) + var(--web-space-1) + var(--browser-session-tree-inset, 0px));
+  border-radius: 0;
   background-color: color-mix(in srgb, var(--web-text) 9%, var(--ui-row-active-background));
   box-shadow: inset 2px 0 var(--web-accent);
 }
