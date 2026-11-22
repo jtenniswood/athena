@@ -48,6 +48,14 @@ test.afterAll(async () => {
   await gateway?.close()
 })
 
+const openProjectActions = async (project, touch) => {
+  if (touch) {
+    await project.locator('[data-browser-group-header]').first().dispatchEvent('contextmenu', { pointerType: 'touch' })
+  } else {
+    await project.getByRole('button', { name: 'Actions', exact: true }).click()
+  }
+}
+
 const editor = page => page.locator('[contenteditable="true"]:visible').first()
 const openNavigation = async page => {
   await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
@@ -4239,13 +4247,7 @@ for (const width of [1440, 390]) {
     const project = profile => group(profile).locator('[data-sessions-project="shared-project"]')
     await expect(project('default')).toBeVisible()
     await expect(project('research')).toBeVisible()
-    const researchProject = project('research')
-    if (width === 390) {
-      await researchProject.locator('[data-browser-group-header]').first().dispatchEvent('contextmenu', { pointerType: 'touch' })
-    } else {
-      await researchProject.hover()
-      await researchProject.getByRole('button', { name: 'Actions', exact: true }).click()
-    }
+    await openProjectActions(project('research'), width === 390)
     for (const name of ['Rename…', 'Appearance', 'Add folder', 'Set active', 'Copy path', 'Delete…']) {
       await expect(page.getByRole('menuitem', { name, exact: true })).toBeVisible()
     }
@@ -4419,22 +4421,22 @@ for (const width of [1440, 390]) {
       await page.keyboard.press('Escape')
       await expect(page.locator(`[role="menu"][id="${id}"]`)).toBeHidden()
     }
-    const actions = page.getByRole('button', { name: 'Actions', exact: true })
-    await actions.click()
+    const projectRow = page.locator(`[data-sessions-project="${project.id}"]`)
+    await openProjectActions(projectRow, width === 390)
     await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click()
     const dialog = page.getByRole('dialog', { name: 'Delete "test"?', exact: true })
     await expect(dialog).toBeVisible()
     // Cancel must not issue a destructive request.
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
     expect(deletes).toEqual([])
-    await actions.click()
+    await openProjectActions(projectRow, width === 390)
     await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click()
     const confirm = dialog.getByRole('button', { name: 'Delete', exact: true })
     await confirm.click()
     await expect.poll(() => deletes.length).toBe(1)
     expect(deletes[0]).toEqual({ profile: 'writer', id: project.id })
     await expect(dialog).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Actions', exact: true, includeHidden: true })).toHaveCount(1)
+    await expect(projectRow).toHaveCount(1)
     releaseDelete()
     await expect(dialog).toContainText('Synthetic project deletion failed')
     await expect(confirm).toBeEnabled()
@@ -4443,11 +4445,11 @@ for (const width of [1440, 390]) {
     await expect.poll(() => deletes.length).toBe(2)
     releaseDelete()
     await expect(dialog).toBeHidden()
-    await expect(actions).toHaveCount(0)
+    await expect(projectRow).toHaveCount(0)
     await page.reload()
     if (width === 390) await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().click()
     await expect(editor(page)).toHaveText(draft, { timeout: 30000 })
-    await expect(actions).toHaveCount(0)
+    await expect(projectRow).toHaveCount(0)
     expect(errors).toEqual([])
   })
 }
