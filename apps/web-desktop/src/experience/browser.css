@@ -17,7 +17,23 @@
 .browser-shell [data-browser-model-pill]::before { mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='7' width='16' height='12' rx='3'/%3E%3Cpath d='M9 7V5h6v2M8 12h.01M16 12h.01M9 16h6M2 11v4M22 11v4'/%3E%3C/svg%3E"); }
 .browser-shell [data-testid="reasoning-pill"]::before { mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 3a3 3 0 0 0-3 3v.3A3.5 3.5 0 0 0 4 12a3.5 3.5 0 0 0 2 5.7V18a3 3 0 0 0 5 2.2V5a3 3 0 0 0-2-2.8ZM15 3a3 3 0 0 1 3 3v.3a3.5 3.5 0 0 1 2 5.7 3.5 3.5 0 0 1-2 5.7v.3a3 3 0 0 1-5 2.2V5a3 3 0 0 1 2-2.8Z'/%3E%3C/svg%3E"); }
 .browser-tool-title button { border:1px solid var(--web-border); border-radius:var(--web-radius-panel); padding:var(--web-space-2) var(--web-space-3); font-size:var(--web-text-caption); background:var(--web-bg); cursor:pointer; }
-.browser-workspace { flex:1; min-height:0; display:flex; position:relative; }
+.browser-workspace { --browser-app-navigation-width:3.75rem; flex:1; min-height:0; display:flex; position:relative; }
+.browser-app-navigation {
+  --web-icon-size:1.25rem;
+  box-sizing:border-box;
+  flex:0 0 var(--browser-app-navigation-width);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:.5rem;
+  padding-block:max(.5rem,calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1))) max(.5rem,calc(env(safe-area-inset-bottom,0px) / var(--web-ui-scale,1)));
+  border-inline-end:1px solid var(--web-border-subtle);
+  background:var(--web-sidebar);
+}
+.browser-app-navigation[hidden] { display:none; }
+.browser-app-navigation > [data-browser-toolbar-button] { width:2.75rem; height:2.75rem; border-radius:.75rem; }
+.browser-app-navigation > [aria-current="page"] { color:var(--web-text); background:var(--web-active); }
+.browser-app-navigation > [data-browser-toolbar-button]:last-child { margin-block-start:auto; }
 .browser-navigation { --sidebar:var(--web-sidebar); position:relative; width:var(--browser-navigation-width,19rem); flex-shrink:0; display:flex; flex-direction:column; border-inline-end:1px solid var(--web-border-subtle); background:var(--web-sidebar); overflow:hidden; }
 /* The shell owns the divider so it continues alongside the profile footer. */
 .browser-navigation [data-slot="sidebar"] { border-right-width:0; background:var(--web-sidebar); }
@@ -211,7 +227,9 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
   display: none !important;
 }
 .browser-main { position:relative; flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; outline:none; overflow:hidden; }
-.browser-main[hidden] { display:none; }
+.browser-chat-workspace,.browser-page { display:flex; flex:1; flex-direction:column; min-width:0; min-height:0; }
+.browser-page { overflow:auto; }
+.browser-main[hidden],.browser-chat-workspace[hidden] { display:none; }
 /* Keep the dock at the workspace edge with one small margin. Safe-area values
    are screen pixels, so compensate for the browser UI's root zoom. */
 .browser-main { --composer-shell-pad-block-end:max(.5rem,calc(env(safe-area-inset-bottom,0px) / var(--web-ui-scale,1))); }
@@ -244,17 +262,23 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-sessions-pane [data-web-session-id]:is(:hover,:focus-within,:has([data-state="open"])) [data-row-actions]:has(> [data-browser-session-actions]) { min-width:var(--web-control-compact); }
  .browser-chat-toolbar { position:relative; z-index:2; grid-template-columns:max-content minmax(0,1fr); gap:var(--web-space-1); height:auto; min-height:var(--web-toolbar-height); }
  .browser-chat-toolbar .browser-actions { min-width:0; gap:var(--web-space-1); }
- .browser-navigation { box-sizing:border-box; position:absolute; inset:0; inset-inline-end:auto; z-index:61; width:min(var(--browser-navigation-width,19rem),calc(100% - 3rem)); padding:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1)) calc(env(safe-area-inset-right,0px) / var(--web-ui-scale,1)) calc(env(safe-area-inset-bottom,0px) / var(--web-ui-scale,1)) calc(env(safe-area-inset-left,0px) / var(--web-ui-scale,1)); transform:translateY(.5rem); opacity:0; visibility:hidden; transition:transform 160ms ease,opacity 160ms ease,visibility 160ms; box-shadow:var(--web-shadow-panel); }
+ .browser-workspace { --browser-app-navigation-width:3.25rem; }
+ .browser-navigation { box-sizing:border-box; position:absolute; inset:0; inset-inline-start:var(--browser-app-navigation-width); inset-inline-end:auto; z-index:61; width:min(var(--browser-navigation-width,19rem),calc(100% - var(--browser-app-navigation-width) - 3rem)); padding:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1)) calc(env(safe-area-inset-right,0px) / var(--web-ui-scale,1)) calc(env(safe-area-inset-bottom,0px) / var(--web-ui-scale,1)) calc(env(safe-area-inset-left,0px) / var(--web-ui-scale,1)); transform:translateY(.5rem); opacity:0; visibility:hidden; transition:transform 160ms ease,opacity 160ms ease,visibility 160ms; box-shadow:var(--web-shadow-panel); }
  /* Android already insets the WebView below its status bar. Browser drawers
     still need their safe area, but the native drawer must match the chat top. */
  .browser-shell[data-android-app] .browser-navigation { padding-top:0; }
  .browser-navigation.is-open { transform:none; opacity:1; visibility:visible; }
  .browser-navigation-back:hover,.browser-navigation-back:focus-visible { background:var(--web-hover); color:var(--web-text); }
  .browser-navigation-resizer { display:none; }
- .browser-scrim { display:block; position:absolute; inset:0; z-index:60; padding:0; border:0; background:#0004; cursor:default; }
+ .browser-scrim { display:block; position:absolute; inset:0; inset-inline-start:var(--browser-app-navigation-width); z-index:60; padding:0; border:0; background:#0004; cursor:default; }
 }
 @media (pointer: coarse) and (width < 48rem), (pointer: coarse) and (max-height: 27rem) {
- .browser-navigation { inset-inline-end:0; width:100%; box-shadow:none; }
+ .browser-workspace { --browser-app-navigation-width:calc(3.25rem / var(--web-ui-scale,1)); }
+ .browser-app-navigation { --web-icon-size:calc(1.25rem / var(--web-ui-scale,1)); }
+ .browser-app-navigation > [data-browser-toolbar-button] { width:var(--web-touch-min); height:var(--web-touch-min); }
+ .browser-navigation { inset-inline-end:0; width:auto; box-shadow:none; }
+ .browser-page { padding-block-start:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1)); }
+ .browser-shell[data-android-app] .browser-page { padding-block-start:0; }
  .browser-main {
    --chat-toolbar-padding:var(--web-space-2);
    --chat-toolbar-safe-top:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1));
@@ -436,7 +460,6 @@ html[data-experience="browser"] span:has(> img[src*="nous-girl.jpg"]) { display:
 }
 
 .browser-chat-toolbar [data-browser-toolbar-button], .browser-chat-toolbar .browser-approval-control > button { position:relative; }
-.browser-navigation-actions-trigger { margin-inline-end:var(--web-space-1); }
 
 .browser-chat-toolbar .browser-new-chat-profile { width:auto; max-width:min(16rem,50vw); min-width:0; gap:var(--web-space-2); padding:0 var(--web-space-2); color:var(--web-text-muted); font-size:var(--web-text-label); }
 .browser-new-chat-profile > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

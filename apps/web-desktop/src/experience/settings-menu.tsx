@@ -6,14 +6,12 @@ import { BrowserToolbarButton } from './ui/toolbar-button'
 type SettingsLinkProps = {
   triggerRef: RefObject<HTMLButtonElement | null>
   onOpenRoute: (path: string) => void
-  triggerClassName?: string
-  triggerLabel?: string
-  triggerTooltip?: string
+  active: boolean
 }
 
-export function SettingsLink({ triggerRef, onOpenRoute, triggerClassName, triggerLabel, triggerTooltip = triggerLabel ? undefined : 'Settings' }: SettingsLinkProps) {
-  return <BrowserToolbarButton ref={triggerRef} tooltip={triggerTooltip} className={triggerClassName} aria-label="Settings" onClick={() => onOpenRoute('/settings')}>
-    <Codicon name="settings-gear" />{triggerLabel && <span>{triggerLabel}</span>}
+export function SettingsLink({ triggerRef, onOpenRoute, active }: SettingsLinkProps) {
+  return <BrowserToolbarButton ref={triggerRef} tooltip="Settings" aria-label="Settings" aria-current={active ? 'page' : undefined} onClick={() => onOpenRoute('/settings')}>
+    <Codicon name="settings-gear" />
   </BrowserToolbarButton>
 }
 

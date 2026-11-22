@@ -18,6 +18,7 @@ export function narrowDesktopChecks(test, open) {
     const editor = page.locator('[contenteditable="true"]:visible').first()
     const navigation = page.locator('#browser-navigation')
     const main = page.locator('.browser-main')
+    const rail = page.getByRole('navigation', { name: 'App navigation' })
     const sidebarWidth = (await navigation.boundingBox()).width
     const chatActions = page.getByRole('button', { name: 'Chat actions', exact: true })
     await editor.fill('Keep my desktop draft through resizing')
@@ -53,8 +54,9 @@ export function narrowDesktopChecks(test, open) {
       await expect(main).toHaveAttribute('inert', '')
       expect(await main.boundingBox()).toEqual(chatBounds)
       const drawerBounds = await navigation.boundingBox()
-      expect(drawerBounds.width).toBeCloseTo(Math.min(sidebarWidth, width - 72), 0)
-      expect(drawerBounds.x).toBe(0)
+      const railBounds = await rail.boundingBox()
+      expect(drawerBounds.width).toBeCloseTo(Math.min(sidebarWidth, width - railBounds.width - 72), 0)
+      expect(drawerBounds.x).toBeCloseTo(railBounds.x + railBounds.width, 0)
       if (width === 600) await page.screenshot({ path: testInfo.outputPath('desktop-sidebar-overlay.png') })
       // Clicking the exposed chat dismisses the drawer without editing the draft.
       await page.mouse.click(width - 12, 450)

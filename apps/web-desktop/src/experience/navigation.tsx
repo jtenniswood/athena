@@ -1,20 +1,21 @@
-import { useEffect, useRef, useState, type ComponentProps, type ReactNode, type PointerEvent, type RefObject, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent, type RefObject, type MouseEvent } from 'react'
 import { useBrowserSidebarSections } from './sidebar-sections'
 import { useBrowserEngine } from './engine'
 import { Codicon } from '../upstream/browser-api'
-import { AppSettingsRegistration, SettingsLink } from './settings-menu'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { useCompactBrowser, useMobileBrowser } from './ui/use-compact-browser'
+import { KANBAN_ROUTE } from './tool-routes'
 import { useMobileChatHistory } from './mobile-chat-history'
 import { $conversationOpenRequest, $preserveNavigationRequest } from './conversation-navigation'
 import { clampNavigationWidth, DEFAULT_NAVIGATION_WIDTH, MAX_NAVIGATION_WIDTH, MIN_NAVIGATION_WIDTH, NAVIGATION_TAB_LABELS, NAVIGATION_TABS, readNavigationTab, readNavigationWidth, readVisibleNavigationTabs, type NavigationTab, writeBrowserPreference } from './browser-preferences'
 
 /** Browser navigation preferences and focus never own the conversation state. */
-export function useBrowserNavigation({ selectionKey, path, main, trigger, archiveToasts }: {
+export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, archiveToasts }: {
   selectionKey: string
   path: string
   main: RefObject<HTMLElement | null>
   trigger: RefObject<HTMLButtonElement | null>
+  rail: RefObject<HTMLElement | null>
   archiveToasts: RefObject<HTMLDivElement | null>
 }) {
   const sections = useBrowserSidebarSections()
@@ -23,7 +24,9 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, archiv
   const compact = useCompactBrowser()
   const { navigation: { coversWorkspace, useSidebar } } = useBrowserEngine()
   const mobile = useMobileBrowser()
-  const [drawerOpen, setDrawerOpen] = useState(mobile)
+  const kanban = path === KANBAN_ROUTE.path
+  const [drawerRequested, setDrawerOpen] = useState(mobile)
+  const drawerOpen = drawerRequested && !kanban
   const [width, setWidth] = useState(readNavigationWidth)
   const [tab, setTab] = useState<NavigationTab>(readNavigationTab)
   const [visibleTabs, setVisibleTabs] = useState<NavigationTab[]>(readVisibleNavigationTabs)
@@ -35,6 +38,13 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, archiv
   const selectSessionsTab = () => {
     setVisibleTabs(current => current.includes('sessions') ? current : ['sessions', ...current])
     setTab('sessions')
+  }
+  const showHistory = () => {
+    selectSessionsTab()
+    if (compact) {
+      focusDrawerOnOpen.current = true
+      setDrawerOpen(true)
+    } else sidebar.setOpen(true)
   }
   const dismissDrawer = () => {
     setDrawerOpen(false)
@@ -97,7 +107,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, archiv
     if (focusDrawerOnOpen.current) {
       focusDrawerOnOpen.current = false
       const target = drawer.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
-        ?? (mobile ? drawer.current : actionsTrigger.current)
+        ?? drawer.current
       target?.focus({ preventScroll: true })
     }
     const keydown = (event: KeyboardEvent) => {
@@ -106,33 +116,31 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, archiv
       if (event.key === 'Escape') dismissDrawer()
       if (event.key !== 'Tab') return
       const items = [
+        ...(rail.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? []),
         ...(drawer.current?.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input,select,[tabindex="0"]') ?? []),
         ...(archiveToasts.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? []),
       ].filter(el => Boolean(el.getClientRects().length))
       const first = items[0], last = items.at(-1)
-      if (event.shiftKey && (document.activeElement === first || document.activeElement === drawer.current)) { event.preventDefault(); last?.focus() }
+      if (event.shiftKey && document.activeElement === drawer.current) { event.preventDefault(); rail.current?.querySelector<HTMLButtonElement>('button:last-child')?.focus() }
+      else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
     }
     document.addEventListener('keydown', keydown)
     return () => document.removeEventListener('keydown', keydown)
-  }, [archiveToasts, drawerOpen, mobile])
+  }, [archiveToasts, drawerOpen, rail])
   useEffect(() => {
     if (searchFocusRequest) drawer.current?.querySelector<HTMLInputElement>('.browser-session-search input')?.focus({ preventScroll: true })
   }, [searchFocusRequest])
   const backToHistory = useMobileChatHistory({
     mobile, drawerOpen, covered: coversWorkspace(path),
-    showHistory: () => {
-      selectSessionsTab()
-      focusDrawerOnOpen.current = true
-      setDrawerOpen(true)
-    },
+    showHistory,
     showConversation: () => {
       setDrawerOpen(false)
       requestAnimationFrame(() => main.current?.focus())
     }
   })
   return {
-    sections, actionsTrigger, drawer, compact, mobile, drawerOpen, width, setWidth, tab, setTab, visibleTabs, backToHistory, searchFocusRequest,
+    sections, actionsTrigger, drawer, compact, mobile, drawerOpen, width, setWidth, tab, setTab, visibleTabs, backToHistory, showHistory, searchFocusRequest,
     open: compact ? drawerOpen : sidebar.open,
     toggle: compact ? toggleDrawer : () => sidebar.setOpen(!sidebar.open),
     closeDrawer: () => setDrawerOpen(false),
@@ -158,7 +166,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, archiv
 
 type Navigation = ReturnType<typeof useBrowserNavigation>
 
-export function BrowserNavigationTabs({ navigation, actions }: { navigation: Navigation; actions?: ReactNode }) {
+export function BrowserNavigationTabs({ navigation }: { navigation: Navigation }) {
   const [draggedTab, setDraggedTab] = useState<NavigationTab | null>(null)
   const { actionsTrigger, tab, setTab, visibleTabs } = navigation
   const showActions = (event: MouseEvent<HTMLElement>) => {
@@ -166,7 +174,7 @@ export function BrowserNavigationTabs({ navigation, actions }: { navigation: Nav
     event.stopPropagation()
     actionsTrigger.current?.click()
   }
-  if (visibleTabs.length === 1 && !actions && !(navigation.compact && !navigation.mobile)) return null
+  if (visibleTabs.length === 1 && !(navigation.compact && !navigation.mobile)) return null
   return <>
     <div className="browser-navigation-heading">
       {visibleTabs.length > 1 && <div className="browser-navigation-tabs" role="tablist" aria-label="Navigation" onContextMenu={showActions}>
@@ -195,7 +203,6 @@ export function BrowserNavigationTabs({ navigation, actions }: { navigation: Nav
           }
         }} onClick={() => setTab(value)}>{NAVIGATION_TAB_LABELS[value]}</button>)}
       </div>}
-      {actions}
       {navigation.compact && !navigation.mobile && <BrowserToolbarButton tooltip="Close navigation" aria-label="Close navigation" onClick={navigation.dismissDrawer}><Codicon name="close" /></BrowserToolbarButton>}
     </div>
   </>
@@ -223,11 +230,4 @@ export function BrowserNavigationResizer({ navigation }: { navigation: Navigatio
     if (event.key === 'Home') { event.preventDefault(); setWidth(MIN_NAVIGATION_WIDTH) }
     if (event.key === 'End') { event.preventDefault(); setWidth(MAX_NAVIGATION_WIDTH) }
   }} />
-}
-
-export function BrowserNavigationSettings({ navigation, onOpenRoute, row = false }: { navigation: Navigation; onOpenRoute: ComponentProps<typeof SettingsLink>['onOpenRoute']; row?: boolean }) {
-  return <>
-    <SettingsLink onOpenRoute={onOpenRoute} triggerRef={navigation.actionsTrigger} triggerClassName={row ? "browser-sidebar-footer-row browser-navigation-actions-trigger" : "browser-navigation-actions-trigger"} triggerLabel={row ? "Settings" : undefined} />
-    <AppSettingsRegistration />
-  </>
 }
