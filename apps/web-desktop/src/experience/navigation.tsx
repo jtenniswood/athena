@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent, type RefObject, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type PointerEvent, type RefObject, type MouseEvent } from 'react'
 import { useBrowserSidebarSections } from './sidebar-sections'
 import { useBrowserEngine } from './engine'
 import { Codicon } from '../upstream/browser-api'
@@ -121,8 +121,11 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, 
         ...(archiveToasts.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? []),
       ].filter(el => Boolean(el.getClientRects().length))
       const first = items[0], last = items.at(-1)
-      if (event.shiftKey && document.activeElement === drawer.current) { event.preventDefault(); rail.current?.querySelector<HTMLButtonElement>('button:last-child')?.focus() }
-      else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === drawer.current)) {
+        event.preventDefault()
+        const precedingRailButton = document.activeElement === drawer.current ? rail.current?.querySelector<HTMLButtonElement>('button:last-child') : null
+        ;(precedingRailButton ?? last)?.focus()
+      }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
     }
     document.addEventListener('keydown', keydown)
@@ -166,7 +169,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, 
 
 type Navigation = ReturnType<typeof useBrowserNavigation>
 
-export function BrowserNavigationTabs({ navigation }: { navigation: Navigation }) {
+export function BrowserNavigationTabs({ navigation, actions }: { navigation: Navigation; actions?: ReactNode }) {
   const [draggedTab, setDraggedTab] = useState<NavigationTab | null>(null)
   const { actionsTrigger, tab, setTab, visibleTabs } = navigation
   const showActions = (event: MouseEvent<HTMLElement>) => {
@@ -174,7 +177,7 @@ export function BrowserNavigationTabs({ navigation }: { navigation: Navigation }
     event.stopPropagation()
     actionsTrigger.current?.click()
   }
-  if (visibleTabs.length === 1 && !(navigation.compact && !navigation.mobile)) return null
+  if (visibleTabs.length === 1 && !actions && !(navigation.compact && !navigation.mobile)) return null
   return <>
     <div className="browser-navigation-heading">
       {visibleTabs.length > 1 && <div className="browser-navigation-tabs" role="tablist" aria-label="Navigation" onContextMenu={showActions}>
@@ -203,6 +206,7 @@ export function BrowserNavigationTabs({ navigation }: { navigation: Navigation }
           }
         }} onClick={() => setTab(value)}>{NAVIGATION_TAB_LABELS[value]}</button>)}
       </div>}
+      {actions}
       {navigation.compact && !navigation.mobile && <BrowserToolbarButton tooltip="Close navigation" aria-label="Close navigation" onClick={navigation.dismissDrawer}><Codicon name="close" /></BrowserToolbarButton>}
     </div>
   </>

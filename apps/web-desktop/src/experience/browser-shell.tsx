@@ -52,6 +52,7 @@ function BrowserLayout() {
   const rail = useRef<HTMLElement>(null)
   const archiveToasts = useRef<HTMLDivElement>(null)
   const navigation = useBrowserNavigation({ selectionKey: conversation.selectionKey, path: location.pathname, main, trigger: menu, rail, archiveToasts })
+  const inlineKanban = kanban && !navigation.mobile
   const profiles = engine.profiles.useProfiles()
   const preventSessionPaneDrag = useSidebarGestures(navigation.drawer, engine.projects,
     JSON.stringify([profiles.active, profiles.all, presentationMode, navigation.tab, navigation.open, location.pathname]))
@@ -59,6 +60,8 @@ function BrowserLayout() {
   engine.useEnvironment(conversation,
     !(navigation.compact && navigation.drawerOpen) && !settings && !kanban)
   const { tab } = navigation
+  const drawerModal = navigation.compact && navigation.drawerOpen
+  const drawerOwnedElements = navigation.mobile ? ARCHIVE_TOASTS_ID : `browser-app-navigation ${ARCHIVE_TOASTS_ID}`
   const [updateNotice, setUpdateNotice] = useState<PwaUpdateNotice | null>(() => currentPwaUpdate())
   const [updateDismissed, setUpdateDismissed] = useState(false)
   useEffect(() => subscribePwaUpdate(notice => {
@@ -78,7 +81,7 @@ function BrowserLayout() {
     <BrowserArchiveConfirmation />
     <AppSettingsRegistration />
     <div className="browser-workspace">
-      <nav id="browser-app-navigation" className="browser-app-navigation" aria-label="App navigation" ref={rail} hidden={navigation.mobile && !navigation.drawerOpen && !kanban && !settings}>
+      {!navigation.mobile && <nav id="browser-app-navigation" className="browser-app-navigation" aria-label="App navigation" ref={rail}>
         <BrowserToolbarButton tooltip="Chat" aria-label="Chat" aria-current={!kanban && !settings ? 'page' : undefined} onClick={openChat}>
           <Codicon name="comment" />
         </BrowserToolbarButton>
@@ -86,13 +89,20 @@ function BrowserLayout() {
           <Codicon name={KANBAN_ROUTE.icon} />
         </BrowserToolbarButton>
         <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} active={settings} />
-      </nav>
+      </nav>}
       {navigation.compact && !navigation.mobile && navigation.drawerOpen && <button type="button" className="browser-scrim" aria-label="Dismiss navigation" tabIndex={-1} onClick={navigation.dismissDrawer} />}
-      <aside id="browser-navigation" ref={navigation.drawer} tabIndex={navigation.compact ? -1 : undefined} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={navigation.compact && navigation.drawerOpen ? 'dialog' : undefined} aria-modal={navigation.compact && navigation.drawerOpen ? true : undefined} aria-owns={navigation.compact && navigation.drawerOpen ? `browser-app-navigation ${ARCHIVE_TOASTS_ID}` : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
-        <BrowserNavigationTabs navigation={navigation} />
+      <aside id="browser-navigation" ref={navigation.drawer} tabIndex={navigation.compact ? -1 : undefined} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={drawerModal ? 'dialog' : undefined} aria-modal={drawerModal || undefined} aria-owns={drawerModal ? drawerOwnedElements : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
+        <BrowserNavigationTabs navigation={navigation} actions={navigation.mobile && tab !== 'sessions'
+          ? <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} className="browser-navigation-actions-trigger" />
+          : undefined} />
         <div className="browser-navigation-body" data-profile-layout={presentationMode ? 'combined' : 'separate'} role="tabpanel" aria-label={tab}>
           <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}>
-            <BrowserSidebarNavigation searchFocusRequest={navigation.searchFocusRequest}>
+            <BrowserSidebarNavigation searchFocusRequest={navigation.searchFocusRequest} footerActions={navigation.mobile && tab === 'sessions' ? <>
+              <BrowserToolbarButton className="browser-sidebar-footer-row" onClick={() => openRoute(KANBAN_ROUTE.path)}>
+                <Codicon name={KANBAN_ROUTE.icon} /><span>{KANBAN_ROUTE.label}</span>
+              </BrowserToolbarButton>
+              <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} className="browser-sidebar-footer-row" row />
+            </> : null}>
               <BrowserSessionsSurface />
             </BrowserSidebarNavigation>
           </BrowserSessionsPane>
@@ -109,8 +119,8 @@ function BrowserLayout() {
         {!presentationMode && <BrowserProfileNavigation hidden={tab !== 'sessions'} />}
       </aside>
       <BrowserNavigationResizer navigation={navigation} />
-      <main className="browser-main" ref={main} hidden={navigation.mobile && navigation.drawerOpen} inert={navigation.compact && !navigation.mobile && navigation.drawerOpen} tabIndex={-1} aria-label={kanban ? KANBAN_ROUTE.label : 'Conversation and workspace'}>
-        {!kanban && <div className="browser-chat-toolbar" aria-label="Chat toolbar">
+      <main className="browser-main" ref={main} hidden={navigation.mobile && navigation.drawerOpen} inert={navigation.compact && !navigation.mobile && navigation.drawerOpen} tabIndex={-1} aria-label={inlineKanban ? KANBAN_ROUTE.label : 'Conversation and workspace'}>
+        {!inlineKanban && <div className="browser-chat-toolbar" aria-label="Chat toolbar">
           <BrowserToolbarButton tooltip={navigation.mobile ? 'Back to chat history' : navigation.open ? 'Hide sidebar' : 'Show sidebar'} className="browser-menu" ref={menu} aria-label={navigation.mobile ? 'Back to chat history' : navigation.open ? 'Hide navigation' : 'Open navigation'} aria-expanded={navigation.mobile ? undefined : navigation.open} aria-controls="browser-navigation" onClick={navigation.mobile ? navigation.backToHistory : navigation.toggle}>
             <Codicon name={navigation.mobile ? 'arrow-left' : 'layout-sidebar-left'} />
           </BrowserToolbarButton>
@@ -119,13 +129,13 @@ function BrowserLayout() {
             <BrowserChatActionsMenu actions={sessionActions} title={chatTitle} panels={panels} main={main} />
           </div>
         </div>}
-        <div className="browser-chat-workspace" hidden={kanban}>
+        <div className="browser-chat-workspace" hidden={inlineKanban}>
           <BrowserConversationSurface />
           <div className="browser-status"><BrowserStatusSurface /></div>
         </div>
-        {kanban && <div className="browser-page"><BrowserPageSurface /></div>}
+        {inlineKanban && <div className="browser-page"><BrowserPageSurface /></div>}
       </main>
-      <BrowserToolModal />
+      <BrowserToolModal mobile={navigation.mobile} chatUrl={lastChat.current.url} />
       <BrowserArchiveToasts ref={archiveToasts} />
     </div>
   </div>

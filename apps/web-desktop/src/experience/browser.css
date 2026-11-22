@@ -30,7 +30,6 @@
   border-inline-end:1px solid var(--web-border-subtle);
   background:var(--web-sidebar);
 }
-.browser-app-navigation[hidden] { display:none; }
 .browser-app-navigation > [data-browser-toolbar-button] { width:2.75rem; height:2.75rem; border-radius:.75rem; }
 .browser-app-navigation > [aria-current="page"] { color:var(--web-text); background:var(--web-active); }
 .browser-app-navigation > [data-browser-toolbar-button]:last-child { margin-block-start:auto; }
@@ -273,12 +272,7 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-scrim { display:block; position:absolute; inset:0; inset-inline-start:var(--browser-app-navigation-width); z-index:60; padding:0; border:0; background:#0004; cursor:default; }
 }
 @media (pointer: coarse) and (width < 48rem), (pointer: coarse) and (max-height: 27rem) {
- .browser-workspace { --browser-app-navigation-width:calc(3.25rem / var(--web-ui-scale,1)); }
- .browser-app-navigation { --web-icon-size:calc(1.25rem / var(--web-ui-scale,1)); }
- .browser-app-navigation > [data-browser-toolbar-button] { width:var(--web-touch-min); height:var(--web-touch-min); }
- .browser-navigation { inset-inline-end:0; width:auto; box-shadow:none; }
- .browser-page { padding-block-start:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1)); }
- .browser-shell[data-android-app] .browser-page { padding-block-start:0; }
+ .browser-navigation { inset-inline-start:0; inset-inline-end:0; width:100%; box-shadow:none; }
  .browser-main {
    --chat-toolbar-padding:var(--web-space-2);
    --chat-toolbar-safe-top:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1));
@@ -460,6 +454,7 @@ html[data-experience="browser"] span:has(> img[src*="nous-girl.jpg"]) { display:
 }
 
 .browser-chat-toolbar [data-browser-toolbar-button], .browser-chat-toolbar .browser-approval-control > button { position:relative; }
+.browser-navigation-actions-trigger { margin-inline-end:var(--web-space-1); }
 
 .browser-chat-toolbar .browser-new-chat-profile { width:auto; max-width:min(16rem,50vw); min-width:0; gap:var(--web-space-2); padding:0 var(--web-space-2); color:var(--web-text-muted); font-size:var(--web-text-label); }
 .browser-new-chat-profile > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

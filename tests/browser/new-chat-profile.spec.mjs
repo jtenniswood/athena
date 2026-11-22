@@ -42,7 +42,7 @@ for (const width of [1440, 390]) {
         await editor.fill(originalDraft)
         await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
         const footer = page.locator('[data-slot="sidebar-footer"]')
-        await expect(page.getByRole('navigation', { name: 'App navigation' }).getByRole('button', { name: 'Settings', exact: true })).toBeVisible()
+        await expect(footer.getByRole('button', { name: 'Settings', exact: true })).toBeVisible()
         await expect(footer.getByRole('textbox', { name: 'Search', exact: true })).toBeHidden()
         await expect(footer.getByRole('button', { name: 'New chat', exact: true })).toHaveCount(0)
         await page.getByRole('button', { name: 'New session in Hermes', exact: true }).tap()
