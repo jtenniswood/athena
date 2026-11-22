@@ -132,7 +132,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, archiv
     }
   })
   return {
-    sections, actionsTrigger, drawer, compact, mobile, drawerOpen, width, setWidth, tab, setTab, visibleTabs, backToHistory,
+    sections, actionsTrigger, drawer, compact, mobile, drawerOpen, width, setWidth, tab, setTab, visibleTabs, backToHistory, searchFocusRequest,
     open: compact ? drawerOpen : sidebar.open,
     toggle: compact ? toggleDrawer : () => sidebar.setOpen(!sidebar.open),
     closeDrawer: () => setDrawerOpen(false),
