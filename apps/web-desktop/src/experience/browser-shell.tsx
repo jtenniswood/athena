@@ -5,14 +5,13 @@ import { BrowserNewChatProfileSelector } from './new-chat-profile-selector'
 import { BrowserProfileNavigation } from './profile-navigation'
 import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
-import { OpenCodeGoUsageProvider } from './opencode-go-usage'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { BrowserNavigationTabs, BrowserNavigationSettings, BrowserNavigationResizer, useBrowserNavigation } from './navigation'
 import { BrowserActionError } from './action-errors'
 import { ARCHIVE_TOASTS_ID, BrowserArchiveToasts } from './archive-toast'
 import { BrowserArchiveConfirmation } from './archive-confirmation'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { useLocation, useNavigate } from 'react-router'
+import { Navigate, useLocation, useNavigate } from 'react-router'
 import { BrowserSidebarNavigation } from './sidebar-extras'
 import { BrowserSessionsPane } from './sidebar-sections'
 import { BrowserBotsFallback } from './browser-bots-fallback'
@@ -23,8 +22,11 @@ import { currentPwaUpdate, subscribePwaUpdate, type PwaUpdateNotice } from '../p
 
 export function BrowserShell() {
   const { surfaces: { Host } } = useBrowserEngine()
+  const { pathname } = useLocation()
+  // Old Usage links would otherwise be interpreted as chat IDs.
+  if (pathname === '/usage' || pathname === '/usage/') return <Navigate to="/" replace />
   return <SidebarProvider className="browser-provider" style={{ '--sidebar-width': '100%' } as CSSProperties}>
-    <Host><OpenCodeGoUsageProvider><BrowserLayout /></OpenCodeGoUsageProvider></Host>
+    <Host><BrowserLayout /></Host>
   </SidebarProvider>
 }
 function BrowserLayout() {

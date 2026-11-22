@@ -101,7 +101,7 @@
 .browser-pane[hidden],.browser-chat[hidden] { display:none; }
 .browser-sessions-pane { flex:1 1 auto; height:auto; min-height:0; overflow:auto; }
 .browser-sessions-pane [data-sidebar="content"] > [data-sidebar="group"]:first-child { padding-bottom:0; }
-/* Usage, Settings, and Search share the footer's icon and label columns. */
+/* Settings and Search share the footer's icon and label columns. */
 .browser-sessions-pane .browser-sidebar-footer-row {
   --web-icon-size:var(--web-icon-small);
   box-sizing:border-box;
