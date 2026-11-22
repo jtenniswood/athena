@@ -3,7 +3,7 @@ import { BrowserProfileHeader, BrowserTreeStack, type BrowserProfileHeaderModel 
 import { browserClassNames as cn } from './ui/classnames'
 
 export function BrowserProfileNesting({ children }: { children: ReactNode }) {
-  return <div className="ml-3 border-l border-border/50 pl-1">{children}</div>
+  return <div className="ml-3 border-l border-border/50 pl-1 [--browser-session-tree-inset:calc(1rem+1px)]">{children}</div>
 }
 
 export function BrowserProfileGroup({ model, empty, emptyLabel, children, dialog, ...props }: ComponentProps<'div'> & {
