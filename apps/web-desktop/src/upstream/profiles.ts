@@ -1,9 +1,11 @@
 import { useStore } from '@nanostores/react'
-import { $activeGatewayProfile, $profileOrder, $profiles, $showAllProfiles, setShowAllProfiles, sortByProfileOrder } from '@/store/profile'
+import { $activeGatewayProfile, $profileOrder, $profiles, $showAllProfiles, selectProfile, setProfileOrder, setShowAllProfiles, sortByProfileOrder } from '@/store/profile'
 import { $botMeta, $lastRoster } from '@/plugins/hermes-bots/data'
 import { botRosterMeta } from '@/plugins/hermes-bots/routing'
 import { botAppearance } from '@/plugins/hermes-bots/avatar'
 import type { BrowserProfile, BrowserProfiles } from '../experience/contracts/profiles'
+import { readHiddenProfiles } from '../experience/browser-preferences'
+import { browserPreference } from '../platform/preferences'
 import { readBrowserTabProfile, rememberBrowserTabProfile } from '../platform/tab-profile'
 
 function label(value: string) {
@@ -16,19 +18,55 @@ export function useBrowserActiveProfile(): string {
   return useStore($activeGatewayProfile)
 }
 
-/** Restore the tab's active profile and keep the sidebar in combined scope. */
+/** Restore the tab's profile without changing its persisted all-profiles scope. */
 export function restoreBrowserProfile(): () => void {
-  setShowAllProfiles(true)
+  const combined = browserPreference('combinedProfiles')
+  combined.write(combined.read())
+  const savedAllProfiles = $showAllProfiles.get()
   const saved = readBrowserTabProfile()
-  window.__HERMES_WEB_ACTIVE_PROFILE__ = null
-  if (saved) $activeGatewayProfile.set(saved)
+  if (saved) {
+    window.__HERMES_WEB_ACTIVE_PROFILE__ = $showAllProfiles.get() ? null : saved
+    $activeGatewayProfile.set(saved)
+  } else {
+    window.__HERMES_WEB_ACTIVE_PROFILE__ = null
+    setShowAllProfiles(true)
+  }
+  const hiddenProfiles = readHiddenProfiles()
+  let stopSelectingDefault: (() => void) | undefined
+  const chooseVisibleDefault = (profiles: ReturnType<typeof $profiles.get>) => {
+    // Preserve the saved all-profiles scope. Hidden rail
+    // buttons must not replace that choice with a single profile on refresh.
+    if (savedAllProfiles && $showAllProfiles.get()) {
+      stopSelectingDefault?.()
+      return
+    }
+    const defaultProfile = profiles.find(profile => profile.is_default)
+    if (!defaultProfile) return
+    if (!hiddenProfiles.includes(defaultProfile.name)) {
+      stopSelectingDefault?.()
+      return
+    }
+    if (!$showAllProfiles.get() && !hiddenProfiles.includes($activeGatewayProfile.get())) {
+      stopSelectingDefault?.()
+      return
+    }
+    const order = $profileOrder.get()
+    const ordered = sortByProfileOrder(
+      [...profiles],
+      !order.includes(defaultProfile.name) ? [defaultProfile.name, ...order] : order
+    )
+    const next = ordered.find(profile => !hiddenProfiles.includes(profile.name))
+    if (!next) return
+    window.__HERMES_WEB_ACTIVE_PROFILE__ = next.name
+    selectProfile(next.name)
+    stopSelectingDefault?.()
+  }
+  stopSelectingDefault = $profiles.listen(profiles => chooseVisibleDefault([...profiles]))
+  chooseVisibleDefault($profiles.get())
   const stopSavingProfile = $activeGatewayProfile.subscribe(rememberBrowserTabProfile)
-  const stopScopingProfile = $showAllProfiles.listen(all => {
-    if (!all) setShowAllProfiles(true)
-  })
   return () => {
+    stopSelectingDefault?.()
     stopSavingProfile()
-    stopScopingProfile()
   }
 }
 
@@ -48,6 +86,19 @@ export function useBrowserProfiles(): BrowserProfiles {
     active,
     all,
     items: ordered.map(profile => item(profile.name, profile.display_name)),
-    fallback: all || profiles.some(profile => profile.name === active) ? null : item(active)
+    fallback: all || profiles.some(profile => profile.name === active) ? null : item(active),
+    select(profile) {
+      if (profile === null) {
+        window.__HERMES_WEB_ACTIVE_PROFILE__ = null
+        setShowAllProfiles(true)
+      } else selectProfile(profile)
+    },
+    reorder(source, target, after) {
+      const names = ordered.map(profile => profile.name)
+      if (source === target || !names.includes(source) || !names.includes(target)) return
+      const next = names.filter(name => name !== source)
+      next.splice(next.indexOf(target) + (after ? 1 : 0), 0, source)
+      setProfileOrder(next)
+    }
   }
 }

@@ -68,7 +68,13 @@ const openSettingsPanel = async (page, label) => {
   await (await settingsTrigger(page)).click()
   await page.getByRole('region', { name: 'Panels', exact: true }).getByRole('button', { name: label, exact: true }).click()
 }
-const open = async (page, session = 'preview-week') => {
+const open = async (page, session = 'preview-week', { defaultGrouping = false } = {}) => {
+  // Rail workflows select their supported layout explicitly. The default
+  // Profile grouping has its own fresh-context coverage below.
+  if (!defaultGrouping) await page.addInitScript(() => {
+    const key = 'hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles'
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, 'none')
+  })
   await page.goto(`${origin}/#/${session}`)
   if (await page.evaluate(() => matchMedia('(pointer: coarse)').matches && (matchMedia('(width < 48rem)').matches || matchMedia('(max-height: 27rem)').matches))) {
     await page.locator('#browser-navigation').getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().click()
@@ -100,13 +106,6 @@ for (const width of [1440, 390]) {
       started_at: 1900000000 - index, last_active: 1900000000 - index,
       message_count: 2, cwd: null
     }))
-    const other = { ...sessions.at(-1), id: 'other-project-session', title: 'Another project conversation' }
-    await page.route('**/api/profiles/sessions/sidebar**', async route => {
-      const response = await route.fetch()
-      const body = await response.json()
-      body.recents.sessions = [...sessions, other]
-      await route.fulfill({ response, json: body })
-    })
     const home = { id: '__no_project__', label: 'Home', path: null, isNoProject: true, sessionCount: 5,
       sessionIds: sessions.map(session => session.id), repos: [] }
     await page.route('**/api/profiles/projects/tree?**', async route => {
@@ -114,8 +113,8 @@ for (const width of [1440, 390]) {
       expect(limit).toBe(2000)
       await route.fulfill({ json: { projects: [
         { ...home, previewSessions: sessions.slice(0, limit) },
-        { id: 'p_other', label: 'Another project', path: '/workspace/another', sessionCount: 1, sessionIds: [other.id], previewSessions: [other], repos: [] }
-      ], active_id: null, scoped_session_ids: [...sessions, other].map(session => session.id) } })
+        { id: 'p_other', label: 'Another project', path: '/workspace/another', sessionCount: 0, repos: [] }
+      ], active_id: null, scoped_session_ids: sessions.map(session => session.id) } })
     })
     await open(page)
     await editor(page).fill('Keep this draft while showing all chats')
@@ -149,7 +148,7 @@ for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 })
     await open(page)
     await editor(page).fill('Keep this draft while reviewing all scheduled tasks')
-    const profileSelection = await page.evaluate(() => sessionStorage.getItem('hermes-web.browser.profile'))
+    const profileSelection = await page.locator('.browser-profile-choice[aria-pressed="true"]').getAttribute('aria-label')
     await openSettingsPanel(page, 'Scheduled')
     const surface = page.getByRole('region', { name: 'Scheduled tasks', exact: true })
     await expect(surface.getByRole('heading', { name: 'Scheduled tasks', exact: true })).toBeVisible()
@@ -177,7 +176,7 @@ for (const width of [1440, 390]) {
     await page.getByRole('button', { name: 'Close Scheduled', exact: true }).click()
     await expect(page).toHaveURL(/#\/preview-week$/)
     await expect(editor(page)).toHaveText('Keep this draft while reviewing all scheduled tasks')
-    expect(await page.evaluate(() => sessionStorage.getItem('hermes-web.browser.profile'))).toBe(profileSelection)
+    expect(await page.locator('.browser-profile-choice[aria-pressed="true"]').getAttribute('aria-label')).toBe(profileSelection)
     expect(errors).toEqual([])
   })
 }
@@ -350,23 +349,46 @@ test('the first enabled profile routes All profiles drafts without changing scop
     localStorage.setItem('hermes-web.default-profile-route.v1', JSON.stringify({ connectionId: 'web-single', profile: 'writer' }))
   })
   await open(page)
-  const shortcut = await page.evaluate(() => /Mac/i.test(navigator.platform) ? 'Control+Meta+n' : 'Alt+n')
-  await page.keyboard.press(shortcut)
-  await expect(page).toHaveURL(/#\/$/)
+  const all = page.getByRole('button', { name: 'All profiles', exact: true })
+  await all.click()
+  await page.getByRole('button', { name: 'New Session', exact: true }).first().click()
   await editor(page).fill('Create this session in research')
   await editor(page).press('Enter')
   await expect.poll(() => creates.length).toBe(1)
   expect(creates[0].profile).toBe('research')
-  await expect(page.locator('[data-gateway-group]')).toHaveCount(3)
-  const writer = page.locator('[data-gateway-group]').filter({
-    has: page.locator('[data-browser-profile-picture="writer"]')
-  })
-  await writer.getByRole('button', { name: /^New (?:session|conversation) in Writer$/ }).click()
+  await expect(all).toHaveAttribute('aria-pressed', 'true')
+
+  const writer = page.locator('[data-profile-key="writer"]')
+  await writer.click()
+  await expect(writer).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'New Session', exact: true }).first().click()
   await editor(page).fill('Create this session in writer')
   await editor(page).press('Enter')
   await expect.poll(() => creates.length).toBe(2)
   expect(creates[1].profile).toBe('writer')
-  await expect(page.locator('[data-gateway-group]')).toHaveCount(3)
+
+  await all.click()
+  await page.keyboard.press('ControlOrMeta+n')
+  await expect(page).toHaveURL(/#\/$/)
+  await editor(page).fill('Create this keyboard session in research')
+  await editor(page).press('Enter')
+  await expect.poll(() => creates.length).toBe(3)
+  expect(creates[2].profile).toBe('research')
+  await expect(all).toHaveAttribute('aria-pressed', 'true')
+})
+
+touchTest('the phone profile actions only manage enabled profiles and preserve the draft', async ({ page }) => {
+  await page.route('**/api/athena/preferences', route => route.abort())
+  await page.setViewportSize({ width: 390, height: 844 })
+  await open(page)
+  await editor(page).fill('Keep the draft while managing phone profiles')
+  await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
+  await page.getByRole('button', { name: 'Profile actions', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Default for new sessions', exact: true })).toHaveCount(0)
+  await page.getByRole('checkbox', { name: 'Research', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('[data-profile-key="research"]')).toHaveCount(0)
+  await expect(page.locator('[contenteditable="true"]').first()).toHaveText('Keep the draft while managing phone profiles')
 })
 
 for (const preference of ['queue', 'steer']) {
@@ -746,7 +768,8 @@ touchTest('phone navigation and action sheets keep touch targets usable across U
     for (const [name, control] of [
       ['Back to chat', page.getByRole('button', { name: 'Back to chat', exact: true })],
       ['Sessions tab', page.getByRole('tab', { name: 'Sessions', exact: true })],
-      ['Sessions section toggle', nav.locator('.browser-sessions-pane [data-browser-section-label]').first()]
+      ['Sessions section toggle', nav.locator('.browser-sessions-pane [data-browser-section-label]').first()],
+      ['Profile actions', page.getByRole('button', { name: 'Profile actions', exact: true })]
     ]) {
       await expectTouchTarget(`${name} at ${scale}%`, control)
     }
@@ -754,7 +777,7 @@ touchTest('phone navigation and action sheets keep touch targets usable across U
       ['Navigation action', nav.locator('.browser-navigation-body [data-sidebar="menu-button"]:visible')],
       ['Session row', nav.locator('.browser-sessions-pane button[data-slot="row-button"]:visible')],
       ['Session search', nav.locator('.browser-sessions-pane .browser-session-search:visible')],
-      ['New session', nav.locator('.browser-sessions-pane button[data-browser-profile-create]:visible')],
+      ['New session', nav.locator('.browser-sessions-pane button[aria-label="New session"]:visible')],
       ['Session filters', nav.locator('.browser-sessions-pane button[aria-label="Filters"]:visible')],
       ['Session reorder handle', nav.locator('.browser-sessions-pane [class*="group/handle"]:visible')]
     ]) {
@@ -762,15 +785,15 @@ touchTest('phone navigation and action sheets keep touch targets usable across U
       expect(targets.length, `${name} exists at ${scale}%`).toBeGreaterThan(0)
       for (const [index, control] of targets.entries()) await expectTouchTarget(`${name} ${index + 1} at ${scale}%`, control)
     }
-    const filters = nav.getByRole('button', { name: 'Filters', exact: true })
-    await filters.click()
-    const sheet = page.getByRole('menu')
+    const profileActions = page.getByRole('button', { name: 'Profile actions', exact: true })
+    await profileActions.click()
+    const sheet = page.getByRole('dialog', { name: 'Profile actions', exact: true })
     await expect(sheet).toBeVisible()
     const bounds = await sheet.boundingBox()
     expect(bounds.x).toBeGreaterThanOrEqual(-1)
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(391)
     expect(bounds.y + bounds.height).toBeGreaterThanOrEqual(840)
-    const option = sheet.getByRole('menuitemcheckbox', { name: 'Archived', exact: true })
+    const option = sheet.getByRole('button', { name: 'Hide Research', exact: true })
     await expectTouchTarget(`Sheet option at ${scale}%`, option)
     await page.keyboard.press('Escape')
     await expect(nav).toBeVisible()
@@ -826,7 +849,7 @@ test('a touch context-menu gesture does not open sidebar sections', async ({ bro
     await filters.dispatchEvent('contextmenu', { pointerType: 'touch' })
     await expect(page.getByRole('dialog', { name: 'Sidebar sections', exact: true })).toHaveCount(0)
     await filters.tap()
-    await expect(page.getByRole('menuitem', { name: 'Grouping', exact: true })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Ordering', exact: true })).toBeVisible()
   } finally { await context.close() }
 })
 
@@ -846,35 +869,33 @@ for (const mode of [
       await activate(filters)
       const parent = page.locator('[data-slot="dropdown-menu-content"]').last()
       const submenu = page.locator('[data-slot="dropdown-menu-sub-content"]')
-      const grouping = parent.getByRole('menuitem', { name: 'Grouping', exact: true })
-      await grouping.hover()
+      const ordering = parent.getByRole('menuitem', { name: 'Ordering', exact: true })
+      await ordering.hover()
       // Radix's hover-open delay is 100 ms; wait beyond it to catch regressions.
       await page.waitForTimeout(300)
       await expect(submenu).toHaveCount(0)
-      await activate(grouping)
+      await activate(ordering)
       await expect(submenu).toBeVisible()
       await expect(parent).toBeHidden()
       await expect.poll(() => submenu.evaluate(el => el.contains(document.activeElement))).toBe(true)
       await expect(page.getByRole('menu')).toHaveCount(1)
-      await expect.poll(async () => {
-        const bounds = await submenu.boundingBox()
-        return bounds && Math.round(Math.max(Math.abs(bounds.x), Math.abs(bounds.width - mode.viewport.width),
-          Math.abs(bounds.y + bounds.height - mode.viewport.height)))
-      }).toBe(0)
-      await activate(submenu.getByRole('menuitemradio', { name: 'Project', exact: true }))
-      await expect(submenu.getByRole('menuitemradio', { name: 'Project', exact: true })).toHaveAttribute('aria-checked', 'true')
+      const bounds = await submenu.boundingBox()
+      expect(bounds.x).toBe(0)
+      expect(bounds.width).toBe(mode.viewport.width)
+      expect(Math.round(bounds.y + bounds.height)).toBe(mode.viewport.height)
+      await activate(submenu.getByRole('menuitemradio', { name: 'Created', exact: true }))
+      await expect(submenu.getByRole('menuitemradio', { name: 'Created', exact: true })).toHaveAttribute('aria-checked', 'true')
       await expect(parent).toBeHidden()
       await page.keyboard.press('Escape')
       await expect(parent).toHaveCount(0)
       await expect(submenu).toHaveCount(0)
       await expect(filters).toBeFocused()
       await activate(filters)
-      await activate(parent.getByRole('menuitem', { name: 'Grouping', exact: true }))
-      await expect(submenu.getByRole('menuitemradio', { name: 'Project', exact: true })).toHaveAttribute('aria-checked', 'true')
-      await expect.poll(() => submenu.evaluate(el => el.contains(document.activeElement))).toBe(true)
+      await activate(parent.getByRole('menuitem', { name: 'Ordering', exact: true }))
+      await expect(submenu.getByRole('menuitemradio', { name: 'Created', exact: true })).toHaveAttribute('aria-checked', 'true')
       await page.keyboard.press('ArrowLeft')
       await expect(parent).toBeVisible()
-      await expect(grouping).toBeFocused()
+      await expect(ordering).toBeFocused()
       await page.keyboard.press('ArrowRight')
       await expect(submenu).toBeVisible()
       await expect(parent).toBeHidden()
@@ -894,7 +915,7 @@ test('desktop submenus still open on hover beside their parent menu', async ({ p
   await expect(page.getByRole('menu', { name: 'Sidebar sections', exact: true })).toHaveCount(0)
   await filters.click()
   const parent = page.locator('[data-slot="dropdown-menu-content"]').last()
-  await parent.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
+  await parent.getByRole('menuitem', { name: 'Ordering', exact: true }).hover()
   const submenu = page.locator('[data-slot="dropdown-menu-sub-content"]')
   await expect(submenu).toBeVisible()
   await expect(parent).toBeVisible()
@@ -1452,7 +1473,7 @@ for (const width of [390, 1440]) {
     await expect(section).toBeHidden()
     // Both the explicit menu and the remaining heading can restore Pinned.
     if (width === 390) await trigger.click()
-    else await page.locator('.browser-sessions-pane').getByRole('button', { name: 'Profiles', exact: true }).click({ button: 'right' })
+    else await page.locator('.browser-sessions-pane').getByRole('button', { name: 'Sessions', exact: true }).click({ button: 'right' })
     await sectionAction('Show pinned section').click()
     await expect(section).toBeVisible()
     if (!await section.locator('[data-row-actions]').count()) await heading.click()
@@ -1681,7 +1702,7 @@ for (const platform of ['MacIntel', 'Linux x86_64']) {
 }
 
 for (const platform of ['MacIntel', 'Linux x86_64']) {
-  test(`the Archived shortcut preserves the selected chat and draft on ${platform}`, async ({ page }) => {
+  test(`sidebar action shortcuts preserve the selected chat and draft on ${platform}`, async ({ page }) => {
     await page.addInitScript(platform => Object.defineProperty(navigator, 'platform', { value: platform }), platform)
     const modifier = platform === 'MacIntel' ? 'Meta' : 'Control'
     const prefix = platform === 'MacIntel' ? '⌘⌥' : 'Ctrl+Alt+'
@@ -1689,14 +1710,17 @@ for (const platform of ['MacIntel', 'Linux x86_64']) {
     await editor(page).fill('Keep my sidebar shortcut draft')
     const filters = page.getByRole('button', { name: 'Filters', exact: true }).first()
     const archived = page.getByRole('menuitemcheckbox', { name: 'Archived', exact: true })
+    const read = page.getByRole('menuitem', { name: 'Mark all as read', exact: true })
     await filters.click()
     await expect(archived.locator('.browser-session-shortcut')).toHaveText(prefix + 'A')
+    await expect(read.locator('.browser-session-shortcut')).toHaveText(prefix + 'R')
     await expect(archived).toHaveAttribute('aria-checked', 'false')
+    await expect(read).toBeDisabled()
     await page.keyboard.press('Escape')
 
     // Typing and open dialogs retain their own keyboard behavior.
     await editor(page).evaluate((element, mac) => {
-      for (const key of ['a']) element.dispatchEvent(new KeyboardEvent('keydown', {
+      for (const key of ['a', 'r']) element.dispatchEvent(new KeyboardEvent('keydown', {
         key, code: `Key${key.toUpperCase()}`, altKey: true, metaKey: mac, ctrlKey: !mac, bubbles: true, cancelable: true
       }))
     }, platform === 'MacIntel')
@@ -1723,6 +1747,7 @@ for (const platform of ['MacIntel', 'Linux x86_64']) {
       await page.keyboard.press('Escape')
     }
     await main.focus()
+    await page.keyboard.press(`${modifier}+Alt+R`)
     await expect(page).toHaveURL(/#\/preview-week$/)
     await expect(editor(page)).toHaveText('Keep my sidebar shortcut draft')
   })
@@ -2068,7 +2093,7 @@ touchTest('section menu includes collapsed session, messaging, and Cron sections
   await open(page)
   await openSectionNavigation(page)
   const pane = page.locator('.browser-sessions-pane')
-  for (const name of ['Profiles', 'Discord', 'Cron jobs']) {
+  for (const name of ['Sessions', 'Discord', 'Cron jobs']) {
     const label = pane.locator('[data-browser-section-header]').getByRole('button', { name, exact: true })
     await expect(label).toBeVisible()
     const content = label.locator('xpath=ancestor::*[@data-sidebar="group"][1]').locator(':scope > [data-sidebar="group-content"]')
@@ -2082,6 +2107,55 @@ touchTest('section menu includes collapsed session, messaging, and Cron sections
   for (const name of ['Discord', 'Cron jobs']) await expect(sections.getByRole('checkbox', { name, exact: true })).toBeVisible()
   await sections.getByRole('checkbox', { name: 'Discord', exact: true }).click()
   await expect(pane.locator('[data-browser-section-header]').filter({ hasText: 'Discord' }).locator('xpath=ancestor::*[@data-sidebar="group"][1]')).toHaveAttribute('data-browser-section-hidden', '')
+})
+
+test('None grouping shows all sessions without subheaders and survives reload', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await page.route(/\/api\/(?:profiles\/)?sessions(?:\/sidebar)?(?:\?|$)/, async route => {
+    const response = await route.fetch()
+    const data = await response.json()
+    const sessions = data.recents?.sessions ?? data.sessions ?? []
+    for (const session of sessions) {
+      if (session.id === 'preview-idea') session.last_active = session.started_at = session.created_at = Math.floor(Date.now() / 1000) - 40 * 86400
+    }
+    await route.fulfill({ response, json: data })
+  })
+  await open(page)
+  const sidebar = page.locator('.browser-sessions-pane')
+  const dividers = sidebar.locator('.group\\/workspace > button[aria-expanded]')
+  const olderSession = sidebar.getByText('Explore a product idea', { exact: true }).first()
+  const chooseGrouping = async name => {
+    await page.getByRole('button', { name: 'Filters', exact: true }).click()
+    await page.getByRole('menuitem', { name: /^Grouping/ }).hover()
+    const option = page.getByRole('menuitemradio', { name, exact: true })
+    await option.click()
+    await expect(option).toHaveAttribute('aria-checked', 'true')
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('Escape')
+  }
+  for (const allProfiles of [false, true]) {
+    if (allProfiles) await page.getByRole('button', { name: 'All profiles', exact: true }).click()
+    await chooseGrouping('Updated')
+    await expect(dividers.first()).toBeVisible()
+    // None must reveal sessions from collapsed groups, not just hide their labels.
+    if (await dividers.first().getAttribute('aria-expanded') === 'true') await dividers.first().click()
+    await expect(olderSession).toBeHidden()
+    await chooseGrouping('None')
+    await expect(dividers).toHaveCount(0)
+    await expect(olderSession).toBeVisible()
+    await expect(sidebar.getByRole('button', { name: 'Sessions', exact: true })).toBeVisible()
+    await page.reload()
+    await expect(editor(page)).toBeVisible()
+    await expect(olderSession).toBeVisible()
+    await expect(dividers).toHaveCount(0)
+    await page.getByRole('button', { name: 'Filters', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
+    await expect(page.getByRole('menuitemradio', { name: 'None', exact: true })).toHaveAttribute('aria-checked', 'true')
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('Escape')
+    await chooseGrouping('Updated')
+    await expect(dividers.first()).toBeVisible()
+  }
 })
 
 for (const width of [390, 1440]) {
@@ -2763,6 +2837,284 @@ test('navigation resizing follows the pointer at UI scale and persists keyboard 
   await expect(resizer).toHaveAttribute('aria-valuenow', '240')
 })
 
+test('profile context menus stay beside their originating profile', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await open(page)
+  const profile = page.locator('.browser-profile-choice[draggable="true"]').first()
+  await expect(profile).toBeVisible()
+  const origin = await profile.boundingBox()
+  await profile.click({ button: 'right' })
+  const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
+  await expect(menu).toBeVisible()
+  const position = await menu.boundingBox()
+  expect(origin).not.toBeNull()
+  expect(position).not.toBeNull()
+  expect(Math.abs(position.x - origin.x)).toBeLessThan(120)
+  // Collision handling can place a taller menu above the bottom avatar rail.
+  expect(Math.min(Math.abs(position.y - origin.y), Math.abs(position.y + position.height - origin.y))).toBeLessThan(40)
+})
+
+test('Sessions avatar editing preserves the conversation and targets the clicked profile', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
+  const writes = []
+  page.on('websocket', socket => socket.on('framesent', ({ payload }) => {
+    try {
+      const frame = JSON.parse(String(payload))
+      if (frame.method === 'profiles.configure') writes.push(frame.params)
+    } catch { /* Ignore non-JSON transport frames. */ }
+  }))
+  await open(page)
+  await editor(page).fill('Keep this draft while editing another profile')
+  const originalUrl = page.url()
+  const allProfiles = page.getByRole('button', { name: 'All profiles', exact: true })
+  const originalScope = await allProfiles.getAttribute('aria-pressed')
+  // Edit from Sessions before ever opening the Bots tab.
+  const writer = page.locator('[data-profile-key="writer"]')
+  await writer.click({ button: 'right' })
+  const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
+  await menu.getByRole('menuitem', { name: 'Edit profile', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Edit profile', exact: true })
+  await expect(dialog).toContainText('(writer).')
+  await expect(menu).toBeHidden()
+  await expect.poll(() => dialog.evaluate(node => node.contains(document.activeElement))).toBe(true)
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(writer).toBeFocused()
+  await expect(editor(page)).toHaveText('Keep this draft while editing another profile')
+  expect(page.url()).toBe(originalUrl)
+  await expect(allProfiles).toHaveAttribute('aria-pressed', originalScope)
+  expect(writes).toEqual([])
+
+  await writer.click({ button: 'right' })
+  await menu.getByRole('menuitem', { name: 'Edit profile', exact: true }).click()
+  await expect(dialog).toContainText('(writer).')
+  const title = dialog.getByRole('textbox').first()
+  const originalTitle = await title.inputValue()
+  await title.fill('Writer from Sessions')
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  expect(writes.at(-1)?.name).toBe('writer')
+  expect(writes.at(-1)?.ui_meta?.['hermes-bots']?.title).toBe('Writer from Sessions')
+  await expect(editor(page)).toHaveText('Keep this draft while editing another profile')
+  expect(page.url()).toBe(originalUrl)
+  await expect(allProfiles).toHaveAttribute('aria-pressed', originalScope)
+
+  await writer.click({ button: 'right' })
+  await menu.getByRole('menuitem', { name: 'Edit profile', exact: true }).click()
+  await expect(title).toHaveValue('Writer from Sessions')
+  await title.fill(originalTitle)
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(dialog).toBeHidden()
+
+  await allProfiles.click({ button: 'right' })
+  await expect(menu.getByRole('menuitem', { name: 'Edit profile', exact: true })).toHaveCount(0)
+})
+
+test('profiles can reorder and hide the default Hermes profile', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await open(page)
+  const hermes = page.getByRole('button', { name: 'Hermes', exact: true })
+  const writer = page.getByRole('button', { name: 'Writer', exact: true })
+  await hermes.hover()
+  await expect(page.locator('[data-slot="tooltip-content"]', { hasText: 'Hermes' })).toBeVisible()
+  await expect(hermes).toHaveAttribute('draggable', 'true')
+  const writerSize = await writer.evaluate(el => ({ width: el.clientWidth, height: el.clientHeight }))
+  await hermes.dragTo(writer, { targetPosition: { x: writerSize.width * .8, y: writerSize.height / 2 } })
+  const profileOrder = await page.locator('.browser-profile-choice[draggable="true"]').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))
+  expect(profileOrder).toEqual(['Research', 'Writer', 'Hermes'])
+
+  await hermes.click({ button: 'right' })
+  const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
+  const visibility = menu.getByRole('menuitemcheckbox', { name: 'Hermes', exact: true })
+  await expect(visibility).toHaveAttribute('aria-checked', 'true')
+  await visibility.click()
+  await expect(hermes).toHaveCount(0)
+  await expect(visibility).toHaveAttribute('aria-checked', 'false')
+  await visibility.click()
+  await expect(hermes).toBeVisible()
+  await expect(visibility).toHaveAttribute('aria-checked', 'true')
+})
+
+for (const width of [1440]) {
+  test(`profile gap drops stay stable and persist at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 960 })
+    await open(page)
+    if (width === 390) await openNavigation(page)
+    const profiles = page.locator('.browser-profile-choice[draggable="true"]')
+    const rail = page.locator('.browser-profile-rail')
+    const marker = rail.locator('.browser-profile-drop-indicator')
+    const names = () => profiles.evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label')))
+    const beginDrag = async (source, x, y) => {
+      const bounds = await source.boundingBox()
+      await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(x, y, { steps: 12 })
+      await page.mouse.move(x, y)
+    }
+    let expected
+    for (const scale of [100, 125, 150]) {
+      await page.evaluate(percent => window.hermesDesktop.zoom.setPercent(percent), scale)
+      const original = await names()
+      const first = await profiles.nth(0).boundingBox(), second = await profiles.nth(1).boundingBox()
+      const gapX = (first.x + first.width + second.x) / 2
+      const y = second.y + second.height / 2
+      await beginDrag(profiles.nth(2), second.x + second.width * .2, y)
+      await expect(marker).toBeVisible()
+      // A preview must not shift the avatar or change which side the pointer is on.
+      expect((await profiles.nth(1).boundingBox()).x).toBeCloseTo(second.x, 1)
+      await page.mouse.move(gapX, y)
+      await page.mouse.move(gapX, y)
+      await expect(marker).toBeVisible()
+      await page.mouse.up()
+      expected = [original[0], original[2], original[1]]
+      await expect.poll(names).toEqual(expected)
+      await expect(marker).toHaveCount(0)
+
+      // Reverse direction into the leading gap, then cancel a further drag.
+      const all = await page.getByRole('button', { name: 'All profiles', exact: true }).boundingBox()
+      const leading = await profiles.first().boundingBox()
+      await beginDrag(profiles.last(), (all.x + all.width + leading.x) / 2, y)
+      await expect(marker).toBeVisible()
+      await page.mouse.up()
+      expected = [original[1], original[0], original[2]]
+      await expect.poll(names).toEqual(expected)
+      const end = await page.locator('.browser-profile-drop-end').boundingBox()
+      // Aim inside the visible trailing space at every UI scale.
+      await beginDrag(profiles.first(), Math.min(end.x + end.width / 2, width - 2), y)
+      await expect(marker).toBeVisible()
+      await page.keyboard.press('Escape')
+      await page.mouse.up()
+      await expect(marker).toHaveCount(0)
+      expect(await names()).toEqual(expected)
+    }
+    await page.reload()
+    await expect(editor(page)).toBeVisible()
+    if (width === 390) await openNavigation(page)
+    await expect.poll(names).toEqual(expected)
+  })
+
+  test(`profile end drop shows an indicator and saves the order at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 960 })
+    await open(page)
+    if (width === 390) await openNavigation(page)
+    const source = page.getByRole('button', { name: 'Hermes', exact: true })
+    const writer = page.getByRole('button', { name: 'Writer', exact: true })
+    const end = page.locator('.browser-profile-drop-end')
+    const indicator = end.locator('.browser-profile-drop-indicator')
+    const from = await source.boundingBox(), last = await writer.boundingBox(), target = await end.boundingBox()
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+    await page.mouse.down()
+    // Both the trailing half of the last avatar and the empty space after it
+    // must preview the same insertion position.
+    await page.mouse.move(last.x + last.width * .8, last.y + last.height / 2, { steps: 10 })
+    await page.mouse.move(last.x + last.width * .8, last.y + last.height / 2)
+    await expect(indicator).toBeVisible()
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 5 })
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2)
+    await expect(indicator).toBeVisible()
+    const marker = await indicator.boundingBox()
+    expect(marker.x).toBeGreaterThanOrEqual(last.x + last.width)
+    await page.screenshot({ path: testInfo.outputPath('profile-end-indicator.png') })
+    await page.mouse.up()
+    await expect(indicator).toHaveCount(0)
+    const order = page.locator('.browser-profile-choice[draggable="true"]')
+    expect(await order.evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))).toEqual(['Research', 'Writer', 'Hermes'])
+    await page.reload()
+    await expect(editor(page)).toBeVisible()
+    if (width === 390) await openNavigation(page)
+    expect(await order.evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))).toEqual(['Research', 'Writer', 'Hermes'])
+  })
+}
+
+for (const width of [390, 1440]) {
+  for (const scale of [100, 150]) {
+    test.extend({ hasTouch: width === 390 })(`profile actions preserve drafts and focus at ${width}px and ${scale}%`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 960 })
+      await open(page)
+      await page.evaluate(percent => window.hermesDesktop.zoom.setPercent(percent), scale)
+      await editor(page).fill('Keep this profile actions draft')
+      if (width === 390) await openNavigation(page)
+      const trigger = page.getByRole('button', { name: 'Profile actions', exact: true })
+      const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Profile actions', exact: true })
+      const actionRole = width === 390 ? 'button' : 'menuitem'
+      await trigger.click()
+      await expect(surface.getByRole(actionRole, { name: 'Show hidden', exact: true })).toBeDisabled()
+      await page.screenshot({ path: testInfo.outputPath('profile-actions.png') })
+      const bounds = await surface.boundingBox()
+      expect(bounds.x).toBeGreaterThanOrEqual(-1)
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width + 1)
+      expect(bounds.y).toBeGreaterThanOrEqual(0)
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual(961)
+      if (width === 390) {
+        expect(bounds.y + bounds.height).toBeGreaterThan(950)
+        // The sheet traps Tab; its Escape must leave navigation open.
+        await surface.getByRole('button', { name: 'Cancel', exact: true }).focus()
+        await page.keyboard.press('Tab')
+        await expect(surface.getByRole('button', { name: 'Hide Hermes', exact: true })).toBeFocused()
+      }
+      await page.keyboard.press('Escape')
+      await expect(surface).toHaveCount(0)
+      await expect(trigger).toBeFocused()
+      await trigger.click()
+      await surface.getByRole(actionRole, { name: 'Hide Writer', exact: true }).click()
+      await expect(page.locator('[data-profile-key="writer"]')).toHaveCount(0)
+      await expect(trigger).toBeFocused()
+      await trigger.click()
+      await surface.getByRole(actionRole, { name: 'Show hidden', exact: true }).click()
+      await expect(page.locator('[data-profile-key="writer"]')).toBeVisible()
+      await expect(trigger).toBeFocused()
+      if (width === 390) await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
+      else {
+        await trigger.click()
+        await editor(page).click()
+        await expect(editor(page)).toBeFocused()
+      }
+      await expect(editor(page)).toHaveText('Keep this profile actions draft')
+    })
+  }
+}
+
+test.describe('touch profile controls', () => {
+  test.use({ hasTouch: true })
+  test('profile actions work with taps without changing the conversation', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await open(page)
+    await editor(page).fill('Keep the touch draft')
+    await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).tap()
+    const trigger = page.getByRole('button', { name: 'Profile actions', exact: true })
+    const sheet = page.getByRole('dialog', { name: 'Profile actions', exact: true })
+    await trigger.tap()
+    await sheet.getByRole('button', { name: 'Hide Research', exact: true }).tap()
+    await expect(page.locator('[data-profile-key="research"]')).toHaveCount(0)
+    await trigger.tap()
+    await sheet.getByRole('button', { name: 'Show hidden', exact: true }).tap()
+    await expect(page.locator('[data-profile-key="research"]')).toBeVisible()
+    await page.getByRole('button', { name: 'Back to chat', exact: true }).tap()
+    await expect(page).toHaveURL(/#\/preview-week$/)
+    await expect(editor(page)).toHaveText('Keep the touch draft')
+  })
+})
+
+test('phone profiles retain saved desktop order and reject drag operations', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('hermes.desktop.profileOrder', JSON.stringify(['writer', 'default', 'research'])))
+  await page.setViewportSize({ width: 390, height: 844 })
+  await open(page)
+  await openNavigation(page)
+  const profiles = page.locator('[data-profile-key]')
+  const names = () => profiles.evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label')))
+  await expect.poll(names).toEqual(['Writer', 'Hermes', 'Research'])
+  for (const profile of await profiles.all()) await expect(profile).toHaveAttribute('draggable', 'false')
+  // Even a synthetic drag cannot call the reorder command on a phone.
+  const dataTransfer = await page.evaluateHandle(() => new DataTransfer())
+  await profiles.first().dispatchEvent('dragstart', { dataTransfer })
+  await page.locator('.browser-profile-rail').dispatchEvent('drop', { dataTransfer, clientX: 350 })
+  expect(await names()).toEqual(['Writer', 'Hermes', 'Research'])
+  await expect(page.locator('.browser-profile-drop-indicator')).toHaveCount(0)
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes.desktop.profileOrder')))).toEqual(['writer', 'default', 'research'])
+  await page.setViewportSize({ width: 1440, height: 960 })
+  for (const profile of await profiles.all()) await expect(profile).toHaveAttribute('draggable', 'true')
+  expect(await names()).toEqual(['Writer', 'Hermes', 'Research'])
+})
+
 test('Capabilities opens its page and returns to the same chat draft', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
   await open(page)
@@ -3284,7 +3636,7 @@ for (const scenario of [
       await expect(filters).toBeVisible()
       await expect(filters).toHaveCSS('background-color', appearance.background)
       await expect(filters).toHaveCSS('border-top-color', appearance.border)
-      const ordering = filters.getByRole('menuitem', { name: 'Grouping', exact: true })
+      const ordering = filters.getByRole('menuitem', { name: 'Ordering', exact: true })
       await expect(ordering).toHaveCSS('font-family', appearance.font)
       expect((await ordering.boundingBox()).height).toBeCloseTo(appearance.rowHeight, 0)
       if (compact && hasTouch) await ordering.click()
@@ -3656,7 +4008,7 @@ for (const width of [1440, 390]) {
       await expect(group.getByRole('button', { name: title, exact: true })).toBeVisible()
     }
     const research = page.locator('[data-gateway-group]').filter({ has: page.locator('[data-browser-profile-picture="research"]') })
-    await expect(research.getByRole('button', { name: 'Research session history', exact: true })).toHaveCount(1)
+    await expect(research.locator('[data-web-session-id]')).toHaveCount(9)
     await expect(research.getByRole('button', { name: /^Older research chat/ })).toHaveCount(8)
     await expect(research.getByRole('button', { name: /^(More|Less)$/ })).toHaveCount(0)
     await expect(page.locator('#browser-navigation').getByText('Screen', { exact: true })).toHaveCount(0)
@@ -3669,8 +4021,79 @@ for (const width of [1440, 390]) {
 }
 
 
+test('Profile grouping replaces presentation controls and switches live without gateway nesting', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await page.route('**/api/athena/preferences', route => route.abort())
+  await open(page, 'preview-week', { defaultGrouping: true })
+  await editor(page).fill('Keep my draft while grouping by profile')
+  const chooseGrouping = async name => {
+    await page.getByRole('button', { name: 'Filters', exact: true }).click()
+    await expect(page.getByRole('menuitemcheckbox', { name: 'Presentation mode', exact: true })).toHaveCount(0)
+    await page.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
+    await expect(page.getByRole('menuitemradio', { name: 'Gateway & profile', exact: true })).toHaveCount(0)
+    await page.getByRole('menuitemradio', { name, exact: true }).click()
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('Escape')
+  }
+  await page.getByRole('button', { name: 'Filters', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
+  await expect(page.getByRole('menuitemradio', { name: 'None', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+  await expect(page.locator('[data-browser-section-id="sessions"] [data-browser-section-header]')).toContainText('Profiles')
+  await expect(page.locator('[data-browser-profile-picture="default"]')).toBeVisible()
+  await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
+  await expect(page.locator('[data-browser-profile-project]')).toHaveCount(0)
+  await expect(page.locator('[data-gateway-group]')).toHaveCount(3)
+  const sectionHeader = page.locator('[data-browser-section-id="sessions"] [data-browser-section-header]')
+  await expect(sectionHeader.getByRole('button', { name: 'New session', exact: true })).toHaveCount(0)
+  const profileHeader = page.locator('[data-gateway-group]').first()
+  const add = profileHeader.getByRole('button', { name: /^New session in/ })
+  const actions = profileHeader.getByRole('button', { name: /^Group actions:/ })
+  await page.mouse.move(1400, 900)
+  await expect(add).toBeVisible()
+  await expect(add).toHaveCSS('opacity', '1')
+  await expect(add).toHaveCSS('color', await actions.evaluate(button => getComputedStyle(button).color))
+  await expect(editor(page)).toHaveText('Keep my draft while grouping by profile')
+  await page.reload()
+  await expect(page.locator('[data-browser-profile-picture="default"]')).toBeVisible()
+  await expect(editor(page)).toHaveText('Keep my draft while grouping by profile')
+  await page.goto(`${origin}/#/settings?tab=config:appearance`)
+  await expect(page.getByRole('group', { name: 'Session list presentation', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
+  await chooseGrouping('Status')
+  const defaultGroup = page.locator('[data-gateway-group]').filter({ has: page.locator('[data-browser-profile-picture="default"]') })
+  await expect(defaultGroup.getByRole('button', { name: 'Hide Done sessions', exact: true })).toBeVisible()
+  await expect(page.locator('[data-gateway-group]')).toHaveCount(3)
+  await expect(page.locator('.browser-profile-footer')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Filters', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Profiles', exact: true }).hover()
+  await page.getByRole('menuitemradio', { name: 'Separate', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+  await expect(defaultGroup).toHaveCount(0)
+  await page.getByRole('button', { name: 'Filters', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
+  await expect(page.getByRole('menuitemradio', { name: 'Status', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByRole('menuitemradio', { name: 'Profile', exact: true })).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+  await chooseGrouping('None')
+  await expect(page.locator('[data-browser-profile-picture]')).toHaveCount(0)
+  await expect(page.locator('[data-browser-section-id="sessions"] [data-browser-section-header]')).toContainText('Sessions')
+  await expect(page.locator('.browser-profile-footer')).toBeVisible()
+  await expect(sectionHeader.getByRole('button', { name: 'New session', exact: true })).toHaveCount(1)
+  await expect(editor(page)).toHaveText('Keep my draft while grouping by profile')
+  await page.reload()
+  await expect(editor(page)).toBeVisible()
+  await expect(page.locator('[data-browser-profile-picture]')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Filters', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
+  await expect(page.getByRole('menuitemradio', { name: 'None', exact: true })).toHaveAttribute('aria-checked', 'true')
+})
+
 for (const width of [1440, 390]) {
-  test.extend({ hasTouch: width === 390 })(`project grouping preserves the draft and keeps project actions profile scoped at ${width}px`, async ({ page }) => {
+  test.extend({ hasTouch: width === 390 })(`profile layout composes with content grouping and preserves the draft at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 960 })
     await page.route('**/api/athena/preferences', route => route.abort())
     const extra = { id: 'profile-extra', title: 'Research project conversation', profile: 'research', source: 'desktop',
@@ -3703,7 +4126,7 @@ for (const width of [1440, 390]) {
       { id: 'shared-project', label: projectLabel, path: '/workspace/project', sessionCount: 2, repos: [],
         sessionIds: ['preview-week', extra.id], previewSessions: [extra] }
     ], active_id: null } }))
-    await open(page)
+    await open(page, 'preview-week', { defaultGrouping: true })
     const draft = 'Keep this draft through independent profile layouts'
     await editor(page).fill(draft)
     if (width === 390) await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
@@ -3717,26 +4140,39 @@ for (const width of [1440, 390]) {
     }
     const section = page.locator('[data-browser-section-id="sessions"]')
     const group = profile => section.locator('[data-gateway-group]').filter({ has: page.locator(`[data-browser-profile-picture="${profile}"]`) })
+    await choose('Grouping', 'Status')
+    await expect(group('default').getByRole('button', { name: 'Hide Done sessions', exact: true })).toBeVisible()
+    await expect(group('research').getByRole('button', { name: extra.title, exact: true })).toBeVisible()
+    await group('default').getByRole('button', { name: 'Hide Done sessions', exact: true }).click()
+    await expect(group('default').getByRole('button', { name: 'Plan a calmer working week', exact: true })).toHaveCount(0)
+    await expect(group('research').getByRole('button', { name: extra.title, exact: true })).toBeVisible()
+    await choose('Grouping', 'None')
+    await expect(group('default').getByRole('button', { name: 'Plan a calmer working week', exact: true })).toBeVisible()
+    await choose('Grouping', 'Status')
+    await choose('Profiles', 'Separate')
+    await expect(page.locator('.browser-profile-footer')).toBeVisible()
+    await expect(section.locator('[data-gateway-group]')).toHaveCount(0)
+    await expect(section.getByRole('button', { name: 'Hide Done sessions', exact: true })).toBeVisible()
+    await choose('Profiles', 'Combined')
+    await expect(group('default').getByRole('button', { name: 'Show Done sessions', exact: true })).toBeVisible()
     await choose('Grouping', 'Project')
     const project = profile => group(profile).locator('[data-sessions-project="shared-project"]')
     await expect(project('default')).toBeVisible()
     await expect(project('research')).toBeVisible()
-    if (width !== 390) {
-      await project('research').hover()
-      await project('research').getByRole('button', { name: 'Actions', exact: true }).click()
-      for (const name of ['Rename…', 'Appearance', 'Add folder', 'Set active', 'Copy path', 'Delete…']) {
-        await expect(page.getByRole('menuitem', { name, exact: true })).toBeVisible()
-      }
-      await page.getByRole('menuitem', { name: 'Rename…', exact: true }).click()
-      const rename = page.getByRole('dialog', { name: 'Rename project', exact: true })
-      await rename.getByRole('textbox').fill('Renamed shared project')
-      await rename.getByRole('button', { name: 'Save', exact: true }).click()
-      await expect(rename).toBeHidden()
-      expect(projectWrites).toEqual([{ id: 'shared-project', name: 'Renamed shared project', profile: 'research' }])
-      await expect(project('research')).toContainText('Renamed shared project')
+    await project('research').hover()
+    await project('research').getByRole('button', { name: 'Actions', exact: true }).click()
+    for (const name of ['Rename…', 'Appearance', 'Add folder', 'Set active', 'Copy path', 'Delete…']) {
+      await expect(page.getByRole('menuitem', { name, exact: true })).toBeVisible()
     }
+    await page.getByRole('menuitem', { name: 'Rename…', exact: true }).click()
+    const rename = page.getByRole('dialog', { name: 'Rename project', exact: true })
+    await rename.getByRole('textbox').fill('Renamed shared project')
+    await rename.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(rename).toBeHidden()
+    expect(projectWrites).toEqual([{ id: 'shared-project', name: 'Renamed shared project', profile: 'research' }])
+    await expect(project('research')).toContainText('Renamed shared project')
     await expect(group('research').getByRole('button', { name: 'Plan a calmer working week', exact: true })).toHaveCount(0)
-    await choose('Grouping', 'None')
+    await choose('Grouping', 'Updated')
     await expect(group('default')).toBeVisible()
     await page.reload()
     await expect(group('default')).toBeVisible()
@@ -3746,78 +4182,49 @@ for (const width of [1440, 390]) {
   })
 }
 
-test('the simplified sidebar restores combined profiles and keeps grouping and archive controls', async ({ page }) => {
+test('profile menus hide groups and filters restore every profile without losing the draft', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
   await page.route('**/api/athena/preferences', route => route.abort())
-  await page.addInitScript(() => {
-    if (sessionStorage.getItem('legacy-sidebar-seeded')) return
-    sessionStorage.setItem('legacy-sidebar-seeded', 'true')
-    localStorage.setItem('hermes-web.browser.combined-profiles', 'false')
-    localStorage.setItem('hermes-web.browser.hidden-profile-groups', JSON.stringify(['default', 'research', 'writer']))
-    const prefix = 'hermes-web.browser.hermes.desktop.'
-    for (const [key, value] of Object.entries({
-      showAllProfiles: 'false',
-      'sidebarGrouping.allProfiles': 'status',
-      sidebarStatusFilter: '["working"]',
-      sidebarProfileFilter: '["writer"]',
-      sidebarProjectFilter: '["missing-project"]',
-      sidebarPrFilter: '["open"]'
-    })) localStorage.setItem(prefix + key, value)
-  })
-  await page.route('**/api/profiles/projects/tree?**', route => route.fulfill({ json: {
-    projects: [{ id: 'legacy-project', label: 'Legacy project', path: '/workspace/legacy',
-      sessionCount: 1, repos: [], sessionIds: ['preview-week'] }],
-    active_id: null
-  } }))
-  await open(page)
-  const draft = 'Keep the selected chat draft while changing the sidebar view'
+  await open(page, 'preview-week', { defaultGrouping: true })
+  const draft = 'Keep this draft while hiding profiles'
   await editor(page).fill(draft)
-  const sidebar = page.locator('[data-browser-section-id="sessions"]')
-  const groups = sidebar.locator('[data-gateway-group]')
-  const selected = sidebar.getByRole('button', { name: 'Plan a calmer working week', exact: true })
-  const filters = page.getByRole('button', { name: 'Filters', exact: true })
+  const section = page.locator('[data-browser-section-id="sessions"]')
+  const groups = section.locator('[data-gateway-group]')
+  const group = profile => groups.filter({ has: page.locator(`[data-browser-profile-picture="${profile}"]`) })
+  const restore = page.getByRole('menuitem', { name: 'Restore all profiles', exact: true })
+  await expect(groups).toHaveCount(3)
+  await page.getByRole('button', { name: 'Filters', exact: true }).click()
+  await expect(restore).toBeDisabled()
+  await page.keyboard.press('Escape')
+  const route = page.url()
+  await group('default').getByRole('button', { name: /^Group actions:/ }).click()
+  await page.getByRole('menuitem', { name: 'Hide profile', exact: true }).click()
+  await expect(groups).toHaveCount(2)
+  await expect(section.getByRole('button', { name: 'Plan a calmer working week', exact: true })).toHaveCount(0)
+  expect(page.url()).toBe(route)
+  await expect(editor(page)).toHaveText(draft)
+  await page.reload()
+  await expect(groups).toHaveCount(2)
+  await expect(group('default')).toHaveCount(0)
+  await expect(editor(page)).toHaveText(draft)
+  for (const profile of ['research', 'writer']) {
+    await group(profile).getByRole('button', { name: /^Group actions:/ }).click()
+    await page.getByRole('menuitem', { name: 'Hide profile', exact: true }).click()
+    await expect(group(profile)).toHaveCount(0)
+  }
   await expect(groups).toHaveCount(0)
-  await expect(selected).toHaveCount(0)
-  await filters.click()
-  const restore = page.getByRole('menuitem', { name: 'Restore hidden profiles', exact: true })
+  await expect(section.locator('[data-web-session-id]')).toHaveCount(0)
+  await page.reload()
+  await expect(groups).toHaveCount(0)
+  await expect(section.locator('[data-web-session-id]')).toHaveCount(0)
+  await expect(editor(page)).toHaveText(draft)
+  await page.getByRole('button', { name: 'Filters', exact: true }).click()
+  await expect(restore).toBeEnabled()
   await restore.click()
   await expect(groups).toHaveCount(3)
-  await expect(selected).toBeVisible()
-
-  const research = groups.filter({ has: page.locator('[data-browser-profile-picture="research"]') })
-  await research.getByRole('button', { name: /: Research$/ }).click()
-  await page.getByRole('menuitem', { name: 'Hide profile', exact: true }).click()
-  await expect(research).toHaveCount(0)
-  await expect(groups).toHaveCount(2)
-  await page.reload()
-  await expect(groups).toHaveCount(2)
-  await expect(research).toHaveCount(0)
-  await filters.click()
-  await restore.click()
-  await expect(research).toBeVisible()
-  await expect(editor(page)).toHaveText(draft)
-  await expect(sidebar.locator('[data-sessions-project]')).toHaveCount(0)
-  await filters.click()
-  const menu = page.getByRole('menu')
-  await expect(menu.getByRole('menuitem')).toHaveText(['Grouping'])
-  const archived = menu.getByRole('menuitemcheckbox', { name: 'Archived', exact: true })
-  await expect(menu.getByRole('menuitemcheckbox')).toHaveCount(1)
-  await expect(archived).toHaveAttribute('aria-checked', 'false')
-  await archived.click()
-  await expect(archived).toHaveAttribute('aria-checked', 'true')
-  await expect(selected).toHaveCount(0)
-  await archived.click()
-  await expect(selected).toBeVisible()
-  await menu.getByRole('menuitem', { name: 'Grouping', exact: true }).hover()
-  await expect(page.getByRole('menuitemradio')).toHaveText(['None', 'Project'])
-  await expect(page.getByRole('menuitemradio', { name: 'None', exact: true })).toBeChecked()
-  await page.getByRole('menuitemradio', { name: 'Project', exact: true }).click()
-  await page.keyboard.press('Escape')
-  await page.keyboard.press('Escape')
-  await expect(sidebar.locator('[data-sessions-project]').first()).toBeVisible()
   await expect(editor(page)).toHaveText(draft)
   await page.reload()
-  await expect(sidebar.locator('[data-sessions-project]').first()).toBeVisible()
+  await expect(groups).toHaveCount(3)
   await expect(editor(page)).toHaveText(draft)
 })
 
@@ -3847,6 +4254,12 @@ test('empty profiles stay visible and can start conversations when there are no 
     await expect(section.locator(`[data-browser-profile-picture="${profile}"]`)).toBeVisible()
   }
   const research = section.locator('[data-gateway-group]').filter({ has: page.locator('[data-browser-profile-picture="research"]') })
+  await research.getByRole('button', { name: /^Group actions:/ }).click()
+  await page.getByRole('menuitem', { name: 'Hide profile', exact: true }).click()
+  await expect(research).toHaveCount(0)
+  await page.getByRole('button', { name: 'Filters', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Restore all profiles', exact: true }).click()
+  await expect(research).toBeVisible()
   await research.hover()
   await research.getByRole('button', { name: /^New (?:session|conversation) in Research$/ }).click()
   await expect(editor(page)).toBeVisible()
@@ -3879,22 +4292,88 @@ test('empty configured channels stay hidden and channel controls exclude unset p
   await expect(telegram).toHaveCount(0)
 })
 
+for (const layout of ['flat', 'profiles', 'projects']) {
+  test(`dragging chats selects manual ordering and preserves the draft in ${layout}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 960 })
+    await page.route('**/api/athena/preferences', route => route.abort())
+    await page.addInitScript(layout => {
+      localStorage.setItem('hermes.desktop.showAllProfiles', 'true')
+      localStorage.setItem('hermes-web.browser.combined-profiles', String(layout !== 'flat'))
+      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarGrouping.allProfiles', layout === 'profiles' ? 'profile' : 'none')
+      localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarAgentsGrouped.allProfiles', String(layout === 'projects'))
+    }, layout)
+    await page.route('**/api/profiles/sessions/sidebar**', async route => {
+      const response = await route.fetch()
+      const body = await response.json()
+      const template = body.recents.sessions.find(session => session.id === 'preview-week')
+      body.recents.sessions.push(
+        { ...template, id: 'drag-first', title: 'Drag first chat', cwd: '/workspace/drag-project', git_repo_root: '/workspace/drag-project', started_at: template.started_at - 1000, last_active: template.last_active - 1000 },
+        { ...template, id: 'drag-second', title: 'Drag second chat', cwd: '/workspace/drag-project', git_repo_root: '/workspace/drag-project', started_at: template.started_at - 500, last_active: template.last_active - 2000 }
+      )
+      await route.fulfill({ response, json: body })
+    })
+    await open(page)
+    await editor(page).fill('Keep this draft while dragging chats')
+    const chooseOrdering = async name => {
+      await page.getByRole('button', { name: 'Filters', exact: true }).click()
+      await page.getByRole('menuitem', { name: 'Ordering', exact: true }).hover()
+      await page.getByRole('menuitemradio', { name, exact: true }).click()
+      await page.keyboard.press('Escape')
+      await page.keyboard.press('Escape')
+    }
+    const first = page.getByRole('button', { name: 'Drag first chat', exact: true })
+    const second = page.getByRole('button', { name: 'Drag second chat', exact: true })
+    const selectedRoute = page.url()
+    const expectManual = async () => {
+      await page.getByRole('button', { name: 'Filters', exact: true }).click()
+      await page.getByRole('menuitem', { name: 'Ordering', exact: true }).hover()
+      await expect(page.getByRole('menuitemradio', { name: 'Manual', exact: true })).toBeChecked()
+      await page.keyboard.press('Escape')
+      await page.keyboard.press('Escape')
+    }
+    await chooseOrdering('Created')
+    await expect.poll(async () => (await first.boundingBox()).y > (await second.boundingBox()).y).toBe(true)
+    await chooseOrdering('Manual')
+    await expectManual()
+    await expect.poll(async () => (await first.boundingBox()).y > (await second.boundingBox()).y).toBe(true)
+    await expect(editor(page)).toHaveText('Keep this draft while dragging chats')
+    await expect(page).toHaveURL(selectedRoute)
+    await page.reload()
+    await expect(first).toBeVisible()
+    await expectManual()
+    await expect.poll(async () => (await first.boundingBox()).y > (await second.boundingBox()).y).toBe(true)
+    await chooseOrdering('Updated')
+    const before = await page.getByRole('button', { name: 'Reorder Drag first chat', exact: true }).boundingBox(), target = await second.boundingBox()
+    expect(before.y).toBeLessThan(target.y)
+    await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2 + 10, { steps: 3 })
+    await page.waitForTimeout(150)
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2 + 4, { steps: 15 })
+    await page.waitForTimeout(150)
+    await page.mouse.up()
+    await expect.poll(async () => (await first.boundingBox()).y > (await second.boundingBox()).y).toBe(true)
+    await expect(editor(page)).toHaveText('Keep this draft while dragging chats')
+    await expect(page).toHaveURL(selectedRoute)
+    await expectManual()
+    await page.reload()
+    await expect(first).toBeVisible()
+    await expect.poll(async () => (await first.boundingBox()).y > (await second.boundingBox()).y).toBe(true)
+    await expect(editor(page)).toHaveText('Keep this draft while dragging chats')
+    await chooseOrdering('Updated')
+    await expect.poll(async () => (await first.boundingBox()).y < (await second.boundingBox()).y).toBe(true)
+  })
+}
+
 for (const width of [1440, 390]) {
   test.extend({ hasTouch: width === 390 })(`project deletion follows the owning profile and preserves failed confirmations at ${width}px`, async ({ page }) => {
     const errors = []
     page.on('pageerror', error => errors.push(error.message))
     const project = { id: 'p_delete_test', slug: 'test', name: 'test', primary_path: null, folders: [], archived: false, created_at: 1 }
-    const node = { id: project.id, label: project.name, path: null, repos: [], sessionCount: 1, sessionIds: ['project-delete-chat'] }
+    const node = { id: project.id, label: project.name, path: null, repos: [], sessionCount: 0, previewSessions: [], sessionIds: [] }
     let deleted = false, rejectDelete = true, releaseDelete
     const deletes = []
     await page.route('**/api/athena/preferences', route => route.abort())
-    await page.route('**/api/profiles/sessions/sidebar**', async route => {
-      const response = await route.fetch()
-      const body = await response.json()
-      const template = body.recents.sessions.find(session => session.id === 'preview-week')
-      body.recents.sessions.push({ ...template, id: 'project-delete-chat', title: 'Project test chat', profile: 'writer' })
-      await route.fulfill({ response, json: body })
-    })
     await page.route(/\/api\/profiles\/projects\/tree/, route => route.fulfill({ json: { projects: deleted ? [] : [node], active_id: null, scoped_session_ids: [] } }))
     await page.routeWebSocket(/\/api\/ws/, socket => {
       const server = socket.connectToServer()
@@ -3917,7 +4396,7 @@ for (const width of [1440, 390]) {
     })
     await page.setViewportSize({ width, height: 960 })
     await open(page)
-    const draft = 'Keep my draft while deleting a project'
+    const draft = 'Keep my draft while deleting an empty project'
     await editor(page).fill(draft)
     if (width === 390) await openSectionNavigation(page)
     await page.getByRole('button', { name: 'Filters', exact: true }).click()
@@ -3930,26 +4409,22 @@ for (const width of [1440, 390]) {
       await page.keyboard.press('Escape')
       await expect(page.locator(`[role="menu"][id="${id}"]`)).toBeHidden()
     }
-    const row = page.locator('[data-sessions-project="p_delete_test"]')
-    const actions = row.getByRole('button', { name: 'Actions', exact: true })
-    const openActions = () => width === 390
-      ? row.locator('[data-browser-group-header]').click({ button: 'right' })
-      : actions.click()
-    await openActions()
+    const actions = page.getByRole('button', { name: 'Actions', exact: true })
+    await actions.click()
     await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click()
     const dialog = page.getByRole('dialog', { name: 'Delete "test"?', exact: true })
     await expect(dialog).toBeVisible()
     // Cancel must not issue a destructive request.
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
     expect(deletes).toEqual([])
-    await openActions()
+    await actions.click()
     await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click()
     const confirm = dialog.getByRole('button', { name: 'Delete', exact: true })
     await confirm.click()
     await expect.poll(() => deletes.length).toBe(1)
     expect(deletes[0]).toEqual({ profile: 'writer', id: project.id })
     await expect(dialog).toBeVisible()
-    await expect(row).toHaveCount(1)
+    await expect(page.getByRole('button', { name: 'Actions', exact: true, includeHidden: true })).toHaveCount(1)
     releaseDelete()
     await expect(dialog).toContainText('Synthetic project deletion failed')
     await expect(confirm).toBeEnabled()
@@ -3958,11 +4433,11 @@ for (const width of [1440, 390]) {
     await expect.poll(() => deletes.length).toBe(2)
     releaseDelete()
     await expect(dialog).toBeHidden()
-    await expect(row).toHaveCount(0)
+    await expect(actions).toHaveCount(0)
     await page.reload()
     if (width === 390) await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().click()
     await expect(editor(page)).toHaveText(draft, { timeout: 30000 })
-    await expect(row).toHaveCount(0)
+    await expect(actions).toHaveCount(0)
     expect(errors).toEqual([])
   })
 }
