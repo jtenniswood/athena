@@ -82,6 +82,7 @@ function BrowserLayout() {
     <AppSettingsRegistration />
     <div className="browser-workspace">
       {!navigation.mobile && <nav id="browser-app-navigation" className="browser-app-navigation" aria-label="App navigation" ref={rail}>
+        <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" />
         <BrowserToolbarButton tooltip="Chat" aria-label="Chat" aria-current={!kanban && !settings ? 'page' : undefined} onClick={openChat}>
           <Codicon name="comment" />
         </BrowserToolbarButton>
