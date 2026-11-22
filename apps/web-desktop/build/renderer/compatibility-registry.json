@@ -363,12 +363,12 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "store/layout.ts",
-    "reason": "Expose None content grouping, retain legacy saved Profile values, and cycle content grouping independently of profile layout. Always show all sessions independently of saved preview preferences or view reset.",
+    "reason": "Support the Show projects toggle, default to manual chat ordering, ignore retired status filters, and show every available session.",
     "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "None grouping shows all sessions without subheaders and survives reload"
+        "scenario": "Show projects toggles project headers without date dividers and survives reload"
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
@@ -383,26 +383,26 @@
         "scenario": "profile layout composes with content grouping and preserves the draft"
       }
     ],
-    "removal": "Upstream supports None grouping as a persisted option.",
+    "removal": "Upstream supports a project-only grouping toggle and manual-only ordering.",
     "handlers": [
       "ungroupedStore"
     ],
     "sourceHash": "b036ba9cbf09093271bcbfaf825ab5fea1e41f674750e9f1c26f0c6efbd1674f",
     "sourceRoot": "renderer",
     "inputHash": "b036ba9cbf09093271bcbfaf825ab5fea1e41f674750e9f1c26f0c6efbd1674f",
-    "outputHash": "4fcd1b926cf1cb914d5ebc7e6d113fbda992514023c730e91c06e5c724c0f0d5"
+    "outputHash": "2e5549e97dacca10a85da91e75eb94d573ec92e23b0944a7857c6bfc6b980093"
   },
   {
     "name": "browser-session-filters",
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
-    "reason": "Offer Combined or Separate profile layout independently of content grouping, hide desktop-only controls, and retain sidebar shortcuts and profile visibility actions. Remove the obsolete Show all sessions toggle.",
+    "reason": "Offer independent profile layout and project visibility controls while retaining sidebar shortcuts and profile visibility actions. Hide desktop-only controls and retired ordering and status menus.",
     "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "None grouping shows all sessions without subheaders and survives reload"
+        "scenario": "Show projects toggles project headers without date dividers and survives reload"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -421,19 +421,18 @@
         "scenario": "profile layout composes with content grouping and preserves the draft"
       },
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "dragging chats selects manual ordering and preserves the draft in"
+        "file": "tests/browser/sidebar-gestures.spec.mjs",
+        "scenario": "chat title drops save the order and preserve the draft"
       }
     ],
     "removal": "The browser owns the filter menu or upstream offers composition flags.",
     "handlers": [
-      "filterBrowserSessionMenu",
-      "ungroupedMenu"
+      "filterBrowserSessionMenu"
     ],
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
     "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
-    "outputHash": "4ca4fc53bf133225e263424abaa3e50beefc286cc571fbaf054db57b9a52a54f"
+    "outputHash": "66ab6a246ded36a6daf2b1b7211e455df7b2052b143792db1727c1699a435b7a"
   },
   {
     "name": "hidden-bot-roster",
@@ -556,8 +555,8 @@
         "scenario": "profile grouping uses the native all-profile scope"
       },
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "dragging chats selects manual ordering and preserves the draft"
+        "file": "tests/browser/sidebar-gestures.spec.mjs",
+        "scenario": "chat title drops save the order and preserve the draft"
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
@@ -579,7 +578,7 @@
     "sourceHash": "851f2833257195fcf6a4020d5f6f606dbe565de213062de22e5ebcd981f6c0dc",
     "sourceRoot": "renderer",
     "inputHash": "851f2833257195fcf6a4020d5f6f606dbe565de213062de22e5ebcd981f6c0dc",
-    "outputHash": "25303eee1bdb1430b371c57097a072ed2d664a29d6663402613ae16dca39e6ef"
+    "outputHash": "5115977db71e9bdd22d4702b34407a8dcaa3f23fe9524eacef4ddac0437416b6"
   },
   {
     "name": "single-conversation-wiring",
@@ -676,8 +675,8 @@
         "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
       },
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "dragging chats selects manual ordering and preserves the draft"
+        "file": "tests/browser/sidebar-gestures.spec.mjs",
+        "scenario": "chat title drops save the order and preserve the draft"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2088,10 +2087,6 @@
         "scenario": "sidebar visibility uses stable identity through markup changes and reload"
       },
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "dragging chats selects manual ordering and preserves the draft"
-      },
-      {
         "file": "scripts/unified-session-list.test.mjs",
         "scenario": "profile grouping keeps empty configured profiles as new conversation entry points"
       },
@@ -2120,7 +2115,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "4ad9d7cafd540d92128f291c5d4a77051d91845db753a1b07bf19b348f39a691",
     "inputHash": "4ad9d7cafd540d92128f291c5d4a77051d91845db753a1b07bf19b348f39a691",
-    "outputHash": "958994c2e3b38e6b130c4bf49f040530d1024e93958e2e5b3b5313ffe958566d"
+    "outputHash": "13be6d5c03f73ecaed6a88a23e8ba6fbb31ffcac10c4932744ed9c2d8a7b2761"
   },
   {
     "name": "browser-cron-jobs-section-styling",
@@ -3242,8 +3237,8 @@
         "scenario": "Profile grouping replaces presentation controls and switches live without gateway nesting"
       },
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "dragging chats selects manual ordering and preserves the draft"
+        "file": "tests/browser/sidebar-gestures.spec.mjs",
+        "scenario": "chat title drops save the order and preserve the draft"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
