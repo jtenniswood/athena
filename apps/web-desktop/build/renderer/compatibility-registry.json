@@ -67,7 +67,7 @@
       },
       {
         "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "combined profile browsing preserves the conversation draft across tab changes and reload"
+        "scenario": "profile commands preserve the conversation draft across scope changes and reload"
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
@@ -363,40 +363,77 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "store/layout.ts",
-    "reason": "Restrict the browser sidebar to None or Project grouping and manual ordering, show all sessions, and ignore saved filters other than Archived.",
+    "reason": "Expose None content grouping, retain legacy saved Profile values, and cycle content grouping independently of profile layout. Always show all sessions independently of saved preview preferences or view reset.",
     "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "the simplified sidebar restores combined profiles and keeps grouping and archive controls"
+        "scenario": "None grouping shows all sessions without subheaders and survives reload"
+      },
+      {
+        "file": "scripts/unified-session-list.test.mjs",
+        "scenario": "profile grouping uses the native all-profile scope"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Profile grouping replaces presentation controls and switches live without gateway nesting"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "profile layout composes with content grouping and preserves the draft"
       }
     ],
-    "removal": "Remove when Hermes supports a configurable sidebar view with equivalent browser defaults.",
+    "removal": "Upstream supports None grouping as a persisted option.",
     "handlers": [
       "ungroupedStore"
     ],
     "sourceHash": "b036ba9cbf09093271bcbfaf825ab5fea1e41f674750e9f1c26f0c6efbd1674f",
     "sourceRoot": "renderer",
     "inputHash": "b036ba9cbf09093271bcbfaf825ab5fea1e41f674750e9f1c26f0c6efbd1674f",
-    "outputHash": "441207768b740abf058d723b4f9b657a0ed25351a807ebe64c22f7c5ad326b22"
+    "outputHash": "4fcd1b926cf1cb914d5ebc7e6d113fbda992514023c730e91c06e5c724c0f0d5"
   },
   {
     "name": "browser-session-filters",
-    "kind": "replacement",
-    "order": 10,
+    "kind": "browser-transform",
+    "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
-    "reason": "Expose Project and None grouping and the archived view in the browser sidebar.",
-    "owner": "apps/web-desktop/src/upstream/sidebar-view-menu.tsx",
+    "reason": "Offer Combined or Separate profile layout independently of content grouping, hide desktop-only controls, and retain sidebar shortcuts and profile visibility actions. Remove the obsolete Show all sessions toggle.",
+    "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "the simplified sidebar restores combined profiles and keeps grouping and archive controls"
+        "scenario": "None grouping shows all sessions without subheaders and survives reload"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "sidebar action shortcuts preserve the selected chat and draft on"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Profile grouping replaces presentation controls and switches live without gateway nesting"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "profile menus hide groups and filters restore every profile without losing the draft"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "profile layout composes with content grouping and preserves the draft"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "dragging chats selects manual ordering and preserves the draft in"
       }
     ],
-    "removal": "Remove when Hermes offers equivalent sidebar view controls.",
+    "removal": "The browser owns the filter menu or upstream offers composition flags.",
+    "handlers": [
+      "filterBrowserSessionMenu",
+      "ungroupedMenu"
+    ],
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
-    "replacement": "src/upstream/sidebar-view-menu.tsx"
+    "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
+    "outputHash": "4ca4fc53bf133225e263424abaa3e50beefc286cc571fbaf054db57b9a52a54f"
   },
   {
     "name": "hidden-bot-roster",
@@ -519,8 +556,8 @@
         "scenario": "profile grouping uses the native all-profile scope"
       },
       {
-        "file": "tests/browser/sidebar-gestures.spec.mjs",
-        "scenario": "chat title drops save the order and preserve the draft"
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "dragging chats selects manual ordering and preserves the draft"
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
@@ -528,7 +565,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "project grouping preserves the draft and keeps project actions profile scoped"
+        "scenario": "profile layout composes with content grouping and preserves the draft"
       },
       {
         "file": "scripts/sidebar-controller.test.mjs",
@@ -542,7 +579,7 @@
     "sourceHash": "851f2833257195fcf6a4020d5f6f606dbe565de213062de22e5ebcd981f6c0dc",
     "sourceRoot": "renderer",
     "inputHash": "851f2833257195fcf6a4020d5f6f606dbe565de213062de22e5ebcd981f6c0dc",
-    "outputHash": "05767e4e3169888f7d738a62d69ccb8557b7ebc1f00468b2a8814b30b7548069"
+    "outputHash": "25303eee1bdb1430b371c57097a072ed2d664a29d6663402613ae16dca39e6ef"
   },
   {
     "name": "single-conversation-wiring",
@@ -639,8 +676,8 @@
         "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
       },
       {
-        "file": "tests/browser/sidebar-gestures.spec.mjs",
-        "scenario": "chat title drops save the order and preserve the draft"
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "dragging chats selects manual ordering and preserves the draft"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -2051,8 +2088,8 @@
         "scenario": "sidebar visibility uses stable identity through markup changes and reload"
       },
       {
-        "file": "tests/browser/sidebar-gestures.spec.mjs",
-        "scenario": "chat title drops save the order and preserve the draft"
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "dragging chats selects manual ordering and preserves the draft"
       },
       {
         "file": "scripts/unified-session-list.test.mjs",
@@ -2060,7 +2097,11 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "project grouping preserves the draft and keeps project actions profile scoped"
+        "scenario": "profile layout composes with content grouping and preserves the draft"
+      },
+      {
+        "file": "tests/browser/sidebar-gestures.spec.mjs",
+        "scenario": "chat title drops save the order and preserve the draft"
       },
       {
         "file": "tests/browser/sidebar-gestures.spec.mjs",
@@ -3189,7 +3230,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/gateway-groups.tsx",
-    "reason": "Project live profile groups, owner routes, aliases and ordering into Athena-owned group headers, avatars, nesting and disclosure.",
+    "reason": "Project live profile groups, owner routes, aliases and ordering into Athena-owned group headers, avatars, nesting and disclosure. Keep hidden groups browser-owned.",
     "owner": "apps/web-desktop/build/renderer/transforms/sidebar.ts",
     "tests": [
       {
@@ -3198,11 +3239,15 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "the simplified sidebar restores combined profiles and keeps grouping and archive controls"
+        "scenario": "Profile grouping replaces presentation controls and switches live without gateway nesting"
       },
       {
-        "file": "tests/browser/sidebar-gestures.spec.mjs",
-        "scenario": "chat title drops save the order and preserve the draft"
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "dragging chats selects manual ordering and preserves the draft"
+      },
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "profile menus hide groups and filters restore every profile without losing the draft"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -3210,7 +3255,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "project grouping preserves the draft and keeps project actions profile scoped"
+        "scenario": "profile layout composes with content grouping and preserves the draft"
       }
     ],
     "removal": "Remove the private profile-group rewrite once the pinned Hermes release provides its presentation interface.",
@@ -3221,7 +3266,7 @@
     "sourceHash": "7499db0f9583cdcbadfe66f488cf2dea6562d2e4de0c73674c3013ebb951b83c",
     "sourceRoot": "renderer",
     "inputHash": "7499db0f9583cdcbadfe66f488cf2dea6562d2e4de0c73674c3013ebb951b83c",
-    "outputHash": "2f5bc01aae91159b712d6dbe105d2d8faca98e509cc40bf57438b3948cc13647"
+    "outputHash": "bc99f46a4a0362971eda2f8adc80aa1d3ba3eed3318bf6b6ee0c0f68fd5e625b"
   },
   {
     "name": "shared-gateway-profile-route",
@@ -3458,7 +3503,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "project grouping preserves the draft and keeps project actions profile scoped"
+        "scenario": "profile layout composes with content grouping and preserves the draft"
       },
       {
         "file": "scripts/project-delete.test.mjs",
@@ -3820,7 +3865,7 @@
       },
       {
         "file": "tests/browser/session-routing.spec.mjs",
-        "scenario": "owned routes survive combined profile browsing and browser history"
+        "scenario": "owned routes survive profile filtering and browser history"
       },
       {
         "file": "tests/browser/session-routing.spec.mjs",
@@ -3854,7 +3899,7 @@
       },
       {
         "file": "tests/browser/session-routing.spec.mjs",
-        "scenario": "owned routes survive combined profile browsing and browser history"
+        "scenario": "owned routes survive profile filtering and browser history"
       },
       {
         "file": "tests/browser/session-routing.spec.mjs",

@@ -425,12 +425,12 @@ test('latest renderer keeps None grouping integrated and handles layout-less too
   const layoutFile = path.join(root, '../desktop/src/store/layout.ts')
   const layout = readFileSync(layoutFile, 'utf8')
   const layoutOutput = browserPlugin(root).transform(layout, layoutFile)?.code
-  assert.match(layoutOutput, /SIDEBAR_GROUPING_ORDER = \['none', 'project'\]/)
+  assert.match(layoutOutput, /SIDEBAR_GROUPING_ORDER = \['none', 'date', 'project', 'status', 'profile'\]/)
   assert.match(layoutOutput, /SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'none'/)
 
   const filterFile = path.join(root, '../desktop/src/app/chat/sidebar/filter-menu.tsx')
-  const entry = JSON.parse(readFileSync(path.join(root, 'build/renderer/compatibility-registry.json'), 'utf8')).find(entry => filterFile.endsWith(entry.module ?? 'missing'))
-  assert.equal(entry.replacement, 'src/upstream/sidebar-view-menu.tsx')
+  const filter = browserPlugin(root).transform(readFileSync(filterFile, 'utf8'), filterFile)?.code
+  assert.match(filter, /none: \{ icon: 'list-unordered', label: 'None' \}/)
 
   const tooltip = readFileSync(path.join(root, '../desktop/src/components/ui/tooltip.tsx'), 'utf8')
   assert.match(tooltip, /while \(candidate && !hasLayout\(candidate\)\)/)

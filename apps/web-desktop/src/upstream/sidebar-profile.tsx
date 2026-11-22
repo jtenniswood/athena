@@ -16,9 +16,9 @@ import type { SessionInfo } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { $sidebarGrouping, $sidebarRowMeta } from '@/store/layout'
 import { $newProjectDropPlacement } from '@/store/projects'
-import { hideProfileGroup } from '../experience/profile-list-visibility'
 import { BrowserProfileGroup, BrowserProfileNesting } from '../experience/sidebar-profile'
-import { useBrowserProfileSection } from './profile-section'
+import { BrowserHideProfileItem, useHiddenProfileGroups } from '../experience/profile-list-visibility'
+import { useBrowserProfileGrouping, useBrowserProfileSection } from './profile-section'
 import { openBrowserProfileProjectCreate } from './project-create'
 
 export function useBrowserSidebarFigures(totals?: { tokens: number; costUsd: number }) {
@@ -30,7 +30,7 @@ export function useBrowserSidebarFigures(totals?: { tokens: number; costUsd: num
 interface ProfileGroupsController {
   ids: string[]
   ordered: SidebarSessionGroup[]
-  gatewayProfiles?: Map<string, SidebarSessionGroup[]>
+  gatewayProfiles: Map<string, SidebarSessionGroup[]>
   sensors?: Parameters<typeof ReorderableList>[0]['sensors']
 }
 
@@ -38,12 +38,12 @@ interface ProfileGroupsController {
 export function BrowserProfileGroupsControllerSurface({ model, renderGroup, renderNested }: {
   model: ProfileGroupsController
   renderGroup(group: SidebarSessionGroup, index: number, move: (direction: 1 | -1) => void, children: ReactNode): ReactNode
-  renderNested?(groups: SidebarSessionGroup[]): ReactNode
+  renderNested(groups: SidebarSessionGroup[]): ReactNode
 }) {
   return <ReorderableList ids={model.ids} onReorder={reorderGatewayGroups} sensors={model.sensors}>
     {model.ordered.map((group, index) => renderGroup(group, index,
       direction => reorderGatewayGroups(arrayMove(model.ids, index, index + direction)),
-      renderNested && model.gatewayProfiles?.has(group.id) ? <BrowserProfileNesting>{renderNested(model.gatewayProfiles.get(group.id)!)}</BrowserProfileNesting> : null))}
+      model.gatewayProfiles.has(group.id) ? <BrowserProfileNesting>{renderNested(model.gatewayProfiles.get(group.id)!)}</BrowserProfileNesting> : null))}
   </ReorderableList>
 }
 
@@ -74,7 +74,6 @@ interface ProfileGroupController {
 export function BrowserProfileGroupControllerSurface({ model }: { model: ProfileGroupController }) {
   const { t } = useI18n(), s = t.sidebar, copy = s.gatewayGroups
   const { group, sessions, sortable } = model
-  const profile = group.profile
   const grouping = useStore($sidebarGrouping)
   const renameLabel = group.profile ? 'Rename profile' : copy.rename
   const browserProfile = useBrowserProfileSection(group.profile)
@@ -84,12 +83,10 @@ export function BrowserProfileGroupControllerSurface({ model }: { model: Profile
   const actions = <div className="flex items-center">
     <DropdownMenu><DropdownMenuTrigger asChild><Button aria-label={`${copy.actions}: ${label}`} size="icon-xs" variant="ghost"><Codicon name="ellipsis" /></Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        {browserProfile && group.profile && !model.embedded && <BrowserHideProfileItem profile={group.profile} />}
         <DropdownMenuItem onSelect={() => { model.setDraft(model.alias || ''); model.setRenaming(true) }}>{renameLabel}</DropdownMenuItem>
         <DropdownMenuItem disabled={model.first} onSelect={() => model.onMove(-1)}>{copy.moveUp}</DropdownMenuItem>
         <DropdownMenuItem disabled={model.last} onSelect={() => model.onMove(1)}>{copy.moveDown}</DropdownMenuItem>
-        {profile && !model.embedded && <DropdownMenuItem onSelect={() => hideProfileGroup(profile)}>
-          Hide profile
-        </DropdownMenuItem>}
       </DropdownMenuContent>
     </DropdownMenu>
     {browserProfile && group.profile && !model.embedded && grouping === 'project' && <Button
@@ -133,7 +130,8 @@ export const includeBrowserProfileHeader = (id: string) => id !== 'hermes-bots:s
 
 export function useBrowserProfileGroupPresentation() {
   return {
-    flatten: true,
+    flatten: useBrowserProfileGrouping(),
+    hiddenProfiles: useHiddenProfileGroups(),
     filterHeaderContribution: includeBrowserProfileHeader,
     Groups: BrowserProfileGroupsControllerSurface,
     Group: BrowserProfileGroupControllerSurface

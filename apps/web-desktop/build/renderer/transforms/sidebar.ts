@@ -17,29 +17,30 @@ export function ChatSidebar(props: ChatSidebarProps) {
 `
   }
   source = replaceBrowserContract(source, [
-    ["  const ownerGrouped = profileScope === ALL_PROFILES && grouping === 'profile'", "  const ownerGrouped = profileScope === ALL_PROFILES"],
+    ["  const ownerGrouped = profileScope === ALL_PROFILES && grouping === 'profile'", "  const combinedProfiles = useBrowserProfileGrouping()\n  const ownerGrouped = profileScope === ALL_PROFILES && combinedProfiles"],
     ['const profileGroups = useGatewaySessionGroups(agentSessions, ownerGrouped, filtersNarrow)', 'const profileGroups = useBrowserProfileGroups(useGatewaySessionGroups(agentSessions, ownerGrouped, filtersNarrow))'],
-    ['  useEffect(() => {\n    const next = resolveManualSessionOrderIds(', '  useEffect(() => {\n    if (sessionsLoading || showArchived) return\n    const next = resolveManualSessionOrderIds('],
-    ['[agentOrderIds, agentOrderManual, unpinnedAgentSessions]', '[agentOrderIds, agentOrderManual, unpinnedAgentSessions, sessionsLoading, showArchived]']
+    ['  useEffect(() => {\n    const next = resolveManualSessionOrderIds(', '  useEffect(() => {\n    if (sessionsLoading) return\n    const next = resolveManualSessionOrderIds('],
+    ['[agentOrderIds, agentOrderManual, unpinnedAgentSessions]', '[agentOrderIds, agentOrderManual, unpinnedAgentSessions, sessionsLoading]']
   ])
   const projection = [
     'navItems', 'pathname', 'currentView', 'panesFlipped', 'showSessionSections',
     'searchQuery', 'setSearchQuery', 'searchInputRef', 'trimmedQuery', 'searchPending', 'searchResults',
     'activeSidebarSessionId', 'showAllProfiles', 'cardRows', 'dndSensors', 'pinnedSessions', 'pinsOpen', 'agentsOpen', 'cronOpen',
     'inProject', 'enteredProjectId', 'projectLoadFailed', 'projectLoading', 'retryProject', 'showSessionSkeletons',
-    'sessionsLoadError', 'filtersNarrow', 'sessionsLoading', 'recentsLoadMorePending', 'hasMoreSessions',
-    'displayAgentGroups', 'worktreeGroupingActive', 'reposScanning', 'projectsSkeletonVisible',
-    'enteredProject', 'activeProjectId', 'enteredProjectOverlaySessions', 'agentOrderIds',
+    'sessionsLoadError', 'filtersActive', 'filtersNarrow', 'sessionsLoading', 'recentsLoadMorePending', 'hasMoreSessions',
+    'rankedGlobally', 'grouping', 'combinedProfiles', 'displayAgentGroups', 'worktreeGroupingActive', 'reposScanning', 'projectsSkeletonVisible',
+    'enteredProject', 'activeProjectId', 'enteredProjectOverlaySessions', 'agentOrderManual', 'agentOrderIds', 'sortOrderIds',
     'projectOverview', 'overviewHidden', 'overviewPreviews', 'scopedRepoWorktrees', 'enteredProjectContent', 'projectTreeLoading',
     'removedSessionIds', 'displayAgentSessions', 'agentSessions', 'recentsVirtualizes', 'sessionsMode', 'sessionsLabel',
     'messagingGroups', 'ownerGrouped', 'connectionsRegistry', 'profileColors', 'messagingLoadMorePending',
-    'messagingOpenIds', 'cronJobs', 'profileRailVisible', 'toggleUnread', 'reorderPinned', 'reorderSessions',
+    'messagingOpenIds', 'cronJobs', 'profileRailVisible', 'unreadCount', 'toggleUnread', 'reorderPinned', 'reorderSessions',
     'reorderProjects', 'onLoadMoreRecents', 'onEnterProject', 'loadMoreForMessaging',
     'onNavigate', 'onResumeSession', 'onDeleteSession', 'onArchiveSession', 'onBranchSession', 'onNewSessionInWorkspace',
     'onNewSessionSplit', 'onRetrySessions', 'onManageCronJob', 'onTriggerCronJob'
   ]
   source = projectRendererController(source, 'ChatSidebar', `<BrowserSidebarControllerSurface model={{ labels: s, ${projection.join(', ')} }} />`, ['[messagingVisible, setMessagingVisible]', 'revealMoreMessaging'])
-  return `import { BrowserSidebarControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar'))}\n` +
+  return `import { useBrowserProfileGrouping } from ${JSON.stringify(path.join(root, 'src/upstream/profile-section'))}\n` +
+    `import { BrowserSidebarControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar'))}\n` +
     `import { useBrowserProfileGroups } from ${JSON.stringify(path.join(root, 'src/upstream/profile-groups'))}\n` + source
 }
 
@@ -131,20 +132,18 @@ export function GatewayProfileGroups(props: GatewayProfileGroupsProps) {
 `
   }
   source = replaceBrowserContract(source, [
+    ['  const order = useStore($gatewayGroupOrder)', "  const order = useStore($gatewayGroupOrder)\n  const presentationMode = useBrowserProfileGrouping()\n  const hiddenProfileGroups = useHiddenProfileGroups()"],
+    ['if (nested || embedded || !owner) {', 'if (nested || embedded || !owner || presentationMode) {'],
+    ['  const ordered = [...sections].sort((a, b) => {', "  const ordered = sections.filter(group => embedded || !presentationMode || !hiddenProfileGroups.includes(group.profile ?? '')).sort((a, b) => {"],
     ['  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA)', "  const items = useContributions(SIDEBAR_PROFILE_GROUP_HEADER_AREA).filter(item => item.id !== 'hermes-bots:screen-portal')"]
   ])
-  const gatewaySections = source.indexOf('  const registry = useStore($connectionsRegistry)\n  const order = useStore($gatewayGroupOrder)')
-  const groupSorting = source.indexOf('  const ordered = [...sections].sort', gatewaySections)
-  if (gatewaySections < 0 || groupSorting < 0) throw new Error('Browser profile group ordering contract changed')
-  source = source.slice(0, gatewaySections) + `  const order = useStore($gatewayGroupOrder)
-  const sections = [...groups.filter(group => group.connectionId), ...groups.filter(group => !group.connectionId)]
-
-` + source.slice(groupSorting)
   source = projectRendererController(source, 'GatewayProfileGroups', `<BrowserProfileGroupsControllerSurface
-    model={{ ids, ordered, sensors }}
-    renderGroup={(group, index, onMove) => <GatewayProfileGroup key={group.id} embedded={embedded}
+    model={{ ids, ordered, gatewayProfiles, sensors }}
+    renderGroup={(group, index, onMove, children) => <GatewayProfileGroup key={group.id} embedded={embedded}
       first={index === 0} last={index === ordered.length - 1} group={group} onMove={onMove}
-      onNewSessionSplit={onNewSessionSplit} renderRows={renderRows} />}
+      onNewSessionSplit={onNewSessionSplit} renderRows={renderRows}>{children}</GatewayProfileGroup>}
+    renderNested={groups => <GatewayProfileGroups groups={oneGroupPerProfile(groups).map(profile => ({ ...profile, label: profile.profile! }))}
+      nested onNewSessionSplit={onNewSessionSplit} renderRows={renderRows} sensors={sensors} />}
   />`)
   source = projectRendererController(source, 'GatewayProfileGroup', `<BrowserProfileGroupControllerSurface model={{
     group, label, open, embedded, first, last, alias: aliases[group.id], sortable, usage,
@@ -152,7 +151,9 @@ export function GatewayProfileGroups(props: GatewayProfileGroupsProps) {
     sessions, renderRows, children,
     contribution: group.profile && !embedded ? <ProfileGroupHeaderSlot connectionId={group.connectionId ?? null} profile={group.profile} /> : null
   }} />`, ['[visibleCount, setVisibleCount]', 'hiddenCount'])
-  return `import { BrowserProfileGroupsControllerSurface, BrowserProfileGroupControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar-profile'))}\n` + source
+  return `import { BrowserProfileGroupsControllerSurface, BrowserProfileGroupControllerSurface } from ${JSON.stringify(path.join(root, 'src/upstream/sidebar-profile'))}\n` +
+    `import { useHiddenProfileGroups } from ${JSON.stringify(path.join(root, 'src/experience/profile-list-visibility'))}\n` +
+    `import { useBrowserProfileGrouping } from ${JSON.stringify(path.join(root, 'src/upstream/profile-section'))}\n` + source
 }
 
 export function useBrowserWorkspaceController(source: string, root: string): string {

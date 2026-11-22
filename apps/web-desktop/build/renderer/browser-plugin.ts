@@ -159,8 +159,9 @@ import {
   closeBrowserWorkspacePanels,
   exportBrowserStatusbarItem,
   useBrowserProjectDeleteOwner,
+  filterBrowserSessionMenu,
   useBrowserSessionReordering,
-  simplifyBrowserSidebarStore,
+  enableBrowserUngroupedSessions,
   disableBrowserSessionTabs,
   disableBrowserSessionTileMirrors,
   useBrowserSessionSelection,
@@ -184,8 +185,9 @@ export {
   closeBrowserWorkspacePanels,
   exportBrowserStatusbarItem,
   useBrowserProjectDeleteOwner,
+  filterBrowserSessionMenu,
   useBrowserSessionReordering,
-  simplifyBrowserSidebarStore,
+  enableBrowserUngroupedSessions,
   disableBrowserSessionTabs,
   disableBrowserSessionTileMirrors,
   useBrowserSessionSelection,
@@ -336,6 +338,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserBotsPullRefresh: source => useBrowserBotsPullRefresh(source, root),
     useBrowserMicrophoneCapture, useBrowserComposerLayoutWidth,
     guardBrowserVoiceLifetime: source => guardBrowserVoiceLifetime(source, root),
+    filterBrowserSessionMenu: source => filterBrowserSessionMenu(source, root),
     showHiddenBotsInBrowserRoster, disableBrowserSessionTabs, disableBrowserOnboardingTips, disableBrowserSessionTileMirrors,
     disableBrowserSessionOpenActions: source => disableBrowserSessionOpenActions(source, root),
     filterBrowserKeybinds,
@@ -358,7 +361,8 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserCronController: source => useBrowserCronController(source, root),
     sessionReorderingGroups: source => source.includes('useBrowserProfileGroupPresentation')
       ? source : useBrowserSessionReordering(source, 'groups'),
-    ungroupedStore: simplifyBrowserSidebarStore,
+    ungroupedStore: source => enableBrowserUngroupedSessions(source, 'store'),
+    ungroupedMenu: source => enableBrowserUngroupedSessions(source, 'menu'),
   }
   let output = code
   for (const handler of entry.handlers || []) {
