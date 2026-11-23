@@ -190,7 +190,7 @@ export function settingsPageDefinition(id: string): SettingsPageDefinition | und
 
 const settingsPageDescriptions: Readonly<Record<string, string>> = {
   'config:appearance': 'Adjust text size, layout, and message display.',
-  'config:chat-panel': 'Choose which tabs and sections appear in the chat panel.',
+  'config:chat-panel': 'Choose which sections appear in the chat panel.',
   'config:browser-theme': 'Choose a theme and color mode.',
   notifications: 'Choose which browser alerts to receive.',
   'config:browser-sounds': 'Choose a sound for completed replies.',

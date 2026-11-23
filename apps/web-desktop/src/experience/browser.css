@@ -92,15 +92,6 @@
 .browser-navigation-resizer::after { position:absolute; inset:0 auto 0 50%; width:1px; transform:translateX(-50%); background:transparent; content:""; }
 .browser-navigation-resizer:hover::after,.browser-navigation-resizer:focus-visible::after,.browser-navigation-resizer:active::after { width:.2rem; border-radius:999px; background:var(--web-accent); box-shadow:0 0 .45rem color-mix(in srgb,var(--web-accent) 70%,transparent); }
 .browser-navigation-resizer:focus-visible { outline:none; }
-.browser-navigation-tabs { display:flex; flex:1; gap:0; min-width:0; overflow-x:auto; background:var(--web-sidebar); scrollbar-width:none; }
-.browser-navigation-tabs::-webkit-scrollbar { display:none; }
-.browser-navigation-tabs button { position:relative; flex:0 0 auto; min-width:0; max-width:12rem; min-height:var(--web-toolbar-height); border:0; border-radius:0; padding:0 var(--web-space-3); color:var(--web-text-subtle); background:var(--web-sidebar); font-size:.625rem; font-weight:500; letter-spacing:.025em; text-transform:uppercase; cursor:pointer; }
-.browser-navigation-tabs button[draggable="true"] { cursor:grab; }
-.browser-navigation-tabs button[data-dragging="true"] { opacity:.5; cursor:grabbing; }
-.browser-navigation-tabs button + button::before { position:absolute; inset-block:.65rem; left:0; width:1px; background:color-mix(in srgb,var(--web-text) 14%,transparent); content:""; }
-.browser-navigation-tabs button:hover { color:var(--web-text); background:var(--web-hover); }
-.browser-navigation-tabs button:focus-visible { color:var(--web-text); background:var(--web-hover); }
-.browser-navigation-tabs button[aria-selected="true"] { color:var(--web-text); background:var(--web-sidebar); box-shadow:inset 0 -2px 0 var(--web-accent); }
 .browser-navigation-body { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; background:var(--web-sidebar); }
 /* Keep the disclosure in the search/navigation flow so expansion reserves space. */
 .browser-navigation-section { width:calc(100% + 1rem); margin:1px -.5rem 0; }
@@ -194,8 +185,16 @@
   padding-inline:var(--web-space-3);
   border-block-end:1px solid var(--web-border-subtle);
 }
+.browser-sidebar-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-shrink:0;
+  min-height:var(--web-toolbar-height);
+  padding-inline:var(--web-space-3);
+}
 /* Navigation and search controls share the same icon and label spacing. */
-:is(.browser-mobile-titlebar, .browser-sessions-pane) .browser-sidebar-control {
+:is(.browser-mobile-titlebar, .browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control {
   --web-icon-size:var(--web-icon-small);
   box-sizing:border-box;
   display:flex;
@@ -214,15 +213,15 @@
   line-height:var(--web-line-compact);
   text-align:start;
 }
-:is(.browser-mobile-titlebar, .browser-sessions-pane) .browser-sidebar-control:is(:hover,:focus-within) { background:var(--web-hover); color:var(--web-text); }
-:is(.browser-mobile-titlebar, .browser-sessions-pane) .browser-sidebar-control[aria-current="page"] { background:var(--web-active); color:var(--web-text); }
-:is(.browser-mobile-titlebar, .browser-sessions-pane) .browser-sidebar-control > :is(.codicon, svg) {
+:is(.browser-mobile-titlebar, .browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control:is(:hover,:focus-within) { background:var(--web-hover); color:var(--web-text); }
+:is(.browser-mobile-titlebar, .browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control:is([aria-current="page"],[aria-pressed="true"]) { background:var(--web-active); color:var(--web-text); }
+:is(.browser-mobile-titlebar, .browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control > :is(.codicon, svg) {
   width:var(--web-icon-size);
   height:var(--web-icon-size);
   flex:0 0 var(--web-icon-size);
   color:color-mix(in srgb,currentColor 72%,transparent);
 }
-:is(.browser-mobile-titlebar, .browser-sessions-pane) .browser-sidebar-control > .codicon {
+:is(.browser-mobile-titlebar, .browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control > .codicon {
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -344,7 +343,6 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
     still need their safe area, but the native drawer must match the chat top. */
  .browser-shell[data-android-app] .browser-navigation { padding-top:0; }
  .browser-navigation.is-open { transform:none; opacity:1; visibility:visible; }
- .browser-navigation-back:hover,.browser-navigation-back:focus-visible { background:var(--web-hover); color:var(--web-text); }
  .browser-navigation-resizer { display:none; }
  .browser-scrim { display:block; position:absolute; inset:0; inset-inline-start:var(--browser-app-navigation-width); z-index:60; padding:0; border:0; background:#0004; cursor:default; }
 }
@@ -353,8 +351,7 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-main { --chat-toolbar-safe-top:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1)); }
  /* The Android WebView already starts below the system status bar. */
  .browser-shell[data-android-app] .browser-main { --chat-toolbar-safe-top:0px; }
- .browser-navigation-heading { min-height:var(--web-touch-target); }
- .browser-navigation-tabs button { min-width:var(--web-touch-target); min-height:var(--web-touch-target); font-size:var(--web-text-caption); }
+ .browser-sidebar-header .browser-sidebar-control { min-height:var(--web-touch-target); }
  .browser-navigation .browser-profile-actions-trigger { width:var(--web-touch-target); height:var(--web-touch-target); flex-basis:var(--web-touch-target); }
  .browser-navigation-body [data-sidebar="menu-item"],.browser-navigation-body [data-sidebar="menu-button"],.browser-navigation-section-trigger,.browser-navigation-section-list button,.browser-sessions-pane [data-browser-section-label],.browser-sessions-pane button[data-slot="row-button"] { min-height:var(--web-touch-min); height:auto; }
  .browser-sessions-pane [data-browser-section-header] { min-height:var(--web-touch-min); align-items:center; }
@@ -448,8 +445,6 @@ html[data-experience="browser"] span:has(> img[src*="nous-girl.jpg"]) { display:
 .browser-action-error { position:fixed; z-index:200; top:1rem; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:var(--web-space-4); max-width:calc(100% - 2rem); padding:var(--web-space-3) var(--web-space-4); border:1px solid var(--web-border); border-radius:var(--web-radius-panel); background:var(--web-surface); color:var(--web-text); box-shadow:var(--web-shadow-panel); }
 .browser-action-error button { flex-shrink:0; padding:var(--web-space-1) var(--web-space-2); border:1px solid var(--web-border); border-radius:var(--web-radius-control); background:transparent; color:inherit; cursor:pointer; }
 
-.browser-navigation-heading { display:flex; align-items:center; flex-shrink:0; }
-.browser-navigation .browser-navigation-back { display:none; }
 
 .browser-bots-heading { display:flex; align-items:center; justify-content:space-between; gap:var(--web-space-2); padding:var(--web-space-2) var(--web-space-2) var(--web-space-1); }
 .browser-bots-heading > span { font-size:var(--web-text-label); font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--web-text-subtle); }

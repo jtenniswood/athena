@@ -53,7 +53,7 @@ test('Android Back shows chat history after cold and warm notification opens', a
     const first = '#/preview-research?profile=research&androidNotification=1'
     const second = '#/preview-writer?profile=writer&androidNotification=1'
     const nativeBack = () => page.evaluate(() => window.dispatchEvent(new Event('athena:native-back', { cancelable: true })))
-    const history = page.getByRole('tabpanel', { name: 'sessions' })
+    const history = page.locator('.browser-sessions-pane')
     await page.goto(origin + '/' + first)
     await expect(page.getByText('I can help you investigate a question', { exact: false })).toBeVisible()
     expect(await nativeBack()).toBe(false)

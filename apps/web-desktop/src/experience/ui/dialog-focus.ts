@@ -19,7 +19,7 @@ export function useBrowserDialogReturnFocus(open: boolean) {
   const origin = useRef<{ control: HTMLElement | null; fallback: HTMLElement | null }>({ control: null, fallback: null })
   // Read before descendant inputs autofocus, then retain only committed openings.
   const control = document.activeElement instanceof HTMLElement ? document.activeElement : null
-  const fallback = control?.closest('.browser-navigation')?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') ?? null
+  const fallback = control?.closest('.browser-navigation')?.querySelector<HTMLElement>('#browser-bots-toggle') ?? null
   useLayoutEffect(() => { if (open) origin.current = { control, fallback } }, [open])
   return (event: Event) => {
     event.preventDefault()

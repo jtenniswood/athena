@@ -1,13 +1,11 @@
-import { useEffect, useRef, useState, type PointerEvent, type RefObject, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent, type RefObject } from 'react'
 import { useBrowserSidebarSections } from './sidebar-sections'
 import { useBrowserEngine } from './engine'
-import { Codicon } from '../upstream/browser-api'
-import { BrowserToolbarButton } from './ui/toolbar-button'
 import { useCompactBrowser, useMobileBrowser } from './ui/use-compact-browser'
 import { KANBAN_ROUTE } from './tool-routes'
 import { useMobileChatHistory } from './mobile-chat-history'
 import { $conversationOpenRequest, $preserveNavigationRequest } from './conversation-navigation'
-import { clampNavigationWidth, DEFAULT_NAVIGATION_WIDTH, MAX_NAVIGATION_WIDTH, MIN_NAVIGATION_WIDTH, NAVIGATION_TAB_LABELS, NAVIGATION_TABS, readNavigationTab, readNavigationWidth, readVisibleNavigationTabs, type NavigationTab, writeBrowserPreference } from './browser-preferences'
+import { clampNavigationWidth, DEFAULT_NAVIGATION_WIDTH, MAX_NAVIGATION_WIDTH, MIN_NAVIGATION_WIDTH, readBotsOpen, readNavigationWidth, writeBrowserPreference } from './browser-preferences'
 
 /** Browser navigation preferences and focus never own the conversation state. */
 export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, archiveToasts }: {
@@ -28,19 +26,14 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, 
   const [drawerRequested, setDrawerOpen] = useState(mobile)
   const drawerOpen = drawerRequested && !kanban
   const [width, setWidth] = useState(readNavigationWidth)
-  const [tab, setTab] = useState<NavigationTab>(readNavigationTab)
-  const [visibleTabs, setVisibleTabs] = useState<NavigationTab[]>(readVisibleNavigationTabs)
+  const [botsOpen, setBotsOpen] = useState(readBotsOpen)
   const [searchFocusRequest, setSearchFocusRequest] = useState(0)
   const previous = useRef({ selectionKey, path })
   const focusDrawerOnOpen = useRef(false)
   const preserveNextSelection = useRef(false)
   const preserveTimeout = useRef(0)
-  const selectSessionsTab = () => {
-    setVisibleTabs(current => current.includes('sessions') ? current : ['sessions', ...current])
-    setTab('sessions')
-  }
   const showHistory = () => {
-    selectSessionsTab()
+    setBotsOpen(false)
     if (compact) {
       focusDrawerOnOpen.current = true
       setDrawerOpen(true)
@@ -63,7 +56,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, 
     toggleDrawer,
     focusSearch: () => {
       if (coversWorkspace(path)) return
-      selectSessionsTab()
+      setBotsOpen(false)
       if (compact) setDrawerOpen(true)
       setSearchFocusRequest(value => value + 1)
     }
@@ -98,17 +91,13 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, 
     }
     previous.current = { selectionKey, path }
   }, [selectionKey, path, mobile])
-  useEffect(() => { writeBrowserPreference('activeTab', tab) }, [tab])
-  useEffect(() => { writeBrowserPreference('navigationTabs', JSON.stringify(visibleTabs)) }, [visibleTabs])
-  useEffect(() => { if (!visibleTabs.includes(tab)) setTab(visibleTabs[0]) }, [tab, visibleTabs])
+  useEffect(() => { writeBrowserPreference('activeTab', botsOpen ? 'bots' : 'sessions') }, [botsOpen])
   useEffect(() => { writeBrowserPreference('navigationWidth', String(width)) }, [width])
   useEffect(() => {
     if (!drawerOpen) { focusDrawerOnOpen.current = false; return }
     if (focusDrawerOnOpen.current) {
       focusDrawerOnOpen.current = false
-      const target = drawer.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
-        ?? drawer.current
-      target?.focus({ preventScroll: true })
+      drawer.current?.focus({ preventScroll: true })
     }
     const keydown = (event: KeyboardEvent) => {
       // Portaled controls own focus and Escape until they are dismissed.
@@ -143,73 +132,15 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, 
     }
   })
   return {
-    sections, actionsTrigger, drawer, compact, mobile, drawerOpen, width, setWidth, tab, setTab, visibleTabs, backToHistory, showHistory, searchFocusRequest,
+    sections, actionsTrigger, drawer, compact, mobile, drawerOpen, width, setWidth, botsOpen, toggleBots: () => setBotsOpen(open => !open), backToHistory, showHistory, searchFocusRequest,
     open: compact ? drawerOpen : sidebar.open,
     toggle: compact ? toggleDrawer : () => sidebar.setOpen(!sidebar.open),
     closeDrawer: () => setDrawerOpen(false),
-    dismissDrawer,
-    toggleTab(value: NavigationTab) {
-      setVisibleTabs(current => {
-        if (current.includes(value)) return current.length === 1 ? current : current.filter(item => item !== value)
-        return [...current, value]
-      })
-    },
-    reorderTabs(source: NavigationTab, target: NavigationTab, after: boolean) {
-      setVisibleTabs(current => {
-        if (source === target) return current
-        const next = current.filter(value => value !== source)
-        const targetIndex = next.indexOf(target)
-        if (targetIndex < 0) return current
-        next.splice(targetIndex + (after ? 1 : 0), 0, source)
-        return next
-      })
-    }
+    dismissDrawer
   }
 }
 
 type Navigation = ReturnType<typeof useBrowserNavigation>
-
-export function BrowserNavigationTabs({ navigation }: { navigation: Navigation }) {
-  const [draggedTab, setDraggedTab] = useState<NavigationTab | null>(null)
-  const { actionsTrigger, tab, setTab, visibleTabs } = navigation
-  const showActions = (event: MouseEvent<HTMLElement>) => {
-    event.preventDefault()
-    event.stopPropagation()
-    actionsTrigger.current?.click()
-  }
-  if (visibleTabs.length === 1 && !(navigation.compact && !navigation.mobile)) return null
-  return <>
-    <div className="browser-navigation-heading">
-      {visibleTabs.length > 1 && <div className="browser-navigation-tabs" role="tablist" aria-label="Navigation" onContextMenu={showActions}>
-        {visibleTabs.map((value, index) => <button key={value} type="button" role="tab" tabIndex={tab === value ? 0 : -1} aria-selected={tab === value} draggable={visibleTabs.length > 1} data-dragging={draggedTab === value || undefined} onDragStart={event => {
-          setDraggedTab(value)
-          event.dataTransfer.effectAllowed = 'move'
-          event.dataTransfer.setData('text/plain', value)
-        }} onDragOver={event => {
-          if (!draggedTab || draggedTab === value) return
-          event.preventDefault()
-          event.dataTransfer.dropEffect = 'move'
-        }} onDrop={event => {
-          event.preventDefault()
-          const source = draggedTab || NAVIGATION_TABS.find(item => item === event.dataTransfer.getData('text/plain'))
-          if (!source) return
-          const bounds = event.currentTarget.getBoundingClientRect()
-          navigation.reorderTabs(source, value, event.clientX >= bounds.left + bounds.width / 2)
-          setDraggedTab(null)
-        }} onDragEnd={() => setDraggedTab(null)} onKeyDown={event => {
-          const next = event.key === 'ArrowRight' ? visibleTabs[(index + 1) % visibleTabs.length] : event.key === 'ArrowLeft' ? visibleTabs[(index + visibleTabs.length - 1) % visibleTabs.length] : null
-          if (next) {
-            event.preventDefault()
-            event.stopPropagation()
-            setTab(next)
-            ;(event.currentTarget.parentElement?.children[visibleTabs.indexOf(next)] as HTMLElement)?.focus()
-          }
-        }} onClick={() => setTab(value)}>{NAVIGATION_TAB_LABELS[value]}</button>)}
-      </div>}
-      {navigation.compact && !navigation.mobile && <BrowserToolbarButton tooltip="Close navigation" aria-label="Close navigation" onClick={navigation.dismissDrawer}><Codicon name="close" /></BrowserToolbarButton>}
-    </div>
-  </>
-}
 
 export function BrowserNavigationResizer({ navigation }: { navigation: Navigation }) {
   const resize = useRef<{ startX: number; startWidth: number; scale: number } | null>(null)
