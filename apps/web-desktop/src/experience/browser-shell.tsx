@@ -6,7 +6,7 @@ import { BrowserProfileNavigation } from './profile-navigation'
 import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
 import { KANBAN_ROUTE } from './tool-routes'
-import { KanbanIcon } from './ui/kanban-icon'
+import { MaterialIcon } from '../overrides/material-icons/material-icon'
 import { AppSettingsRegistration, SettingsLink } from './settings-menu'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { BrowserNavigationTabs, BrowserNavigationResizer, useBrowserNavigation } from './navigation'
@@ -95,7 +95,7 @@ function BrowserLayout() {
           <Codicon name="comment" />
         </BrowserToolbarButton> : <BrowserProfileNavigation vertical active={chatSelected} onActivate={openProfileChat} />}
         <BrowserToolbarButton tooltip={KANBAN_ROUTE.label} aria-label={KANBAN_ROUTE.label} aria-current={kanban ? 'page' : undefined} onClick={() => { if (!kanban) openRoute(KANBAN_ROUTE.path) }}>
-          <KanbanIcon />
+          <MaterialIcon symbol="view_kanban" />
         </BrowserToolbarButton>
         <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} active={settings} />
       </nav>}
@@ -104,7 +104,7 @@ function BrowserLayout() {
         {navigation.mobile && <nav className="browser-mobile-titlebar" aria-label="App shortcuts">
           <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" />
           <BrowserToolbarButton className="browser-sidebar-control" onClick={() => openRoute(KANBAN_ROUTE.path)}>
-            <KanbanIcon /><span>{KANBAN_ROUTE.label}</span>
+            <MaterialIcon symbol="view_kanban" /><span>{KANBAN_ROUTE.label}</span>
           </BrowserToolbarButton>
           <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} className="browser-sidebar-control" row />
         </nav>}
