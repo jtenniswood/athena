@@ -4273,6 +4273,9 @@ for (const width of [1440, 390]) {
 test('profile menus hide groups and filters restore every profile without losing the draft', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
   await page.route('**/api/athena/preferences', route => route.abort())
+  await page.addInitScript(() => {
+    localStorage.setItem('hermes-web.browser.hermes.desktop.sidebarProfileFilter', JSON.stringify(['research']))
+  })
   await open(page, 'preview-week', { defaultGrouping: true })
   const draft = 'Keep this draft while hiding profiles'
   await editor(page).fill(draft)
@@ -4281,8 +4284,14 @@ test('profile menus hide groups and filters restore every profile without losing
   const group = profile => groups.filter({ has: page.locator(`[data-browser-profile-picture="${profile}"]`) })
   const restore = page.getByRole('menuitem', { name: 'Restore all profiles', exact: true })
   await expect(groups).toHaveCount(3)
+  await expect(group('default').getByRole('button', { name: 'Plan a calmer working week', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Filters', exact: true }).click()
   await expect(restore).toBeDisabled()
+  await expect(page.getByRole('menuitem', { name: 'Profile', exact: true })).toHaveCount(0)
+  await page.getByRole('menuitem', { name: 'Profiles', exact: true }).hover()
+  await expect(page.getByRole('menuitem', { name: 'New profile', exact: true })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: /^Import profile/ })).toBeVisible()
+  await page.keyboard.press('Escape')
   await page.keyboard.press('Escape')
   const route = page.url()
   await group('default').getByRole('button', { name: /^Group actions:/ }).click()
