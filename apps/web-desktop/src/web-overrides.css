@@ -42,13 +42,6 @@ body,
   width: 100% !important;
 }
 
-/* Keep the new-session control on the right. Sidebar group actions share
-   hover, keyboard focus, open-menu, and touch visibility in browser.css. */
-[data-browser-project-controls]:has(button:has(.codicon-kebab-vertical)):has(button:has(.codicon-add)) {
-  position: relative;
-  inset-inline-end: -1.25rem;
-}
-
 [data-sessions-project][data-session-drop-active] {
   background: color-mix(in srgb, var(--ui-accent) 12%, transparent);
   outline: 2px solid var(--ui-accent);

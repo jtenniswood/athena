@@ -80,7 +80,7 @@ export function BrowserProfileGroupControllerSurface({ model }: { model: Profile
   const label = model.alias || browserProfile?.label || model.label
   const figures = useBrowserSidebarFigures(model.usage ? { tokens: model.usage.tokens, costUsd: model.usage.cost_usd } : undefined)
   const toggle = () => toggleGatewayGroup(group.id)
-  const actions = <div className="flex items-center">
+  const actions = <div className="flex items-center gap-1">
     <DropdownMenu><DropdownMenuTrigger asChild><Button aria-label={`${copy.actions}: ${label}`} size="icon-xs" variant="ghost"><Codicon name="ellipsis" /></Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {browserProfile && group.profile && !model.embedded && <BrowserHideProfileItem profile={group.profile} />}
