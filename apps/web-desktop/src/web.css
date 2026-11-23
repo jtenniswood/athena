@@ -9,10 +9,17 @@
 @source "./";
 @import "../../desktop/src/styles.css";
 
-/* Inset the row fill while keeping the title aligned with its section. */
 .browser-sessions-pane [data-sessions-mode] [data-browser-section-header] {
   padding-inline: .625rem;
 }
+/* Line up the heading with profile names when avatars have compact targets. */
+@media (not (pointer: coarse)) or ((width >= 48rem) and (height > 27rem)) {
+  .browser-sessions-pane .browser-combined-profiles-section > [data-browser-section-header] {
+    padding-inline-start: .375rem;
+  }
+}
+
+/* Inset the row fill while keeping the title aligned with its section. */
 .browser-sessions-pane [data-web-session-id] {
   width: calc(100% - var(--web-space-2));
   min-width: 0;
