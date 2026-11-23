@@ -14,7 +14,7 @@ export function BrowserNewChatProfileSelector({ iconOnly }: { iconOnly: boolean 
         {selected ? <BotFace color={avatarColor(selected.appearance.color, selected.botName)} name={selected.botName} image={selected.appearance.image} shape={selected.appearance.shape} size={20} />
           : iconOnly && <Codicon name="account" />}
         {!iconOnly && <>
-          <span>{selected?.label || draft.profile}</span>
+          <span className="browser-new-chat-profile-label">{selected?.label || draft.profile}</span>
           <Codicon name="chevron-down" />
         </>}
       </BrowserToolbarButton>

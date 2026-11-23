@@ -41,8 +41,9 @@ for (const width of [1440, 390]) {
       if (width === 390) {
         await editor.fill(originalDraft)
         await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+        const shortcuts = page.getByRole('navigation', { name: 'App shortcuts', exact: true })
+        await expect(shortcuts.getByRole('button', { name: 'Settings', exact: true })).toBeVisible()
         const footer = page.locator('[data-slot="sidebar-footer"]')
-        await expect(footer.getByRole('button', { name: 'Settings', exact: true })).toBeVisible()
         await expect(footer.getByRole('textbox', { name: 'Search', exact: true })).toBeHidden()
         await expect(footer.getByRole('button', { name: 'New chat', exact: true })).toHaveCount(0)
         await page.getByRole('button', { name: 'New session in Hermes', exact: true }).tap()
@@ -52,6 +53,18 @@ for (const width of [1440, 390]) {
       }
       await expect(selector).toBeVisible()
       await expect(selector).toHaveAccessibleName('Chat profile: Hermes')
+      if (width !== 390) {
+        await expect(selector).toHaveText('Hermes')
+        const contentFits = await selector.evaluate(button => {
+          const bounds = button.getBoundingClientRect()
+          const label = button.querySelector('.browser-new-chat-profile-label')
+          return label && label.clientWidth >= label.scrollWidth && [...button.children].every(child => {
+            const box = child.getBoundingClientRect()
+            return box.left >= bounds.left && box.right <= bounds.right
+          })
+        })
+        expect(contentFits).toBe(true)
+      }
       await expect(editor).toBeEmpty()
       const text = `Keep my draft while choosing its profile at ${width}px`
       await editor.fill(text)
@@ -74,6 +87,7 @@ for (const width of [1440, 390]) {
       expect(prompts[0]).toMatchObject({ text, profile: 'research' })
       await expect(page.locator('[data-slot="aui_user-message-root"]').last()).toContainText(text)
       await expect(selector).toHaveCount(0)
+      await expect(page.locator('[data-slot="aui_assistant-message-root"]').last()).toContainText('No external model was called.')
       await page.reload()
       if (width === 390) await page.getByRole('button', { name: text.slice(0, 48), exact: true }).first().click()
       await expect(editor).toBeVisible({ timeout: 30000 })
