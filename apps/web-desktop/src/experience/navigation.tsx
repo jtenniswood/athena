@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode, type PointerEvent, type RefObject, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent, type RefObject, type MouseEvent } from 'react'
 import { useBrowserSidebarSections } from './sidebar-sections'
 import { useBrowserEngine } from './engine'
 import { Codicon } from '../upstream/browser-api'
@@ -169,7 +169,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, 
 
 type Navigation = ReturnType<typeof useBrowserNavigation>
 
-export function BrowserNavigationTabs({ navigation, actions }: { navigation: Navigation; actions?: ReactNode }) {
+export function BrowserNavigationTabs({ navigation }: { navigation: Navigation }) {
   const [draggedTab, setDraggedTab] = useState<NavigationTab | null>(null)
   const { actionsTrigger, tab, setTab, visibleTabs } = navigation
   const showActions = (event: MouseEvent<HTMLElement>) => {
@@ -177,7 +177,7 @@ export function BrowserNavigationTabs({ navigation, actions }: { navigation: Nav
     event.stopPropagation()
     actionsTrigger.current?.click()
   }
-  if (visibleTabs.length === 1 && !actions && !(navigation.compact && !navigation.mobile)) return null
+  if (visibleTabs.length === 1 && !(navigation.compact && !navigation.mobile)) return null
   return <>
     <div className="browser-navigation-heading">
       {visibleTabs.length > 1 && <div className="browser-navigation-tabs" role="tablist" aria-label="Navigation" onContextMenu={showActions}>
@@ -206,7 +206,6 @@ export function BrowserNavigationTabs({ navigation, actions }: { navigation: Nav
           }
         }} onClick={() => setTab(value)}>{NAVIGATION_TAB_LABELS[value]}</button>)}
       </div>}
-      {actions}
       {navigation.compact && !navigation.mobile && <BrowserToolbarButton tooltip="Close navigation" aria-label="Close navigation" onClick={navigation.dismissDrawer}><Codicon name="close" /></BrowserToolbarButton>}
     </div>
   </>
