@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type DragEvent as ReactDragEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type DragEvent as ReactDragEvent, type ReactNode } from 'react'
 import { BrowserActionSurface, type BrowserActionAnchor } from './ui/action-surface'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { useMobileBrowser } from './ui/use-compact-browser'
 import { BotFace, avatarColor, Codicon, Tooltip, TooltipContent, TooltipTrigger } from '../upstream/browser-api'
+import { useBrowserProfileMenuActions } from '../upstream/profile-layout-menu'
 import { useBrowserEngine } from './engine'
 import { readHideAllProfilesButton, readHiddenProfiles, writeBrowserPreference } from './browser-preferences'
 
@@ -15,11 +16,13 @@ function ProfileTip({ label, menuOpen, children }: { label: string; menuOpen: bo
   </Tooltip>
 }
 
-export function BrowserProfileNavigation({ hidden = false, vertical = false, active = true, onActivate }: {
+export function BrowserProfileNavigation({ hidden = false, vertical = false, combined, active = true, onActivate, onChat }: {
   hidden?: boolean
   vertical?: boolean
+  combined: boolean
   active?: boolean
   onActivate?: (profile: string | null) => void
+  onChat?: () => void
 }) {
   const engine = useBrowserEngine()
   const BrowserProfileEditor = engine.surfaces.ProfileEditor
@@ -27,6 +30,17 @@ export function BrowserProfileNavigation({ hidden = false, vertical = false, act
   const compact = useMobileBrowser()
   const actionsTrigger = useRef<HTMLButtonElement>(null), draggedProfile = useRef<string | null>(null)
   const profileRail = useRef<HTMLDivElement>(null)
+  const chatTrigger = useRef<HTMLButtonElement>(null)
+  const focusAfterLayoutChange = useRef(false)
+  const profileActions = useBrowserProfileMenuActions(combined, () => { focusAfterLayoutChange.current = true })
+  useLayoutEffect(() => {
+    if (!focusAfterLayoutChange.current) return
+    focusAfterLayoutChange.current = false
+    const rail = profileRail.current
+    const target = !vertical ? actionsTrigger.current : combined ? chatTrigger.current
+      : rail?.querySelector<HTMLButtonElement>('button[aria-pressed="true"]') ?? rail?.querySelector('button')
+    target?.focus({ preventScroll: true })
+  }, [combined, vertical])
   const [draggingProfile, setDraggingProfile] = useState<string | null>(null)
   const [dropTargetProfile, setDropTargetProfile] = useState<{ key: string; after: boolean } | null>(null)
   const [hiddenProfiles, setHiddenProfiles] = useState<string[]>(readHiddenProfiles)
@@ -40,17 +54,20 @@ export function BrowserProfileNavigation({ hidden = false, vertical = false, act
   useEffect(() => { if (hidden) setProfileContextMenuPosition(null) }, [hidden])
   useEffect(() => { writeBrowserPreference('hiddenProfiles', JSON.stringify(hiddenProfiles)) }, [hiddenProfiles])
   useEffect(() => { writeBrowserPreference('hideAllProfilesButton', String(hideAllProfilesButton)) }, [hideAllProfilesButton])
-  const openProfileContextMenu = (event: React.MouseEvent<HTMLElement>, profile: string | null = null) => {
+  const openProfileContextMenu = (event: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>, profile: string | null = null) => {
     event.preventDefault()
     event.stopPropagation()
     const bounds = event.currentTarget.getBoundingClientRect()
-    const atPointer = event.type === 'contextmenu' && (event.clientX !== 0 || event.clientY !== 0)
+    const atPointer = event.type === 'contextmenu' && 'clientX' in event && (event.clientX !== 0 || event.clientY !== 0)
     setProfileContextMenuPosition({
       x: atPointer ? event.clientX : bounds.left,
       y: atPointer ? event.clientY : bounds.bottom,
       returnFocus: event.currentTarget,
       profile
     })
+  }
+  const onProfileMenuKey = (event: React.KeyboardEvent<HTMLButtonElement>, profile: string | null = null) => {
+    if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) openProfileContextMenu(event, profile)
   }
   const activateProfile = onActivate ?? model.select
   const toggleProfile = (profileName: string) => {
@@ -110,27 +127,32 @@ export function BrowserProfileNavigation({ hidden = false, vertical = false, act
   const lastVisibleProfile = visibleProfileAvatars.at(-1)?.key
   const menuOpen = profileContextMenuPosition !== null
   return <>
-    <div className={vertical ? 'browser-profile-sidebar' : 'browser-profile-footer'} hidden={hidden}>
-      <div className="browser-profile-rail" ref={profileRail} tabIndex={vertical ? -1 : undefined} role="radiogroup" aria-label="Profiles" onContextMenu={event => openProfileContextMenu(event)} onDragOver={hoverProfileDrop} onDrop={reorderProfiles} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDropTargetProfile(null) }}>
-        {showAllProfiles && <ProfileTip menuOpen={menuOpen} label="All profiles"><button className="browser-profile-choice browser-profile-all" type="button" aria-label="All profiles" aria-pressed={active && model.all} onClick={() => activateProfile(null)} onContextMenu={event => openProfileContextMenu(event)}><Codicon name="symbol-misc" size="1rem" /></button></ProfileTip>}
-        {visibleFallback && <ProfileTip menuOpen={menuOpen} label={visibleFallback.label}><button className="browser-profile-choice" type="button" aria-label={visibleFallback.label} aria-pressed={active} onClick={() => activateProfile(model.active)} onContextMenu={event => openProfileContextMenu(event, model.active)}><BotFace color={avatarColor(visibleFallback.appearance.color, visibleFallback.botName)} name={visibleFallback.botName} image={visibleFallback.appearance.image} shape={visibleFallback.appearance.shape} size={28} /></button></ProfileTip>}
+    {vertical && combined ? <ProfileTip menuOpen={menuOpen} label="Chat">
+      <BrowserToolbarButton ref={chatTrigger} aria-label="Chat" aria-current={active ? 'page' : undefined}
+        aria-haspopup="menu" onClick={onChat} onContextMenu={event => openProfileContextMenu(event)} onKeyDown={event => onProfileMenuKey(event)}>
+        <Codicon name="comment" />
+      </BrowserToolbarButton>
+    </ProfileTip> : <div className={vertical ? 'browser-profile-sidebar' : 'browser-profile-footer'} hidden={hidden}>
+      {!combined && <div className="browser-profile-rail" ref={profileRail} tabIndex={vertical ? -1 : undefined} role="radiogroup" aria-label="Profiles" onContextMenu={event => openProfileContextMenu(event)} onDragOver={hoverProfileDrop} onDrop={reorderProfiles} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDropTargetProfile(null) }}>
+        {showAllProfiles && <ProfileTip menuOpen={menuOpen} label="All profiles"><button className="browser-profile-choice browser-profile-all" type="button" aria-label="All profiles" aria-pressed={active && model.all} onClick={() => activateProfile(null)} onContextMenu={event => openProfileContextMenu(event)} onKeyDown={event => onProfileMenuKey(event)}><Codicon name="symbol-misc" size="1rem" /></button></ProfileTip>}
+        {visibleFallback && <ProfileTip menuOpen={menuOpen} label={visibleFallback.label}><button className="browser-profile-choice" type="button" aria-label={visibleFallback.label} aria-pressed={active} onClick={() => activateProfile(model.active)} onContextMenu={event => openProfileContextMenu(event, model.active)} onKeyDown={event => onProfileMenuKey(event, model.active)}><BotFace color={avatarColor(visibleFallback.appearance.color, visibleFallback.botName)} name={visibleFallback.botName} image={visibleFallback.appearance.image} shape={visibleFallback.appearance.shape} size={28} /></button></ProfileTip>}
         {visibleProfileAvatars.map(item => <div className="browser-profile-slot" key={item.key}>
           {draggingProfile && dropTargetProfile?.key === item.key && !dropTargetProfile.after && draggingProfile !== item.key && <span className="browser-profile-drop-indicator" aria-hidden="true" />}
-          <ProfileTip menuOpen={menuOpen} label={item.label}><button className={`browser-profile-choice${draggingProfile === item.key ? ' is-dragging' : ''}${dropTargetProfile?.key === item.key && draggingProfile !== item.key ? ' is-drop-target' : ''}`} draggable={!compact} data-profile-key={item.key} type="button" aria-label={item.label} aria-pressed={active && !model.all && model.active === item.key} onClick={() => activateProfile(item.key)} onContextMenu={event => openProfileContextMenu(event, item.key)} onDragStart={event => beginProfileDrag(event, item.key)} onDragEnd={finishProfileDrag}><BotFace color={avatarColor(item.appearance.color, item.botName)} image={item.appearance.image} name={item.botName} shape={item.appearance.shape} size={28} /></button></ProfileTip>
+          <ProfileTip menuOpen={menuOpen} label={item.label}><button className={`browser-profile-choice${draggingProfile === item.key ? ' is-dragging' : ''}${dropTargetProfile?.key === item.key && draggingProfile !== item.key ? ' is-drop-target' : ''}`} draggable={!compact} data-profile-key={item.key} type="button" aria-label={item.label} aria-pressed={active && !model.all && model.active === item.key} onClick={() => activateProfile(item.key)} onContextMenu={event => openProfileContextMenu(event, item.key)} onKeyDown={event => onProfileMenuKey(event, item.key)} onDragStart={event => beginProfileDrag(event, item.key)} onDragEnd={finishProfileDrag}><BotFace color={avatarColor(item.appearance.color, item.botName)} image={item.appearance.image} name={item.botName} shape={item.appearance.shape} size={28} /></button></ProfileTip>
         </div>)}
         {lastVisibleProfile && <div className="browser-profile-drop-end" aria-hidden="true">
           {draggingProfile && dropTargetProfile?.key === lastVisibleProfile && dropTargetProfile.after && draggingProfile !== lastVisibleProfile && <span className="browser-profile-drop-indicator" />}
         </div>}
 
-      </div>
-      {!vertical && <BrowserToolbarButton tooltip="Profile actions" ref={actionsTrigger} className="browser-profile-actions-trigger" type="button" aria-label="Profile actions" aria-haspopup={compact ? 'dialog' : 'menu'} aria-expanded={Boolean(profileContextMenuPosition)} onClick={event => openProfileContextMenu(event)}><Codicon name="ellipsis" size="1rem" /></BrowserToolbarButton>}
-    </div>
+      </div>}
+      {!vertical && <BrowserToolbarButton tooltip="Profile actions" ref={actionsTrigger} className="browser-profile-actions-trigger ml-auto" type="button" aria-label="Profile actions" aria-haspopup={compact ? 'dialog' : 'menu'} aria-expanded={Boolean(profileContextMenuPosition)} onClick={event => openProfileContextMenu(event)}><Codicon name="ellipsis" size="1rem" /></BrowserToolbarButton>}
+    </div>}
     <BrowserActionSurface
       title="Profile actions"
       hideTitle
       anchor={profileContextMenuPosition}
       compact={compact}
-      fallbackFocus={vertical ? profileRail : actionsTrigger}
+      fallbackFocus={vertical ? (combined ? chatTrigger : profileRail) : actionsTrigger}
       onClose={() => setProfileContextMenuPosition(null)}
       groups={[
         {
@@ -143,10 +165,11 @@ export function BrowserProfileNavigation({ hidden = false, vertical = false, act
             run: () => setEditingProfile(profileContextMenuPosition.profile)
           }] : []
         },
+        ...profileActions,
         {
           key: 'profiles',
           label: 'Profiles',
-          actions: [
+          actions: combined ? [] : [
             {
               key: 'all-profiles',
               label: 'All Profiles',

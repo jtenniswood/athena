@@ -59,11 +59,8 @@ test('a new app window keeps its explicit profile through first send and later r
     await expect(popup.locator('[data-slot="aui_user-message-root"]').last()).toContainText('A question from the routed window')
     expect(application.gateway.controls.calls.some(call => call.method === 'session.create' &&
       (call.params?.profile === 'research' || call.profile === 'research'))).toBe(true)
-    await popup.getByRole('button', { name: 'Filters', exact: true }).click()
-    await popup.getByRole('menuitem', { name: 'Profiles', exact: true }).hover()
+    await popup.getByRole('navigation', { name: 'App navigation', exact: true }).getByRole('button', { name: 'Chat', exact: true }).click({ button: 'right' })
     await popup.getByRole('menuitemradio', { name: 'Separate', exact: true }).click()
-    await popup.keyboard.press('Escape')
-    await popup.keyboard.press('Escape')
     await popup.locator('[data-profile-key="writer"]').click()
     await expect.poll(() => new URL(popup.url()).searchParams.get('profile')).toBe('writer')
     await popup.reload()

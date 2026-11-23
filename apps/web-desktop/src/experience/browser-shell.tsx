@@ -90,9 +90,7 @@ function BrowserLayout() {
     <div className="browser-workspace">
       {!navigation.mobile && <nav id="browser-app-navigation" className="browser-app-navigation" aria-label="App navigation" ref={rail}>
         <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" />
-        {presentationMode ? <BrowserToolbarButton tooltip="Chat" aria-label="Chat" aria-current={chatSelected ? 'page' : undefined} onClick={openChat}>
-          <Codicon name="comment" />
-        </BrowserToolbarButton> : <BrowserProfileNavigation vertical active={chatSelected} onActivate={openProfileChat} />}
+        <BrowserProfileNavigation vertical combined={presentationMode} active={chatSelected} onChat={openChat} onActivate={openProfileChat} />
         <BrowserToolbarButton tooltip={KANBAN_ROUTE.label} aria-label={KANBAN_ROUTE.label} aria-current={kanban ? 'page' : undefined} onClick={() => { if (!kanban) openRoute(KANBAN_ROUTE.path) }}>
           <Codicon name={KANBAN_ROUTE.icon} />
         </BrowserToolbarButton>
@@ -124,7 +122,7 @@ function BrowserLayout() {
           <p>{updateNotice.message}</p>
           {updateNotice.phase === 'available' && <button type="button" className="browser-update-panel-action" onClick={updateNotice.update}>Update</button>}
         </div>}
-        {navigation.mobile && !presentationMode && <BrowserProfileNavigation hidden={tab !== 'sessions'} />}
+        {navigation.mobile && <BrowserProfileNavigation combined={presentationMode} hidden={tab !== 'sessions'} />}
       </aside>
       {chatSelected && <BrowserNavigationResizer navigation={navigation} />}
       <main className="browser-main" ref={main} hidden={navigation.mobile && navigation.drawerOpen} inert={navigation.compact && !navigation.mobile && navigation.drawerOpen} tabIndex={-1} aria-label={inlineKanban ? KANBAN_ROUTE.label : 'Conversation and workspace'}>

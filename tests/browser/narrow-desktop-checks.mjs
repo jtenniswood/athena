@@ -78,11 +78,8 @@ export function narrowDesktopChecks(test, open) {
       await expect(editor).toHaveText('Keep my desktop draft through resizing')
       await toggle.click()
 
-      await page.getByRole('button', { name: 'Filters', exact: true }).click()
-      const parent = page.locator('[data-slot="dropdown-menu-content"]').last()
-      await parent.getByRole('menuitem', { name: 'Profiles', exact: true }).hover()
-      await expect(page.locator('[data-slot="dropdown-menu-sub-content"]')).toBeVisible()
-      await expect(parent).toBeVisible()
+      await rail.locator('.browser-profile-choice, button[aria-label="Chat"]').first().click({ button: 'right' })
+      await expect(page.getByRole('menu', { name: 'Profile actions', exact: true })).toBeVisible()
       await page.keyboard.press('Escape')
       await page.keyboard.press('Escape')
       await expect(navigation).toBeHidden()
