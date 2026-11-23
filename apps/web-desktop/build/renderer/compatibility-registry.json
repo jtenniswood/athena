@@ -2451,6 +2451,7 @@
     "sourceHash": "1b39f8ff9ba7c31199cc6572256c5c666ce8cdf6699f1db2b6fbbd26a2e069f3",
     "replacement": "src/upstream/browser-dialog.tsx",
     "importers": [
+      "app/profiles/create-profile-dialog.tsx",
       "plugins/hermes-bots/create-dialog.tsx",
       "plugins/hermes-bots/edit-profile-dialog.tsx",
       "plugins/hermes-bots/user-sections-ui.tsx",
