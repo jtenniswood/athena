@@ -12,11 +12,8 @@ export function BrowserNewChatProfileSelector({ iconOnly }: { iconOnly: boolean 
     <DropdownMenuTrigger asChild>
       <BrowserToolbarButton className={iconOnly ? undefined : 'browser-new-chat-profile'} aria-label={`Chat profile: ${selected?.label || draft.profile}`} tooltip="Choose a profile for this chat">
         {selected ? <BotFace color={avatarColor(selected.appearance.color, selected.botName)} name={selected.botName} image={selected.appearance.image} shape={selected.appearance.shape} size={20} />
-          : iconOnly && <Codicon name="account" />}
-        {!iconOnly && <>
-          <span className="browser-new-chat-profile-label">{selected?.label || draft.profile}</span>
-          <Codicon name="chevron-down" />
-        </>}
+          : <Codicon name="account" />}
+        {!iconOnly && <Codicon name="chevron-down" />}
       </BrowserToolbarButton>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" className="w-64 p-1">

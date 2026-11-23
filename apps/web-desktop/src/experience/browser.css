@@ -490,6 +490,4 @@ html[data-experience="browser"] span:has(> img[src*="nous-girl.jpg"]) { display:
 
 .browser-chat-toolbar [data-browser-toolbar-button], .browser-chat-toolbar .browser-approval-control > button { position:relative; }
 
-.browser-chat-toolbar .browser-actions > .browser-new-chat-profile { width:auto; flex:0 1 auto; max-width:min(16rem,50vw); min-width:0; gap:var(--web-space-2); padding:0 var(--web-space-2); color:var(--web-text-muted); font-size:var(--web-text-label); }
-.browser-new-chat-profile > :not(.browser-new-chat-profile-label) { flex-shrink:0; }
-.browser-new-chat-profile-label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.browser-chat-toolbar .browser-actions > .browser-new-chat-profile { width:auto; flex:none; gap:var(--web-space-2); padding:0 var(--web-space-2); color:var(--web-text-muted); }

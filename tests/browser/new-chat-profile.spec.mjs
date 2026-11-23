@@ -53,12 +53,11 @@ for (const width of [1440, 390]) {
       }
       await expect(selector).toBeVisible()
       await expect(selector).toHaveAccessibleName('Chat profile: Hermes')
+      await expect(selector).toHaveText('')
       if (width !== 390) {
-        await expect(selector).toHaveText('Hermes')
         const contentFits = await selector.evaluate(button => {
           const bounds = button.getBoundingClientRect()
-          const label = button.querySelector('.browser-new-chat-profile-label')
-          return label && label.clientWidth >= label.scrollWidth && [...button.children].every(child => {
+          return [...button.children].every(child => {
             const box = child.getBoundingClientRect()
             return box.left >= bounds.left && box.right <= bounds.right
           })
