@@ -87,6 +87,7 @@ export const settingsCatalog: readonly SettingsGroupDefinition[] = [
         scopeDescription: 'Browser automation runs on the connected Hermes server. “Use My Real Browser Profile” uses that server’s supported Chromium profile, not the browser viewing this page. Private URLs and local network access refer to networks visible from that server.'
       },
       { id: 'config:webhooks', title: 'Webhooks', scope: 'connected-server', icon: 'globe', surface: 'tool' },
+      { id: 'config:kanban', title: 'Kanban', aliases: ['task board', 'orchestration', 'triage'], scope: 'mixed', icon: 'project', surface: 'tool' },
       { id: 'plugins', title: 'Plugins', scope: 'connected-server' },
       { id: 'config:safety', title: 'Permissions', aliases: ['Permissions & safety'], scope: 'connected-server' },
       {
@@ -204,6 +205,7 @@ const settingsPageDescriptions: Readonly<Record<string, string>> = {
   'config:workspace': 'Manage projects, files, and shell settings.',
   'config:browser': 'Configure browser automation on the connected server.',
   'config:webhooks': 'Choose which events webhooks receive.',
+  'config:kanban': 'Manage the task board, profile assignment, and triage.',
   'config:safety': 'Manage approvals, privacy, and checkpoints.',
   vault: 'Manage saved logins used by browser automation.',
   keys: 'Manage tool API keys and server credentials.',

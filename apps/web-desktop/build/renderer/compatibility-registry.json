@@ -3512,6 +3512,28 @@
     "removal": "Remove when upstream routes combined-view project edits to the saved owner and retains failed confirmations."
   },
   {
+    "name": "browser-kanban-orchestration-settings",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "plugins/kanban/orchestration.tsx",
+    "sourceRoot": "renderer",
+    "sourceHash": "4436e696ab5ef4c12bf2e9d6157d992a374f9c12c7854b68eefffdc9a6d606b7",
+    "inputHash": "4436e696ab5ef4c12bf2e9d6157d992a374f9c12c7854b68eefffdc9a6d606b7",
+    "outputHash": "d7808d49ac2eb95a486d106dc2573e4c928db054ed07749e84209321039feccc",
+    "handlers": [
+      "presentBrowserKanbanOrchestration"
+    ],
+    "reason": "Make the shared Kanban orchestration controls accessible and show loading, retry, and child promotion controls in browser settings.",
+    "owner": "apps/web-desktop/build/renderer/transforms/settings.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "Kanban settings update the existing plugin preferences and orchestration"
+      }
+    ],
+    "removal": "Remove when the upstream Kanban orchestration panel exposes these controls and request states."
+  },
+  {
     "name": "browser-config-field-presentation",
     "kind": "browser-transform",
     "order": 20,

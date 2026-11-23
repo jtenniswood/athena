@@ -1810,6 +1810,76 @@ test('settings and command center use one upstream overlay and preserve the chat
   await expect(chat).toContainText('Keep this draft while checking settings')
 })
 
+test('Kanban settings update the existing plugin preferences and orchestration', async ({ page }) => {
+  const orchestration = {
+    orchestrator_profile: '', default_assignee: '', auto_decompose: true, auto_promote_children: true
+  }
+  await page.route(/\/api\/plugins\/kanban\/orchestration(?:\?|$)/, route => {
+    if (route.request().method() === 'PUT') Object.assign(orchestration, route.request().postDataJSON())
+    return route.fulfill({ json: orchestration })
+  })
+  await page.route(/\/api\/plugins\/kanban\/profiles(?:\?|$)/, route => route.fulfill({ json: {
+    profiles: [{ name: 'research', is_default: false, description: 'Research tasks', description_auto: false }]
+  } }))
+
+  const board = { slug: 'default', name: 'Main', project_id: '' }
+  await page.route(/\/api\/plugins\/kanban\/boards(?:\?|$)/, route => route.fulfill({ json: {
+    boards: [board], current: board.slug
+  } }))
+  await page.route(/\/api\/plugins\/kanban\/boards\/default(?:\?|$)/, route => {
+    expect(route.request().method()).toBe('PATCH')
+    Object.assign(board, route.request().postDataJSON())
+    return route.fulfill({ json: { board } })
+  })
+  await page.route(/\/api\/plugins\/kanban\/projects(?:\?|$)/, route => route.fulfill({ json: {
+    projects: [{ id: 'test-project', name: 'Test project' }]
+  } }))
+
+  await open(page)
+  await (await settingsTrigger(page)).click()
+  const dialog = page.getByRole('dialog', { name: 'Settings', exact: true })
+  await dialog.getByRole('region', { name: 'Tools', exact: true }).getByRole('button', { name: 'Kanban', exact: true }).click()
+  const settings = dialog.getByRole('main', { name: 'Kanban', exact: true })
+  const enabled = settings.getByRole('switch', { name: 'Enable Kanban' })
+  await expect(enabled).not.toBeChecked()
+  await enabled.click()
+  await expect(enabled).toBeChecked()
+
+  const grouping = settings.getByRole('switch', { name: 'Group Running by profile' })
+  await expect(grouping).not.toBeChecked()
+  await grouping.click()
+  await expect(grouping).toBeChecked()
+
+  const assignee = settings.getByRole('combobox', { name: 'Default assignee' })
+  await assignee.click()
+  await page.getByRole('option', { name: 'research', exact: true }).click()
+  await expect(assignee).toHaveText('research')
+  expect(orchestration.default_assignee).toBe('research')
+  await expect(settings.getByRole('textbox', { name: 'research profile description' })).toHaveValue('Research tasks')
+
+  const promote = settings.getByRole('switch', { name: 'Auto-promote child tasks' })
+  await expect(promote).toBeChecked()
+  await promote.click()
+  await expect(promote).not.toBeChecked()
+  expect(orchestration.auto_promote_children).toBe(false)
+
+  await settings.getByRole('button', { name: 'Board: Main' }).click()
+  await page.getByRole('menuitem', { name: 'Settings…', exact: true }).click()
+  const boardSettings = page.getByRole('dialog', { name: 'Board settings — Main' })
+  await boardSettings.getByRole('combobox').click()
+  await page.getByRole('option', { name: 'Test project', exact: true }).click()
+  await boardSettings.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(boardSettings).toBeHidden()
+  expect(board.project_id).toBe('test-project')
+
+  await enabled.click()
+  await expect(grouping).toBeHidden()
+  await enabled.click()
+  await expect(grouping).toBeChecked()
+  await expect(assignee).toHaveText('research')
+  await expect(promote).not.toBeChecked()
+})
+
 test('settings fills the viewport and uses compact list and detail navigation', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await open(page)
