@@ -1944,13 +1944,13 @@ for (const width of [1440, 700, 600]) {
     }
     const search = navigation.getByRole('textbox', { name: 'Search', exact: true })
     await expect(search).toBeHidden()
-    await navigation.getByRole('button', { name: 'Bots' }).click()
+    await page.getByRole('button', { name: 'Bots', exact: true }).click()
     await page.keyboard.press(`${modifier}+b`)
     await expect(navigation).toBeHidden()
 
     await page.keyboard.press(`${modifier}+Shift+f`)
     await expect(navigation).toBeVisible()
-    const bots = navigation.getByRole('button', { name: 'Bots', exact: true })
+    const bots = page.getByRole('button', { name: 'Bots', exact: true })
     await expect(bots).toHaveAttribute('aria-pressed', 'false')
     await expect(search).toBeFocused()
     await bots.focus()
@@ -2872,8 +2872,15 @@ for (const width of [390, 1440]) {
         await surface.getByRole('button', { name: 'Chat panel', exact: true }).click()
       }
       const sidebar = page.locator('#browser-navigation')
-      const bots = sidebar.getByRole('button', { name: 'Bots', exact: true })
+      const controls = width === 390 ? sidebar : page.getByRole('navigation', { name: 'App navigation', exact: true })
+      const bots = controls.getByRole('button', { name: 'Bots', exact: true })
       await expect(sidebar.getByRole('tablist')).toHaveCount(0)
+      if (width !== 390) {
+        await expect(sidebar.getByRole('button', { name: 'Bots', exact: true })).toHaveCount(0)
+        await expect(bots.locator('xpath=following-sibling::*[1]')).toHaveAccessibleName('Kanban')
+        await page.getByRole('button', { name: 'Hide navigation', exact: true }).click()
+        await expect(sidebar).toBeHidden()
+      }
       await bots.click()
       await expect(bots).toHaveAttribute('aria-pressed', 'true')
       await expect(sidebar.getByRole('button', { name: /Research · @/ })).toBeVisible()

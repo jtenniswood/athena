@@ -32,12 +32,15 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, 
   const focusDrawerOnOpen = useRef(false)
   const preserveNextSelection = useRef(false)
   const preserveTimeout = useRef(0)
-  const showHistory = () => {
-    setBotsOpen(false)
+  const showSidebar = () => {
     if (compact) {
       focusDrawerOnOpen.current = true
       setDrawerOpen(true)
     } else sidebar.setOpen(true)
+  }
+  const showHistory = () => {
+    setBotsOpen(false)
+    showSidebar()
   }
   const dismissDrawer = () => {
     setDrawerOpen(false)
@@ -131,9 +134,16 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, 
       requestAnimationFrame(() => main.current?.focus())
     }
   })
+  const open = compact ? drawerOpen : sidebar.open
   return {
-    sections, actionsTrigger, drawer, compact, mobile, drawerOpen, width, setWidth, botsOpen, toggleBots: () => setBotsOpen(open => !open), backToHistory, showHistory, searchFocusRequest,
-    open: compact ? drawerOpen : sidebar.open,
+    sections, actionsTrigger, drawer, compact, mobile, drawerOpen, width, setWidth, botsOpen, backToHistory, showHistory, searchFocusRequest,
+    open,
+    toggleBots(forceOpen: boolean) {
+      if (forceOpen || !open) {
+        setBotsOpen(true)
+        showSidebar()
+      } else setBotsOpen(!botsOpen)
+    },
     toggle: compact ? toggleDrawer : () => sidebar.setOpen(!sidebar.open),
     closeDrawer: () => setDrawerOpen(false),
     dismissDrawer

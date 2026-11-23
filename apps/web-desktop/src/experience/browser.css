@@ -84,6 +84,7 @@
 .browser-profile-sidebar + [data-browser-toolbar-button] { margin-block-start:-.25rem; }
 .browser-app-navigation > [aria-current="page"] { color:var(--web-text); background:var(--web-active); }
 .browser-app-navigation > [data-browser-toolbar-button]:last-child { margin-block-start:auto; }
+.browser-app-navigation > [aria-pressed="true"] { color:var(--web-text); background:var(--web-active); }
 .browser-navigation { --sidebar:var(--web-sidebar); position:relative; width:var(--browser-navigation-width,19rem); flex-shrink:0; display:flex; flex-direction:column; border-inline-end:1px solid var(--web-border-subtle); background:var(--web-sidebar); overflow:hidden; }
 /* The shell owns the divider so it continues alongside the profile footer. */
 .browser-navigation [data-slot="sidebar"] { border-right-width:0; background:var(--web-sidebar); }
@@ -188,7 +189,7 @@
 .browser-sidebar-header {
   display:flex;
   align-items:center;
-  justify-content:space-between;
+  justify-content:flex-end;
   flex-shrink:0;
   min-height:var(--web-toolbar-height);
   padding-inline:var(--web-space-3);
@@ -351,6 +352,7 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-main { --chat-toolbar-safe-top:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1)); }
  /* The Android WebView already starts below the system status bar. */
  .browser-shell[data-android-app] .browser-main { --chat-toolbar-safe-top:0px; }
+ .browser-sidebar-header:has(.browser-sidebar-control) { justify-content:flex-start; }
  .browser-sidebar-header .browser-sidebar-control { min-height:var(--web-touch-target); }
  .browser-navigation .browser-profile-actions-trigger { width:var(--web-touch-target); height:var(--web-touch-target); flex-basis:var(--web-touch-target); }
  .browser-navigation-body [data-sidebar="menu-item"],.browser-navigation-body [data-sidebar="menu-button"],.browser-navigation-section-trigger,.browser-navigation-section-list button,.browser-sessions-pane [data-browser-section-label],.browser-sessions-pane button[data-slot="row-button"] { min-height:var(--web-touch-min); height:auto; }

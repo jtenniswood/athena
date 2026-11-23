@@ -11,6 +11,7 @@ import { BrowserToolbarButton } from './ui/toolbar-button'
 import { BrowserNavigationResizer, useBrowserNavigation } from './navigation'
 import { BrowserActionError } from './action-errors'
 import { ARCHIVE_TOASTS_ID, BrowserArchiveToasts } from './archive-toast'
+import { preserveNavigationForNextSelection } from './conversation-navigation'
 import { BrowserArchiveConfirmation } from './archive-confirmation'
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
@@ -61,6 +62,7 @@ function BrowserLayout() {
   engine.useEnvironment(conversation,
     !(navigation.compact && navigation.drawerOpen) && !settings && !kanban)
   const { botsOpen } = navigation
+  const botsSelected = botsOpen && navigation.open && !coversWorkspace
   const drawerModal = navigation.compact && navigation.drawerOpen
   const drawerOwnedElements = navigation.mobile ? ARCHIVE_TOASTS_ID : `browser-app-navigation ${ARCHIVE_TOASTS_ID}`
   const [updateNotice, setUpdateNotice] = useState<PwaUpdateNotice | null>(() => currentPwaUpdate())
@@ -83,6 +85,17 @@ function BrowserLayout() {
     else openChat()
     profiles.select(profile)
   }
+  const botsButton = <BrowserToolbarButton id="browser-bots-toggle" tooltip={navigation.mobile ? undefined : 'Bots'}
+    className={navigation.mobile ? 'browser-sidebar-control' : undefined} aria-label="Bots"
+    aria-pressed={botsSelected} aria-controls="browser-bots-pane" onClick={() => {
+      if (coversWorkspace) {
+        preserveNavigationForNextSelection()
+        openChat()
+      }
+      navigation.toggleBots(coversWorkspace)
+    }}>
+    <Codicon name="hubot" />{navigation.mobile && <span>Bots</span>}
+  </BrowserToolbarButton>
   return <div className="browser-shell" data-browser-shell="" data-android-app={isAndroidApp() || undefined} data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined}>
     <BrowserActionError />
     <BrowserArchiveConfirmation />
@@ -90,9 +103,10 @@ function BrowserLayout() {
     <div className="browser-workspace">
       {!navigation.mobile && <nav id="browser-app-navigation" className="browser-app-navigation" aria-label="App navigation" ref={rail}>
         <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" />
-        {presentationMode ? <BrowserToolbarButton tooltip="Chat" aria-label="Chat" aria-current={chatSelected ? 'page' : undefined} onClick={openChat}>
+        {presentationMode ? <BrowserToolbarButton tooltip="Chat" aria-label="Chat" aria-current={chatSelected && !botsSelected ? 'page' : undefined} onClick={openChat}>
           <Codicon name="comment" />
         </BrowserToolbarButton> : <BrowserProfileNavigation vertical active={chatSelected} onActivate={openProfileChat} />}
+        {botsButton}
         <BrowserToolbarButton tooltip={KANBAN_ROUTE.label} aria-label={KANBAN_ROUTE.label} aria-current={kanban ? 'page' : undefined} onClick={() => { if (!kanban) openRoute(KANBAN_ROUTE.path) }}>
           <Codicon name={KANBAN_ROUTE.icon} />
         </BrowserToolbarButton>
@@ -107,12 +121,9 @@ function BrowserLayout() {
           </BrowserToolbarButton>
           <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} className="browser-sidebar-control" row />
         </nav>}
-        <div className="browser-sidebar-header">
-          <BrowserToolbarButton id="browser-bots-toggle" className="browser-sidebar-control" aria-pressed={botsOpen} aria-controls="browser-bots-pane" onClick={navigation.toggleBots}>
-            <Codicon name="hubot" /><span>Bots</span>
-          </BrowserToolbarButton>
-          {navigation.compact && !navigation.mobile && <BrowserToolbarButton tooltip="Close navigation" aria-label="Close navigation" onClick={navigation.dismissDrawer}><Codicon name="close" /></BrowserToolbarButton>}
-        </div>
+        {navigation.compact && <div className="browser-sidebar-header">
+          {navigation.mobile ? botsButton : <BrowserToolbarButton tooltip="Close navigation" aria-label="Close navigation" onClick={navigation.dismissDrawer}><Codicon name="close" /></BrowserToolbarButton>}
+        </div>}
         <div className="browser-navigation-body" data-profile-layout={presentationMode ? 'combined' : 'separate'}>
           <BrowserSessionsPane hidden={botsOpen} sections={navigation.sections}>
             <BrowserSidebarNavigation searchFocusRequest={navigation.searchFocusRequest}>
