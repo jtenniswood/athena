@@ -429,7 +429,7 @@ test('profile visibility survives navigation when preference storage is unavaila
   await page.keyboard.press('Escape')
   await expect(writer).toHaveCount(0)
   await page.getByRole('tab', { name: 'Bots', exact: true }).click()
-  const profiles = page.getByRole('navigation', { name: 'App navigation' }).getByRole('radiogroup', { name: 'Profiles' })
+  const profiles = page.getByRole('navigation', { name: 'App navigation' }).locator('.browser-app-rail')
   await expect(profiles).toBeVisible()
   await page.getByRole('tab', { name: 'Sessions', exact: true }).click()
   await expect(profiles).toBeVisible()
