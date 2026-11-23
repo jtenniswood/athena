@@ -18,7 +18,7 @@ export interface BrowserSidebarModel {
 
 /** Athena's navigation layout consumes projections, never mutable engine stores. */
 export function BrowserSidebar({ model, children }: { model: BrowserSidebarModel; children: ReactNode }) {
-  const { footerActions, searchFocusRequest } = useBrowserSidebarNavigation()
+  const { searchFocusRequest } = useBrowserSidebarNavigation()
   const [dismissedSearchRequest, setDismissedSearchRequest] = useState(0)
   const showSearch = model.showSections && (Boolean(model.search.value) || searchFocusRequest !== dismissedSearchRequest)
   return <div data-slot="sidebar" data-tour="sessions-sidebar" data-tip-region="" className={cn(
@@ -44,11 +44,10 @@ export function BrowserSidebar({ model, children }: { model: BrowserSidebarModel
       {model.showSections ? <div data-sessions-mode={model.mode} data-sessions-project={model.project}
         className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain pb-1.75 [scrollbar-gutter:stable] scrollbar-fade">{children}</div> : model.empty}
       <div data-slot="sidebar-footer" className="mt-auto min-h-0 shrink overflow-y-auto overflow-x-hidden overscroll-contain pb-1 pt-1 scrollbar-fade">
-        {footerActions}
         {showSearch && <div onBlur={event => {
           if (!event.currentTarget.contains(event.relatedTarget)) setDismissedSearchRequest(searchFocusRequest)
         }}>
-          <SearchField containerClassName="browser-sidebar-footer-row browser-session-search" aria-label="Search" placeholder="Search" inputRef={model.search.input} value={model.search.value} onChange={model.search.change} />
+          <SearchField containerClassName="browser-sidebar-control browser-session-search" aria-label="Search" placeholder="Search" inputRef={model.search.input} value={model.search.value} onChange={model.search.change} />
         </div>}
       </div>
       {model.profileRail}
