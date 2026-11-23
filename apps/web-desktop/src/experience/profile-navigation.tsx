@@ -156,37 +156,47 @@ export function BrowserProfileNavigation({ hidden = false, vertical = false, com
       onClose={() => setProfileContextMenuPosition(null)}
       groups={[
         {
-          key: 'edit',
-          actions: profileContextMenuPosition?.profile ? [{
-            key: 'edit-profile',
-            label: 'Edit profile',
-            icon: <Codicon name="edit" size="1rem" />,
-            afterClose: true,
-            run: () => setEditingProfile(profileContextMenuPosition.profile)
-          }] : []
-        },
-        ...profileActions,
-        {
-          key: 'profiles',
-          label: 'Profiles',
-          actions: combined ? [] : [
-            {
-              key: 'all-profiles',
-              label: 'All Profiles',
-              icon: <Codicon name="organization" size="1rem" />,
-              checked: !hideAllProfilesButton,
-              keepOpen: true,
-              run: () => setHideAllProfilesButton(value => !value)
-            },
-            ...profileItems.map(item => ({
-              key: `profile-${item.key}`,
-              label: item.label,
-              icon: <Codicon name="account" size="1rem" />,
-              checked: !hiddenProfiles.includes(item.key),
-              keepOpen: true,
-              run: () => toggleProfile(item.key)
-            }))
+          key: 'manage',
+          actions: [
+            ...(profileContextMenuPosition?.profile ? [{
+              key: 'edit-profile',
+              label: 'Edit profile',
+              icon: <Codicon name="edit" size="1rem" />,
+              afterClose: true,
+              run: () => setEditingProfile(profileContextMenuPosition.profile)
+            }] : []),
+            ...profileActions.manage
           ]
+        },
+        {
+          key: 'view',
+          actions: [profileActions.layout, ...(!combined ? [{
+            key: 'visible-profiles',
+            label: 'Profiles',
+            icon: <Codicon name="organization" />,
+            run: () => {},
+            children: [{
+              key: 'profile-visibility',
+              actions: [
+                {
+                  key: 'all-profiles',
+                  label: 'All Profiles',
+                  icon: <Codicon name="organization" size="1rem" />,
+                  checked: !hideAllProfilesButton,
+                  keepOpen: true,
+                  run: () => setHideAllProfilesButton(value => !value)
+                },
+                ...profileItems.map(item => ({
+                  key: `profile-${item.key}`,
+                  label: item.label,
+                  icon: <Codicon name="account" size="1rem" />,
+                  checked: !hiddenProfiles.includes(item.key),
+                  keepOpen: true,
+                  run: () => toggleProfile(item.key)
+                }))
+              ]
+            }]
+          }] : [])]
         }
       ]}
     />

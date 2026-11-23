@@ -424,6 +424,7 @@ test('profile visibility survives navigation when preference storage is unavaila
   await editor(page).fill('Keep the draft across profile navigation')
   const writer = page.locator('[data-profile-key="writer"]')
   await writer.click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Profiles', exact: true }).hover()
   await page.getByRole('menuitemcheckbox', { name: 'Writer', exact: true }).click()
   await page.keyboard.press('Escape')
   await expect(writer).toHaveCount(0)
