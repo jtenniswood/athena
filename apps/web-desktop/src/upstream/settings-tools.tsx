@@ -3,6 +3,7 @@ import { BrowserSettingsEmbeddedOverlay, BrowserSettingsToolActions } from '../e
 import { settingsCatalog } from '../experience/settings/catalog'
 
 const SystemUpdates = lazy(async () => ({ default: (await import('../experience/settings/updates-page')).BrowserSystemUpdatesPage }))
+const Kanban = lazy(async () => ({ default: (await import('./kanban-settings')).BrowserKanbanSettings }))
 const Profiles = lazy(async () => ({ default: (await import('@/app/profiles')).ProfilesView }))
 const Webhooks = lazy(async () => ({ default: (await import('@/app/webhooks')).WebhooksView }))
 const CommandCenter = lazy(async () => ({ default: (await import('@/app/command-center')).CommandCenterView }))
@@ -16,6 +17,7 @@ export function BrowserSettingsToolContent({ view, onClose }: { view: string; on
   return <BrowserSettingsEmbeddedOverlay.Provider value>
     <Suspense fallback={<p role="status">Loading…</p>}>
       {view === 'config:system-updates' && <SystemUpdates />}
+      {view === 'config:kanban' && <Kanban />}
       {view === 'config:profiles' && <Profiles onClose={onClose} />}
       {view === 'config:webhooks' && <Webhooks onClose={onClose} />}
       {view === 'config:command-center' && actions && <CommandCenter {...actions} onClose={onClose} />}

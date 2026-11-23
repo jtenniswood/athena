@@ -9,6 +9,7 @@ export { useBrowserThreadSubmitScroll } from './transforms/transcript'
 import {
   exposeBrowserConfigFieldPresentation,
   exposeBrowserSettingsRowRefs,
+  presentBrowserKanbanOrchestration,
   keepBrowserPluginManagementInSettings,
   keepBrowserPluginInstallInSettings,
   useBrowserSettingsToolActions,
@@ -290,6 +291,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     useBrowserSidebarController: source => useBrowserSidebarController(source, root),
     exposeBrowserConfigFieldPresentation: source => exposeBrowserConfigFieldPresentation(source, root),
     exposeBrowserSettingsRowRefs,
+    presentBrowserKanbanOrchestration,
     useBrowserMessagingPresentation: source => useBrowserMessagingPresentation(source, root),
     useBrowserCatalogIdleTask: source => useBrowserCatalogIdleTask(source, root),
     useBrowserErrorFallback: source => useBrowserErrorFallback(source, root),
