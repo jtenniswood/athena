@@ -363,7 +363,7 @@
     "kind": "browser-transform",
     "order": 20,
     "module": "store/layout.ts",
-    "reason": "Support the Show projects toggle, default to manual chat ordering, ignore retired status filters, and show every available session.",
+    "reason": "Support the Show projects toggle, default to manual chat ordering, ignore retired status and profile filters, and show every available session.",
     "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
     "tests": [
       {
@@ -390,14 +390,14 @@
     "sourceHash": "b036ba9cbf09093271bcbfaf825ab5fea1e41f674750e9f1c26f0c6efbd1674f",
     "sourceRoot": "renderer",
     "inputHash": "b036ba9cbf09093271bcbfaf825ab5fea1e41f674750e9f1c26f0c6efbd1674f",
-    "outputHash": "2e5549e97dacca10a85da91e75eb94d573ec92e23b0944a7857c6bfc6b980093"
+    "outputHash": "bd417303bafa544347f0749043911bc7a33a3fb300208550242b692907c46364"
   },
   {
     "name": "browser-session-filters",
     "kind": "browser-transform",
     "order": 20,
     "module": "app/chat/sidebar/filter-menu.tsx",
-    "reason": "Offer independent profile layout and project visibility controls while retaining sidebar shortcuts and profile visibility actions. Hide desktop-only controls and retired ordering and status menus.",
+    "reason": "Offer independent profile layout and project visibility controls while retaining sidebar shortcuts and profile visibility actions. Keep profile creation and import in the Profiles menu and hide retired filter controls.",
     "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
     "tests": [
       {
@@ -432,7 +432,7 @@
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
     "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
-    "outputHash": "66ab6a246ded36a6daf2b1b7211e455df7b2052b143792db1727c1699a435b7a"
+    "outputHash": "8cfbbbdac5505a8841368308b192a9ffb7a8bbc74bd15daaa5a580fb58e14c02"
   },
   {
     "name": "hidden-bot-roster",
