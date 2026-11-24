@@ -83,6 +83,7 @@
 .browser-app-navigation > img { box-sizing:border-box; flex-shrink:0; width:var(--app-rail-button-size); height:var(--app-rail-button-size); padding:.25rem; }
 .browser-app-rail { display:flex; flex:1; min-height:0; width:100%; flex-direction:column; align-items:center; gap:var(--app-rail-gap); overflow:auto; scrollbar-width:none; }
 .browser-app-rail-item { position:relative; display:flex; flex:0 0 auto; }
+.browser-app-rail-item[data-rail-key="settings"] { flex-direction:column; gap:var(--app-rail-gap); }
 .browser-app-rail-item[data-rail-key="settings"]:last-child { margin-block-start:auto; }
 .browser-app-rail .browser-app-rail-item > button { width:var(--app-rail-button-size); height:var(--app-rail-button-size); border-radius:.625rem; }
 .browser-app-rail-item > [aria-current="page"],
@@ -197,7 +198,7 @@
   padding-inline:var(--web-space-3);
 }
 /* Navigation and search controls share the same icon and label spacing. */
-.browser-sessions-pane .browser-sidebar-control {
+:is(.browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control {
   --web-icon-size:var(--web-icon-small);
   box-sizing:border-box;
   display:flex;
@@ -216,15 +217,15 @@
   line-height:var(--web-line-compact);
   text-align:start;
 }
-.browser-sessions-pane .browser-sidebar-control:is(:hover,:focus-within) { background:var(--web-hover); color:var(--web-text); }
+:is(.browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control:is(:hover,:focus-within) { background:var(--web-hover); color:var(--web-text); }
 .browser-sessions-pane .browser-sidebar-control:is([aria-current="page"],[aria-pressed="true"]) { background:var(--web-active); color:var(--web-text); }
-.browser-sessions-pane .browser-sidebar-control > :is(.codicon, svg) {
+:is(.browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control > :is(.codicon, svg) {
   width:var(--web-icon-size);
   height:var(--web-icon-size);
   flex:0 0 var(--web-icon-size);
   color:color-mix(in srgb,currentColor 72%,transparent);
 }
-.browser-sessions-pane .browser-sidebar-control > .codicon {
+:is(.browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control > .codicon {
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -404,6 +405,8 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-main { --chat-toolbar-safe-top:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1)); }
  /* The Android WebView already starts below the system status bar. */
  .browser-shell[data-android-app] .browser-main { --chat-toolbar-safe-top:0px; }
+ .browser-sidebar-header:has(.browser-sidebar-control) { justify-content:flex-start; }
+ .browser-sidebar-header .browser-sidebar-control { min-height:var(--web-touch-target); }
  .browser-navigation .browser-profile-actions-trigger { width:var(--web-touch-target); height:var(--web-touch-target); flex-basis:var(--web-touch-target); }
  .browser-navigation-body [data-sidebar="menu-item"],.browser-navigation-body [data-sidebar="menu-button"],.browser-navigation-section-trigger,.browser-navigation-section-list button,.browser-sessions-pane [data-browser-section-label],.browser-sessions-pane button[data-slot="row-button"] { min-height:var(--web-touch-min); height:auto; }
  .browser-sessions-pane [data-browser-section-header] { min-height:var(--web-touch-min); align-items:center; }
