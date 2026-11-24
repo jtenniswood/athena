@@ -87,6 +87,8 @@
 .browser-navigation { --sidebar:var(--web-sidebar); position:relative; width:var(--browser-navigation-width,19rem); flex-shrink:0; display:flex; flex-direction:column; border-inline-end:1px solid var(--web-border-subtle); background:var(--web-sidebar); overflow:hidden; }
 /* The shell owns the divider so it continues alongside the profile footer. */
 .browser-navigation [data-slot="sidebar"] { border-right-width:0; background:var(--web-sidebar); }
+/* The compact drawer can receive focus as a container when no tab is visible. */
+.browser-navigation[tabindex="-1"]:focus { outline:none; }
 .browser-navigation[hidden],.browser-navigation-resizer[hidden] { display:none; }
 .browser-navigation-resizer { position:relative; width:.35rem; flex:0 0 .35rem; z-index:2; margin-left:-.175rem; cursor:col-resize; background:transparent; touch-action:none; }
 .browser-navigation-resizer::after { position:absolute; inset:0 auto 0 50%; width:1px; transform:translateX(-50%); background:transparent; content:""; }
