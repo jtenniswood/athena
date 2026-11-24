@@ -1,16 +1,18 @@
 import { useEffect, useSyncExternalStore, type RefObject } from 'react'
 import { androidAppSettingsMenu, isAndroidApp } from '../platform/android'
 import { Codicon } from '../upstream/browser-api'
+import { reorderableRailButton } from './app-rail'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 
 type SettingsLinkProps = {
   triggerRef: RefObject<HTMLButtonElement | null>
   onOpenRoute: (path: string) => void
   active?: boolean
+  reorderable?: boolean
 }
 
-export function SettingsLink({ triggerRef, onOpenRoute, active }: SettingsLinkProps) {
-  return <BrowserToolbarButton ref={triggerRef} tooltip="Settings" aria-label="Settings" aria-current={active ? 'page' : undefined} onClick={() => onOpenRoute('/settings')}>
+export function SettingsLink({ triggerRef, onOpenRoute, active, reorderable }: SettingsLinkProps) {
+  return <BrowserToolbarButton {...(reorderable ? reorderableRailButton : {})} ref={triggerRef} tooltip="Settings" aria-label="Settings" aria-current={active ? 'page' : undefined} onClick={() => onOpenRoute('/settings')}>
     <Codicon name="settings-gear" />
   </BrowserToolbarButton>
 }

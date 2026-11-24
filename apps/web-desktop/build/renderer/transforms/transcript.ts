@@ -47,3 +47,33 @@ export function expandBrowserMessageOnTap(source: string): string {
     ["onClick={() => {\n              triggerHaptic('selection')\n              onToggleExpanded()\n            }}", 'onClick={toggleExpanded}']
   ])
 }
+
+/** Keep the renderer's response grouping and add a single browser disclosure. */
+export function useBrowserResponseActivity(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/response-activity'))
+  return `import { BrowserResponseActivity } from ${owner}\n` + replaceBrowserContract(source, [[
+    `          {section.indices.map(index => (
+            <ThreadPrimitive.MessageByIndex components={components} index={index} key={index} />
+          ))}`,
+    `          <BrowserResponseActivity indices={section.indices}>
+            {section.indices.map(index => (
+              <ThreadPrimitive.MessageByIndex components={components} index={index} key={index} />
+            ))}
+          </BrowserResponseActivity>`
+  ]])
+}
+
+/** Mark public commentary at the same boundary as its Markdown and timestamp. */
+export function markBrowserCommentaryParts(source: string, root: string): string {
+  const owner = JSON.stringify(path.join(root, 'src/experience/response-activity'))
+  return `import { BrowserCommentaryPart } from ${owner}\n` + replaceBrowserContract(source, [[
+    `    <>
+      <TimelineTimestamp className="mb-0.5 block" completedAt={completedAt} timestamp={timestamp} />
+      <MarkdownText />
+    </>`,
+    `    <BrowserCommentaryPart>
+      <TimelineTimestamp className="mb-0.5 block" completedAt={completedAt} timestamp={timestamp} />
+      <MarkdownText />
+    </BrowserCommentaryPart>`
+  ]])
+}

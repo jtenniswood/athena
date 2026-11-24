@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import { $profiles } from '@/store/profile'
+import { useStore } from '@nanostores/react'
+import { $profiles, refreshActiveProfile } from '@/store/profile'
+import { CreateProfileDialog } from '@/app/profiles/create-profile-dialog'
 import { $lastRoster } from '@/plugins/hermes-bots/data'
 import { requestForBot } from '@/plugins/hermes-bots/routing'
 import { WEB_CONNECTION_ID } from '../platform/connection'
@@ -7,6 +9,14 @@ import { ensureBotMetadata } from '@/plugins/hermes-bots/canonical-chat'
 import { EditProfileDialog } from '@/plugins/hermes-bots/edit-profile-dialog'
 import type { RosterRow } from '@/plugins/hermes-bots/types'
 import { reportActionFailure } from '../experience/action-errors'
+
+export function BrowserProfileCreator({ open, onClose, onCreated }: { open: boolean; onClose(): void; onCreated(profile: string): void }) {
+  const profiles = useStore($profiles)
+  return <CreateProfileDialog open={open} onClose={onClose} profiles={profiles} onCreated={async profile => {
+    await refreshActiveProfile()
+    onCreated(profile)
+  }} />
+}
 
 /** Open the existing bot editor without selecting its profile or conversation. */
 export function BrowserProfileEditor({ profile, onClose }: { profile: string | null; onClose(): void }) {

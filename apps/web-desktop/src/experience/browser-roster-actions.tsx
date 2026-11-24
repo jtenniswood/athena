@@ -7,7 +7,7 @@ import { useMobileBrowser } from './ui/use-compact-browser'
 function RosterActions({ name, groups, children, sectionId, actionKey }: { name: string; actionKey: string; groups: BrowserActionGroup[]; children: ReactNode; sectionId?: string }) {
   const compact = useMobileBrowser()
   const trigger = useRef<HTMLButtonElement>(null)
-  const fallback = { current: document.querySelector<HTMLElement>('.browser-navigation [role="tab"][aria-selected="true"]') }
+  const fallback = { current: document.querySelector<HTMLElement>('#browser-bots-toggle') }
   const [anchor, setAnchor] = useState<BrowserActionAnchor | null>(null)
   const open = (x?: number, y?: number) => {
     const control = trigger.current

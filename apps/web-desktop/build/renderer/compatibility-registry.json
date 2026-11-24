@@ -340,6 +340,25 @@
     "sourceRoot": "renderer"
   },
   {
+    "name": "browser-inline-url-links",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "components/assistant-ui/markdown-text.tsx",
+    "reason": "Link standalone HTTP and HTTPS URLs in response inline code while preserving its formatting.",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "response links open a browser tab without losing the conversation or draft"
+      }
+    ],
+    "removal": "Remove when the upstream response renderer links standalone HTTP and HTTPS URLs in inline code.",
+    "sourceHash": "1da9f95a0a89748aa176c992372642e6d9d514b5919f63516e192fadd02024d1",
+    "outputHash": "ca2fdc2c86a5426fa2c99fe20ad594df2a0b8c5f8c614d51385a09555445d719",
+    "handler": "browser-inline-url-links",
+    "sourceRoot": "renderer"
+  },
+  {
     "name": "browser-html-link-attributes",
     "kind": "renderer-transform",
     "order": 30,
@@ -432,7 +451,7 @@
     "sourceHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
     "sourceRoot": "renderer",
     "inputHash": "d482e4eaf3d54d1b975e0d5d1537bd51e703f6a0d2ff3dd2f566a8ffb744e39b",
-    "outputHash": "8cfbbbdac5505a8841368308b192a9ffb7a8bbc74bd15daaa5a580fb58e14c02"
+    "outputHash": "625741d67c2903b9db5f869c82e3533a5b67c96f85dbd333cd28192f0ec96f8f"
   },
   {
     "name": "hidden-bot-roster",
@@ -2451,6 +2470,7 @@
     "sourceHash": "1b39f8ff9ba7c31199cc6572256c5c666ce8cdf6699f1db2b6fbbd26a2e069f3",
     "replacement": "src/upstream/browser-dialog.tsx",
     "importers": [
+      "app/profiles/create-profile-dialog.tsx",
       "plugins/hermes-bots/create-dialog.tsx",
       "plugins/hermes-bots/edit-profile-dialog.tsx",
       "plugins/hermes-bots/user-sections-ui.tsx",
@@ -4081,5 +4101,49 @@
     "sourceHash": "5606f31e9091409d16e1994d50a419a3585b9b76449a5bc4c1f5bb56f6202a54",
     "outputHash": "fd5fa8411871c7aa26b3bc8ec9d56eaa33550a60c47b9f3a41d961ce74e6130e",
     "handler": "browser-clipboard-routing"
+  },
+  {
+    "name": "browser-response-activity",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/assistant-ui/thread/response-group.tsx",
+    "reason": "Give each response one collapsed activity row while retaining the existing message runtimes.",
+    "owner": "apps/web-desktop/build/renderer/transforms/transcript.ts",
+    "tests": [
+      {
+        "file": "tests/browser/response-activity.spec.mjs",
+        "scenario": "a saved tool-heavy response keeps its final reply visible with activity collapsed"
+      }
+    ],
+    "removal": "Remove when the renderer provides a turn-level disclosure for intermediate activity.",
+    "handlers": [
+      "useBrowserResponseActivity"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "83b11fe725e5f48c322ebfe7a0d7fdc41e2bca9c97ea8779bb2bddf1af9b8f41",
+    "inputHash": "83b11fe725e5f48c322ebfe7a0d7fdc41e2bca9c97ea8779bb2bddf1af9b8f41",
+    "outputHash": "4366c8c3fabf25e1a406ec0dae5624737946004ea16dd13396b12ffcf9a4e462"
+  },
+  {
+    "name": "browser-response-commentary",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/assistant-ui/thread/message-parts.tsx",
+    "reason": "Identify text preceding the final reply so it can be revealed with response activity.",
+    "owner": "apps/web-desktop/build/renderer/transforms/transcript.ts",
+    "tests": [
+      {
+        "file": "tests/browser/response-activity.spec.mjs",
+        "scenario": "a saved tool-heavy response keeps its final reply visible with activity collapsed"
+      }
+    ],
+    "removal": "Remove when the renderer provides a turn-level disclosure for intermediate activity.",
+    "handlers": [
+      "markBrowserCommentaryParts"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "196535328a26fc53543f164ba4173f2d56d1f295d3666097b817e7655a8fb613",
+    "inputHash": "196535328a26fc53543f164ba4173f2d56d1f295d3666097b817e7655a8fb613",
+    "outputHash": "26d115f8e26ced8e8dae33cea628e8a906902ee4f731df3dc138a38eb098df52"
   }
 ]

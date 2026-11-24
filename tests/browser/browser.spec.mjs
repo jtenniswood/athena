@@ -6,6 +6,7 @@ import { getBrowserTarget } from './test-target.mjs'
 import { installBrowserErrorCollector } from './error-collector.mjs'
 import { viewportChecks } from './viewport-checks.mjs'
 import { narrowDesktopChecks } from './narrow-desktop-checks.mjs'
+import { showSidebarView } from './sidebar-view.mjs'
 
 // This suite exercises the browser shell only. The old desktop/browser
 // selector was removed, so every test must start through the same production
@@ -57,6 +58,16 @@ const openProjectActions = async (project, touch) => {
 }
 
 const editor = page => page.locator('[contenteditable="true"]:visible').first()
+const profileMenu = (page, touch = false) => page.getByRole(touch ? 'dialog' : 'menu', { name: 'Profile actions', exact: true })
+const openProfileSubmenu = async (page, name, touch = false) => {
+  const item = profileMenu(page, touch).getByRole(touch ? 'button' : 'menuitem', { name, exact: true })
+  if (touch) {
+    await item.tap()
+    return page.getByRole('dialog', { name, exact: true })
+  }
+  await item.hover()
+  return page.locator('[data-slot="dropdown-menu-sub-content"]:visible')
+}
 const openNavigation = async page => {
   await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
   await expect(page.locator('.browser-navigation.is-open')).toBeVisible()
@@ -393,7 +404,8 @@ touchTest('the phone profile actions only manage enabled profiles and preserve t
   await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
   await page.getByRole('button', { name: 'Profile actions', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Default for new sessions', exact: true })).toHaveCount(0)
-  await page.getByRole('checkbox', { name: 'Research', exact: true }).click()
+  const profiles = await openProfileSubmenu(page, 'Profiles', true)
+  await profiles.getByRole('checkbox', { name: 'Research', exact: true }).click()
   await page.keyboard.press('Escape')
   await expect(page.locator('[data-profile-key="research"]')).toHaveCount(0)
   await expect(page.locator('[contenteditable="true"]').first()).toHaveText('Keep the draft while managing phone profiles')
@@ -502,8 +514,19 @@ for (const preference of ['queue', 'steer']) for (const alternate of [false, tru
 
 test('response links open a browser tab without losing the conversation or draft', async ({ page, context }) => {
   const destination = 'https://example.com/response-link'
-  // Exercise the actual transcript renderer with both Markdown and HTML anchors.
-  const response = `[Markdown reference](${destination})\n\n<a href="${destination}">HTML reference</a>`
+  const inlineUrl = 'http://devbox.example.test:8090/status?mode=ready&check=1'
+  const bareUrl = 'https://example.com/bare'
+  const codeLabel = 'https://example.com/label'
+  const response = [
+    `[Markdown reference](${destination})`,
+    `<a href="${destination}">HTML reference</a>`,
+    `Open the service (\`${inlineUrl}\`).`,
+    `Bare URL (${bareUrl}).`,
+    `[\`${codeLabel}\`](${destination})`,
+    `<a href="${destination}">\`https://example.com/html-label\`</a>`,
+    `\`curl ${inlineUrl}\` and \`https://example.com:99999\` and \`javascript:void(0)\``,
+    '```bash\ncat <<EOF\nhttps://example.com/fenced\nEOF\n```'
+  ].join('\n\n')
   await page.routeWebSocket(/\/api\/ws/, socket => {
     const server = socket.connectToServer()
     server.onMessage(message => {
@@ -522,19 +545,32 @@ test('response links open a browser tab without losing the conversation or draft
     if (row) row.content = response
     await route.fulfill({ response: upstream, json: body })
   })
-  await context.route(destination, route => route.fulfill({ contentType: 'text/html', body: '<h1>Reference destination</h1>' }))
+  for (const url of [destination, inlineUrl]) {
+    await context.route(url, route => route.fulfill({ contentType: 'text/html', body: '<h1>Reference destination</h1>' }))
+  }
   // The desktop preference must not send browser clicks to its absent pane.
   await page.addInitScript(() => localStorage.setItem('hermes.desktop.alwaysExternalLinks.v1', 'false'))
   await open(page)
   await expect(page.locator('.athena-connecting-overlay')).toBeHidden({ timeout: 30000 })
   for (const dismiss of await page.getByRole('button', { name: 'Dismiss notification', exact: true }).all()) await dismiss.click()
   await editor(page).fill('Keep my response-link draft')
+  await expect(page.getByRole('link', { name: bareUrl, exact: true })).toHaveAttribute('href', bareUrl)
+  await expect(page.locator('code a', { hasText: inlineUrl })).toHaveCount(1)
+  await expect(page.getByRole('link', { name: codeLabel, exact: true })).toHaveAttribute('href', destination)
+  await expect(page.getByRole('link', { name: 'https://example.com/html-label', exact: true })).toHaveAttribute('href', destination)
+  for (const text of [`curl ${inlineUrl}`, 'https://example.com:99999', 'javascript:void(0)']) {
+    await expect(page.getByText(text, { exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: text, exact: true })).toHaveCount(0)
+  }
+  await expect(page.getByText('https://example.com/fenced')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'https://example.com/fenced', exact: true })).toHaveCount(0)
   for (const [label, gesture] of [
     ['Markdown reference', 'keyboard'],
     ['Markdown reference', 'click'],
     ['HTML reference', 'click'],
     ['Markdown reference', 'modifier'],
-    ['HTML reference', 'middle']
+    ['HTML reference', 'middle'],
+    [inlineUrl, 'click']
   ]) {
     const link = page.getByRole('link', { name: label, exact: true })
     await page.bringToFront()
@@ -549,7 +585,7 @@ test('response links open a browser tab without losing the conversation or draft
     if (gesture === 'keyboard') await link.press('Enter')
     else await link.click(gesture === 'modifier' ? { modifiers: ['ControlOrMeta'] } : gesture === 'middle' ? { button: 'middle' } : {})
     const popup = await popupPromise
-    await expect(popup).toHaveURL(destination)
+    await expect(popup).toHaveURL(label === inlineUrl ? inlineUrl : destination)
     await expect(popup.getByRole('heading', { name: 'Reference destination' })).toBeVisible()
     expect(await popup.evaluate(() => window.opener)).toBeNull()
     await popup.close()
@@ -676,7 +712,7 @@ test('fresh startup restores chat, registrations, bots, and avatar-backed profil
   await expect(page.locator('[data-browser-conversation-kind="session"]')).toHaveCount(1)
   await expect(page.locator('.browser-upstream-workspace [data-zone-tabstrip]')).toBeHidden()
   await expect(page.locator('.browser-main header[class*="h-(--titlebar-height)"]')).toBeHidden()
-  await page.getByRole('tab', { name: 'Bots', exact: true }).click()
+  await showSidebarView(page, 'bots')
   await expect(page.getByRole('button', { name: /Research · @/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Writer · @/ })).toBeVisible()
 
@@ -687,7 +723,7 @@ test('fresh startup restores chat, registrations, bots, and avatar-backed profil
   await expect(page).toHaveURL(/#\/preview-research$/)
   await expect(page.locator('[data-tree-tab^="session-tile:"]')).toHaveCount(0)
 
-  await page.getByRole('tab', { name: 'Sessions', exact: true }).click()
+  await showSidebarView(page, 'sessions')
   await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
   await expect(editor(page)).toBeVisible()
   await expect(page.locator('[data-browser-conversation-kind="session"]')).toHaveCount(1)
@@ -776,7 +812,7 @@ touchTest('phone navigation and action sheets keep touch targets usable across U
     }
     for (const [name, control] of [
       ['Back to chat', page.getByRole('button', { name: 'Back to chat', exact: true })],
-      ['Sessions tab', page.getByRole('tab', { name: 'Sessions', exact: true })],
+      ['Bots toggle', page.getByRole('button', { name: 'Bots', exact: true })],
       ['Sessions section toggle', nav.locator('.browser-sessions-pane [data-browser-section-label]').first()],
       ['Profile actions', page.getByRole('button', { name: 'Profile actions', exact: true })]
     ]) {
@@ -801,7 +837,8 @@ touchTest('phone navigation and action sheets keep touch targets usable across U
     expect(bounds.x).toBeGreaterThanOrEqual(-1)
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(391)
     expect(bounds.y + bounds.height).toBeGreaterThanOrEqual(840)
-    const option = sheet.getByRole('button', { name: 'Hide Research', exact: true })
+    const profiles = await openProfileSubmenu(page, 'Profiles', true)
+    const option = profiles.getByRole('checkbox', { name: 'Research', exact: true })
     await expectTouchTarget(`Sheet option at ${scale}%`, option)
     await page.keyboard.press('Escape')
     await expect(nav).toBeVisible()
@@ -858,78 +895,77 @@ test('a touch context-menu gesture does not open sidebar sections', async ({ bro
     await filters.dispatchEvent('contextmenu', { pointerType: 'touch' })
     await expect(page.getByRole('dialog', { name: 'Sidebar sections', exact: true })).toHaveCount(0)
     await filters.tap()
-    await expect(page.getByRole('menuitem', { name: 'Profiles', exact: true })).toBeVisible()
+    await expect(page.getByRole('menuitemcheckbox', { name: 'Show projects', exact: true })).toBeVisible()
   } finally { await context.close() }
 })
 
-for (const mode of [
-  { name: 'phone touch', viewport: { width: 390, height: 844 }, touch: true },
-  { name: 'landscape touch', viewport: { width: 844, height: 390 }, touch: true }
-]) {
-  test(`${mode.name} submenus open on activation and replace the parent sheet`, async ({ browser }) => {
-    const context = await browser.newContext({ viewport: mode.viewport, isMobile: mode.touch, hasTouch: mode.touch })
-    const page = await context.newPage()
-    const activate = locator => mode.touch ? locator.tap() : locator.click()
+for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }]) {
+  test(`profile controls remain available in the touch action sheet at ${viewport.width}px`, async ({ browser }) => {
+    const context = await browser.newContext({ viewport, isMobile: true, hasTouch: true })
     try {
-      await open(page)
-      await activate(page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }))
-      await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).toBeVisible()
-      const filters = page.getByRole('button', { name: 'Filters', exact: true })
-      await activate(filters)
-      const parent = page.locator('[data-slot="dropdown-menu-content"]').last()
-      const submenu = page.locator('[data-slot="dropdown-menu-sub-content"]')
-      const profiles = parent.getByRole('menuitem', { name: 'Profiles', exact: true })
-      await profiles.hover()
-      // Radix's hover-open delay is 100 ms; wait beyond it to catch regressions.
-      await page.waitForTimeout(300)
-      await expect(submenu).toHaveCount(0)
-      await activate(profiles)
-      await expect(submenu).toBeVisible()
-      await expect(parent).toBeHidden()
-      await expect.poll(() => submenu.evaluate(el => el.contains(document.activeElement))).toBe(true)
-      await expect(page.getByRole('menu')).toHaveCount(1)
-      await expect.poll(async () => {
-        const bounds = await submenu.boundingBox()
-        return bounds && [Math.round(bounds.x), Math.round(bounds.width), Math.round(bounds.y + bounds.height)]
-      }).toEqual([0, mode.viewport.width, mode.viewport.height])
-      await activate(submenu.getByRole('menuitemradio', { name: 'Combined', exact: true }))
-      await expect(submenu.getByRole('menuitemradio', { name: 'Combined', exact: true })).toHaveAttribute('aria-checked', 'true')
-      await expect(parent).toBeHidden()
-      await page.keyboard.press('Escape')
-      await expect(parent).toHaveCount(0)
-      await expect(submenu).toHaveCount(0)
-      await expect(filters).toBeFocused()
-      await activate(filters)
-      await activate(parent.getByRole('menuitem', { name: 'Profiles', exact: true }))
-      await expect(submenu.getByRole('menuitemradio', { name: 'Combined', exact: true })).toHaveAttribute('aria-checked', 'true')
-      await page.keyboard.press('ArrowLeft')
-      await expect(parent).toBeVisible()
-      await expect(profiles).toBeFocused()
-      await page.keyboard.press('ArrowRight')
-      await expect(submenu).toBeVisible()
-      await expect(parent).toBeHidden()
-      await page.keyboard.press('Escape')
-      await expect(submenu).toHaveCount(0)
-      await expect(parent).toHaveCount(0)
-      await expect(filters).toBeFocused()
+      const page = await context.newPage()
+      await page.route('**/api/athena/preferences', route => route.abort())
+      await open(page, 'preview-week', { defaultGrouping: true })
+      await page.getByRole('button', { name: 'Back to chat history', exact: true }).tap()
+      const trigger = page.getByRole('button', { name: 'Profile actions', exact: true })
+      const sheet = page.getByRole('dialog', { name: 'Profile actions', exact: true })
+      await trigger.tap()
+      await expect(sheet.getByRole('button', { name: 'New profile', exact: true })).toBeVisible()
+      await expect(sheet.getByRole('button', { name: /^Import profile/ })).toBeVisible()
+      await expect(sheet.getByRole('radio', { name: 'Combined', exact: true })).toHaveCount(0)
+      const layout = await openProfileSubmenu(page, 'Profile layout', true)
+      await expect(layout.getByRole('radio', { name: 'Combined', exact: true })).toBeChecked()
+      await layout.getByRole('radio', { name: 'Separate', exact: true }).tap()
+      await expect(sheet).toBeHidden()
+      await expect(trigger).toBeFocused()
+      await expect(page.getByRole('radiogroup', { name: 'Profiles', exact: true })).toBeVisible()
+      await trigger.tap()
+      const profiles = await openProfileSubmenu(page, 'Profiles', true)
+      await expect(profiles.getByRole('checkbox', { name: 'Research', exact: true })).toBeChecked()
+      await profiles.getByRole('button', { name: 'Back to Profile actions', exact: true }).tap()
+      await expect(sheet.getByRole('button', { name: 'Profiles', exact: true })).toBeFocused()
+      await openProfileSubmenu(page, 'Profile layout', true)
+      await expect(layout.getByRole('radio', { name: 'Separate', exact: true })).toBeChecked()
+      await layout.getByRole('radio', { name: 'Combined', exact: true }).tap()
+      await expect(sheet).toBeHidden()
+      await expect(trigger).toBeFocused()
     } finally { await context.close() }
   })
 }
 
-test('desktop submenus still open on hover beside their parent menu', async ({ page }) => {
+test('Filters keeps session controls and the Chat icon opens profile actions by keyboard', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 })
-  await open(page)
-  const filters = page.getByRole('button', { name: 'Filters', exact: true })
-  await filters.click({ button: 'right' })
-  await expect(page.getByRole('menu', { name: 'Sidebar sections', exact: true })).toHaveCount(0)
-  await filters.click()
-  const parent = page.locator('[data-slot="dropdown-menu-content"]').last()
-  await parent.getByRole('menuitem', { name: 'Profiles', exact: true }).hover()
-  const submenu = page.locator('[data-slot="dropdown-menu-sub-content"]')
-  await expect(submenu).toBeVisible()
-  await expect(parent).toBeVisible()
-  await expect(page.getByRole('menu')).toHaveCount(2)
+  await page.route('**/api/athena/preferences', route => route.abort())
+  await open(page, 'preview-week', { defaultGrouping: true })
+  await page.getByRole('button', { name: 'Filters', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: 'Profiles', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Show projects', exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
+  const chat = page.getByRole('navigation', { name: 'App navigation' }).getByRole('button', { name: 'Chat', exact: true })
+  await chat.press('Shift+F10')
+  const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
+  const layout = menu.getByRole('menuitem', { name: 'Profile layout', exact: true })
+  await layout.press('ArrowRight')
+  const submenu = page.locator('[data-slot="dropdown-menu-sub-content"]:visible')
+  await expect(submenu.getByRole('menuitemradio', { name: 'Combined', exact: true })).toBeChecked()
+  await page.keyboard.press('ArrowLeft')
+  await expect(layout).toBeFocused()
+  await menu.getByRole('menuitem', { name: 'New profile', exact: true }).click()
+  const create = page.getByRole('dialog', { name: 'New profile', exact: true })
+  await expect(create).toBeVisible()
+  await expect(menu).toBeHidden()
+  await create.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await chat.click({ button: 'right' })
+  await page.evaluate(() => {
+    window.hermesDesktop.selectPaths = async () => {
+      window.profileImportPrompted = true
+      return []
+    }
+  })
+  await menu.getByRole('menuitem', { name: /^Import profile/ }).click()
+  await expect.poll(() => page.evaluate(() => window.profileImportPrompted)).toBe(true)
+  await expect(menu).toBeHidden()
+  await expect(chat).toBeFocused()
 })
 
 touchTest('phone long code and tables scroll inside the response at 320px', async ({ page }) => {
@@ -976,7 +1012,7 @@ test('phone startup session-route restoration keeps the chat list visible until 
   } finally { await context.close() }
 })
 
-test.extend({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } })('phone Back leaves Settings unhighlighted when only Sessions is visible', async ({ page }) => {
+test.extend({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } })('phone Back leaves Settings unhighlighted with legacy sidebar preferences', async ({ page }) => {
   await page.route('**/api/athena/preferences', route => route.abort())
   await page.addInitScript(() => {
     localStorage.setItem('hermes-web.browser.navigation-tabs', '["sessions"]')
@@ -988,6 +1024,7 @@ test.extend({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 84
   const settings = navigation.getByRole('button', { name: 'Settings', exact: true })
   await expect(settings).toBeVisible({ timeout: 30000 })
   await expect(navigation.getByRole('tablist')).toHaveCount(0)
+  await expect(navigation.getByRole('button', { name: 'Bots', exact: true })).toHaveAttribute('aria-pressed', 'false')
 
   await session.tap()
   await page.getByRole('button', { name: 'Back to chat history', exact: true }).tap()
@@ -1102,7 +1139,7 @@ test('archiving the open chat on mobile shows the chat list and leaves Undo expl
     await open(page)
     await expect.poll(() => page.evaluate(() => window.history.state?.usr?.athenaMobileChat)).toBe(true)
     const row = page.locator('[data-web-session-id="preview-week"]').first()
-    const list = page.getByRole('tabpanel', { name: 'sessions', exact: true })
+    const list = page.locator('.browser-sessions-pane')
     const toast = page.locator('.browser-archive-toast')
     const getArchiveStatus = async () => (await (await page.request.get(`${origin}/api/sessions/preview-week?profile=default`)).json()).archived
 
@@ -1225,7 +1262,7 @@ test('phone session-row actions stay open without resuming the row', async ({ br
   }
   await page.getByRole('button', { name: 'Back to chat history', exact: true }).tap()
   await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).toBeVisible()
-  await expect(page.getByRole('tab', { name: 'Sessions', exact: true })).toBeFocused()
+  await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).toBeFocused()
   const section = page.locator('.browser-pinned-section')
   await expect(section).toBeVisible()
   if (!await section.locator('[data-row-actions]').count()) await section.getByRole('button', { name: /Pinned/ }).first().click()
@@ -1942,16 +1979,16 @@ for (const width of [1440, 700, 600]) {
     }
     const search = navigation.getByRole('textbox', { name: 'Search', exact: true })
     await expect(search).toBeHidden()
-    await navigation.getByRole('tab', { name: 'Bots' }).click()
+    await page.getByRole('button', { name: 'Bots', exact: true }).click()
     await page.keyboard.press(`${modifier}+b`)
     await expect(navigation).toBeHidden()
 
     await page.keyboard.press(`${modifier}+Shift+f`)
     await expect(navigation).toBeVisible()
-    const sessions = navigation.getByRole('tab', { name: 'Sessions' })
-    await expect(sessions).toHaveAttribute('aria-selected', 'true')
+    const bots = page.getByRole('button', { name: 'Bots', exact: true })
+    await expect(bots).toHaveAttribute('aria-pressed', 'false')
     await expect(search).toBeFocused()
-    await sessions.focus()
+    await bots.focus()
     await expect(search).toBeHidden()
     await page.keyboard.press(`${modifier}+Shift+f`)
     await expect(search).toBeFocused()
@@ -2252,12 +2289,17 @@ test('Show projects toggles project headers without date dividers and survives r
 })
 
 for (const width of [390, 1440]) {
-  test(`Bots keeps filters beside the rightmost add button at ${width}px`, async ({ page }, testInfo) => {
+  const botsToolbarTest = width === 390 ? touchTest : test
+  botsToolbarTest(`Bots keeps filters beside the rightmost add button at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 960 })
-    await open(page)
+    if (width === 390) {
+      await page.goto(`${origin}/#/`)
+      await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).toBeVisible()
+    } else {
+      await open(page)
+    }
     await page.waitForLoadState('networkidle')
-    if (width === 390) await openNavigation(page)
-    await page.getByRole('tab', { name: 'Bots', exact: true }).click()
+    await showSidebarView(page, 'bots', width === 390 ? 'tap' : 'click')
     const filter = page.getByRole('button', { name: /^Filter roster/ })
     const add = page.getByRole('button', { name: 'New bot or group chat', exact: true })
     await expect(filter).toBeVisible()
@@ -2296,7 +2338,7 @@ for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 960 })
     await open(page)
     if (width === 390) await openNavigation(page)
-    await page.getByRole('tab', { name: 'Bots', exact: true }).click()
+    await showSidebarView(page, 'bots')
     const bot = page.getByRole('button', { name: /Research · @/ }).first()
     await expect(bot).toBeVisible()
     await bot.click({ button: 'right' })
@@ -2311,7 +2353,7 @@ for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 960 })
     await open(page)
     if (width === 390) await openNavigation(page)
-    await page.getByRole('tab', { name: 'Bots', exact: true }).click()
+    await showSidebarView(page, 'bots')
     await expect(page.getByRole('button', { name: /Research · @/ })).toBeVisible()
     await expect(page.locator('.browser-pane button:has(.codicon-bell), .browser-pane button:has(.codicon-bell-slash)')).toHaveCount(0)
     if (width === 390) await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
@@ -2842,14 +2884,9 @@ for (const width of [390, 1440]) {
 
 for (const width of [390, 1440]) {
   for (const scale of [100, 150]) {
-    test.extend({ hasTouch: width === 390 })(`navigation tab actions preserve selection and drafts at ${width}px and ${scale}%`, async ({ page }) => {
+    test.extend({ hasTouch: width === 390 })(`sidebar Bots toggle and section settings preserve selection and drafts at ${width}px and ${scale}%`, async ({ page }) => {
       await page.setViewportSize({ width, height: 960 })
-      const saved = await (await page.request.get(`${origin}/api/athena/preferences`)).json()
-      const reset = await page.request.patch(`${origin}/api/athena/preferences`, {
-        headers: { Origin: origin },
-        data: { version: 1, accountId: saved.accountId, seed: false, changes: { 'hermes-web.browser.navigation-tabs': '["sessions","bots"]', 'hermes-web.browser.navigation': 'sessions' } }
-      })
-      expect(reset.ok()).toBe(true)
+      await page.route('**/api/athena/preferences', route => route.abort())
       await open(page)
       await page.evaluate(value => window.hermesDesktop.zoom.setPercent(value), scale)
       await editor(page).fill('Keep this draft while arranging navigation')
@@ -2859,9 +2896,11 @@ for (const width of [390, 1440]) {
       }
       const trigger = page.getByRole('button', { name: 'Settings', exact: true })
       if (width === 390) {
-        const navigationBox = await page.locator('.browser-navigation').boundingBox()
-        expect(navigationBox.x).toBe(0)
-        expect(navigationBox.width).toBe(width)
+        const navigation = page.locator('.browser-navigation')
+        await expect.poll(async () => {
+          const bounds = await navigation.boundingBox()
+          return bounds && [Math.round(bounds.x), Math.round(bounds.width)]
+        }).toEqual([0, width])
         const triggerBox = await trigger.boundingBox()
         expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(width)
       }
@@ -2872,17 +2911,27 @@ for (const width of [390, 1440]) {
         await expect(page.getByRole('menu', { name: 'Settings and workspace', exact: true })).toHaveCount(0)
         await surface.getByRole('button', { name: 'Chat panel', exact: true }).click()
       }
+      const sidebar = page.locator('#browser-navigation')
+      const controls = width === 390 ? sidebar : page.getByRole('navigation', { name: 'App navigation', exact: true })
+      const bots = controls.getByRole('button', { name: 'Bots', exact: true })
+      await expect(sidebar.getByRole('tablist')).toHaveCount(0)
+      if (width !== 390) {
+        await expect(sidebar.getByRole('button', { name: 'Bots', exact: true })).toHaveCount(0)
+        await expect(bots.locator('xpath=following-sibling::*[1]')).toHaveAccessibleName('Kanban')
+        await page.getByRole('button', { name: 'Hide navigation', exact: true }).click()
+        await expect(sidebar).toBeHidden()
+      }
+      await bots.click()
+      await expect(bots).toHaveAttribute('aria-pressed', 'true')
+      await expect(sidebar.getByRole('button', { name: /Research · @/ })).toBeVisible()
+      await expect(sidebar.locator('.browser-sessions-pane')).toBeHidden()
+      await bots.click()
+      await expect(bots).toHaveAttribute('aria-pressed', 'false')
+      await expect(sidebar.locator('.browser-sessions-pane')).toBeVisible()
       await openChatPanel()
-      await expect(surface.getByRole('group')).toHaveCount(2)
-      await expect(check('Sessions')).toBeChecked()
-      await check('Sessions').click()
-      await expect(check('Sessions')).not.toBeChecked()
-      await expect(check('Bots')).toBeDisabled()
-      await expect(page.locator('.browser-sessions-pane')).toHaveJSProperty('hidden', true)
-      await check('Sessions').click()
-      await check('Bots').click()
-      await expect(check('Sessions')).toBeDisabled()
-      await expect(page.locator('.browser-sessions-pane')).toHaveJSProperty('hidden', false)
+      await expect(surface.getByRole('group')).toHaveCount(1)
+      await expect(check('Sessions')).toHaveCount(0)
+      await expect(check('Bots')).toHaveCount(0)
       const cron = check('Cron jobs')
       const initialCron = await cron.isChecked()
       await cron.click()
@@ -2891,14 +2940,10 @@ for (const width of [390, 1440]) {
       await expect(surface).toHaveCount(0)
       await expect(editor(page)).toHaveText('Keep this draft while arranging navigation')
       await openChatPanel()
-      await expect(check('Sessions')).toBeDisabled()
       await expect(cron).toBeChecked({ checked: !initialCron })
-      await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('hermes-web.browser.navigation-tabs')))).toEqual(['sessions'])
-      await check('Bots').click()
       await cron.click()
       await page.getByRole('button', { name: 'Close settings', exact: true }).click()
       await expect(page).toHaveURL(/#\/preview-week$/)
-      await expect(page.getByRole('tab', { name: 'Sessions', exact: true, includeHidden: true })).toHaveCount(1)
     })
   }
 }
@@ -2935,7 +2980,7 @@ test('separated profiles replace Chat in the desktop rail and open their own con
   await page.route('**/api/athena/preferences', route => route.abort())
   await open(page)
   const rail = page.getByRole('navigation', { name: 'App navigation' })
-  const profiles = rail.getByRole('radiogroup', { name: 'Profiles' })
+  const profiles = rail
   const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
   await expect(rail.getByRole('button', { name: 'Chat', exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Profile actions', exact: true })).toHaveCount(0)
@@ -2946,10 +2991,12 @@ test('separated profiles replace Chat in the desktop rail and open their own con
     const origin = await profile.boundingBox()
     await profile.click({ button: 'right' })
     await expect(menu.getByRole('menuitem', { name: 'Edit profile', exact: true })).toBeVisible()
-    await expect(menu.getByRole('menuitemcheckbox', { name, exact: true })).toBeVisible()
+    await expect(menu.getByRole('menuitemcheckbox', { name, exact: true })).toHaveCount(0)
     const position = await menu.boundingBox()
     expect(Math.abs(position.x - origin.x)).toBeLessThan(120)
     expect(Math.abs(position.y - origin.y)).toBeLessThan(40)
+    const submenu = await openProfileSubmenu(page, 'Profiles')
+    await expect(submenu.getByRole('menuitemcheckbox', { name, exact: true })).toBeChecked()
     await page.keyboard.press('Escape')
     await expect(profile).toBeFocused()
   }
@@ -2973,6 +3020,53 @@ test('separated profiles replace Chat in the desktop rail and open their own con
   await expect(writer).toHaveAttribute('aria-pressed', 'true')
 })
 
+test('the separated desktop rail adds profiles between the roster and Kanban', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await page.route('**/api/athena/preferences', route => route.abort())
+  const createdProfile = { name: 'new-rail-profile', display_name: 'New rail profile', path: '/workspace/new-rail-profile' }
+  let created = false
+  await page.route('**/api/profiles', async route => {
+    if (route.request().method() === 'POST') {
+      expect(route.request().postDataJSON()).toEqual({ name: createdProfile.name, clone_from: 'default' })
+      created = true
+      await route.fulfill({ json: { ok: true, name: createdProfile.name, path: createdProfile.path } })
+      return
+    }
+    if (!created) return route.continue()
+    const response = await route.fetch()
+    const data = await response.json()
+    await route.fulfill({ response, json: { ...data, profiles: [...data.profiles, createdProfile] } })
+  })
+  await open(page)
+  const rail = page.getByRole('navigation', { name: 'App navigation' })
+  const add = rail.getByRole('button', { name: 'New profile', exact: true })
+  const kanban = rail.getByRole('button', { name: 'Kanban', exact: true })
+  const centers = await rail.locator('img[alt="Athena"], button.browser-profile-choice, button[aria-label="New profile"], button[aria-label="Bots"], button[aria-label="Kanban"]').evaluateAll(items =>
+    items.map(item => {
+      const { y, height } = item.getBoundingClientRect()
+      return y + height / 2
+    })
+  )
+  expect(centers).toHaveLength(8)
+  for (let i = 2; i < centers.length; i++) {
+    expect(centers[i] - centers[i - 1]).toBeCloseTo(centers[1] - centers[0], 1)
+  }
+
+  await kanban.click()
+  const dialog = page.getByRole('dialog', { name: 'New profile', exact: true })
+  await add.click()
+  await expect(dialog.getByRole('textbox', { name: 'Name', exact: true })).toBeFocused()
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(add).toBeFocused()
+
+  await add.press('Enter')
+  await dialog.getByRole('textbox', { name: 'Name', exact: true }).fill(createdProfile.name)
+  await dialog.getByRole('button', { name: 'Create profile', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  await expect(rail.getByRole('button', { name: createdProfile.display_name, exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page).toHaveURL(/#\/$/)
+})
+
 test('Sessions avatar editing preserves the conversation and targets the clicked profile', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
   const writes = []
@@ -2987,7 +3081,7 @@ test('Sessions avatar editing preserves the conversation and targets the clicked
   const originalUrl = page.url()
   const allProfiles = page.getByRole('button', { name: 'All profiles', exact: true })
   const originalScope = await allProfiles.getAttribute('aria-pressed')
-  // Edit from Sessions before ever opening the Bots tab.
+  // Edit from Sessions before opening Bots.
   const writer = page.locator('[data-profile-key="writer"]')
   await writer.click({ button: 'right' })
   const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
@@ -3038,12 +3132,12 @@ test('profiles can reorder and hide the default Hermes profile', async ({ page }
   await expect(hermes).toHaveAttribute('draggable', 'true')
   const writerSize = await writer.evaluate(el => ({ width: el.clientWidth, height: el.clientHeight }))
   await hermes.dragTo(writer, { targetPosition: { x: writerSize.width / 2, y: writerSize.height * .8 } })
-  const profileOrder = await page.locator('.browser-profile-choice[draggable="true"]').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))
+  const profileOrder = await page.locator('[data-profile-key][draggable="true"]').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))
   expect(profileOrder).toEqual(['Research', 'Writer', 'Hermes'])
 
   await hermes.click({ button: 'right' })
-  const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
-  const visibility = menu.getByRole('menuitemcheckbox', { name: 'Hermes', exact: true })
+  const submenu = await openProfileSubmenu(page, 'Profiles')
+  const visibility = submenu.getByRole('menuitemcheckbox', { name: 'Hermes', exact: true })
   await expect(visibility).toHaveAttribute('aria-checked', 'true')
   await visibility.click()
   await expect(hermes).toHaveCount(0)
@@ -3055,11 +3149,12 @@ test('profiles can reorder and hide the default Hermes profile', async ({ page }
 
 for (const width of [1440]) {
   test(`profile gap drops stay stable and persist at ${width}px`, async ({ page }) => {
+    await page.route('**/api/athena/preferences', route => route.abort())
     await page.setViewportSize({ width, height: 960 })
     await open(page)
-    const profiles = page.locator('.browser-profile-choice[draggable="true"]')
-    const rail = page.locator('.browser-profile-rail')
-    const marker = rail.locator('.browser-profile-drop-indicator')
+    const profiles = page.locator('[data-profile-key][draggable="true"]')
+    const rail = page.locator('.browser-app-rail')
+    const marker = rail.locator('[data-rail-insertion]')
     const names = () => profiles.evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label')))
     const dataTransfer = await page.evaluateHandle(() => new DataTransfer())
     const hoverAt = (clientY) => rail.dispatchEvent('dragover', { dataTransfer, clientY })
@@ -3094,9 +3189,8 @@ for (const width of [1440]) {
       await dropAt(leadingGap)
       expected = [original[1], original[0], original[2]]
       await expect.poll(names).toEqual(expected)
-      const end = await page.locator('.browser-profile-drop-end').boundingBox()
-      // Aim inside the visible trailing space at every UI scale.
-      await beginDrag(profiles.first(), end.y + end.height / 2)
+      const end = await rail.getByRole('button', { name: 'Settings', exact: true }).boundingBox()
+      await beginDrag(profiles.first(), end.y + end.height * .8)
       await expect(marker).toBeVisible()
       await profiles.first().dispatchEvent('dragend', { dataTransfer })
       await expect(marker).toHaveCount(0)
@@ -3107,39 +3201,64 @@ for (const width of [1440]) {
     await expect.poll(names).toEqual(expected)
   })
 
-  test(`profile end drop shows an indicator and saves the order at ${width}px`, async ({ page }, testInfo) => {
+  test(`navigation controls and profile avatars share a saved order at ${width}px`, async ({ page }) => {
+    await page.route('**/api/athena/preferences', route => route.abort())
     await page.setViewportSize({ width, height: 960 })
     await open(page)
-    const source = page.getByRole('button', { name: 'Hermes', exact: true })
-    const writer = page.getByRole('button', { name: 'Writer', exact: true })
-    const end = page.locator('.browser-profile-drop-end')
-    const indicator = end.locator('.browser-profile-drop-indicator')
-    const last = await writer.boundingBox(), target = await end.boundingBox()
-    const rail = page.locator('.browser-profile-rail')
+    const rail = page.locator('.browser-app-rail')
+    const settings = rail.getByRole('button', { name: 'Settings', exact: true })
+    const research = rail.getByRole('button', { name: 'Research', exact: true })
+    const kanban = rail.getByRole('button', { name: 'Kanban', exact: true })
+    const writer = rail.getByRole('button', { name: 'Writer', exact: true })
+    const order = () => rail.locator('[data-rail-key]').evaluateAll(items => items.map(item => item.dataset.railKey))
+    const before = await order()
+    const researchBox = await research.boundingBox()
+    await settings.dragTo(research, { targetPosition: { x: researchBox.width / 2, y: researchBox.height * .2 } })
+    const settingsMoved = before.filter(key => key !== 'settings')
+    settingsMoved.splice(settingsMoved.indexOf('profile:research'), 0, 'settings')
+    await expect.poll(order).toEqual(settingsMoved)
+
+    const kanbanBox = await kanban.boundingBox()
     const dataTransfer = await page.evaluateHandle(() => new DataTransfer())
-    await source.dispatchEvent('dragstart', { dataTransfer })
-    // Both the trailing half of the last avatar and the empty space after it
-    // must preview the same insertion position.
-    await rail.dispatchEvent('dragover', { dataTransfer, clientY: last.y + last.height * .8 })
-    await expect(indicator).toBeVisible()
-    await rail.dispatchEvent('dragover', { dataTransfer, clientY: target.y + target.height / 2 })
-    await expect(indicator).toBeVisible()
-    const marker = await indicator.boundingBox()
-    expect(marker.y).toBeGreaterThanOrEqual(last.y + last.height)
-    await page.screenshot({ path: testInfo.outputPath('profile-end-indicator.png') })
-    await rail.dispatchEvent('drop', { dataTransfer, clientY: target.y + target.height / 2 })
-    await expect(indicator).toHaveCount(0)
-    const order = page.locator('.browser-profile-choice[draggable="true"]')
-    expect(await order.evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))).toEqual(['Research', 'Writer', 'Hermes'])
+    await writer.dispatchEvent('dragstart', { dataTransfer })
+    await rail.dispatchEvent('dragover', { dataTransfer, clientY: kanbanBox.y + kanbanBox.height * .8 })
+    await expect(rail.locator('[data-rail-key="kanban"][data-rail-insertion="after"]')).toBeVisible()
+    await rail.dispatchEvent('drop', { dataTransfer, clientY: kanbanBox.y + kanbanBox.height * .8 })
+    const writerMoved = settingsMoved.filter(key => key !== 'profile:writer')
+    writerMoved.splice(writerMoved.indexOf('kanban') + 1, 0, 'profile:writer')
+    await expect.poll(order).toEqual(writerMoved)
+    await expect(rail.locator('[data-rail-insertion]')).toHaveCount(0)
+
+    await settings.press('Alt+ArrowDown')
+    const final = writerMoved.filter(key => key !== 'settings')
+    final.splice(final.indexOf('profile:research') + 1, 0, 'settings')
+    await expect.poll(order).toEqual(final)
+    await expect(settings).toBeFocused()
     await page.reload()
-    await expect(editor(page)).toBeVisible()
-    expect(await order.evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')))).toEqual(['Research', 'Writer', 'Hermes'])
+    await expect.poll(order).toEqual(final)
+    await kanban.click()
+    await expect(page.getByRole('main', { name: 'Kanban', exact: true })).toBeVisible()
   })
 }
+
+test('reordering the Chat control preserves navigation and the draft', async ({ page }) => {
+  await page.route('**/api/athena/preferences', route => route.abort())
+  await open(page, 'preview-week', { defaultGrouping: true })
+  await editor(page).fill('Keep this draft while reordering Chat')
+  const rail = page.locator('.browser-app-rail')
+  const chat = rail.getByRole('button', { name: 'Chat', exact: true })
+  const nextKey = await rail.locator('[data-rail-key]').nth(1).getAttribute('data-rail-key')
+  await chat.press('Alt+ArrowDown')
+  await expect(rail.locator('[data-rail-key]').first()).toHaveAttribute('data-rail-key', nextKey)
+  await expect(chat).toBeFocused()
+  await chat.click()
+  await expect(editor(page)).toHaveText('Keep this draft while reordering Chat')
+})
 
 for (const width of [390, 1440]) {
   for (const scale of [100, 150]) {
     test.extend({ hasTouch: width === 390 })(`profile actions preserve drafts and focus at ${width}px and ${scale}%`, async ({ page }, testInfo) => {
+      await page.route('**/api/athena/preferences', route => route.abort())
       await page.setViewportSize({ width, height: 960 })
       await open(page)
       await page.evaluate(percent => window.hermesDesktop.zoom.setPercent(percent), scale)
@@ -3147,13 +3266,14 @@ for (const width of [390, 1440]) {
       if (width === 390) await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
       const trigger = page.getByRole('button', { name: width === 390 ? 'Profile actions' : 'Hermes', exact: true })
       const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Profile actions', exact: true })
-      const writer = surface.getByRole(width === 390 ? 'checkbox' : 'menuitemcheckbox', { name: 'Writer', exact: true })
       const openActions = () => trigger.click({ button: width === 390 ? 'left' : 'right' })
       await openActions()
+      const submenu = await openProfileSubmenu(page, 'Profiles', width === 390)
+      const writer = submenu.getByRole(width === 390 ? 'checkbox' : 'menuitemcheckbox', { name: 'Writer', exact: true })
       await expect(writer).toHaveAttribute('aria-checked', 'true')
       await page.screenshot({ path: testInfo.outputPath('profile-actions.png') })
       await expect.poll(async () => {
-        const bounds = await surface.boundingBox()
+        const bounds = await submenu.boundingBox()
         return bounds && bounds.x >= -1 && bounds.x + bounds.width <= width + 1 &&
           bounds.y >= 0 && bounds.y + bounds.height <= 961
       }).toBe(true)
@@ -3164,6 +3284,7 @@ for (const width of [390, 1440]) {
       await expect(surface).toHaveCount(0)
       await expect(trigger).toBeFocused()
       await openActions()
+      await openProfileSubmenu(page, 'Profiles', width === 390)
       await writer.click()
       await expect(page.locator('[data-profile-key="writer"]')).toBeVisible()
       await page.keyboard.press('Escape')
@@ -3183,29 +3304,33 @@ for (const width of [390, 1440]) {
 test.describe('touch profile controls', () => {
   test.use({ hasTouch: true })
   test('profile actions work with taps without changing the conversation', async ({ page }) => {
+    await page.route('**/api/athena/preferences', route => route.abort())
     await page.setViewportSize({ width: 390, height: 844 })
     await open(page)
     await editor(page).fill('Keep the touch draft')
     await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).tap()
     const trigger = page.getByRole('button', { name: 'Profile actions', exact: true })
-    const sheet = page.getByRole('dialog', { name: 'Profile actions', exact: true })
     await trigger.tap()
-    await sheet.getByRole('button', { name: 'Hide Research', exact: true }).tap()
+    const submenu = await openProfileSubmenu(page, 'Profiles', true)
+    const research = submenu.getByRole('checkbox', { name: 'Research', exact: true })
+    await research.tap()
     await expect(page.locator('[data-profile-key="research"]')).toHaveCount(0)
-    await trigger.tap()
-    await sheet.getByRole('button', { name: 'Show hidden', exact: true }).tap()
+    await research.tap()
     await expect(page.locator('[data-profile-key="research"]')).toBeVisible()
-    await page.getByRole('button', { name: 'Back to chat', exact: true }).tap()
+    await page.keyboard.press('Escape')
+    await page.locator('#browser-navigation').getByRole('button', { name: 'Plan a calmer working week', exact: true }).first().tap()
     await expect(page).toHaveURL(/#\/preview-week$/)
     await expect(editor(page)).toHaveText('Keep the touch draft')
   })
 })
 
-test('phone profiles retain saved desktop order and reject drag operations', async ({ page }) => {
+touchTest('phone profiles retain saved desktop order and reject drag operations', async ({ page }) => {
+  await page.route('**/api/athena/preferences', route => route.abort())
   await page.addInitScript(() => localStorage.setItem('hermes.desktop.profileOrder', JSON.stringify(['writer', 'default', 'research'])))
   await page.setViewportSize({ width: 390, height: 844 })
   await open(page)
-  await openNavigation(page)
+  await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).toBeVisible()
   const profiles = page.locator('[data-profile-key]')
   const names = () => profiles.evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label')))
   await expect.poll(names).toEqual(['Writer', 'Hermes', 'Research'])
@@ -3215,7 +3340,7 @@ test('phone profiles retain saved desktop order and reject drag operations', asy
   await profiles.first().dispatchEvent('dragstart', { dataTransfer })
   await page.locator('.browser-profile-rail').dispatchEvent('drop', { dataTransfer, clientX: 350 })
   expect(await names()).toEqual(['Writer', 'Hermes', 'Research'])
-  await expect(page.locator('.browser-profile-drop-indicator')).toHaveCount(0)
+  await expect(page.locator('[data-rail-insertion]')).toHaveCount(0)
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes.desktop.profileOrder')))).toEqual(['writer', 'default', 'research'])
   await page.setViewportSize({ width: 1440, height: 960 })
   for (const profile of await profiles.all()) await expect(profile).toHaveAttribute('draggable', 'true')
@@ -3529,7 +3654,7 @@ for (const width of [390, 1440]) {
       await page.evaluate(value => window.hermesDesktop.zoom.setPercent(value), scale)
       await editor(page).fill('Keep my draft while arranging Bots')
       if (width === 390) await openNavigation(page)
-      await page.getByRole('tab', { name: 'Bots', exact: true }).click()
+      await showSidebarView(page, 'bots')
       const filter = page.getByRole('button', { name: /^Filter roster/ })
       const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Filter Bots', exact: true })
       const radio = width === 390 ? 'radio' : 'menuitemradio'
@@ -3590,7 +3715,7 @@ for (const width of [390, 1440]) {
         await expect(add).toBeFocused()
       }
       if (width === 390) await expect(page.locator('.browser-navigation.is-open')).toBeVisible()
-      await page.getByRole('tab', { name: 'Sessions', exact: true }).click()
+      await showSidebarView(page, 'sessions')
       if (width === 390) await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
       await expect(editor(page)).toHaveText('Keep my draft while arranging Bots')
       await expect(page).toHaveURL(/#\/preview-week$/)
@@ -3606,7 +3731,7 @@ test.describe('touch Bots controls', () => {
     await open(page)
     await editor(page).fill('Keep this touch Bots draft')
     await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).tap()
-    await page.getByRole('tab', { name: 'Bots', exact: true }).tap()
+    await showSidebarView(page, 'bots', 'tap')
     const filter = page.getByRole('button', { name: /^Filter roster/ })
     await filter.tap()
     const sheet = page.getByRole('dialog', { name: 'Filter Bots', exact: true })
@@ -3633,7 +3758,7 @@ test.describe('touch Bots controls', () => {
 test('hidden Bot visibility commands update the existing session-only preference', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
   await open(page)
-  await page.getByRole('tab', { name: 'Bots', exact: true }).click()
+  await showSidebarView(page, 'bots')
   const filter = page.getByRole('button', { name: 'Filter roster', exact: true })
   const toggle = page.getByRole('menuitemcheckbox', { name: 'Show hidden bots', exact: true })
   await filter.click()
@@ -3641,8 +3766,8 @@ test('hidden Bot visibility commands update the existing session-only preference
   await toggle.click()
   await expect(toggle).toHaveAttribute('aria-checked', 'true')
   await page.keyboard.press('Escape')
-  await page.getByRole('tab', { name: 'Sessions', exact: true }).click()
-  await page.getByRole('tab', { name: 'Bots', exact: true }).click()
+  await showSidebarView(page, 'sessions')
+  await showSidebarView(page, 'bots')
   await filter.click()
   await expect(toggle).toHaveAttribute('aria-checked', 'true')
   await page.keyboard.press('Escape')
@@ -3661,7 +3786,7 @@ for (const width of [390, 1440]) {
       await page.evaluate(value => window.hermesDesktop.zoom.setPercent(value), scale)
       await editor(page).fill('Keep my draft while organizing rows')
       if (width === 390) await openNavigation(page)
-      await page.getByRole('tab', { name: 'Bots', exact: true }).click()
+      await showSidebarView(page, 'bots')
       const trigger = page.getByRole('button', { name: 'Actions for Research', exact: true })
       const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Actions for Research', exact: true })
       const item = (name) => surface.getByRole(width === 390 ? 'button' : 'menuitem', { name, exact: true })
@@ -3717,9 +3842,9 @@ for (const width of [390, 1440]) {
       await renamed.click()
       await page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Actions for Renamed work', exact: true }).getByRole(width === 390 ? 'button' : 'menuitem', { name: 'Delete', exact: true }).click()
       await expect(renamed).toHaveCount(0)
-      await expect(page.getByRole('tab', { name: 'Bots', exact: true })).toBeFocused()
+      await expect(page.getByRole('button', { name: 'Bots', exact: true })).toBeFocused()
       await expect(trigger).toBeVisible()
-      await page.getByRole('tab', { name: 'Sessions', exact: true }).click()
+      await showSidebarView(page, 'sessions')
       if (width === 390) await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
       await expect(editor(page)).toHaveText('Keep my draft while organizing rows')
       await expect(page).toHaveURL(/#\/preview-week$/)
@@ -3733,7 +3858,7 @@ test('shared UI styles: compact controls retain active and keyboard focus states
   await page.evaluate(() => window.hermesDesktop.zoom.setPercent(100))
   const sessionFilter = page.getByRole('button', { name: 'Filters', exact: true })
   expect((await sessionFilter.boundingBox()).width).toBeCloseTo(24, 0)
-  const bots = page.getByRole('tab', { name: 'Bots', exact: true })
+  const bots = page.getByRole('button', { name: 'Bots', exact: true })
   await page.keyboard.press('Tab')
   await bots.focus()
   await expect(bots).toHaveCSS('outline-style', 'solid')
@@ -3821,18 +3946,12 @@ for (const scenario of [
       await expect(filters).toBeVisible()
       await expect(filters).toHaveCSS('background-color', appearance.background)
       await expect(filters).toHaveCSS('border-top-color', appearance.border)
-      const profiles = filters.getByRole('menuitem', { name: 'Profiles', exact: true })
-      await expect(profiles).toHaveCSS('font-family', appearance.font)
-      expect((await profiles.boundingBox()).height).toBeCloseTo(appearance.rowHeight, 0)
-      if (compact && hasTouch) await profiles.click()
-      else await profiles.hover()
-      const submenu = page.locator('[data-slot="dropdown-menu-sub-content"]:visible')
-      await expect(submenu).toBeVisible()
-      await expect(submenu).toHaveCSS('background-color', appearance.background)
-      const submenuBox = await submenu.boundingBox()
-      expect(submenuBox.x + submenuBox.width).toBeLessThanOrEqual(width + 1)
-      expect(submenuBox.y + submenuBox.height).toBeLessThanOrEqual(height + 1)
-      await page.keyboard.press('Escape')
+      const projects = filters.getByRole('menuitemcheckbox', { name: 'Show projects', exact: true })
+      await expect(projects).toHaveCSS('font-family', appearance.font)
+      expect((await projects.boundingBox()).height).toBeCloseTo(appearance.rowHeight, 0)
+      const filterBox = await filters.boundingBox()
+      expect(filterBox.x + filterBox.width).toBeLessThanOrEqual(width + 1)
+      expect(filterBox.y + filterBox.height).toBeLessThanOrEqual(height + 1)
       await page.keyboard.press('Escape')
       if (compact) await page.keyboard.press('Escape')
       await expect(editor(page)).toBeVisible()
@@ -4100,14 +4219,17 @@ test.describe('Bots touch refresh', () => {
     await page.setViewportSize({ width:390,height:844 })
     await page.goto(`${origin}/#/preview-week`)
     const session = page.locator('#browser-navigation').getByRole('button',{name:'Plan a calmer working week',exact:true})
-    const sessionsTab = page.getByRole('tab',{name:'Sessions',exact:true})
-    await expect.poll(async()=>await editor(page).isVisible() || await sessionsTab.isVisible(),{timeout:30000}).toBe(true)
-    if(!await editor(page).isVisible()) { await sessionsTab.click(); await session.click() }
+    const botsToggle = page.getByRole('button', { name: 'Bots', exact: true })
+    await expect.poll(async () => await editor(page).isVisible() || await botsToggle.isVisible(), { timeout: 30000 }).toBe(true)
+    if (!await editor(page).isVisible()) {
+      if (await botsToggle.getAttribute('aria-pressed') === 'true') await botsToggle.click()
+      await session.click()
+    }
     await expect(editor(page)).toBeVisible()
     await editor(page).fill('Keep this draft while refreshing Bots')
     await page.getByRole('button',{name:/^(Open navigation|Back to home|Back to chat history)$/}).click()
     await expect(page.getByRole('dialog',{name:'Navigation',exact:true})).toBeVisible()
-    await page.getByRole('tab',{name:'Bots',exact:true}).click()
+    await showSidebarView(page, 'bots')
     const surface = page.locator('[data-browser-bots-refresh]')
     await expect(surface).toBeVisible()
     await expect(page.getByRole('button',{name:'New bot or group chat',exact:true})).toBeVisible()
@@ -4126,7 +4248,7 @@ test.describe('Bots touch refresh', () => {
     await expect.poll(()=>calls.filter(method=>method==='groups.list').length).toBeGreaterThan(groupsBefore)
     await expect(surface).not.toHaveAttribute('aria-busy','true')
     expect(documents).toBe(documentsBefore)
-    await page.getByRole('tab',{name:'Sessions',exact:true}).click()
+    await showSidebarView(page, 'sessions')
     await page.locator('#browser-navigation').getByRole('button',{name:'Plan a calmer working week',exact:true}).click()
     await expect(editor(page)).toHaveText('Keep this draft while refreshing Bots')
   })
@@ -4236,14 +4358,14 @@ test('Profile grouping replaces presentation controls and switches live without 
   await page.goto(`${origin}/#/settings?tab=config:appearance`)
   await expect(page.getByRole('group', { name: 'Session list presentation', exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'Close settings', exact: true }).click()
-  await page.getByRole('button', { name: 'Filters', exact: true }).click()
-  await page.getByRole('menuitem', { name: 'Profiles', exact: true }).hover()
-  await page.getByRole('menuitemradio', { name: 'Separate', exact: true }).click()
-  await page.keyboard.press('Escape')
-  await page.keyboard.press('Escape')
+  const rail = page.getByRole('navigation', { name: 'App navigation', exact: true })
+  await rail.getByRole('button', { name: 'Chat', exact: true }).click({ button: 'right' })
+  const layout = await openProfileSubmenu(page, 'Profile layout')
+  await layout.getByRole('menuitemradio', { name: 'Separate', exact: true }).click()
+  await expect.poll(() => rail.locator('.browser-profile-choice:focus').count()).toBe(1)
   await expect(page.locator('[data-browser-profile-picture]')).toHaveCount(0)
   await expect(page.locator('[data-browser-section-id="sessions"] [data-browser-section-header]')).toContainText('Sessions')
-  await expect(page.getByRole('radiogroup', { name: 'Profiles', exact: true })).toBeVisible()
+  await expect(rail.locator('[data-profile-key]').first()).toBeVisible()
   await expect(sectionHeader.getByRole('button', { name: 'New session', exact: true })).toHaveCount(1)
   await expect(editor(page)).toHaveText('Keep my draft while grouping by profile')
   await page.reload()
@@ -4291,21 +4413,26 @@ for (const width of [1440, 390]) {
     const draft = 'Keep this draft through independent profile layouts'
     await editor(page).fill(draft)
     if (width === 390) await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
-    const choose = async (menu, value) => {
-      await page.getByRole('button', { name: 'Filters', exact: true }).click()
-      const submenu = page.getByRole('menuitem', { name: menu, exact: true })
-      if (width === 390) await submenu.click(); else await submenu.hover()
-      await page.getByRole('menuitemradio', { name: value, exact: true }).click()
-      if (width === 390) await page.mouse.click(width - 8, 8)
-      else { await page.keyboard.press('Escape'); await page.keyboard.press('Escape') }
+    const choose = async value => {
+      if (width === 390) {
+        await page.getByRole('button', { name: 'Profile actions', exact: true }).tap()
+        const layout = await openProfileSubmenu(page, 'Profile layout', true)
+        await layout.getByRole('radio', { name: value, exact: true }).tap()
+      } else {
+        const rail = page.getByRole('navigation', { name: 'App navigation', exact: true })
+        const trigger = value === 'Separate' ? rail.getByRole('button', { name: 'Chat', exact: true }) : rail.locator('.browser-profile-choice').first()
+        await trigger.click({ button: 'right' })
+        const layout = await openProfileSubmenu(page, 'Profile layout')
+        await layout.getByRole('menuitemradio', { name: value, exact: true }).click()
+      }
     }
     const section = page.locator('[data-browser-section-id="sessions"]')
     const group = profile => section.locator('[data-gateway-group]').filter({ has: page.locator(`[data-browser-profile-picture="${profile}"]`) })
     await expect(group('research').getByRole('button', { name: extra.title, exact: true })).toBeVisible()
-    await choose('Profiles', 'Separate')
-    await expect(page.getByRole('radiogroup', { name: 'Profiles', exact: true })).toBeVisible()
+    await choose('Separate')
+    await expect(page.locator('[data-profile-key="default"]')).toBeVisible()
     await expect(section.locator('[data-gateway-group]')).toHaveCount(0)
-    await choose('Profiles', 'Combined')
+    await choose('Combined')
     const toggleProjects = async () => {
       await page.getByRole('button', { name: 'Filters', exact: true }).click()
       await page.getByRole('menuitemcheckbox', { name: 'Show projects', exact: true }).click()
@@ -4358,10 +4485,7 @@ test('profile menus hide groups and filters restore every profile without losing
   await page.getByRole('button', { name: 'Filters', exact: true }).click()
   await expect(restore).toBeDisabled()
   await expect(page.getByRole('menuitem', { name: 'Profile', exact: true })).toHaveCount(0)
-  await page.getByRole('menuitem', { name: 'Profiles', exact: true }).hover()
-  await expect(page.getByRole('menuitem', { name: 'New profile', exact: true })).toBeVisible()
-  await expect(page.getByRole('menuitem', { name: /^Import profile/ })).toBeVisible()
-  await page.keyboard.press('Escape')
+  await expect(page.getByRole('menuitem', { name: 'Profiles', exact: true })).toHaveCount(0)
   await page.keyboard.press('Escape')
   const route = page.url()
   await group('default').getByRole('button', { name: /^Group actions:/ }).click()
