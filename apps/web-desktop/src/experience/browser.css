@@ -299,6 +299,56 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_syst
 body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assistant-message-root"]:not(:has(> [data-slot="aui_assistant-message-content"] > .aui-md)):not(:has([data-clarify-choices])):not(:has([role="alert"])) {
   display: none !important;
 }
+.browser-response-activity {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: .5rem;
+  min-height: 2rem;
+  margin-inline-start: var(--message-text-indent);
+  padding: .125rem .5rem;
+  border-radius: .375rem;
+  color: var(--ui-text-tertiary);
+  font-size: .8125rem;
+  cursor: pointer;
+}
+.browser-response-activity:hover { background: var(--web-hover); color: var(--foreground); }
+.browser-response-activity:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.browser-response-activity-time { font-variant-numeric: tabular-nums; }
+.browser-response-activity-chevron {
+  width: .375rem;
+  height: .375rem;
+  border-inline-end: 1px solid currentColor;
+  border-block-end: 1px solid currentColor;
+  transform: rotate(-45deg);
+}
+.browser-response-activity[aria-expanded="true"] .browser-response-activity-chevron { transform: rotate(45deg); }
+.browser-response-activity-pulse {
+  width: .375rem;
+  height: .375rem;
+  border-radius: 50%;
+  background: currentColor;
+  animation: browser-response-pulse 1.6s ease-in-out infinite alternate;
+}
+@keyframes browser-response-pulse { to { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) {
+  .browser-response-activity-pulse { animation: none; }
+}
+
+.browser-response-content, [data-browser-commentary] { display: contents; }
+.browser-response-content[data-activity-summary] [data-slot="aui_turn-duration"],
+.browser-response-content[data-activity-summary] > [data-role="assistant"] > [data-slot="aui_assistant-message-content"] >
+  :is([data-slot="aui_turn-activity"], [data-slot="aui_response-loading"]) {
+  display: none;
+}
+.browser-response-content[data-activity-collapsed] > [data-role="assistant"] > [data-slot="aui_assistant-message-content"] >
+  :is([data-browser-commentary], [data-tool-group], [data-slot="aui_thinking-disclosure"]) {
+  display: none;
+}
+/* Activity-only bubbles should not leave a turn gap or an orphan timestamp. */
+.browser-response-content[data-activity-collapsed] > [data-role="assistant"]:has(> [data-slot="aui_assistant-message-content"] > :is([data-browser-commentary], [data-tool-group], [data-slot="aui_thinking-disclosure"])):not(:has(> :not([data-slot="aui_assistant-message-content"], [data-slot="timeline-timestamp"], [data-slot="aui_message-streaming-marker"]))):not(:has(> [data-slot="aui_assistant-message-content"] > :not([data-browser-commentary], [data-tool-group], [data-slot="aui_thinking-disclosure"], [data-slot="aui_turn-activity"], [data-slot="aui_response-loading"], [data-slot="timeline-timestamp"]))) {
+  display: none;
+}
 .browser-main { position:relative; flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; outline:none; overflow:hidden; }
 .browser-chat-workspace,.browser-page { display:flex; flex:1; flex-direction:column; min-width:0; min-height:0; }
 .browser-page { overflow:auto; }
