@@ -176,9 +176,7 @@
 .browser-sessions-pane [data-sessions-mode] > [data-sidebar="group"] > [data-browser-section-header] { min-height:2rem; padding-block:var(--web-space-1); }
 .browser-sessions-pane [data-sessions-mode] > [data-sidebar="group"] { padding-bottom:0 !important; }
 .browser-sessions-pane [data-sessions-mode] > [data-sidebar="group"] > [data-sidebar="group-content"] { padding-bottom:0 !important; }
-/* Keep the recents section content-sized in the browser rail. The upstream
-   sidebar gives it the remaining flex height, which leaves messaging and Cron
-   pinned to the bottom when the list is short or empty. */
+/* Keep ungrouped recents content-sized so messaging and Cron follow the rows. */
 .browser-sessions-pane .browser-session-list-section { flex:0 0 auto !important; min-height:0 !important; overflow:visible !important; }
 .browser-sessions-pane .browser-session-list-section > [data-sidebar="group-content"] { flex:0 0 auto !important; min-height:0 !important; overflow:visible !important; }
 .browser-sessions-pane .browser-combined-profiles-section { --browser-profiles-gutter:var(--web-space-3); padding-inline:var(--browser-profiles-gutter); }
@@ -188,8 +186,10 @@
  margin-inline:calc(-1 * var(--browser-profiles-gutter));
  padding-inline:var(--browser-profiles-gutter);
 }
-/* Keep dragged profile groups inside the list so they cannot paint over the
-   section heading. Clip without creating a second scrolling container. */
+/* Let the profile list fill the remaining scroll area without shrinking long
+   lists. Keep dragged groups below the heading with a single scroll container. */
+.browser-sessions-pane .browser-session-list-section:has(> [data-sidebar="group-content"] :is([data-gateway-group],[data-gateway-section])),
+.browser-sessions-pane .browser-session-list-section > [data-sidebar="group-content"]:has([data-gateway-group],[data-gateway-section]) { flex:1 0 auto !important; }
 .browser-sessions-pane .browser-session-list-section > [data-sidebar="group-content"]:has([data-gateway-group],[data-gateway-section]) { overflow:clip !important; }
 .browser-pane[hidden],.browser-chat[hidden] { display:none; }
 .browser-sessions-pane { flex:1 1 auto; height:auto; min-height:0; overflow:auto; }
