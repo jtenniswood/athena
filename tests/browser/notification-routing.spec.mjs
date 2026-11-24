@@ -123,6 +123,7 @@ test('a prepared update blocks portal menus until the worker aborts', async ({ p
 })
 
 test('pending sign-out refuses PWA preparation and retains its draft after logout fails', async ({ page }) => {
+  await page.evaluate(() => { location.hash = '/settings?tab=gateway' })
   let finishLogout
   await page.route('**/auth/logout', async route => {
     await new Promise(resolve => { finishLogout = resolve })
@@ -137,12 +138,13 @@ test('pending sign-out refuses PWA preparation and retains its draft after logou
     await expect(page.locator('#root')).toHaveJSProperty('inert', true)
     expect(await route(page, page.url())).toEqual({ ready: false })
   } finally { finishLogout?.() }
-  await expect(page.getByRole('alert').filter({ hasText: 'Sign-out failed' })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: 'Sign-out failed' })).toBeVisible()
   await expect(page.locator('#root')).toHaveJSProperty('inert', false)
   expect(await page.evaluate(() => window.notificationDocument)).toBe('Retain this document')
   expect((await sendFromWorker(page, { type: 'HERMES_FLUSH_UPDATE', transaction: 'after-sign-out-failure' })).ready).toBe(true)
   await sendFromWorker(page, { type: 'HERMES_ABORT_UPDATE', transaction: 'after-sign-out-failure' }, false)
   await expect(page.locator('#root')).toHaveJSProperty('inert', false)
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
   await expect(composer(page)).toHaveText('Keep this notification-tab draft')
 })
 

@@ -76,6 +76,7 @@ for (const scale of [100, 125, 150]) {
     await assertReachable(form.getByRole('button', { name: 'Test connection' }), 300, 48)
     await form.getByRole('button', { name: 'Test connection' }).click()
     await expect(form.getByRole('status')).toHaveText('The configured gateway is reachable.')
+    await assertReachable(form.getByRole('button', { name: 'Sign out', exact: true }), 300, 48)
     await page.screenshot({ path: testInfo.outputPath('gateway-keyboard.png') })
 
     await form.getByRole('combobox', { name: 'Sign-in method' }).click()

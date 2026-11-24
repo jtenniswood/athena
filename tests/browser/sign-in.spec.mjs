@@ -86,23 +86,20 @@ async function hermesAuth(context, { providers = [externalProvider], signedIn = 
   }))
 }
 
-const signOutButton = page => page.getByRole('button', { name: 'Sign out', exact: true })
-
-async function selectSignOut(page) {
-  if (!await signOutButton(page).isVisible()) await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
-  const settings = page.getByRole('button', { name: 'Settings', exact: true })
-  await expect(settings).toBeVisible()
-  await expect(signOutButton(page)).toBeVisible()
-  expect((await signOutButton(page).boundingBox()).y).toBeGreaterThan((await settings.boundingBox()).y)
-  await signOutButton(page).click()
+async function selectSignOut(page, compact = false) {
+  const trigger = page.getByRole('button', { name: 'Settings', exact: true })
+  if (!await trigger.isVisible()) await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).click()
+  await trigger.click()
+  await page.getByRole('navigation', { name: 'Settings categories' }).getByRole('button', { name: 'Gateway', exact: true }).click()
+  await page.getByRole('region', { name: 'Gateway connection', exact: true }).getByRole('button', { name: 'Sign out', exact: true }).click()
 }
 
 async function expectSignOutError(page, message) {
-  await expect(page.getByRole('alert').getByText(message, { exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Gateway connection', exact: true }).getByText(message, { exact: true })).toBeVisible()
 }
 
 for (const width of [390, 1440]) {
-  test.extend({ hasTouch: width === 390 })(`navigation sign-out returns to sign-in and preserves text drafts at ${width}px`, async ({ page, context }) => {
+  test.extend({ hasTouch: width === 390 })(`settings sign-out returns to sign-in and preserves text drafts at ${width}px`, async ({ page, context }) => {
     await hermesAuth(context, { signedIn: true })
     await page.setViewportSize({ width, height: 960 })
     await page.goto(`${origin}/#/preview-week`)
@@ -110,12 +107,12 @@ for (const width of [390, 1440]) {
     await expect(editor(page)).toBeVisible({ timeout: 30000 })
     await editor(page).fill('Keep this draft after signing out')
     const logout = page.waitForRequest(request => request.url().endsWith('/auth/logout'))
-    await selectSignOut(page)
+    await selectSignOut(page, width === 390)
     expect((await logout).method()).toBe('POST')
     await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Sign in' })).toBeEnabled()
     await expect(editor(page)).toHaveCount(0)
-    await expect(page).toHaveURL(/#\/preview-week$/)
+    await expect(page).toHaveURL(/#\/settings\?tab=gateway$/)
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes:composer-drafts:v3'))['preview-week'])).toBe('Keep this draft after signing out')
     await context.addCookies([{ name: 'athena_test_session', value: 'authenticated', url: origin, httpOnly: true }])
     await page.goto(`${origin}/#/preview-week`)
@@ -125,7 +122,7 @@ for (const width of [390, 1440]) {
   })
 }
 
-test('navigation sign-out clears imported session tokens', async ({ page, context }) => {
+test('settings sign-out clears imported session tokens', async ({ page, context }) => {
   await hermesAuth(context, { signedIn: true })
   await page.goto(`${origin}/?token=synthetic-session-token#/preview-week`)
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
@@ -144,7 +141,7 @@ test('failed sign-out keeps chat and token credentials available for retry', asy
   await expectSignOutError(page, 'Sign-out failed (503). Try again.')
   await expect(editor(page)).toHaveText('Keep this draft on failure')
   expect(await page.evaluate(() => window.hermesDesktop.getConnectionConfig())).toMatchObject({ remoteAuthMode: 'token', remoteTokenSet: true })
-  await expect(signOutButton(page)).toBeEnabled()
+  await expect(page.getByRole('region', { name: 'Gateway connection', exact: true }).getByRole('button', { name: 'Sign out', exact: true })).toBeEnabled()
 })
 
 test('sign-out blocks late edits and preserves the saved draft', async ({ page, context }) => {
@@ -164,7 +161,7 @@ test('sign-out blocks late edits and preserves the saved draft', async ({ page, 
     await requested
     await expect(page.locator('#root')).toHaveJSProperty('inert', true)
     await expect(page.locator('body')).toHaveJSProperty('inert', true)
-    await expect(page.locator('.browser-app-navigation button[aria-label="Settings"]').click({ timeout: 500 })).rejects.toThrow()
+    await expect(page.getByRole('button', { name: 'Close settings', exact: true }).click({ timeout: 500 })).rejects.toThrow()
   } finally { releaseLogout() }
   await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes:composer-drafts:v3'))['preview-week'])).toBe('Before sign-out')
@@ -183,6 +180,7 @@ test('sign-out leaves unsent attachments in chat without ending the session', as
   await expect(page.getByRole('button', { name: 'Remove unsent.txt', exact: true })).toBeVisible()
   await selectSignOut(page)
   await expectSignOutError(page, 'Send or remove unsent attachments before reloading.')
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Remove unsent.txt', exact: true })).toBeVisible()
   expect(logouts).toBe(0)
 })
