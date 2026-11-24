@@ -502,8 +502,19 @@ for (const preference of ['queue', 'steer']) for (const alternate of [false, tru
 
 test('response links open a browser tab without losing the conversation or draft', async ({ page, context }) => {
   const destination = 'https://example.com/response-link'
-  // Exercise the actual transcript renderer with both Markdown and HTML anchors.
-  const response = `[Markdown reference](${destination})\n\n<a href="${destination}">HTML reference</a>`
+  const inlineUrl = 'http://devbox.example.test:8090/status?mode=ready&check=1'
+  const bareUrl = 'https://example.com/bare'
+  const codeLabel = 'https://example.com/label'
+  const response = [
+    `[Markdown reference](${destination})`,
+    `<a href="${destination}">HTML reference</a>`,
+    `Open the service (\`${inlineUrl}\`).`,
+    `Bare URL (${bareUrl}).`,
+    `[\`${codeLabel}\`](${destination})`,
+    `<a href="${destination}">\`https://example.com/html-label\`</a>`,
+    `\`curl ${inlineUrl}\` and \`https://example.com:99999\` and \`javascript:void(0)\``,
+    '```bash\ncat <<EOF\nhttps://example.com/fenced\nEOF\n```'
+  ].join('\n\n')
   await page.routeWebSocket(/\/api\/ws/, socket => {
     const server = socket.connectToServer()
     server.onMessage(message => {
@@ -522,19 +533,32 @@ test('response links open a browser tab without losing the conversation or draft
     if (row) row.content = response
     await route.fulfill({ response: upstream, json: body })
   })
-  await context.route(destination, route => route.fulfill({ contentType: 'text/html', body: '<h1>Reference destination</h1>' }))
+  for (const url of [destination, inlineUrl]) {
+    await context.route(url, route => route.fulfill({ contentType: 'text/html', body: '<h1>Reference destination</h1>' }))
+  }
   // The desktop preference must not send browser clicks to its absent pane.
   await page.addInitScript(() => localStorage.setItem('hermes.desktop.alwaysExternalLinks.v1', 'false'))
   await open(page)
   await expect(page.locator('.athena-connecting-overlay')).toBeHidden({ timeout: 30000 })
   for (const dismiss of await page.getByRole('button', { name: 'Dismiss notification', exact: true }).all()) await dismiss.click()
   await editor(page).fill('Keep my response-link draft')
+  await expect(page.getByRole('link', { name: bareUrl, exact: true })).toHaveAttribute('href', bareUrl)
+  await expect(page.locator('code a', { hasText: inlineUrl })).toHaveCount(1)
+  await expect(page.getByRole('link', { name: codeLabel, exact: true })).toHaveAttribute('href', destination)
+  await expect(page.getByRole('link', { name: 'https://example.com/html-label', exact: true })).toHaveAttribute('href', destination)
+  for (const text of [`curl ${inlineUrl}`, 'https://example.com:99999', 'javascript:void(0)']) {
+    await expect(page.getByText(text, { exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: text, exact: true })).toHaveCount(0)
+  }
+  await expect(page.getByText('https://example.com/fenced')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'https://example.com/fenced', exact: true })).toHaveCount(0)
   for (const [label, gesture] of [
     ['Markdown reference', 'keyboard'],
     ['Markdown reference', 'click'],
     ['HTML reference', 'click'],
     ['Markdown reference', 'modifier'],
-    ['HTML reference', 'middle']
+    ['HTML reference', 'middle'],
+    [inlineUrl, 'click']
   ]) {
     const link = page.getByRole('link', { name: label, exact: true })
     await page.bringToFront()
@@ -549,7 +573,7 @@ test('response links open a browser tab without losing the conversation or draft
     if (gesture === 'keyboard') await link.press('Enter')
     else await link.click(gesture === 'modifier' ? { modifiers: ['ControlOrMeta'] } : gesture === 'middle' ? { button: 'middle' } : {})
     const popup = await popupPromise
-    await expect(popup).toHaveURL(destination)
+    await expect(popup).toHaveURL(label === inlineUrl ? inlineUrl : destination)
     await expect(popup.getByRole('heading', { name: 'Reference destination' })).toBeVisible()
     expect(await popup.evaluate(() => window.opener)).toBeNull()
     await popup.close()

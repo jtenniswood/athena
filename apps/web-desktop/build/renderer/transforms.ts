@@ -64,6 +64,38 @@ function rewrite(code: string, id: string): { code: string; map: null } | null {
     if (normalizedId.endsWith('/desktop/src/app/chat/composer/status-stack/session-control-goal.tsx')) {
       return { code: exposeGoalResumeAction(code), map: null }
     }
+    if (normalizedId.endsWith('/desktop/src/components/assistant-ui/markdown-text.tsx')) {
+      const target = '        remarkPlugins={REMARK_PLUGINS}'
+      const anchor = "import { defaultRemarkPlugins } from 'streamdown'\n"
+      if (code.split(target).length !== 2 || code.split(anchor).length !== 2) throw new Error('Response Markdown plugin configuration changed')
+      const imports = `import type { Root } from 'hast'
+import { externalUrlTarget } from '@hermes/shared'
+import { SKIP, visitParents } from 'unist-util-visit-parents'
+`
+      const inlineLinks = `
+// Walk the parsed HTML tree so existing links and fenced code can be skipped.
+function rehypeInlineUrlLinks() {
+  return (tree: Root) => {
+    visitParents(tree, 'element', node => {
+      if (node.tagName === 'a' || node.tagName === 'pre') return SKIP
+      const child = node.children[0]
+      if (node.tagName !== 'code' || node.children.length !== 1 || child.type !== 'text') return
+      if (inlineHttpUrl.test(child.value) && externalUrlTarget(child.value)) {
+        node.children = [{ type: 'element', tagName: 'a', properties: { href: child.value }, children: [child] }]
+      }
+      return SKIP
+    })
+  }
+}
+const inlineHttpUrl = ${/^https?:\/\/[^/\s\\][^\s\\]*$/i}
+const INLINE_URL_REHYPE_PLUGINS = [...Object.values(defaultRehypePlugins), rehypeInlineUrlLinks]
+`
+      return {
+        code: code.replace(anchor, "import { defaultRehypePlugins, defaultRemarkPlugins } from 'streamdown'\n" + imports + inlineLinks)
+          .replace(target, '        rehypePlugins={previewOnly ? undefined : INLINE_URL_REHYPE_PLUGINS}\n' + target),
+        map: null
+      }
+    }
     if (normalizedId.endsWith('/desktop/src/lib/markdown-preprocess.ts')) {
       // HTML attributes already own their URLs. Keep bare-URL autolinking
       // from inserting angle brackets inside href/src attribute values.
