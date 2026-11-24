@@ -28,7 +28,7 @@
   padding-inline:max(1rem, calc(env(safe-area-inset-left,0px) / var(--web-ui-scale,1))) max(1rem, calc(env(safe-area-inset-right,0px) / var(--web-ui-scale,1)));
 }
 .browser-chat-toolbar > .browser-menu { grid-column:1; grid-row:1; }
-.browser-chat-toolbar > .browser-actions { grid-column:2; grid-row:1; justify-self:end; min-width:0; }
+.browser-chat-toolbar > .browser-actions { grid-column:2; grid-row:1; justify-self:end; min-width:0; max-width:100%; }
 /* Let the transcript scroll under the controls and clear the fade on focus.
    Docked tools share the workspace top edge and need room for their headers. */
 .browser-main:has([data-slot="aui_thread-viewport"]):not(:has(.browser-upstream-workspace > [data-tree-split] [data-tree-tab]:not([data-tree-tab="workspace"]))) {
@@ -88,6 +88,8 @@
 .browser-navigation { --sidebar:var(--web-sidebar); position:relative; width:var(--browser-navigation-width,19rem); flex-shrink:0; display:flex; flex-direction:column; border-inline-end:1px solid var(--web-border-subtle); background:var(--web-sidebar); overflow:hidden; }
 /* The shell owns the divider so it continues alongside the profile footer. */
 .browser-navigation [data-slot="sidebar"] { border-right-width:0; background:var(--web-sidebar); }
+/* The compact drawer can receive focus as a container when no tab is visible. */
+.browser-navigation[tabindex="-1"]:focus { outline:none; }
 .browser-navigation[hidden],.browser-navigation-resizer[hidden] { display:none; }
 .browser-navigation-resizer { position:relative; width:.35rem; flex:0 0 .35rem; z-index:2; margin-left:-.175rem; cursor:col-resize; background:transparent; touch-action:none; }
 .browser-navigation-resizer::after { position:absolute; inset:0 auto 0 50%; width:1px; transform:translateX(-50%); background:transparent; content:""; }
@@ -166,13 +168,14 @@
 .browser-sessions-pane [data-sessions-mode] > [data-sidebar="group"] > [data-browser-section-header] { min-height:2rem; padding-block:var(--web-space-1); }
 .browser-sessions-pane [data-sessions-mode] > [data-sidebar="group"] { padding-bottom:0 !important; }
 .browser-sessions-pane [data-sessions-mode] > [data-sidebar="group"] > [data-sidebar="group-content"] { padding-bottom:0 !important; }
-/* Keep the recents section content-sized in the browser rail. The upstream
-   sidebar gives it the remaining flex height, which leaves messaging and Cron
-   pinned to the bottom when the list is short or empty. */
+/* Keep ungrouped recents content-sized so messaging and Cron follow the rows. */
 .browser-sessions-pane .browser-session-list-section { flex:0 0 auto !important; min-height:0 !important; overflow:visible !important; }
 .browser-sessions-pane .browser-session-list-section > [data-sidebar="group-content"] { flex:0 0 auto !important; min-height:0 !important; overflow:visible !important; }
-/* Keep dragged profile groups inside the list so they cannot paint over the
-   section heading. Clip without creating a second scrolling container. */
+.browser-sessions-pane .browser-combined-profiles-section { padding-inline:var(--web-space-3); }
+/* Let the profile list fill the remaining scroll area without shrinking long
+   lists. Keep dragged groups below the heading with a single scroll container. */
+.browser-sessions-pane .browser-session-list-section:has(> [data-sidebar="group-content"] :is([data-gateway-group],[data-gateway-section])),
+.browser-sessions-pane .browser-session-list-section > [data-sidebar="group-content"]:has([data-gateway-group],[data-gateway-section]) { flex:1 0 auto !important; }
 .browser-sessions-pane .browser-session-list-section > [data-sidebar="group-content"]:has([data-gateway-group],[data-gateway-section]) { overflow:clip !important; }
 .browser-pane[hidden],.browser-chat[hidden] { display:none; }
 .browser-sessions-pane { flex:1 1 auto; height:auto; min-height:0; overflow:auto; }
@@ -186,6 +189,7 @@
   padding-inline:var(--web-space-3);
   border-block-end:1px solid var(--web-border-subtle);
 }
+.browser-mobile-titlebar > img { margin-inline-start:auto; }
 .browser-sidebar-header {
   display:flex;
   align-items:center;
@@ -195,7 +199,7 @@
   padding-inline:var(--web-space-3);
 }
 /* Navigation and search controls share the same icon and label spacing. */
-:is(.browser-mobile-titlebar, .browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control {
+:is(.browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control {
   --web-icon-size:var(--web-icon-small);
   box-sizing:border-box;
   display:flex;
@@ -214,15 +218,15 @@
   line-height:var(--web-line-compact);
   text-align:start;
 }
-:is(.browser-mobile-titlebar, .browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control:is(:hover,:focus-within) { background:var(--web-hover); color:var(--web-text); }
-:is(.browser-mobile-titlebar, .browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control:is([aria-current="page"],[aria-pressed="true"]) { background:var(--web-active); color:var(--web-text); }
-:is(.browser-mobile-titlebar, .browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control > :is(.codicon, svg) {
+:is(.browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control:is(:hover,:focus-within) { background:var(--web-hover); color:var(--web-text); }
+:is(.browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control:is([aria-current="page"],[aria-pressed="true"]) { background:var(--web-active); color:var(--web-text); }
+:is(.browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control > :is(.codicon, svg) {
   width:var(--web-icon-size);
   height:var(--web-icon-size);
   flex:0 0 var(--web-icon-size);
   color:color-mix(in srgb,currentColor 72%,transparent);
 }
-:is(.browser-mobile-titlebar, .browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control > .codicon {
+:is(.browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control > .codicon {
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -487,5 +491,4 @@ html[data-experience="browser"] span:has(> img[src*="nous-girl.jpg"]) { display:
 
 .browser-chat-toolbar [data-browser-toolbar-button], .browser-chat-toolbar .browser-approval-control > button { position:relative; }
 
-.browser-chat-toolbar .browser-new-chat-profile { width:auto; max-width:min(16rem,50vw); min-width:0; gap:var(--web-space-2); padding:0 var(--web-space-2); color:var(--web-text-muted); font-size:var(--web-text-label); }
-.browser-new-chat-profile > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.browser-chat-toolbar .browser-actions > .browser-new-chat-profile { width:auto; flex:none; gap:var(--web-space-2); padding:0 var(--web-space-2); color:var(--web-text-muted); }
