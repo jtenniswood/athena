@@ -179,6 +179,7 @@
    pinned to the bottom when the list is short or empty. */
 .browser-sessions-pane .browser-session-list-section { flex:0 0 auto !important; min-height:0 !important; overflow:visible !important; }
 .browser-sessions-pane .browser-session-list-section > [data-sidebar="group-content"] { flex:0 0 auto !important; min-height:0 !important; overflow:visible !important; }
+.browser-sessions-pane .browser-combined-profiles-section { padding-inline:var(--web-space-3); }
 /* Keep dragged profile groups inside the list so they cannot paint over the
    section heading. Clip without creating a second scrolling container. */
 .browser-sessions-pane .browser-session-list-section > [data-sidebar="group-content"]:has([data-gateway-group],[data-gateway-section]) { overflow:clip !important; }
