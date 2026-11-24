@@ -7,13 +7,11 @@ type SettingsLinkProps = {
   triggerRef: RefObject<HTMLButtonElement | null>
   onOpenRoute: (path: string) => void
   active?: boolean
-  className?: string
-  row?: boolean
 }
 
-export function SettingsLink({ triggerRef, onOpenRoute, active, className, row }: SettingsLinkProps) {
-  return <BrowserToolbarButton ref={triggerRef} className={className} tooltip={row ? undefined : "Settings"} aria-label="Settings" aria-current={active ? 'page' : undefined} onClick={() => onOpenRoute('/settings')}>
-    <Codicon name="settings-gear" />{row && <span>Settings</span>}
+export function SettingsLink({ triggerRef, onOpenRoute, active }: SettingsLinkProps) {
+  return <BrowserToolbarButton ref={triggerRef} tooltip="Settings" aria-label="Settings" aria-current={active ? 'page' : undefined} onClick={() => onOpenRoute('/settings')}>
+    <Codicon name="settings-gear" />
   </BrowserToolbarButton>
 }
 
