@@ -1948,7 +1948,7 @@
     "tests": [
       {
         "file": "scripts/renderer-adapter.test.mjs",
-        "scenario": "plugins/hermes-bots/create-dialog.tsx"
+        "scenario": "compiler and Vite resolve scoped replacements, virtual modules, aliases, and bypass imports identically"
       }
     ],
     "removal": "Remove when upstream group membership dialogs restore their opening control and respect browser scale.",
@@ -4045,6 +4045,10 @@
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "legacy Bots navigation opens chat history"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "phone navigation closes for session changes while preserving drafts"
       }
     ],
     "removal": "Remove when bundled plugin discovery offers a browser exclusion list.",
