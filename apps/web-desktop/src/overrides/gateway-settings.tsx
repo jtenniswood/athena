@@ -49,7 +49,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean; subp
       <label htmlFor={signInMethodId}>Sign-in method</label>
       <Select value={mode} disabled={busy} onValueChange={value => setMode(value as 'oauth' | 'token')}>
         <SelectTrigger id={signInMethodId}><SelectValue /></SelectTrigger>
-        <SelectContent>
+        <SelectContent side="top">
           <SelectItem value="oauth">Browser sign-in</SelectItem>
           <SelectItem value="token">Session token</SelectItem>
         </SelectContent>
