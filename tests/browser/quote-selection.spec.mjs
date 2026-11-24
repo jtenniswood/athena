@@ -7,6 +7,7 @@ test.afterAll(async () => { await application?.close() })
 
 const composer = page => page.locator('[data-slot="composer-rich-input"]:visible').first()
 const addToChat = page => page.getByRole('button', { name: 'Add to chat', exact: true })
+const copySelection = page => page.locator('.browser-quote-selection').getByRole('button', { name: 'Copy', exact: true })
 const response = page => page.getByText(/^Start with three things that matter most this week\./)
 const excerpt = 'three things that matter most this week.'
 
@@ -53,6 +54,7 @@ test('adding selected transcript text appends an undoable quote to the unsent dr
   await page.mouse.up()
 
   await expect(addToChat(page)).toBeVisible()
+  await expect(copySelection(page)).toHaveCount(0)
   expect(await page.evaluate(() => window.getSelection().toString())).toBe(excerpt)
   await addToChat(page).click()
   await expect(editor).toBeFocused()
@@ -94,6 +96,35 @@ test('selection actions dismiss on Escape and stay with their source conversatio
 
 test.describe('touch selection', () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } })
+
+  test('tapping Copy copies the highlighted text without changing the draft', async ({ page, context, browserName }) => {
+    if (browserName === 'chromium') {
+      await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: application.origin })
+    } else {
+      await page.addInitScript(() => {
+        // WebKit cannot grant clipboard-read permission in Playwright.
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined })
+        const execCommand = document.execCommand.bind(document)
+        document.execCommand = (command, ...args) => {
+          if (command !== 'copy') return execCommand(command, ...args)
+          const field = document.activeElement
+          window.copiedSelection = field.value.slice(field.selectionStart, field.selectionEnd)
+          return true
+        }
+      })
+    }
+
+    await openConversation(page)
+    await composer(page).fill('Keep my draft')
+    await selectText(response(page), excerpt)
+    await expect(addToChat(page)).toBeVisible()
+    await copySelection(page).tap()
+
+    await expect.poll(() => page.evaluate(browser => browser === 'chromium'
+      ? navigator.clipboard.readText() : window.copiedSelection, browserName)).toBe(excerpt)
+    await expect(copySelection(page)).toHaveCount(0)
+    await expect(composer(page)).toHaveText('Keep my draft')
+  })
 
   test('a selected reply can be added by tapping the control', async ({ page }) => {
     await openConversation(page)
