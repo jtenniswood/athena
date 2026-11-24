@@ -8,7 +8,7 @@ import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
 import { KANBAN_ROUTE } from './tool-routes'
 import { MaterialIcon } from '../overrides/material-icons/material-icon'
-import { AppSettingsRegistration, SettingsLink } from './settings-menu'
+import { AppSettingsRegistration, SettingsLink, SignOutButton } from './settings-menu'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { BrowserNavigationResizer, useBrowserNavigation } from './navigation'
 import { BrowserActionError } from './action-errors'
@@ -121,7 +121,10 @@ function BrowserLayout() {
             aria-current={kanban ? 'page' : undefined} onClick={() => { if (!kanban) openRoute(KANBAN_ROUTE.path) }}>
             <MaterialIcon symbol="view_kanban" />
           </BrowserToolbarButton> },
-          { key: 'settings', button: <SettingsLink reorderable onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} active={settings} /> }
+          { key: 'settings', button: <>
+            <SettingsLink reorderable onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} active={settings} />
+            <SignOutButton />
+          </> }
         ]} />
       </nav>}
       {navigation.compact && !navigation.mobile && navigation.drawerOpen && <button type="button" className="browser-scrim" aria-label="Dismiss navigation" tabIndex={-1} onClick={navigation.dismissDrawer} />}
@@ -134,7 +137,7 @@ function BrowserLayout() {
           <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" />
         </nav>}
         {navigation.compact && <div className="browser-sidebar-header">
-          {navigation.mobile ? botsButton : <BrowserToolbarButton tooltip="Close navigation" aria-label="Close navigation" onClick={navigation.dismissDrawer}><Codicon name="close" /></BrowserToolbarButton>}
+          {navigation.mobile ? <>{botsButton}<SignOutButton row /></> : <BrowserToolbarButton tooltip="Close navigation" aria-label="Close navigation" onClick={navigation.dismissDrawer}><Codicon name="close" /></BrowserToolbarButton>}
         </div>}
         <div className="browser-navigation-body" data-profile-layout={presentationMode ? 'combined' : 'separate'}>
           <BrowserSessionsPane hidden={botsOpen} sections={navigation.sections}>

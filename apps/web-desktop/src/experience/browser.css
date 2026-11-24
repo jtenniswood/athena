@@ -83,6 +83,7 @@
 .browser-app-navigation > img { box-sizing:border-box; flex-shrink:0; width:var(--app-rail-button-size); height:var(--app-rail-button-size); padding:.25rem; }
 .browser-app-rail { display:flex; flex:1; min-height:0; width:100%; flex-direction:column; align-items:center; gap:var(--app-rail-gap); overflow:auto; scrollbar-width:none; }
 .browser-app-rail-item { position:relative; display:flex; flex:0 0 auto; }
+.browser-app-rail-item[data-rail-key="settings"] { flex-direction:column; gap:var(--app-rail-gap); }
 .browser-app-rail-item[data-rail-key="settings"]:last-child { margin-block-start:auto; }
 .browser-app-rail .browser-app-rail-item > button { width:var(--app-rail-button-size); height:var(--app-rail-button-size); border-radius:.625rem; }
 .browser-app-rail-item > [aria-current="page"],
