@@ -12,10 +12,9 @@ export function isBrowserToolPane(id: string): boolean {
 
 /** Keep sidebar actions and upstream workspace projection on one pane policy. */
 export function browserPaneComposition<T extends BrowserPaneContribution>(panes: readonly T[]) {
-  const bots = panes.find(pane => pane.id === 'hermes-bots:pane')
   const toolbarPanes = panes.filter(pane => isBrowserToolPane(pane.id))
   const workspacePanelIds = new Set(toolbarPanes.filter(pane =>
     (pane.data as { placement?: string } | undefined)?.placement !== 'main'
   ).map(pane => pane.id))
-  return { bots, toolbarPanes, workspacePanelIds }
+  return { toolbarPanes, workspacePanelIds }
 }

@@ -197,7 +197,7 @@
   padding-inline:var(--web-space-3);
 }
 /* Navigation and search controls share the same icon and label spacing. */
-:is(.browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control {
+.browser-sessions-pane .browser-sidebar-control {
   --web-icon-size:var(--web-icon-small);
   box-sizing:border-box;
   display:flex;
@@ -216,15 +216,15 @@
   line-height:var(--web-line-compact);
   text-align:start;
 }
-:is(.browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control:is(:hover,:focus-within) { background:var(--web-hover); color:var(--web-text); }
-:is(.browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control:is([aria-current="page"],[aria-pressed="true"]) { background:var(--web-active); color:var(--web-text); }
-:is(.browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control > :is(.codicon, svg) {
+.browser-sessions-pane .browser-sidebar-control:is(:hover,:focus-within) { background:var(--web-hover); color:var(--web-text); }
+.browser-sessions-pane .browser-sidebar-control:is([aria-current="page"],[aria-pressed="true"]) { background:var(--web-active); color:var(--web-text); }
+.browser-sessions-pane .browser-sidebar-control > :is(.codicon, svg) {
   width:var(--web-icon-size);
   height:var(--web-icon-size);
   flex:0 0 var(--web-icon-size);
   color:color-mix(in srgb,currentColor 72%,transparent);
 }
-:is(.browser-sidebar-header, .browser-sessions-pane) .browser-sidebar-control > .codicon {
+.browser-sessions-pane .browser-sidebar-control > .codicon {
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -404,8 +404,6 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-main { --chat-toolbar-safe-top:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1)); }
  /* The Android WebView already starts below the system status bar. */
  .browser-shell[data-android-app] .browser-main { --chat-toolbar-safe-top:0px; }
- .browser-sidebar-header:has(.browser-sidebar-control) { justify-content:flex-start; }
- .browser-sidebar-header .browser-sidebar-control { min-height:var(--web-touch-target); }
  .browser-navigation .browser-profile-actions-trigger { width:var(--web-touch-target); height:var(--web-touch-target); flex-basis:var(--web-touch-target); }
  .browser-navigation-body [data-sidebar="menu-item"],.browser-navigation-body [data-sidebar="menu-button"],.browser-navigation-section-trigger,.browser-navigation-section-list button,.browser-sessions-pane [data-browser-section-label],.browser-sessions-pane button[data-slot="row-button"] { min-height:var(--web-touch-min); height:auto; }
  .browser-sessions-pane [data-browser-section-header] { min-height:var(--web-touch-min); align-items:center; }

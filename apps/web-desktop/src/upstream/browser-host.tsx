@@ -1,8 +1,13 @@
 import { AndroidSharePicker } from './android-share'
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { BrowserLinkContextMenu } from '../experience/link-context-menu'
 import { ContribWiring, WiredPane } from '@/app/contrib/wiring'
-import { ContribBoundary, ContribRender } from '@/contrib/react/boundary'
+import { createPluginContext } from '@/contrib/plugin'
+import { host } from '@hermes/plugin-sdk'
+import { startFaceClock, stopFaceClock } from '@/plugins/hermes-bots/avatar'
+import { migrateBotMeta, primeRoster } from '@/plugins/hermes-bots/data'
+import { BOTS_LOCALES } from '@/plugins/hermes-bots/i18n'
+import { ID, setPluginCtx } from '@/plugins/hermes-bots/shared'
 import { useContributions } from '@/contrib/react/use-contributions'
 import { navigateToWorkspacePage } from '@/app/routes'
 import { SessionTileCloseConfirm } from '@/app/chat/session-tile'
@@ -15,6 +20,24 @@ import { useBrowserSettings } from './settings'
 
 /** Mount engine contributions once; Athena supplies the product shell. */
 export function BrowserEngineHost({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    // Reuse the existing profile appearance storage, translations, and avatar
+    // rendering without registering the Bot Mode workspace or messaging hooks.
+    const context = createPluginContext(ID)
+    setPluginCtx(context)
+    const disposeLocales = context.i18n.register(BOTS_LOCALES)
+    startFaceClock()
+    void migrateBotMeta(context.storage).catch(() => undefined)
+    const unsubscribe = host.state.gateway.subscribe(state => {
+      if (state === 'open') void primeRoster()
+    })
+    return () => {
+      unsubscribe()
+      stopFaceClock()
+      disposeLocales()
+      setPluginCtx(null)
+    }
+  }, [])
   return <ContribWiring>{children}<AndroidSharePicker /><BrowserLinkContextMenu /><SessionTileCloseConfirm /></ContribWiring>
 }
 
@@ -22,11 +45,6 @@ export function BrowserSessionsSurface() { return <WiredPane part="sidebar" /> }
 export function BrowserStatusSurface() { return <WiredPane part="statusbar" /> }
 export function BrowserPageSurface() {
   return <BrowserPageRoutes><WiredPane part="chatRoutes" /></BrowserPageRoutes>
-}
-
-export function BrowserBotsSurface({ fallback }: { fallback: ReactNode }) {
-  const { bots } = browserPaneComposition(useContributions('panes'))
-  return bots?.render ? <ContribBoundary id={bots.id}><ContribRender render={bots.render} /></ContribBoundary> : fallback
 }
 
 export function BrowserConversationSurface() {
