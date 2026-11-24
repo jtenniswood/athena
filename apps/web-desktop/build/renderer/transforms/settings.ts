@@ -37,6 +37,45 @@ export function exposeBrowserSettingsRowRefs(source: string): string {
   ]]) + list + toggle + source.slice(toggleEnd)
 }
 
+export function presentBrowserKanbanOrchestration(source: string): string {
+  return replaceBrowserContract(source, [
+    ['<SelectTrigger className="w-44">', '<SelectTrigger aria-label={label} className="w-44">'],
+    ['        className="h-7 flex-1 text-[0.71rem]"', '        aria-label={profile.name + " profile description"}\n        className="h-7 flex-1 text-[0.71rem]"'],
+    ['  const { data: settings } = useQuery', '  const settingsQuery = useQuery'],
+    ['  const { data: roster } = useQuery', '  const rosterQuery = useQuery'],
+    [`  if (!settings || !roster) {
+    return null
+  }`, `  const settings = settingsQuery.data
+  const roster = rosterQuery.data
+  if (!settings || !roster) {
+    if (settingsQuery.isError || rosterQuery.isError) {
+      return <div className="flex items-center gap-2 py-3">
+        <p role="alert">Kanban orchestration settings could not be loaded.</p>
+        <Button size="sm" variant="outline" onClick={() => {
+          void settingsQuery.refetch()
+          void rosterQuery.refetch()
+        }}>Retry</Button>
+      </div>
+    }
+    return <p role="status">Loading orchestration settings…</p>
+  }`],
+    [`          {k.autoDecompose}
+        </label>`, `          {k.autoDecompose}
+        </label>
+        {'auto_promote_children' in settings && typeof settings.auto_promote_children === 'boolean' && (
+          <label className="flex cursor-pointer items-center gap-2 pb-1.5 text-[0.75rem] text-(--ui-text-secondary)">
+            <Switch
+              aria-label="Auto-promote child tasks"
+              checked={settings.auto_promote_children}
+              onCheckedChange={checked => save.mutate({ auto_promote_children: checked })}
+              size="xs"
+            />
+            Auto-promote child tasks
+          </label>
+        )}`]
+  ])
+}
+
 export function keepBrowserPluginManagementInSettings(source: string): string {
   const target = 'const MANAGE_PLUGINS_HREF = `#${CAPABILITIES_ROUTE}?tab=plugins`'
   const params = 'export const PAGE_SCOPED_PARAMS = ['
