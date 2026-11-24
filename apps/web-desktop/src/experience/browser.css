@@ -179,7 +179,13 @@
 /* Keep ungrouped recents content-sized so messaging and Cron follow the rows. */
 .browser-sessions-pane .browser-session-list-section { flex:0 0 auto !important; min-height:0 !important; overflow:visible !important; }
 .browser-sessions-pane .browser-session-list-section > [data-sidebar="group-content"] { flex:0 0 auto !important; min-height:0 !important; overflow:visible !important; }
-.browser-sessions-pane .browser-combined-profiles-section { padding-inline:var(--web-space-3); }
+.browser-sessions-pane .browser-combined-profiles-section { --browser-profiles-gutter:var(--web-space-3); padding-inline:var(--browser-profiles-gutter); }
+/* Move the clipping edge out to the panel gutter without moving the list contents. */
+.browser-sessions-pane .browser-combined-profiles-section > [data-sidebar="group-content"] {
+ width:auto;
+ margin-inline:calc(-1 * var(--browser-profiles-gutter));
+ padding-inline:var(--browser-profiles-gutter);
+}
 /* Let the profile list fill the remaining scroll area without shrinking long
    lists. Keep dragged groups below the heading with a single scroll container. */
 .browser-sessions-pane .browser-session-list-section:has(> [data-sidebar="group-content"] :is([data-gateway-group],[data-gateway-section])),
