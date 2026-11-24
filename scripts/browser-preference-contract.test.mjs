@@ -22,6 +22,8 @@ test('existing preference formats retain defaults and conservative malformed-val
   assert.deepEqual(parse('navigationTabs', '["bots","future","bots"]'), ['bots'])
   assert.deepEqual(parse('navigationTabs', '[]'), ['sessions', 'bots'])
   assert.deepEqual(parse('navigationTabs', '{bad'), ['sessions', 'bots'])
+  assert.deepEqual(parse('appRailOrder', '["kanban","profile:writer","kanban",null,"settings"]'), ['kanban', 'profile:writer', 'settings'])
+  assert.deepEqual(parse('appRailOrder', '{bad'), [])
   assert.deepEqual(parse('hiddenProfiles', '["research",null,5]'), ['research'])
   assert.equal(parse('navigationWidth', null), 224)
   assert.equal(parse('navigationWidth', 'bad'), 304)

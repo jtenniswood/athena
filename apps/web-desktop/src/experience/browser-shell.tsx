@@ -2,6 +2,7 @@ import { useSidebarGestures } from './sidebar-gestures'
 import { useBrowserEngine } from './engine'
 import { useChatPanelSettings } from './settings/chat-panel-page'
 import { BrowserNewChatProfileSelector } from './new-chat-profile-selector'
+import { reorderableRailButton } from './app-rail'
 import { BrowserProfileNavigation } from './profile-navigation'
 import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
@@ -89,12 +90,14 @@ function BrowserLayout() {
     <AppSettingsRegistration />
     <div className="browser-workspace">
       {!navigation.mobile && <nav id="browser-app-navigation" className="browser-app-navigation" aria-label="App navigation" ref={rail}>
-        <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" />
-        <BrowserProfileNavigation vertical combined={presentationMode} active={chatSelected} onChat={openChat} onActivate={openProfileChat} />
-        <BrowserToolbarButton tooltip={KANBAN_ROUTE.label} aria-label={KANBAN_ROUTE.label} aria-current={kanban ? 'page' : undefined} onClick={() => { if (!kanban) openRoute(KANBAN_ROUTE.path) }}>
-          <Codicon name={KANBAN_ROUTE.icon} />
-        </BrowserToolbarButton>
-        <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} active={settings} />
+        <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" draggable={false} />
+        <BrowserProfileNavigation vertical combined={presentationMode} active={chatSelected} onChat={openChat} onActivate={openProfileChat} controls={[
+          { key: 'kanban', button: <BrowserToolbarButton {...reorderableRailButton} tooltip={KANBAN_ROUTE.label} aria-label={KANBAN_ROUTE.label}
+            aria-current={kanban ? 'page' : undefined} onClick={() => { if (!kanban) openRoute(KANBAN_ROUTE.path) }}>
+            <Codicon name={KANBAN_ROUTE.icon} />
+          </BrowserToolbarButton> },
+          { key: 'settings', button: <SettingsLink reorderable onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} active={settings} /> }
+        ]} />
       </nav>}
       {navigation.compact && !navigation.mobile && navigation.drawerOpen && <button type="button" className="browser-scrim" aria-label="Dismiss navigation" tabIndex={-1} onClick={navigation.dismissDrawer} />}
       <aside id="browser-navigation" ref={navigation.drawer} tabIndex={navigation.compact ? -1 : undefined} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open || (!navigation.mobile && !chatSelected)} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={drawerModal ? 'dialog' : undefined} aria-modal={drawerModal || undefined} aria-owns={drawerModal ? drawerOwnedElements : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
