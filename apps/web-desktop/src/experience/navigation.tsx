@@ -115,7 +115,7 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, 
       const first = items[0], last = items.at(-1)
       if (event.shiftKey && (document.activeElement === first || document.activeElement === drawer.current)) {
         event.preventDefault()
-        const precedingRailButton = document.activeElement === drawer.current ? rail.current?.querySelector<HTMLButtonElement>('button:last-child') : null
+        const precedingRailButton = document.activeElement === drawer.current ? Array.from(rail.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? []).at(-1) : null
         ;(precedingRailButton ?? last)?.focus()
       }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }

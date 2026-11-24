@@ -37,6 +37,8 @@ export const browserPreferences = Object.freeze({
     rule: 'Preserve the former profile presentation independently of content grouping.'
   } }),
   activeTab: definition('hermes-web.browser.navigation', 'experience/browser-preferences', 'sessions', raw => raw === 'bots' ? 'bots' : 'sessions'),
+  appRailOrder: definition('hermes-web.browser.app-rail-order', 'experience/app-rail', empty,
+    raw => [...new Set(list(raw))], JSON.stringify, { memoryOnFailure: true }),
   hiddenProfiles: definition('hermes-web.browser.hidden-profiles', 'experience/browser-preferences', empty, list, JSON.stringify),
   hiddenProfileGroups: definition('hermes-web.browser.hidden-profile-groups', 'experience/profile-list-visibility', empty, list, JSON.stringify, { memoryOnFailure: true }),
   hideAllProfilesButton: definition('hermes-web.browser.hide-all-profiles-button', 'experience/browser-preferences', false, raw => raw === 'true'),

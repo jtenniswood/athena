@@ -2,7 +2,6 @@ import { Dialog, DropdownMenu } from 'radix-ui'
 import { restoreBrowserControlFocus } from './dialog-focus'
 import { createPortal } from 'react-dom'
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
-import { DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from '../../upstream/browser-api'
 
 export type BrowserAction = {
   key: string
@@ -129,12 +128,16 @@ export function BrowserActionSurface({ title, hideTitle = false, actions = [], g
       return <Group key={group.key} className="browser-action-group" aria-label={group.label} {...(group.selection === 'single' ? { value: group.actions.find(action => action.checked)?.key || '' } : {})}>
         {group.label && <DropdownMenu.Label className="browser-action-group-label">{group.label}</DropdownMenu.Label>}
         {group.actions.map(action => {
-          if (action.children) return <DropdownMenuSub key={action.key}>
-            <DropdownMenuSubTrigger className="browser-action-item" aria-label={action.ariaLabel} disabled={action.disabled} hideChevron>{label(action)}</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className={`browser-action-menu ${className}`} data-browser-action-surface sideOffset={4} collisionPadding={8}>
-              {renderDesktopGroups(action.children)}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
+          if (action.children) return <DropdownMenu.Sub key={action.key}>
+            <DropdownMenu.SubTrigger className="browser-action-item" data-slot="dropdown-menu-sub-trigger"
+              aria-label={action.ariaLabel} disabled={action.disabled}>{label(action)}</DropdownMenu.SubTrigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.SubContent className={`browser-action-menu ${className}`} data-browser-action-surface
+                data-slot="dropdown-menu-sub-content" aria-label={action.label} sideOffset={4} collisionPadding={8} updatePositionStrategy="always">
+                {renderDesktopGroups(action.children)}
+              </DropdownMenu.SubContent>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Sub>
           const props = {
             className: 'browser-action-item',
             'aria-label': action.ariaLabel,

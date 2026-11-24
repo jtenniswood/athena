@@ -2,6 +2,7 @@ import { useSidebarGestures } from './sidebar-gestures'
 import { useBrowserEngine } from './engine'
 import { useChatPanelSettings } from './settings/chat-panel-page'
 import { BrowserNewChatProfileSelector } from './new-chat-profile-selector'
+import { reorderableRailButton } from './app-rail'
 import { BrowserProfileNavigation } from './profile-navigation'
 import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
@@ -88,7 +89,7 @@ function BrowserLayout() {
     else openChat()
     profiles.select(profile)
   }
-  const botsButton = <BrowserToolbarButton id="browser-bots-toggle" tooltip={navigation.mobile ? undefined : 'Bots'}
+  const botsButton = <BrowserToolbarButton {...(!navigation.mobile ? reorderableRailButton : {})} id="browser-bots-toggle" tooltip={navigation.mobile ? undefined : 'Bots'}
     className={navigation.mobile ? 'browser-sidebar-control' : undefined} aria-label="Bots"
     aria-pressed={botsSelected} aria-controls="browser-bots-pane" onClick={() => {
       if (coversWorkspace) {
@@ -106,23 +107,22 @@ function BrowserLayout() {
     <BrowserProfileCreator open={creatingProfile} onClose={() => setCreatingProfile(false)} onCreated={openProfileChat} />
     <div className="browser-workspace">
       {!navigation.mobile && <nav id="browser-app-navigation" className="browser-app-navigation" aria-label="App navigation" ref={rail}>
-        <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" />
-        {presentationMode ? <BrowserToolbarButton tooltip="Chat" aria-label="Chat" aria-current={chatSelected && !botsSelected ? 'page' : undefined} onClick={openChat}>
-          <Codicon name="comment" />
-        </BrowserToolbarButton> : <>
-          <BrowserProfileNavigation vertical active={chatSelected} onActivate={openProfileChat} />
-          <BrowserToolbarButton tooltip={t.profiles.newProfile} aria-label={t.profiles.newProfile} aria-haspopup="dialog" onClick={event => {
-            event.currentTarget.focus()
-            setCreatingProfile(true)
-          }}>
+        <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" draggable={false} />
+        <BrowserProfileNavigation vertical combined={presentationMode} active={chatSelected && (!presentationMode || !botsSelected)} onChat={openChat} onActivate={openProfileChat} controls={[
+          { key: 'new-profile', button: presentationMode ? null : <BrowserToolbarButton {...reorderableRailButton}
+            tooltip={t.profiles.newProfile} aria-label={t.profiles.newProfile} aria-haspopup="dialog" onClick={event => {
+              event.currentTarget.focus()
+              setCreatingProfile(true)
+            }}>
             <Codicon name="add" />
-          </BrowserToolbarButton>
-        </>}
-        {botsButton}
-        <BrowserToolbarButton tooltip={KANBAN_ROUTE.label} aria-label={KANBAN_ROUTE.label} aria-current={kanban ? 'page' : undefined} onClick={() => { if (!kanban) openRoute(KANBAN_ROUTE.path) }}>
-          <MaterialIcon symbol="view_kanban" />
-        </BrowserToolbarButton>
-        <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} active={settings} />
+          </BrowserToolbarButton> },
+          { key: 'bots', button: botsButton },
+          { key: 'kanban', button: <BrowserToolbarButton {...reorderableRailButton} tooltip={KANBAN_ROUTE.label} aria-label={KANBAN_ROUTE.label}
+            aria-current={kanban ? 'page' : undefined} onClick={() => { if (!kanban) openRoute(KANBAN_ROUTE.path) }}>
+            <MaterialIcon symbol="view_kanban" />
+          </BrowserToolbarButton> },
+          { key: 'settings', button: <SettingsLink reorderable onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} active={settings} /> }
+        ]} />
       </nav>}
       {navigation.compact && !navigation.mobile && navigation.drawerOpen && <button type="button" className="browser-scrim" aria-label="Dismiss navigation" tabIndex={-1} onClick={navigation.dismissDrawer} />}
       <aside id="browser-navigation" ref={navigation.drawer} tabIndex={navigation.compact ? -1 : undefined} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open || (!navigation.mobile && !chatSelected)} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={drawerModal ? 'dialog' : undefined} aria-modal={drawerModal || undefined} aria-owns={drawerModal ? drawerOwnedElements : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
@@ -152,7 +152,7 @@ function BrowserLayout() {
           <p>{updateNotice.message}</p>
           {updateNotice.phase === 'available' && <button type="button" className="browser-update-panel-action" onClick={updateNotice.update}>Update</button>}
         </div>}
-        {navigation.mobile && !presentationMode && <BrowserProfileNavigation hidden={botsOpen} />}
+        {navigation.mobile && <BrowserProfileNavigation combined={presentationMode} hidden={botsOpen} />}
       </aside>
       {chatSelected && <BrowserNavigationResizer navigation={navigation} />}
       <main className="browser-main" ref={main} hidden={navigation.mobile && navigation.drawerOpen} inert={navigation.compact && !navigation.mobile && navigation.drawerOpen} tabIndex={-1} aria-label={inlineKanban ? KANBAN_ROUTE.label : 'Conversation and workspace'}>

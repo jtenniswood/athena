@@ -332,8 +332,7 @@ function OptionGlyph({ option }: { option: Option }) {`
 }
 
 `, ""],
-    [sidebarSourceBlock(output, "          <DropdownMenuSub>\n            <DropdownMenuSubTrigger hideChevron>", "          {showsAdvancedChrome"), `          <BrowserProfileLayoutMenu combined={combinedProfiles} />
-          <OptionCheckbox
+    [sidebarSourceBlock(output, "          <DropdownMenuSub>\n            <DropdownMenuSubTrigger hideChevron>", "          {showsAdvancedChrome"), `          <OptionCheckbox
             checked={grouping === 'project'}
             onCheck={() => setSidebarGrouping(grouping === 'project' ? 'none' : 'project')}
             option={{ icon: 'root-folder', id: 'show-projects', label: 'Show projects' }}
@@ -374,9 +373,8 @@ function OptionGlyph({ option }: { option: Option }) {`
     ['  const showAllSessions = useStore($sidebarShowAllSessions)\n', ''],
     ['{viewCustomized && <DropdownMenuItem onSelect={resetSidebarView}', '{(viewCustomized || !combinedProfiles) && <DropdownMenuItem onSelect={() => resetBrowserSidebarView(resetSidebarView)}']
   ])
-  const layoutOwner = JSON.stringify(path.join(root, 'src/upstream/profile-layout-menu'))
   const sectionOwner = JSON.stringify(path.join(root, 'src/upstream/profile-section'))
-  return `import { BrowserProfileLayoutMenu } from ${layoutOwner}\nimport { useBrowserProfileGrouping, resetBrowserSidebarView } from ${sectionOwner}\n` +
+  return `import { useBrowserProfileGrouping, resetBrowserSidebarView } from ${sectionOwner}\n` +
     `import { BrowserRestoreProfilesItem } from ${profilesOwner}\nimport { browserSidebarActionLabel, useBrowserSidebarShortcuts } from ${owner}\n` + output.replace(target, target + hideDesktopOnlyRows)
 }
 
