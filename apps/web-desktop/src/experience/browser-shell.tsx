@@ -101,11 +101,11 @@ function BrowserLayout() {
       {navigation.compact && !navigation.mobile && navigation.drawerOpen && <button type="button" className="browser-scrim" aria-label="Dismiss navigation" tabIndex={-1} onClick={navigation.dismissDrawer} />}
       <aside id="browser-navigation" ref={navigation.drawer} tabIndex={navigation.compact ? -1 : undefined} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open || (!navigation.mobile && !chatSelected)} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={drawerModal ? 'dialog' : undefined} aria-modal={drawerModal || undefined} aria-owns={drawerModal ? drawerOwnedElements : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
         {navigation.mobile && <nav className="browser-mobile-titlebar" aria-label="App shortcuts">
-          <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" />
-          <BrowserToolbarButton className="browser-sidebar-control" onClick={() => openRoute(KANBAN_ROUTE.path)}>
-            <Codicon name={KANBAN_ROUTE.icon} /><span>{KANBAN_ROUTE.label}</span>
+          <BrowserToolbarButton tooltip={KANBAN_ROUTE.label} aria-label={KANBAN_ROUTE.label} onClick={() => openRoute(KANBAN_ROUTE.path)}>
+            <Codicon name={KANBAN_ROUTE.icon} />
           </BrowserToolbarButton>
-          <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} className="browser-sidebar-control" row />
+          <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} />
+          <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" />
         </nav>}
         <BrowserNavigationTabs navigation={navigation} />
         <div className="browser-navigation-body" data-profile-layout={presentationMode ? 'combined' : 'separate'} role="tabpanel" aria-label={tab}>

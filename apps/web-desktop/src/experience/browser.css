@@ -195,8 +195,8 @@
   padding-inline:var(--web-space-3);
   border-block-end:1px solid var(--web-border-subtle);
 }
-/* Navigation and search controls share the same icon and label spacing. */
-:is(.browser-mobile-titlebar, .browser-sessions-pane) .browser-sidebar-control {
+.browser-mobile-titlebar > img { margin-inline-start:auto; }
+.browser-sessions-pane .browser-sidebar-control {
   --web-icon-size:var(--web-icon-small);
   box-sizing:border-box;
   display:flex;
@@ -215,15 +215,15 @@
   line-height:var(--web-line-compact);
   text-align:start;
 }
-:is(.browser-mobile-titlebar, .browser-sessions-pane) .browser-sidebar-control:is(:hover,:focus-within) { background:var(--web-hover); color:var(--web-text); }
-:is(.browser-mobile-titlebar, .browser-sessions-pane) .browser-sidebar-control[aria-current="page"] { background:var(--web-active); color:var(--web-text); }
-:is(.browser-mobile-titlebar, .browser-sessions-pane) .browser-sidebar-control > :is(.codicon, svg) {
+.browser-sessions-pane .browser-sidebar-control:is(:hover,:focus-within) { background:var(--web-hover); color:var(--web-text); }
+.browser-sessions-pane .browser-sidebar-control[aria-current="page"] { background:var(--web-active); color:var(--web-text); }
+.browser-sessions-pane .browser-sidebar-control > :is(.codicon, svg) {
   width:var(--web-icon-size);
   height:var(--web-icon-size);
   flex:0 0 var(--web-icon-size);
   color:color-mix(in srgb,currentColor 72%,transparent);
 }
-:is(.browser-mobile-titlebar, .browser-sessions-pane) .browser-sidebar-control > .codicon {
+.browser-sessions-pane .browser-sidebar-control > .codicon {
   display:inline-flex;
   align-items:center;
   justify-content:center;
