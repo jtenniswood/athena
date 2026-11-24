@@ -1,6 +1,7 @@
 .browser-quote-selection {
   position: fixed;
   z-index: 50;
+  display: flex;
   /* Selection rectangles already include Athena's document zoom. */
   zoom: calc(1 / var(--web-ui-scale, 1));
   border: 1px solid var(--web-border);
@@ -8,11 +9,26 @@
   background: var(--web-surface);
   color: var(--web-text);
   box-shadow: var(--web-shadow-panel);
-  cursor: pointer;
   user-select: none;
 }
 
-.browser-quote-selection > span {
+.browser-quote-selection > button {
+  border-radius: inherit;
+  cursor: pointer;
+}
+
+.browser-quote-selection > button + button {
+  border-inline-start: 1px solid var(--web-border);
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+.browser-quote-selection > button:has(+ button) {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.browser-quote-selection > button > span {
   display: flex;
   align-items: center;
   min-height: var(--web-control-compact);
@@ -22,10 +38,10 @@
   zoom: var(--web-ui-scale, 1);
 }
 
-.browser-quote-selection:hover {
+.browser-quote-selection > button:hover {
   background: var(--web-hover);
 }
 
-.browser-quote-selection:focus-visible {
+.browser-quote-selection > button:focus-visible {
   outline: var(--web-focus-ring);
 }
