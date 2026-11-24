@@ -1,8 +1,6 @@
 import { useLayoutEffect } from 'react'
 import { atom } from 'nanostores'
 import { useStore } from '@nanostores/react'
-import { Codicon } from '../../upstream/browser-api'
-import { NAVIGATION_TABS, NAVIGATION_TAB_LABELS } from '../browser-preferences'
 import type { useBrowserNavigation } from '../navigation'
 import type { BrowserActionGroup } from '../ui/action-surface'
 import { useSettingsPresentation } from './presentation'
@@ -17,17 +15,7 @@ export function useChatPanelSettings(navigation: ReturnType<typeof useBrowserNav
 
 /** Reuse the live navigation commands and their existing preference owners. */
 function chatPanelSettingsGroups(navigation: ReturnType<typeof useBrowserNavigation>): BrowserActionGroup[] {
-  return [
-    { key: 'tabs', label: 'Tabs', actions: NAVIGATION_TABS.map(value => ({
-      key: value,
-      label: NAVIGATION_TAB_LABELS[value],
-      icon: <Codicon name={value === 'sessions' ? 'history' : 'hubot'} />,
-      checked: navigation.visibleTabs.includes(value),
-      disabled: navigation.visibleTabs.includes(value) && navigation.visibleTabs.length === 1,
-      run: () => navigation.toggleTab(value)
-    })) },
-    { key: 'sections', label: 'Sections', actions: navigation.sections.actions }
-  ]
+  return [{ key: 'sections', label: 'Sections', actions: navigation.sections.actions }]
 }
 
 export function BrowserChatPanelPage() {
@@ -37,8 +25,7 @@ export function BrowserChatPanelPage() {
       { kind: 'heading' as const, label: group.label || group.key },
       ...group.actions.map(action => ({ id: `${group.key}:${action.key}`, kind: 'toggle' as const,
         label: action.label, checked: action.checked, disabled: action.disabled, run: action.run }))
-    ]),
-    { kind: 'text', label: 'Keep at least one tab visible.' }
+    ])
   ])
   return <div ref={presentation} className="browser-chat-panel-settings">
     {groups.map(group => <fieldset key={group.key}>
@@ -48,6 +35,5 @@ export function BrowserChatPanelPage() {
         <input type="checkbox" checked={action.checked} disabled={action.disabled} onChange={() => action.run()} />
       </label>)}
     </fieldset>)}
-    <p>Keep at least one tab visible.</p>
   </div>
 }

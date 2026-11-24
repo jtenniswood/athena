@@ -8,9 +8,10 @@ import { BrowserToolModal } from './tool-modal'
 import { KANBAN_ROUTE } from './tool-routes'
 import { AppSettingsRegistration, SettingsLink } from './settings-menu'
 import { BrowserToolbarButton } from './ui/toolbar-button'
-import { BrowserNavigationTabs, BrowserNavigationResizer, useBrowserNavigation } from './navigation'
+import { BrowserNavigationResizer, useBrowserNavigation } from './navigation'
 import { BrowserActionError } from './action-errors'
 import { ARCHIVE_TOASTS_ID, BrowserArchiveToasts } from './archive-toast'
+import { preserveNavigationForNextSelection } from './conversation-navigation'
 import { BrowserArchiveConfirmation } from './archive-confirmation'
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
@@ -58,11 +59,12 @@ function BrowserLayout() {
   const inlineKanban = kanban && !navigation.mobile
   const profiles = engine.profiles.useProfiles()
   const preventSessionPaneDrag = useSidebarGestures(navigation.drawer, engine.projects,
-    JSON.stringify([profiles.active, profiles.all, presentationMode, navigation.tab, navigation.open, location.pathname]))
+    JSON.stringify([profiles.active, profiles.all, presentationMode, navigation.botsOpen, navigation.open, location.pathname]))
   useChatPanelSettings(navigation)
   engine.useEnvironment(conversation,
     !(navigation.compact && navigation.drawerOpen) && !settings && !kanban)
-  const { tab } = navigation
+  const { botsOpen } = navigation
+  const botsSelected = botsOpen && navigation.open && !coversWorkspace
   const drawerModal = navigation.compact && navigation.drawerOpen
   const drawerOwnedElements = navigation.mobile ? ARCHIVE_TOASTS_ID : `browser-app-navigation ${ARCHIVE_TOASTS_ID}`
   const [updateNotice, setUpdateNotice] = useState<PwaUpdateNotice | null>(() => currentPwaUpdate())
@@ -85,6 +87,17 @@ function BrowserLayout() {
     else openChat()
     profiles.select(profile)
   }
+  const botsButton = <BrowserToolbarButton id="browser-bots-toggle" tooltip={navigation.mobile ? undefined : 'Bots'}
+    className={navigation.mobile ? 'browser-sidebar-control' : undefined} aria-label="Bots"
+    aria-pressed={botsSelected} aria-controls="browser-bots-pane" onClick={() => {
+      if (coversWorkspace) {
+        preserveNavigationForNextSelection()
+        openChat()
+      }
+      navigation.toggleBots(coversWorkspace)
+    }}>
+    <Codicon name="hubot" />{navigation.mobile && <span>Bots</span>}
+  </BrowserToolbarButton>
   return <div className="browser-shell" data-browser-shell="" data-android-app={isAndroidApp() || undefined} data-browser-conversation-kind={conversation.kind} data-browser-conversation-id={conversation.id || undefined}>
     <BrowserActionError />
     <BrowserArchiveConfirmation />
@@ -93,7 +106,7 @@ function BrowserLayout() {
     <div className="browser-workspace">
       {!navigation.mobile && <nav id="browser-app-navigation" className="browser-app-navigation" aria-label="App navigation" ref={rail}>
         <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" />
-        {presentationMode ? <BrowserToolbarButton tooltip="Chat" aria-label="Chat" aria-current={chatSelected ? 'page' : undefined} onClick={openChat}>
+        {presentationMode ? <BrowserToolbarButton tooltip="Chat" aria-label="Chat" aria-current={chatSelected && !botsSelected ? 'page' : undefined} onClick={openChat}>
           <Codicon name="comment" />
         </BrowserToolbarButton> : <>
           <BrowserProfileNavigation vertical active={chatSelected} onActivate={openProfileChat} />
@@ -104,6 +117,7 @@ function BrowserLayout() {
             <Codicon name="add" />
           </BrowserToolbarButton>
         </>}
+        {botsButton}
         <BrowserToolbarButton tooltip={KANBAN_ROUTE.label} aria-label={KANBAN_ROUTE.label} aria-current={kanban ? 'page' : undefined} onClick={() => { if (!kanban) openRoute(KANBAN_ROUTE.path) }}>
           <Codicon name={KANBAN_ROUTE.icon} />
         </BrowserToolbarButton>
@@ -118,14 +132,16 @@ function BrowserLayout() {
           <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} />
           <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" />
         </nav>}
-        <BrowserNavigationTabs navigation={navigation} />
-        <div className="browser-navigation-body" data-profile-layout={presentationMode ? 'combined' : 'separate'} role="tabpanel" aria-label={tab}>
-          <BrowserSessionsPane hidden={tab !== 'sessions'} sections={navigation.sections}>
+        {navigation.compact && <div className="browser-sidebar-header">
+          {navigation.mobile ? botsButton : <BrowserToolbarButton tooltip="Close navigation" aria-label="Close navigation" onClick={navigation.dismissDrawer}><Codicon name="close" /></BrowserToolbarButton>}
+        </div>}
+        <div className="browser-navigation-body" data-profile-layout={presentationMode ? 'combined' : 'separate'}>
+          <BrowserSessionsPane hidden={botsOpen} sections={navigation.sections}>
             <BrowserSidebarNavigation searchFocusRequest={navigation.searchFocusRequest}>
               <BrowserSessionsSurface />
             </BrowserSidebarNavigation>
           </BrowserSessionsPane>
-          <div hidden={tab !== 'bots'} className="browser-pane"><BrowserBotsSurface fallback={<BrowserBotsFallback />} /></div>
+          <div id="browser-bots-pane" hidden={!botsOpen} className="browser-pane"><BrowserBotsSurface fallback={<BrowserBotsFallback />} /></div>
         </div>
         {updateNotice && !updateDismissed && <div className="browser-update-panel" role="status" aria-label="Application update">
           <div className="browser-update-panel-heading">
@@ -135,7 +151,7 @@ function BrowserLayout() {
           <p>{updateNotice.message}</p>
           {updateNotice.phase === 'available' && <button type="button" className="browser-update-panel-action" onClick={updateNotice.update}>Update</button>}
         </div>}
-        {navigation.mobile && !presentationMode && <BrowserProfileNavigation hidden={tab !== 'sessions'} />}
+        {navigation.mobile && !presentationMode && <BrowserProfileNavigation hidden={botsOpen} />}
       </aside>
       {chatSelected && <BrowserNavigationResizer navigation={navigation} />}
       <main className="browser-main" ref={main} hidden={navigation.mobile && navigation.drawerOpen} inert={navigation.compact && !navigation.mobile && navigation.drawerOpen} tabIndex={-1} aria-label={inlineKanban ? KANBAN_ROUTE.label : 'Conversation and workspace'}>
