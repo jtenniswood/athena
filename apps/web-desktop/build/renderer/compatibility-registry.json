@@ -4081,5 +4081,49 @@
     "sourceHash": "5606f31e9091409d16e1994d50a419a3585b9b76449a5bc4c1f5bb56f6202a54",
     "outputHash": "fd5fa8411871c7aa26b3bc8ec9d56eaa33550a60c47b9f3a41d961ce74e6130e",
     "handler": "browser-clipboard-routing"
+  },
+  {
+    "name": "browser-response-activity",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/assistant-ui/thread/response-group.tsx",
+    "reason": "Give each response one collapsed activity row while retaining the existing message runtimes.",
+    "owner": "apps/web-desktop/build/renderer/transforms/transcript.ts",
+    "tests": [
+      {
+        "file": "tests/browser/response-activity.spec.mjs",
+        "scenario": "a saved tool-heavy response keeps its final reply visible with activity collapsed"
+      }
+    ],
+    "removal": "Remove when the renderer provides a turn-level disclosure for intermediate activity.",
+    "handlers": [
+      "useBrowserResponseActivity"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "83b11fe725e5f48c322ebfe7a0d7fdc41e2bca9c97ea8779bb2bddf1af9b8f41",
+    "inputHash": "83b11fe725e5f48c322ebfe7a0d7fdc41e2bca9c97ea8779bb2bddf1af9b8f41",
+    "outputHash": "4366c8c3fabf25e1a406ec0dae5624737946004ea16dd13396b12ffcf9a4e462"
+  },
+  {
+    "name": "browser-response-commentary",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "components/assistant-ui/thread/message-parts.tsx",
+    "reason": "Identify text preceding the final reply so it can be revealed with response activity.",
+    "owner": "apps/web-desktop/build/renderer/transforms/transcript.ts",
+    "tests": [
+      {
+        "file": "tests/browser/response-activity.spec.mjs",
+        "scenario": "a saved tool-heavy response keeps its final reply visible with activity collapsed"
+      }
+    ],
+    "removal": "Remove when the renderer provides a turn-level disclosure for intermediate activity.",
+    "handlers": [
+      "markBrowserCommentaryParts"
+    ],
+    "sourceRoot": "renderer",
+    "sourceHash": "196535328a26fc53543f164ba4173f2d56d1f295d3666097b817e7655a8fb613",
+    "inputHash": "196535328a26fc53543f164ba4173f2d56d1f295d3666097b817e7655a8fb613",
+    "outputHash": "26d115f8e26ced8e8dae33cea628e8a906902ee4f731df3dc138a38eb098df52"
   }
 ]
