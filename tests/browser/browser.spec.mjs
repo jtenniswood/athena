@@ -2289,12 +2289,17 @@ test('Show projects toggles project headers without date dividers and survives r
 })
 
 for (const width of [390, 1440]) {
-  test(`Bots keeps filters beside the rightmost add button at ${width}px`, async ({ page }, testInfo) => {
+  const botsToolbarTest = width === 390 ? touchTest : test
+  botsToolbarTest(`Bots keeps filters beside the rightmost add button at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 960 })
-    await open(page)
+    if (width === 390) {
+      await page.goto(`${origin}/#/`)
+      await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).toBeVisible()
+    } else {
+      await open(page)
+    }
     await page.waitForLoadState('networkidle')
-    if (width === 390) await openNavigation(page)
-    await showSidebarView(page, 'bots')
+    await showSidebarView(page, 'bots', width === 390 ? 'tap' : 'click')
     const filter = page.getByRole('button', { name: /^Filter roster/ })
     const add = page.getByRole('button', { name: 'New bot or group chat', exact: true })
     await expect(filter).toBeVisible()
