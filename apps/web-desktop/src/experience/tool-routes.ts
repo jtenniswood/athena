@@ -1,6 +1,6 @@
 export const SCHEDULED_TASKS_ROUTE = { path: '/scheduled-tasks', label: 'Scheduled', icon: 'watch' } as const
 
-export const KANBAN_ROUTE = { path: '/kanban', label: 'Kanban', icon: 'project' } as const
+export const KANBAN_ROUTE = { path: '/kanban', label: 'Kanban' } as const
 
 export const BROWSER_TOOL_ROUTES = [
   { path: '/capabilities', label: 'Capabilities', icon: 'symbol-misc' },

@@ -14,6 +14,7 @@ import os from 'os'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Socket } from 'node:net'
 import { VitePWA } from 'vite-plugin-pwa'
+import { materialIcons } from './src/overrides/material-icons/plugin.ts'
 
 // The desktop renderer ships a Vite config with everything this build needs
 // (monorepo aliases, emojibase assets, chunking); this config reuses those
@@ -177,6 +178,7 @@ export default defineConfig(({ command, mode }) => {
   base: './',
   plugins: [
     rendererAdapterPlugin(__dirname),
+    materialIcons(__dirname),
     buildInfoPlugin(),
     hermesDynamicProxy(),
     react(),

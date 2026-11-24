@@ -6,6 +6,7 @@ import { BrowserProfileNavigation } from './profile-navigation'
 import { isAndroidApp } from '../platform/android'
 import { BrowserToolModal } from './tool-modal'
 import { KANBAN_ROUTE } from './tool-routes'
+import { MaterialIcon } from '../overrides/material-icons/material-icon'
 import { AppSettingsRegistration, SettingsLink } from './settings-menu'
 import { BrowserToolbarButton } from './ui/toolbar-button'
 import { BrowserNavigationResizer, useBrowserNavigation } from './navigation'
@@ -119,7 +120,7 @@ function BrowserLayout() {
         </>}
         {botsButton}
         <BrowserToolbarButton tooltip={KANBAN_ROUTE.label} aria-label={KANBAN_ROUTE.label} aria-current={kanban ? 'page' : undefined} onClick={() => { if (!kanban) openRoute(KANBAN_ROUTE.path) }}>
-          <Codicon name={KANBAN_ROUTE.icon} />
+          <MaterialIcon symbol="view_kanban" />
         </BrowserToolbarButton>
         <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} active={settings} />
       </nav>}
@@ -127,7 +128,7 @@ function BrowserLayout() {
       <aside id="browser-navigation" ref={navigation.drawer} tabIndex={navigation.compact ? -1 : undefined} onPointerDownCapture={preventSessionPaneDrag} hidden={!navigation.open || (!navigation.mobile && !chatSelected)} className={`browser-navigation ${navigation.drawerOpen ? 'is-open' : ''}`} role={drawerModal ? 'dialog' : undefined} aria-modal={drawerModal || undefined} aria-owns={drawerModal ? drawerOwnedElements : undefined} aria-label="Navigation" style={{ '--browser-navigation-width': `${navigation.width}px` } as CSSProperties}>
         {navigation.mobile && <nav className="browser-mobile-titlebar" aria-label="App shortcuts">
           <BrowserToolbarButton tooltip={KANBAN_ROUTE.label} aria-label={KANBAN_ROUTE.label} onClick={() => openRoute(KANBAN_ROUTE.path)}>
-            <Codicon name={KANBAN_ROUTE.icon} />
+            <MaterialIcon symbol="view_kanban" />
           </BrowserToolbarButton>
           <SettingsLink onOpenRoute={openRoute} triggerRef={navigation.actionsTrigger} />
           <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" />
