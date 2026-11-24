@@ -1,6 +1,8 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
+import { writeClipboard } from '../../platform/clipboard'
 import { useI18n, usePaneVisible } from '../../upstream/browser-api'
+import { reportActionFailure } from '../action-errors'
 import './quote-selection.css'
 
 const messageText = '[data-slot="aui_assistant-message-content"], [data-slot="aui_user-message-text"]'
@@ -83,8 +85,8 @@ interface QuoteSelectionProps {
 }
 
 export function BrowserQuoteSelection({ surfaceId, sessionKey, profile, visible, scrollRef, contentRef }: QuoteSelectionProps) {
-  const label = useI18n().t.rightSidebar.addToChat
-  const buttonRef = useRef<HTMLButtonElement>(null)
+  const { t } = useI18n()
+  const toolbarRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState<SelectionPosition | null>(null)
 
   useLayoutEffect(() => {
@@ -104,7 +106,7 @@ export function BrowserQuoteSelection({ surfaceId, sessionKey, profile, visible,
       })
     }
     const onPointerDown = (event: PointerEvent) => {
-      if (event.pointerType !== 'mouse' || buttonRef.current?.contains(event.target as Node)) return
+      if (event.pointerType !== 'mouse' || toolbarRef.current?.contains(event.target as Node)) return
       dragging = true
       setPosition(null)
     }
@@ -113,7 +115,7 @@ export function BrowserQuoteSelection({ surfaceId, sessionKey, profile, visible,
       update()
     }
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || !buttonRef.current) return
+      if (event.key !== 'Escape' || !toolbarRef.current) return
       event.preventDefault()
       event.stopPropagation()
       readSelection(content)?.selection.removeAllRanges()
@@ -145,10 +147,10 @@ export function BrowserQuoteSelection({ surfaceId, sessionKey, profile, visible,
   }, [surfaceId, sessionKey, profile, visible, scrollRef, contentRef])
 
   useLayoutEffect(() => {
-    const button = buttonRef.current
-    if (!position || !button) return
+    const toolbar = toolbarRef.current
+    if (!position || !toolbar) return
 
-    const { width, height } = button.getBoundingClientRect()
+    const { width, height } = toolbar.getBoundingClientRect()
     const { left, top, bottom, viewportLeft, viewportRight, viewportTop, viewportBottom, preferBelow } = position
     const margin = 8
     const gap = preferBelow ? 14 : 6
@@ -157,33 +159,60 @@ export function BrowserQuoteSelection({ surfaceId, sessionKey, profile, visible,
     const fitsAbove = above >= viewportTop + margin
     const fitsBelow = below + height <= viewportBottom - margin
     const y = fitsBelow && (preferBelow || !fitsAbove) ? below : above
-    button.style.left = `${Math.max(viewportLeft + margin, Math.min(left - width / 2, viewportRight - width - margin))}px`
-    button.style.top = `${Math.max(viewportTop + margin, y)}px`
-  }, [position, label])
+    toolbar.style.left = `${Math.max(viewportLeft + margin, Math.min(left - width / 2, viewportRight - width - margin))}px`
+    toolbar.style.top = `${Math.max(viewportTop + margin, y)}px`
+  }, [position, t.common.copy, t.rightSidebar.addToChat])
 
   if (!visible || !position || !surfaceId) return null
 
-  return createPortal(
-    <button
-      className="browser-quote-selection"
-      ref={buttonRef}
-      type="button"
-      onMouseDown={event => event.preventDefault()}
-      onClick={() => {
-        const content = contentRef.current
-        const selected = content && readSelection(content)
-        if (!content || !selected) return
+  const copySelection = async () => {
+    const content = contentRef.current
+    if (!content) return
+    const selected = readSelection(content)
+    if (!selected) return
 
-        const quote = selected.text.split('\n').map(line => line ? `> ${line}` : '>').join('\n')
-        // The editor uses the last break to keep the trailing blank line editable.
-        if (composers.get(surfaceId)?.(`${quote}\n\n\n`) && readSelection(content)) {
-          selected.selection.removeAllRanges()
-        }
-        setPosition(null)
-      }}
-    >
-      <span>{label}</span>
-    </button>,
+    const copiedRange = selected.range.cloneRange()
+    try {
+      await writeClipboard(selected.text)
+    } catch {
+      reportActionFailure(t.common.copyFailed)
+      return
+    }
+
+    // A pending clipboard write can finish after the user changes the selection.
+    const current = readSelection(content)
+    if (current && current.range.compareBoundaryPoints(Range.START_TO_START, copiedRange) === 0
+      && current.range.compareBoundaryPoints(Range.END_TO_END, copiedRange) === 0) {
+      current.selection.removeAllRanges()
+      setPosition(null)
+    }
+  }
+
+  return createPortal(
+    <div className="browser-quote-selection" ref={toolbarRef} onMouseDown={event => event.preventDefault()}>
+      {position.preferBelow && (
+        <button type="button" onClick={copySelection}>
+          <span>{t.common.copy}</span>
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          const content = contentRef.current
+          const selected = content && readSelection(content)
+          if (!content || !selected) return
+
+          const quote = selected.text.split('\n').map(line => line ? `> ${line}` : '>').join('\n')
+          // The editor uses the last break to keep the trailing blank line editable.
+          if (composers.get(surfaceId)?.(`${quote}\n\n\n`) && readSelection(content)) {
+            selected.selection.removeAllRanges()
+          }
+          setPosition(null)
+        }}
+      >
+        <span>{t.rightSidebar.addToChat}</span>
+      </button>
+    </div>,
     document.body
   )
 }
