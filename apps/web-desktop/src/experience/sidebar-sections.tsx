@@ -69,9 +69,9 @@ export function useBrowserSidebarSections() {
   return { hiddenSections, register, setChannels, actions }
 }
 
-export function BrowserSessionsPane({ hidden, sections, children }: { hidden: boolean; sections: ReturnType<typeof useBrowserSidebarSections>; children: ReactNode }) {
+export function BrowserSessionsPane({ sections, children }: { sections: ReturnType<typeof useBrowserSidebarSections>; children: ReactNode }) {
   const compact = useMobileBrowser()
-  return <SidebarSectionsContext.Provider value={sections}><div hidden={hidden} className="browser-pane browser-sessions-pane" onClickCapture={event => {
+  return <SidebarSectionsContext.Provider value={sections}><div className="browser-pane browser-sessions-pane" onClickCapture={event => {
     if (!compact || !(event.target instanceof Element)) return
     const button = event.target.closest('button')
     if (!button) return

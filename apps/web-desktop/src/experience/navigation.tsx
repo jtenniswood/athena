@@ -5,7 +5,7 @@ import { useCompactBrowser, useMobileBrowser } from './ui/use-compact-browser'
 import { KANBAN_ROUTE } from './tool-routes'
 import { useMobileChatHistory } from './mobile-chat-history'
 import { $conversationOpenRequest, $preserveNavigationRequest } from './conversation-navigation'
-import { clampNavigationWidth, DEFAULT_NAVIGATION_WIDTH, MAX_NAVIGATION_WIDTH, MIN_NAVIGATION_WIDTH, readBotsOpen, readNavigationWidth, writeBrowserPreference } from './browser-preferences'
+import { clampNavigationWidth, DEFAULT_NAVIGATION_WIDTH, MAX_NAVIGATION_WIDTH, MIN_NAVIGATION_WIDTH, readNavigationWidth, writeBrowserPreference } from './browser-preferences'
 
 /** Browser navigation preferences and focus never own the conversation state. */
 export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, archiveToasts }: {
@@ -26,21 +26,16 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, 
   const [drawerRequested, setDrawerOpen] = useState(mobile)
   const drawerOpen = drawerRequested && !kanban
   const [width, setWidth] = useState(readNavigationWidth)
-  const [botsOpen, setBotsOpen] = useState(readBotsOpen)
   const [searchFocusRequest, setSearchFocusRequest] = useState(0)
   const previous = useRef({ selectionKey, path })
   const focusDrawerOnOpen = useRef(false)
   const preserveNextSelection = useRef(false)
   const preserveTimeout = useRef(0)
-  const showSidebar = () => {
+  const showHistory = () => {
     if (compact) {
       focusDrawerOnOpen.current = true
       setDrawerOpen(true)
     } else sidebar.setOpen(true)
-  }
-  const showHistory = () => {
-    setBotsOpen(false)
-    showSidebar()
   }
   const dismissDrawer = () => {
     setDrawerOpen(false)
@@ -59,7 +54,6 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, 
     toggleDrawer,
     focusSearch: () => {
       if (coversWorkspace(path)) return
-      setBotsOpen(false)
       if (compact) setDrawerOpen(true)
       setSearchFocusRequest(value => value + 1)
     }
@@ -94,7 +88,6 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, 
     }
     previous.current = { selectionKey, path }
   }, [selectionKey, path, mobile])
-  useEffect(() => { writeBrowserPreference('activeTab', botsOpen ? 'bots' : 'sessions') }, [botsOpen])
   useEffect(() => { writeBrowserPreference('navigationWidth', String(width)) }, [width])
   useEffect(() => {
     if (!drawerOpen) { focusDrawerOnOpen.current = false; return }
@@ -136,14 +129,8 @@ export function useBrowserNavigation({ selectionKey, path, main, trigger, rail, 
   })
   const open = compact ? drawerOpen : sidebar.open
   return {
-    sections, actionsTrigger, drawer, compact, mobile, drawerOpen, width, setWidth, botsOpen, backToHistory, showHistory, searchFocusRequest,
+    sections, actionsTrigger, drawer, compact, mobile, drawerOpen, width, setWidth, backToHistory, showHistory, searchFocusRequest,
     open,
-    toggleBots(forceOpen: boolean) {
-      if (forceOpen || !open) {
-        setBotsOpen(true)
-        showSidebar()
-      } else setBotsOpen(!botsOpen)
-    },
     toggle: compact ? toggleDrawer : () => sidebar.setOpen(!sidebar.open),
     closeDrawer: () => setDrawerOpen(false),
     dismissDrawer

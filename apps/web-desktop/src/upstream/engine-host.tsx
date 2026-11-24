@@ -1,7 +1,7 @@
 import type { BrowserConversationModel } from '../experience/contracts/conversation'
 import type { BrowserEngine } from '../experience/contracts/engine'
 import { lazy, Suspense } from 'react'
-import { BrowserEngineHost, BrowserSessionsSurface, BrowserBotsSurface, BrowserConversationSurface, BrowserStatusSurface, BrowserPageSurface, useBrowserHostPanels, openBrowserPage } from './browser-host'
+import { BrowserEngineHost, BrowserSessionsSurface, BrowserConversationSurface, BrowserStatusSurface, BrowserPageSurface, useBrowserHostPanels, openBrowserPage } from './browser-host'
 import { useBrowserConversation } from './conversation'
 import { useBrowserSessionActions } from './conversation-actions'
 import { selectBrowserSession } from './selection'
@@ -23,7 +23,7 @@ const SettingsController = lazy(async () => ({ default: (await import('./setting
 export const browserEngine = Object.freeze({
   protocol: 1,
   surfaces: {
-    Host: BrowserEngineHost, Sessions: BrowserSessionsSurface, Bots: BrowserBotsSurface,
+    Host: BrowserEngineHost, Sessions: BrowserSessionsSurface,
     Conversation: BrowserConversationSurface, Status: BrowserStatusSurface, Page: BrowserPageSurface,
     ProfileCreator: BrowserProfileCreator, ProfileEditor: BrowserProfileEditor
   },

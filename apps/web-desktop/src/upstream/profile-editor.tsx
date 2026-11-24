@@ -26,7 +26,7 @@ export function BrowserProfileEditor({ profile, onClose }: { profile: string | n
     setEditing(null)
     if (!profile) return
     const row = $lastRoster.get().find(bot => bot.name === profile || bot.targetProfile === profile || bot.route?.targetProfile === profile)
-    // The Sessions rail can be used before the Bots roster has loaded.
+    // Profile editing also works before the shared profile metadata has loaded.
     const bot: RosterRow = row ?? {
       ...$profiles.get().find(item => item.name === profile),
       name: profile,

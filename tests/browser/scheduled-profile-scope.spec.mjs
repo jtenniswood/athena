@@ -1,16 +1,14 @@
 import { test, expect } from '@playwright/test'
 import { createBuiltApplication } from './built-application.mjs'
-import { showSidebarView } from './sidebar-view.mjs'
 
 test.use({ serviceWorkers: 'block' })
 let app
-test.beforeAll(async () => { app = await createBuiltApplication() })
+test.beforeAll(async () => {
+  app = await createBuiltApplication()
+  Object.assign(app.gateway.sessions.get('preview-research'), { hidden: false, title: 'Research Notes' })
+})
 test.afterAll(async () => { await app?.close() })
 const editor = page => page.locator('[data-slot="composer-rich-input"]:visible').first()
-async function selectResearchBot(page) {
-  await showSidebarView(page, 'bots')
-  await page.getByRole('button', { name: /Research · @/ }).click()
-}
 
 for (const width of [1440, 390]) {
   test.describe(`${width}px`, () => {
@@ -31,7 +29,7 @@ for (const width of [1440, 390]) {
         }] })
       })
       await page.goto(app.origin + '/?profile=research#/preview-research?profile=research')
-      if (width === 390) await selectResearchBot(page)
+      if (width === 390) await page.locator('#browser-navigation').getByRole('button', { name: 'Research Notes', exact: true }).click()
       await expect(editor(page)).toBeVisible({ timeout: 30000 })
       const chatRoute = new URL(page.url()).hash
       const conversation = page.locator('[data-browser-conversation-id]')
@@ -40,7 +38,6 @@ for (const width of [1440, 390]) {
       await editor(page).fill('Keep this Research draft while reviewing scheduled tasks')
       if (width === 390) {
         await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
-        await showSidebarView(page, 'sessions')
       }
       await page.getByRole('button', { name: 'Settings', exact: true }).click()
       await page.getByRole('region', { name: 'Panels', exact: true }).getByRole('button', { name: 'Scheduled', exact: true }).click()
@@ -65,7 +62,7 @@ for (const width of [1440, 390]) {
       await expect(conversation).toHaveAttribute('data-browser-conversation-id', chatId)
       expect(new URL(page.url()).hash).toBe(chatRoute)
       await page.reload()
-      if (width === 390) await selectResearchBot(page)
+      if (width === 390) await page.locator('#browser-navigation').getByRole('button', { name: 'Research Notes', exact: true }).click()
       await expect(editor(page)).toHaveText('Keep this Research draft while reviewing scheduled tasks')
       expect(errors).toEqual([])
     })

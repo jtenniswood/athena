@@ -47,7 +47,7 @@ jobs:
           import { readFileSync, appendFileSync } from 'node:fs'
           import { spawnSync } from 'node:child_process'
           const plan = JSON.parse(readFileSync('test-results/behavior-plan.json', 'utf8'))
-          const critical = new Set(['bot-session-cancellation', 'single-conversation-wiring', 'browser-root', 'browser-profile-selection', 'browser-group-selection', 'browser-created-group-selection'])
+          const critical = new Set(['bot-session-cancellation', 'single-conversation-wiring', 'browser-root', 'browser-profile-selection', 'browser-group-selection', 'browser-created-group-selection', 'exclude-bundled-bot-mode'])
           appendFileSync(process.env.GITHUB_OUTPUT, `selection=${plan.entries.some(name => critical.has(name))}\n`)
           if (plan.requested.length) {
             const result = spawnSync(process.execPath, ['scripts/verify-behavior.mjs', '--changed', process.env.BASE_SHA, '--runner', 'node', '--run', '--output', 'test-results/behavior-node.json'], { encoding: 'utf8' })
@@ -82,11 +82,11 @@ jobs:
         env:
           HERMES_TEST_IMAGE: athena:compatibility
         run: pnpm exec playwright test tests/browser/plugin-discovery.spec.mjs --project=chromium --reporter=line
-      - name: Verify selection races through their registry entry
+      - name: Verify chat navigation after Bot Mode removal
         if: steps.behavior.outputs.selection == 'true'
         env:
           HERMES_TEST_IMAGE: athena:compatibility
-        run: node scripts/verify-behavior.mjs --entry bot-session-cancellation --runner browser --run --output test-results/behavior-selection.json
+        run: node scripts/verify-behavior.mjs --entry exclude-bundled-bot-mode --runner browser --run --output test-results/behavior-selection.json
       - name: Preserve behavior plans and browser failure diagnostics
         if: always()
         uses: actions/upload-artifact@v7
