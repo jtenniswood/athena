@@ -340,6 +340,25 @@
     "sourceRoot": "renderer"
   },
   {
+    "name": "browser-inline-url-links",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "components/assistant-ui/markdown-text.tsx",
+    "reason": "Link standalone HTTP and HTTPS URLs in response inline code while preserving its formatting.",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "response links open a browser tab without losing the conversation or draft"
+      }
+    ],
+    "removal": "Remove when the upstream response renderer links standalone HTTP and HTTPS URLs in inline code.",
+    "sourceHash": "1da9f95a0a89748aa176c992372642e6d9d514b5919f63516e192fadd02024d1",
+    "outputHash": "ca2fdc2c86a5426fa2c99fe20ad594df2a0b8c5f8c614d51385a09555445d719",
+    "handler": "browser-inline-url-links",
+    "sourceRoot": "renderer"
+  },
+  {
     "name": "browser-html-link-attributes",
     "kind": "renderer-transform",
     "order": 30,
