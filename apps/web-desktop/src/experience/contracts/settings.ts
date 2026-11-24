@@ -13,7 +13,6 @@ export interface BrowserSettingsPageProps {
 }
 
 export interface BrowserSettings {
-  activityToasts: { enabled: boolean; toggle: () => void }
   panels: readonly {
     id: string
     checked: boolean | undefined

@@ -12,7 +12,6 @@ export interface BrowserEngine {
   readonly surfaces: {
     Host: ComponentType<{ children: ReactNode }>
     Sessions: ComponentType
-    Bots: ComponentType<{ fallback: ReactNode }>
     Conversation: ComponentType
     Status: ComponentType
     Page: ComponentType

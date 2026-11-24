@@ -8,20 +8,8 @@
     "owner": "apps/web-desktop/build/renderer/transforms.ts",
     "tests": [
       {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
-      },
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "an explicit profile choice survives delayed Bot activation"
-      },
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "a session selection supersedes delayed Bot activation without losing its draft"
-      },
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "returning to a Bot while its previous activation is pending honors the latest choice"
+        "file": "scripts/selection-owner.test.mjs",
+        "scenario": "every ordinary session open cancels older Bot work before the engine commits"
       }
     ],
     "removal": "Remove when routed Bot opens use public browser navigation contracts with equivalent interruption tests.",
@@ -38,10 +26,6 @@
     "reason": "Use the existing shared gateway for browser profiles",
     "owner": "apps/web-desktop/build/renderer/transforms.ts",
     "tests": [
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
-      },
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "phone session-row actions stay open without resuming the row"
@@ -61,10 +45,6 @@
     "reason": "Keep browser profile selection and the native all-profile grouping scope independent of background gateway activation.",
     "owner": "apps/web-desktop/build/renderer/transforms.ts",
     "tests": [
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "an explicit profile choice survives delayed Bot activation"
-      },
       {
         "file": "tests/browser/interruptions.spec.mjs",
         "scenario": "profile commands preserve the conversation draft across scope changes and reload"
@@ -89,8 +69,8 @@
     "owner": "apps/web-desktop/build/renderer/transforms.ts",
     "tests": [
       {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
+        "file": "scripts/roster-selection.test.mjs",
+        "scenario": "Bot commands resolve the exact connection-qualified row and report a missing owner"
       }
     ],
     "removal": "Remove when upstream canonical Bot navigation never reopens stale desktop tabs in the browser.",
@@ -107,10 +87,6 @@
     "reason": "Refresh and paginate the selected native session scope independently of background gateway activation.",
     "owner": "apps/web-desktop/build/renderer/transforms.ts",
     "tests": [
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "an explicit profile choice survives delayed Bot activation"
-      },
       {
         "file": "scripts/unified-session-list.test.mjs",
         "scenario": "profile grouping uses the native all-profile scope"
@@ -130,18 +106,6 @@
     "reason": "Deduplicate concurrent canonical chat opens on the shared gateway",
     "owner": "apps/web-desktop/build/renderer/transforms.ts",
     "tests": [
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
-      },
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "a session selection supersedes delayed Bot activation without losing its draft"
-      },
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "returning to a Bot while its previous activation is pending honors the latest choice"
-      },
       {
         "file": "scripts/renderer-update.test.mjs",
         "scenario": "background Bot refresh preserves refreshInPlace and cannot swallow a foreground open"
@@ -274,10 +238,6 @@
     "reason": "Keep background Bot readiness from replacing an explicit browser profile choice. Refresh same-gateway credentials through a fresh engine reconnect without clearing the selected conversation, and return completion to the bridge's exclusive apply transaction.",
     "owner": "apps/web-desktop/build/renderer/transforms.ts",
     "tests": [
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "an explicit profile choice survives delayed Bot activation"
-      },
       {
         "file": "tests/browser/sign-in-credentials.spec.mjs",
         "scenario": "a confirmed token apply replaces the saved credential and preserves the draft"
@@ -462,8 +422,8 @@
     "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
     "tests": [
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "Bots keeps filters beside the rightmost add button"
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser moves hidden Bots into the normal roster when the filter option is enabled"
       }
     ],
     "removal": "Upstream exposes hidden-roster presentation as a public option.",
@@ -609,19 +569,11 @@
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
-      },
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "a session selection supersedes delayed Bot activation without losing its draft"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       },
       {
         "file": "scripts/selection.test.mjs",
         "scenario": "session commands preserve the clicked owner for identical IDs in different profiles"
-      },
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "a direct resume command supersedes delayed Bot activation"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -664,7 +616,7 @@
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       },
       {
         "file": "tests/browser/link-navigation.spec.mjs",
@@ -689,10 +641,6 @@
     "reason": "Project engine-owned session metadata and commands into Athena-owned row presentation, browser gestures, sortable handles and owner-scoped previews. Preserve the direct archive command beside the menu.",
     "owner": "apps/web-desktop/src/upstream/session-row.tsx",
     "tests": [
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
-      },
       {
         "file": "tests/browser/sidebar-gestures.spec.mjs",
         "scenario": "chat title drops save the order and preserve the draft"
@@ -763,12 +711,8 @@
     "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
     "tests": [
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "Bots keeps filters beside the rightmost add button"
-      },
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "a rejected Bot activation reports a visible failure and preserves the session draft"
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser bot menus omit the open-chat shortcut"
       }
     ],
     "removal": "Browser Bot actions use public canonical conversation commands.",
@@ -956,8 +900,8 @@
     "owner": "apps/web-desktop/build/renderer/overrides.ts",
     "tests": [
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "Bots keeps filters beside the rightmost add button"
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser owns the Bots toolbar instead of rewriting upstream toolbar JSX"
       }
     ],
     "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",
@@ -993,7 +937,7 @@
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Keep browser ownership until upstream offers an equivalent public composition point.",
@@ -1063,7 +1007,7 @@
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Remove when the browser adapter no longer imports this composition contract.",
@@ -1182,7 +1126,7 @@
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Remove when the browser adapter no longer imports this composition contract.",
@@ -1199,7 +1143,7 @@
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Remove when the browser adapter no longer imports this composition contract.",
@@ -1220,7 +1164,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
@@ -1244,7 +1188,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
@@ -1268,7 +1212,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
@@ -1292,7 +1236,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
@@ -1316,7 +1260,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
@@ -1340,7 +1284,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
@@ -1364,7 +1308,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
@@ -1388,7 +1332,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
@@ -1412,7 +1356,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
@@ -1436,7 +1380,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
@@ -1460,7 +1404,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Remove when the renderer supplies equivalent web-consumable exports and alias-resolution tests pass without this mapping.",
@@ -1675,16 +1619,8 @@
     "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
     "tests": [
       {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "group selection survives delayed Bot activation and preserves both composers"
-      },
-      {
         "file": "tests/browser/pull-to-refresh.spec.mjs",
         "scenario": "downward pull at the top refreshes once"
-      },
-      {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "pulling Bots refreshes roster and groups while preserving the chat draft"
       }
     ],
     "removal": "Remove when upstream roster surfaces accept browser-owned selection callbacks.",
@@ -1706,8 +1642,8 @@
     "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
     "tests": [
       {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "creating a group selects the new room through the browser command"
+        "file": "scripts/roster-selection.test.mjs",
+        "scenario": "canonical group selection preserves key origin and rejects unregistered keys"
       }
     ],
     "removal": "Remove when upstream roster surfaces accept browser-owned selection callbacks.",
@@ -1796,10 +1732,6 @@
     "tests": [
       {
         "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "the session picker supersedes a delayed Bot selection"
-      },
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
         "scenario": "the command center opens a session in the browser conversation view"
       }
     ],
@@ -1821,10 +1753,6 @@
     "reason": "Apply browser selection ownership at shared session entry points so older Bot activations cannot replace a newer choice. Offer an Undo toast after a confirmed archive using the original session owner. Confirm and stop running responses before archiving.",
     "owner": "apps/web-desktop/build/renderer/transforms/navigation.ts",
     "tests": [
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "a fresh chat supersedes delayed Bot activation and keeps its draft"
-      },
       {
         "file": "tests/browser/browser.spec.mjs",
         "scenario": "hovered chat archive preserves the selected conversation and draft"
@@ -1926,7 +1854,7 @@
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "Bots shared actions preserve filters, focus, and drafts"
+        "scenario": "Sessions avatar editing preserves the conversation and targets the clicked profile"
       }
     ],
     "removal": "Remove when upstream controlled Bot creation and section dialogs restore their opening control and fit browser viewport scaling.",
@@ -1947,8 +1875,8 @@
     "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
     "tests": [
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "Bots shared actions preserve filters, focus, and drafts"
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser owns the Bots toolbar instead of rewriting upstream toolbar JSX"
       }
     ],
     "removal": "Remove when upstream controlled Bot creation and section dialogs restore their opening control and fit browser viewport scaling.",
@@ -1972,16 +1900,8 @@
     "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
     "tests": [
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
-      },
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "Bot row writes report an unconfirmed gateway save while retaining local metadata and drafts"
-      },
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "group and Bot row actions work with taps and preserve draft and dialog focus"
+        "file": "scripts/roster-selection.test.mjs",
+        "scenario": "Bot commands resolve the exact connection-qualified row and report a missing owner"
       }
     ],
     "removal": "Remove when upstream exposes shared browser row action surfaces and authoritative commands for all roster operations.",
@@ -2002,8 +1922,8 @@
     "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
     "tests": [
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
+        "file": "scripts/browser.test.mjs",
+        "scenario": "browser owns the Bots toolbar instead of rewriting upstream toolbar JSX"
       }
     ],
     "removal": "Remove when upstream section headings expose accessible browser action surfaces with stable focus targets.",
@@ -2027,8 +1947,8 @@
     "owner": "apps/web-desktop/build/renderer/transforms/roster.ts",
     "tests": [
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
+        "file": "scripts/renderer-adapter.test.mjs",
+        "scenario": "compiler and Vite resolve scoped replacements, virtual modules, aliases, and bypass imports identically"
       }
     ],
     "removal": "Remove when upstream group membership dialogs restore their opening control and respect browser scale.",
@@ -2050,7 +1970,7 @@
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
+        "scenario": "Sessions avatar editing preserves the conversation and targets the clicked profile"
       }
     ],
     "removal": "Remove when upstream profile edit dialogs restore their opening control and respect browser scale.",
@@ -2072,11 +1992,7 @@
     "tests": [
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
-      },
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "rejected Bot duplication and deletion leave the roster and draft intact"
+        "scenario": "Sessions avatar editing preserves the conversation and targets the clicked profile"
       }
     ],
     "removal": "Remove when upstream controlled confirmation dialogs restore a valid opening control and respect browser scale.",
@@ -2484,18 +2400,6 @@
         "scenario": "browser resolver maps SDK and direct dialog imports through the scoped adapters"
       },
       {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "Bots shared actions preserve filters, focus, and drafts"
-      },
-      {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
-      },
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "rejected Bot duplication and deletion leave the roster and draft intact"
-      },
-      {
         "file": "scripts/state-safety.test.mjs",
         "scenario": "page transitions reserve portal interaction and reject foreign or stale ownership"
       },
@@ -2529,18 +2433,6 @@
       {
         "file": "scripts/compatibility-registry.test.mjs",
         "scenario": "browser resolver maps SDK and direct dialog imports through the scoped adapters"
-      },
-      {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "Bots shared actions preserve filters, focus, and drafts"
-      },
-      {
-        "file": "tests/browser/browser.spec.mjs",
-        "scenario": "roster row actions preserve touch access, sections, focus, and drafts"
-      },
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "rejected Bot duplication and deletion leave the roster and draft intact"
       }
     ],
     "removal": "Remove when upstream controlled dialogs restore their opening control and constrain resizable content to the scaled browser viewport.",
@@ -3096,7 +2988,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Replace when the renderer exposes a public current-conversation identity contract."
@@ -3117,7 +3009,7 @@
       },
       {
         "file": "tests/browser/browser.spec.mjs",
-        "scenario": "fresh startup restores chat, registrations, bots, and avatar-backed profiles"
+        "scenario": "fresh startup restores chat, registrations and avatar-backed profiles"
       }
     ],
     "removal": "Replace when the renderer exposes a public current-conversation identity contract."
@@ -3294,10 +3186,6 @@
       {
         "file": "scripts/renderer-release-contracts.test.mjs",
         "scenario": "shared browser routes reuse the primary without asking the native backend"
-      },
-      {
-        "file": "tests/browser/interruptions.spec.mjs",
-        "scenario": "a late Bot A response cannot replace Bot B or cross their drafts"
       },
       {
         "file": "tests/browser/browser.spec.mjs",
@@ -4145,5 +4033,31 @@
     "sourceHash": "196535328a26fc53543f164ba4173f2d56d1f295d3666097b817e7655a8fb613",
     "inputHash": "196535328a26fc53543f164ba4173f2d56d1f295d3666097b817e7655a8fb613",
     "outputHash": "26d115f8e26ced8e8dae33cea628e8a906902ee4f731df3dc138a38eb098df52"
+  },
+  {
+    "name": "exclude-bundled-bot-mode",
+    "kind": "browser-transform",
+    "order": 20,
+    "module": "contrib/plugins.ts",
+    "reason": "Keep the upstream Bot Mode plugin out of Athena’s bundled plugin discovery.",
+    "owner": "apps/web-desktop/build/renderer/browser-plugin.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "legacy Bots navigation opens chat history"
+      },
+      {
+        "file": "tests/browser/interruptions.spec.mjs",
+        "scenario": "phone navigation closes for session changes while preserving drafts"
+      }
+    ],
+    "removal": "Remove when bundled plugin discovery offers a browser exclusion list.",
+    "sourceHash": "98e4569661b3faf293ef868b6226a06025e4cda1c346194900a46c25272f4f19",
+    "outputHash": "8bf500a6df7d936f9eb5ce495e61a9fe62ea629c2d22c9a8df7c4ce050eeefe4",
+    "handlers": [
+      "excludeBundledBotMode"
+    ],
+    "sourceRoot": "renderer",
+    "inputHash": "98e4569661b3faf293ef868b6226a06025e4cda1c346194900a46c25272f4f19"
   }
 ]

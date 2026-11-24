@@ -6,7 +6,6 @@ import { getBrowserTarget } from './test-target.mjs'
 import { installBrowserErrorCollector } from './error-collector.mjs'
 import { viewportChecks } from './viewport-checks.mjs'
 import { narrowDesktopChecks } from './narrow-desktop-checks.mjs'
-import { showSidebarView } from './sidebar-view.mjs'
 
 // This suite exercises the browser shell only. The old desktop/browser
 // selector was removed, so every test must start through the same production
@@ -705,25 +704,20 @@ test('message editing follows the current runtime after conversation switches wi
   browserErrors.assertClean()
 })
 
-test('fresh startup restores chat, registrations, bots, and avatar-backed profiles', async ({ page }) => {
+test('fresh startup restores chat, registrations and avatar-backed profiles', async ({ page }) => {
   const browserErrors = installBrowserErrorCollector(page)
   await open(page)
   await expect(page.locator('.browser-chat-title')).toHaveCount(0)
   await expect(page.locator('[data-browser-conversation-kind="session"]')).toHaveCount(1)
   await expect(page.locator('.browser-upstream-workspace [data-zone-tabstrip]')).toBeHidden()
   await expect(page.locator('.browser-main header[class*="h-(--titlebar-height)"]')).toBeHidden()
-  await showSidebarView(page, 'bots')
-  await expect(page.getByRole('button', { name: /Research · @/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Writer · @/ })).toBeVisible()
-
-  await page.getByRole('button', { name: /Research · @/ }).click()
+  await expect(page.locator('[data-profile-key="research"]')).toBeVisible()
+  await expect(page.locator('[data-profile-key="writer"]')).toBeVisible()
+  await page.getByRole('button', { name: 'Explore a product idea', exact: true }).click()
   await expect(editor(page)).toBeVisible()
-  await expect(page.locator('.browser-chat-title')).toHaveCount(0)
-  await expect(page.locator('[data-browser-conversation-kind="bot"]')).toHaveCount(1)
-  await expect(page).toHaveURL(/#\/preview-research$/)
+  await expect(page).toHaveURL(/#\/preview-idea$/)
   await expect(page.locator('[data-tree-tab^="session-tile:"]')).toHaveCount(0)
 
-  await showSidebarView(page, 'sessions')
   await page.getByRole('button', { name: 'Plan a calmer working week', exact: true }).click()
   await expect(editor(page)).toBeVisible()
   await expect(page.locator('[data-browser-conversation-kind="session"]')).toHaveCount(1)
@@ -812,7 +806,6 @@ touchTest('phone navigation and action sheets keep touch targets usable across U
     }
     for (const [name, control] of [
       ['Back to chat', page.getByRole('button', { name: 'Back to chat', exact: true })],
-      ['Bots toggle', page.getByRole('button', { name: 'Bots', exact: true })],
       ['Sessions section toggle', nav.locator('.browser-sessions-pane [data-browser-section-label]').first()],
       ['Profile actions', page.getByRole('button', { name: 'Profile actions', exact: true })]
     ]) {
@@ -1024,7 +1017,6 @@ test.extend({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 84
   const settings = navigation.getByRole('button', { name: 'Settings', exact: true })
   await expect(settings).toBeVisible({ timeout: 30000 })
   await expect(navigation.getByRole('tablist')).toHaveCount(0)
-  await expect(navigation.getByRole('button', { name: 'Bots', exact: true })).toHaveAttribute('aria-pressed', 'false')
 
   await session.tap()
   await page.getByRole('button', { name: 'Back to chat history', exact: true }).tap()
@@ -1979,16 +1971,13 @@ for (const width of [1440, 700, 600]) {
     }
     const search = navigation.getByRole('textbox', { name: 'Search', exact: true })
     await expect(search).toBeHidden()
-    await page.getByRole('button', { name: 'Bots', exact: true }).click()
     await page.keyboard.press(`${modifier}+b`)
     await expect(navigation).toBeHidden()
 
     await page.keyboard.press(`${modifier}+Shift+f`)
     await expect(navigation).toBeVisible()
-    const bots = page.getByRole('button', { name: 'Bots', exact: true })
-    await expect(bots).toHaveAttribute('aria-pressed', 'false')
     await expect(search).toBeFocused()
-    await bots.focus()
+    await navigation.getByRole('button', { name: 'Plan a calmer working week', exact: true }).focus()
     await expect(search).toBeHidden()
     await page.keyboard.press(`${modifier}+Shift+f`)
     await expect(search).toBeFocused()
@@ -2289,96 +2278,6 @@ test('Show projects toggles project headers without date dividers and survives r
 })
 
 for (const width of [390, 1440]) {
-  const botsToolbarTest = width === 390 ? touchTest : test
-  botsToolbarTest(`Bots keeps filters beside the rightmost add button at ${width}px`, async ({ page }, testInfo) => {
-    await page.setViewportSize({ width, height: 960 })
-    if (width === 390) {
-      await page.goto(`${origin}/#/`)
-      await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).toBeVisible()
-    } else {
-      await open(page)
-    }
-    await page.waitForLoadState('networkidle')
-    await showSidebarView(page, 'bots', width === 390 ? 'tap' : 'click')
-    const filter = page.getByRole('button', { name: /^Filter roster/ })
-    const add = page.getByRole('button', { name: 'New bot or group chat', exact: true })
-    await expect(filter).toBeVisible()
-    await expect(add).toBeVisible()
-    const checkOrder = async () => {
-      const f = await filter.boundingBox(), a = await add.boundingBox()
-      expect(Math.abs(f.y + f.height / 2 - a.y - a.height / 2)).toBeLessThan(2)
-      expect(f.x + f.width).toBeLessThanOrEqual(a.x)
-      expect(await add.evaluate(el => el.parentElement.lastElementChild === el)).toBe(true)
-    }
-    await checkOrder()
-    await filter.click()
-    const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Filter Bots', exact: true })
-    await expect(surface.getByText('Show', { exact: true })).toBeVisible()
-    await expect(surface.getByText('Filter by time', { exact: true })).toBeVisible()
-    await expect(surface.getByRole(width === 390 ? 'checkbox' : 'menuitemcheckbox', { name: 'Show hidden bots', exact: true })).toBeVisible()
-    await surface.getByRole(width === 390 ? 'radio' : 'menuitemradio', { name: 'Group chats only', exact: true }).click()
-    await page.keyboard.press('Escape')
-    await expect(filter).toBeFocused()
-    await expect(filter).toHaveAccessibleName('Filter roster, 1 active')
-    await filter.click()
-    await surface.getByRole(width === 390 ? 'button' : 'menuitem', { name: 'Clear filters', exact: true }).click()
-    await page.keyboard.press('Escape')
-    await expect(filter).toHaveAccessibleName('Filter roster')
-    await expect(surface).toHaveCount(0)
-    await expect(filter).toBeFocused()
-    await expect(add).toBeVisible()
-    await checkOrder()
-    await add.click()
-    await expect(page.getByRole(width === 390 ? 'button' : 'menuitem', { name: 'New bot', exact: true })).toBeVisible()
-    await page.keyboard.press('Escape')
-    await page.screenshot({ path: testInfo.outputPath('bots-toolbar.png') })
-  })
-
-  test(`Bot menus omit the new-chat shortcut at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 960 })
-    await open(page)
-    if (width === 390) await openNavigation(page)
-    await showSidebarView(page, 'bots')
-    const bot = page.getByRole('button', { name: /Research · @/ }).first()
-    await expect(bot).toBeVisible()
-    await bot.click({ button: 'right' })
-    const menu = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Actions for Research', exact: true })
-    await expect(menu).toBeVisible()
-    await expect(menu.getByRole(width === 390 ? 'button' : 'menuitem', { name: 'Open Bot Chat', exact: true })).toHaveCount(0)
-    await expect(menu.getByRole(width === 390 ? 'button' : 'menuitem', { name: 'New chat with this bot', exact: true })).toHaveCount(0)
-    await page.keyboard.press('Escape')
-  })
-
-  test(`activity toasts move from Bots to a persistent settings toggle at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 960 })
-    await open(page)
-    if (width === 390) await openNavigation(page)
-    await showSidebarView(page, 'bots')
-    await expect(page.getByRole('button', { name: /Research · @/ })).toBeVisible()
-    await expect(page.locator('.browser-pane button:has(.codicon-bell), .browser-pane button:has(.codicon-bell-slash)')).toHaveCount(0)
-    if (width === 390) await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
-    const settings = page.getByRole('button', { name: 'Settings', exact: true })
-    await settings.click()
-    await expect(page.getByText('Notifications', { exact: true })).toBeVisible()
-    const toggle = page.getByRole(width === 390 ? 'checkbox' : 'menuitemcheckbox', { name: 'Activity toasts', exact: true })
-    await expect(toggle).toBeVisible()
-    const initial = await toggle.getAttribute('aria-checked')
-    await toggle.click()
-    await settings.click()
-    await expect(toggle).toHaveAttribute('aria-checked', initial === 'true' ? 'false' : 'true')
-    await page.keyboard.press('Escape')
-    await page.reload()
-    await expect(editor(page)).toBeVisible()
-    await settings.click()
-    await expect(toggle).toHaveAttribute('aria-checked', initial === 'true' ? 'false' : 'true')
-    await toggle.focus()
-    await page.keyboard.press('Enter')
-    await settings.click()
-    await expect(toggle).toHaveAttribute('aria-checked', initial)
-  })
-}
-
-for (const width of [390, 1440]) {
   test.extend({ hasTouch: width === 390 })(`plugin management stays in settings and preserves the draft at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 960 })
     await open(page)
@@ -2391,6 +2290,8 @@ for (const width of [390, 1440]) {
     await expect(page).toHaveURL(/\/settings\?tab=plugins&manage=1$/)
     const manager = frame.getByRole('region', { name: 'Manage plugins', exact: true })
     await expect(manager).toBeVisible()
+    await expect(manager.getByText('Bot Mode', { exact: true })).toHaveCount(0)
+    await expect(manager.getByText('Bots', { exact: true })).toHaveCount(0)
     await expect(manager.getByRole('button', { name: 'Research', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('[data-overlay-surface]')).toHaveCount(1)
     await expect(frame.getByRole('main', { name: 'Plugins', exact: true })).toBeVisible()
@@ -2884,9 +2785,13 @@ for (const width of [390, 1440]) {
 
 for (const width of [390, 1440]) {
   for (const scale of [100, 150]) {
-    test.extend({ hasTouch: width === 390 })(`sidebar Bots toggle and section settings preserve selection and drafts at ${width}px and ${scale}%`, async ({ page }) => {
+    test.extend({ hasTouch: width === 390 })(`legacy Bots navigation opens chat history and section settings preserve drafts at ${width}px and ${scale}%`, async ({ page }) => {
       await page.setViewportSize({ width, height: 960 })
       await page.route('**/api/athena/preferences', route => route.abort())
+      await page.addInitScript(() => {
+        localStorage.setItem('hermes-web.browser.navigation', 'bots')
+        localStorage.setItem('hermes-web.browser.navigation-tabs', '["bots"]')
+      })
       await open(page)
       await page.evaluate(value => window.hermesDesktop.zoom.setPercent(value), scale)
       await editor(page).fill('Keep this draft while arranging navigation')
@@ -2912,21 +2817,7 @@ for (const width of [390, 1440]) {
         await surface.getByRole('button', { name: 'Chat panel', exact: true }).click()
       }
       const sidebar = page.locator('#browser-navigation')
-      const controls = width === 390 ? sidebar : page.getByRole('navigation', { name: 'App navigation', exact: true })
-      const bots = controls.getByRole('button', { name: 'Bots', exact: true })
-      await expect(sidebar.getByRole('tablist')).toHaveCount(0)
-      if (width !== 390) {
-        await expect(sidebar.getByRole('button', { name: 'Bots', exact: true })).toHaveCount(0)
-        await expect(bots.locator('xpath=following-sibling::*[1]')).toHaveAccessibleName('Kanban')
-        await page.getByRole('button', { name: 'Hide navigation', exact: true }).click()
-        await expect(sidebar).toBeHidden()
-      }
-      await bots.click()
-      await expect(bots).toHaveAttribute('aria-pressed', 'true')
-      await expect(sidebar.getByRole('button', { name: /Research · @/ })).toBeVisible()
-      await expect(sidebar.locator('.browser-sessions-pane')).toBeHidden()
-      await bots.click()
-      await expect(bots).toHaveAttribute('aria-pressed', 'false')
+      await expect(page.getByRole('button', { name: 'Bots', exact: true })).toHaveCount(0)
       await expect(sidebar.locator('.browser-sessions-pane')).toBeVisible()
       await openChatPanel()
       await expect(surface.getByRole('group')).toHaveCount(1)
@@ -3041,7 +2932,7 @@ test('the separated desktop rail adds profiles between the roster and Kanban', a
   const rail = page.getByRole('navigation', { name: 'App navigation' })
   const add = rail.getByRole('button', { name: 'New profile', exact: true })
   const kanban = rail.getByRole('button', { name: 'Kanban', exact: true })
-  const centers = await rail.locator('img[alt="Athena"], button.browser-profile-choice, button[aria-label="New profile"], button[aria-label="Bots"], button[aria-label="Kanban"]').evaluateAll(items =>
+  const centers = await rail.locator('img[alt="Athena"], button.browser-profile-choice, button[aria-label="New profile"], button[aria-label="Kanban"]').evaluateAll(items =>
     items.map(item => {
       const { y, height } = item.getBoundingClientRect()
       return y + height / 2
@@ -3081,7 +2972,6 @@ test('Sessions avatar editing preserves the conversation and targets the clicked
   const originalUrl = page.url()
   const allProfiles = page.getByRole('button', { name: 'All profiles', exact: true })
   const originalScope = await allProfiles.getAttribute('aria-pressed')
-  // Edit from Sessions before opening Bots.
   const writer = page.locator('[data-profile-key="writer"]')
   await writer.click({ button: 'right' })
   const menu = page.getByRole('menu', { name: 'Profile actions', exact: true })
@@ -3645,236 +3535,6 @@ test('bundled emoji data is available to browser pickers', async ({ request }) =
   }
 })
 
-for (const width of [390, 1440]) {
-  for (const scale of [100, 150]) {
-    test(`Bots shared actions preserve filters, focus, and drafts at ${width}px and ${scale}%`, async ({ page }, testInfo) => {
-      const errors = installBrowserErrorCollector(page)
-      await page.setViewportSize({ width, height: 960 })
-      await open(page)
-      await page.evaluate(value => window.hermesDesktop.zoom.setPercent(value), scale)
-      await editor(page).fill('Keep my draft while arranging Bots')
-      if (width === 390) await openNavigation(page)
-      await showSidebarView(page, 'bots')
-      const filter = page.getByRole('button', { name: /^Filter roster/ })
-      const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Filter Bots', exact: true })
-      const radio = width === 390 ? 'radio' : 'menuitemradio'
-      await filter.click()
-      await expect(surface.getByRole(radio, { name: 'Bots and group chats', exact: true })).toHaveAttribute('aria-checked', 'true')
-      await surface.getByRole(radio, { name: 'Bots and group chats', exact: true }).focus()
-      if (width === 390) await page.keyboard.press('End')
-      else {
-        await page.keyboard.press('ArrowDown')
-        await expect(surface.getByRole(radio, { name: 'Bots only', exact: true })).toBeFocused()
-        await page.keyboard.press('ArrowDown')
-        await expect(surface.getByRole(radio, { name: 'Group chats only', exact: true })).toBeFocused()
-        await page.keyboard.press('Enter')
-      }
-      await expect(surface.getByRole(radio, { name: 'Group chats only', exact: true })).toHaveAttribute('aria-checked', 'true')
-      await surface.getByRole(radio, { name: 'Active now', exact: true }).click()
-      await page.keyboard.press('Escape')
-      await expect(filter).toHaveAccessibleName('Filter roster, 2 active')
-      await expect(surface).toHaveCount(0)
-      await expect(filter).toBeFocused()
-      await filter.click()
-      await expect(surface.getByRole(radio, { name: 'Group chats only', exact: true })).toHaveAttribute('aria-checked', 'true')
-      await expect(surface.getByRole(radio, { name: 'Active now', exact: true })).toHaveAttribute('aria-checked', 'true')
-      await surface.getByRole(width === 390 ? 'button' : 'menuitem', { name: 'Clear filters', exact: true }).click()
-      await expect(surface.getByRole(radio, { name: 'Bots and group chats', exact: true })).toHaveAttribute('aria-checked', 'true')
-      await expect(surface.getByRole(radio, { name: 'Any activity', exact: true })).toHaveAttribute('aria-checked', 'true')
-      await page.screenshot({ path: testInfo.outputPath('bots-filters.png') })
-      const box = await surface.boundingBox()
-      expect(box.x).toBeGreaterThanOrEqual(-1)
-      expect(box.x + box.width).toBeLessThanOrEqual(width + 1)
-      expect(box.y).toBeGreaterThanOrEqual(-1)
-      expect(box.y + box.height).toBeLessThanOrEqual(961)
-      await page.keyboard.press('Escape')
-      await expect(filter).toBeFocused()
-      await expect(filter).toHaveAccessibleName('Filter roster')
-      await expect(page.getByRole('button', { name: /Research · @/ })).toBeVisible()
-      const add = page.getByRole('button', { name: 'New bot or group chat', exact: true })
-      for (const title of ['New bot', 'New group chat', 'New section']) {
-        await add.click()
-        const create = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'New bot or group chat', exact: true })
-        await create.getByRole(width === 390 ? 'button' : 'menuitem', { name: title, exact: true }).click()
-        const dialog = page.getByRole('dialog', { name: title, exact: true })
-        await expect(dialog).toBeVisible()
-        const fitsViewport = async () => {
-          const bounds = await dialog.boundingBox()
-          return bounds && bounds.x >= -1 && bounds.y >= -1 && bounds.x + bounds.width <= width + 1 && bounds.y + bounds.height <= 961
-        }
-        await expect.poll(fitsViewport, { message: `${title} fits the scaled viewport` }).toBe(true)
-        if (title === 'New bot') {
-          await dialog.getByRole('button', { name: 'Advanced', exact: true }).click()
-          await expect.poll(fitsViewport, { message: 'Advanced Bot settings fit the scaled viewport' }).toBe(true)
-          await page.screenshot({ path: testInfo.outputPath('bot-creation.png') })
-        }
-        await expect(create).toHaveCount(0)
-        await expect.poll(() => dialog.evaluate(el => el.contains(document.activeElement))).toBe(true)
-        await page.keyboard.press('Escape')
-        await expect(dialog).toHaveCount(0)
-        await expect(add).toBeFocused()
-      }
-      if (width === 390) await expect(page.locator('.browser-navigation.is-open')).toBeVisible()
-      await showSidebarView(page, 'sessions')
-      if (width === 390) await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
-      await expect(editor(page)).toHaveText('Keep my draft while arranging Bots')
-      await expect(page).toHaveURL(/#\/preview-week$/)
-      errors.assertClean()
-    })
-  }
-}
-
-test.describe('touch Bots controls', () => {
-  test.use({ hasTouch: true })
-  test('Bots filters and creation controls work with taps', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 })
-    await open(page)
-    await editor(page).fill('Keep this touch Bots draft')
-    await page.getByRole('button', { name: /^(Open navigation|Back to home|Back to chat history)$/ }).tap()
-    await showSidebarView(page, 'bots', 'tap')
-    const filter = page.getByRole('button', { name: /^Filter roster/ })
-    await filter.tap()
-    const sheet = page.getByRole('dialog', { name: 'Filter Bots', exact: true })
-    await sheet.getByRole('radio', { name: 'Bots only', exact: true }).tap()
-    await sheet.getByRole('button', { name: 'Done', exact: true }).tap()
-    await expect(filter).toHaveAccessibleName('Filter roster, 1 active')
-    await filter.tap()
-    await sheet.getByRole('checkbox', { name: 'Show hidden bots', exact: true }).tap()
-    await expect(sheet.getByRole('checkbox', { name: 'Show hidden bots', exact: true })).toHaveAttribute('aria-checked', 'true')
-    await sheet.getByRole('button', { name: 'Done', exact: true }).tap()
-    const add = page.getByRole('button', { name: 'New bot or group chat', exact: true })
-    await add.tap()
-    await page.getByRole('dialog', { name: 'New bot or group chat', exact: true }).getByRole('button', { name: 'New section', exact: true }).tap()
-    const dialog = page.getByRole('dialog', { name: 'New section', exact: true })
-    await expect(dialog).toBeVisible()
-    await dialog.getByRole('button', { name: 'Cancel', exact: true }).tap()
-    await expect(add).toBeFocused()
-    await page.getByRole('button', { name: 'Back to chat', exact: true }).tap()
-    await expect(editor(page)).toHaveText('Keep this touch Bots draft')
-    await expect(page).toHaveURL(/#\/preview-week$/)
-  })
-})
-
-test('hidden Bot visibility commands update the existing session-only preference', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 960 })
-  await open(page)
-  await showSidebarView(page, 'bots')
-  const filter = page.getByRole('button', { name: 'Filter roster', exact: true })
-  const toggle = page.getByRole('menuitemcheckbox', { name: 'Show hidden bots', exact: true })
-  await filter.click()
-  await expect(toggle).toHaveAttribute('aria-checked', 'false')
-  await toggle.click()
-  await expect(toggle).toHaveAttribute('aria-checked', 'true')
-  await page.keyboard.press('Escape')
-  await showSidebarView(page, 'sessions')
-  await showSidebarView(page, 'bots')
-  await filter.click()
-  await expect(toggle).toHaveAttribute('aria-checked', 'true')
-  await page.keyboard.press('Escape')
-  await page.reload()
-  await expect(filter).toBeVisible({ timeout: 30000 })
-  await filter.click()
-  await expect(toggle).toHaveAttribute('aria-checked', 'false')
-})
-
-for (const width of [390, 1440]) {
-  for (const scale of [100, 150]) {
-    test(`roster row actions preserve touch access, sections, focus, and drafts at ${width}px and ${scale}%`, async ({ page }, testInfo) => {
-      const errors = installBrowserErrorCollector(page)
-      await page.setViewportSize({ width, height: 960 })
-      await open(page)
-      await page.evaluate(value => window.hermesDesktop.zoom.setPercent(value), scale)
-      await editor(page).fill('Keep my draft while organizing rows')
-      if (width === 390) await openNavigation(page)
-      await showSidebarView(page, 'bots')
-      const trigger = page.getByRole('button', { name: 'Actions for Research', exact: true })
-      const surface = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Actions for Research', exact: true })
-      const item = (name) => surface.getByRole(width === 390 ? 'button' : 'menuitem', { name, exact: true })
-      await trigger.click()
-      await expect(item('Pin to top')).toBeVisible()
-      await item('Pin to top').click()
-      await trigger.click()
-      await expect(item('Unpin')).toBeVisible()
-      await item('Unpin').click()
-      await trigger.focus()
-      await page.keyboard.press('Shift+F10')
-      await expect(surface).toBeVisible()
-      const box = await surface.boundingBox()
-      expect(box.x).toBeGreaterThanOrEqual(-1)
-      expect(box.x + box.width).toBeLessThanOrEqual(width + 1)
-      expect(box.y).toBeGreaterThanOrEqual(-1)
-      expect(box.y + box.height).toBeLessThanOrEqual(961)
-      await page.screenshot({ path: testInfo.outputPath('roster-actions.png') })
-      await page.keyboard.press('Escape')
-      await expect(trigger).toBeFocused()
-      for (const [action, title] of [['Edit…', 'Edit profile'], ['Manage groups…', 'Manage groups'], ['Delete', 'Delete bot and profile?']]) {
-        await trigger.click()
-        await item(action).click()
-        const dialog = page.getByRole('dialog', { name: title, exact: true })
-        await expect(dialog).toBeVisible()
-        await expect(surface).toHaveCount(0)
-        const bounds = await dialog.boundingBox()
-        expect(bounds.x).toBeGreaterThanOrEqual(-1)
-        expect(bounds.x + bounds.width).toBeLessThanOrEqual(width + 1)
-        expect(bounds.y).toBeGreaterThanOrEqual(-1)
-        expect(bounds.y + bounds.height).toBeLessThanOrEqual(961)
-        await page.keyboard.press('Escape')
-        await expect(dialog).toHaveCount(0)
-        await expect(trigger).toBeFocused()
-      }
-      await trigger.click()
-      await item('New section…').click()
-      const create = page.getByRole('dialog', { name: 'New section', exact: true })
-      await create.getByRole('textbox').fill('Row work')
-      await create.getByRole('button', { name: 'Create', exact: true }).click()
-      const section = page.locator('.browser-roster-action-row[data-section-id]').filter({ has: page.getByRole('button', { name: 'Actions for Row work', exact: true }) })
-      await expect(section).toBeVisible()
-      await expect(trigger).toBeFocused()
-      await expect(section.locator('..').getByRole('button', { name: /Research · @/ })).toBeVisible()
-      await section.getByRole('button', { name: 'Actions for Row work', exact: true }).click()
-      const sectionActions = page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Actions for Row work', exact: true })
-      await sectionActions.getByRole(width === 390 ? 'button' : 'menuitem', { name: 'Rename', exact: true }).click()
-      const rename = page.getByRole('dialog', { name: 'Rename section', exact: true })
-      await rename.getByRole('textbox').fill('Renamed work')
-      await rename.getByRole('button', { name: 'Save', exact: true }).click()
-      const renamed = page.getByRole('button', { name: 'Actions for Renamed work', exact: true })
-      await expect(renamed).toBeFocused()
-      await renamed.click()
-      await page.getByRole(width === 390 ? 'dialog' : 'menu', { name: 'Actions for Renamed work', exact: true }).getByRole(width === 390 ? 'button' : 'menuitem', { name: 'Delete', exact: true }).click()
-      await expect(renamed).toHaveCount(0)
-      await expect(page.getByRole('button', { name: 'Bots', exact: true })).toBeFocused()
-      await expect(trigger).toBeVisible()
-      await showSidebarView(page, 'sessions')
-      if (width === 390) await page.getByRole('button', { name: 'Back to chat', exact: true }).click()
-      await expect(editor(page)).toHaveText('Keep my draft while organizing rows')
-      await expect(page).toHaveURL(/#\/preview-week$/)
-      errors.assertClean()
-    })
-  }
-}
-
-test('shared UI styles: compact controls retain active and keyboard focus states', async ({ page }) => {
-  await open(page)
-  await page.evaluate(() => window.hermesDesktop.zoom.setPercent(100))
-  const sessionFilter = page.getByRole('button', { name: 'Filters', exact: true })
-  expect((await sessionFilter.boundingBox()).width).toBeCloseTo(24, 0)
-  const bots = page.getByRole('button', { name: 'Bots', exact: true })
-  await page.keyboard.press('Tab')
-  await bots.focus()
-  await expect(bots).toHaveCSS('outline-style', 'solid')
-  await page.keyboard.press('Enter')
-  const filter = page.getByRole('button', { name: /^Filter roster/ })
-  expect((await filter.boundingBox()).width).toBeCloseTo(24, 0)
-  const inactiveColor = await filter.evaluate(el => getComputedStyle(el).color)
-  await filter.click()
-  await page.getByRole('menuitemradio', { name: 'Bots only', exact: true }).click()
-  await page.keyboard.press('Escape')
-  await bots.focus()
-  await page.mouse.move(600, 400)
-  await expect(filter).toHaveAccessibleName('Filter roster, 1 active')
-  await expect(filter).not.toHaveCSS('color', inactiveColor)
-})
-
 // Exercise the rendered contract, including body portals and CSS zoom. These
 // cases straddle the navigation breakpoint and include touch-only landscape.
 for (const scenario of [
@@ -4207,53 +3867,6 @@ for (const nativeMenus of [true, false]) {
   })
 }
 
-test.describe('Bots touch refresh', () => {
-  test.use({ hasTouch: true, isMobile: true })
-  test('pulling Bots refreshes roster and groups while preserving the chat draft', async ({ page }) => {
-    const calls = []
-    let documents = 0
-    page.on('domcontentloaded',()=>documents++)
-    page.on('websocket',socket=>socket.on('framesent',frame=>{
-      try { calls.push(JSON.parse(String(frame.payload)).method) } catch {}
-    }))
-    await page.setViewportSize({ width:390,height:844 })
-    await page.goto(`${origin}/#/preview-week`)
-    const session = page.locator('#browser-navigation').getByRole('button',{name:'Plan a calmer working week',exact:true})
-    const botsToggle = page.getByRole('button', { name: 'Bots', exact: true })
-    await expect.poll(async () => await editor(page).isVisible() || await botsToggle.isVisible(), { timeout: 30000 }).toBe(true)
-    if (!await editor(page).isVisible()) {
-      if (await botsToggle.getAttribute('aria-pressed') === 'true') await botsToggle.click()
-      await session.click()
-    }
-    await expect(editor(page)).toBeVisible()
-    await editor(page).fill('Keep this draft while refreshing Bots')
-    await page.getByRole('button',{name:/^(Open navigation|Back to home|Back to chat history)$/}).click()
-    await expect(page.getByRole('dialog',{name:'Navigation',exact:true})).toBeVisible()
-    await showSidebarView(page, 'bots')
-    const surface = page.locator('[data-browser-bots-refresh]')
-    await expect(surface).toBeVisible()
-    await expect(page.getByRole('button',{name:'New bot or group chat',exact:true})).toBeVisible()
-    await expect.poll(()=>calls.includes('profiles.list')).toBe(true)
-    const documentsBefore = documents
-    const rosterBefore = calls.filter(method=>method==='profiles.list').length
-    const groupsBefore = calls.filter(method=>method==='groups.list').length
-    await surface.evaluate(root=>{
-      const target=root.querySelector('[data-slot="bots-roster"]') || root
-      for(const [type,y] of [['touchstart',40],['touchmove',155],['touchend',155]]) {
-        const touches=type==='touchend'?[]:[new Touch({identifier:0,target,clientX:100,clientY:y})]
-        target.dispatchEvent(new TouchEvent(type,{bubbles:true,cancelable:true,touches}))
-      }
-    })
-    await expect.poll(()=>calls.filter(method=>method==='profiles.list').length).toBeGreaterThan(rosterBefore)
-    await expect.poll(()=>calls.filter(method=>method==='groups.list').length).toBeGreaterThan(groupsBefore)
-    await expect(surface).not.toHaveAttribute('aria-busy','true')
-    expect(documents).toBe(documentsBefore)
-    await showSidebarView(page, 'sessions')
-    await page.locator('#browser-navigation').getByRole('button',{name:'Plan a calmer working week',exact:true}).click()
-    await expect(editor(page)).toHaveText('Keep this draft while refreshing Bots')
-  })
-})
-
 test('saved Telegram conversations remain visible without detected configuration', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
   await page.route(/\/api\/messaging\/platforms(?:\?|$)/, route => route.fulfill({ json: { platforms: [] } }))
@@ -4326,7 +3939,6 @@ for (const width of [1440, 390]) {
     await expect(editor(page)).toHaveText('Keep my draft across the combined history')
   })
 }
-
 
 test('Profile grouping replaces presentation controls and switches live without gateway nesting', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })

@@ -4,7 +4,6 @@ import { createPreviewGateway } from '../../scripts/preview/gateway.mjs'
 import { getBrowserTarget } from './test-target.mjs'
 import { viewportChecks } from './viewport-checks.mjs'
 import { narrowDesktopChecks } from './narrow-desktop-checks.mjs'
-import { showSidebarView } from './sidebar-view.mjs'
 
 test.describe.configure({ retries: 1, timeout: 90000 })
 const { image, url } = getBrowserTarget()
@@ -43,19 +42,17 @@ const open = async page => {
 viewportChecks(test, open)
 narrowDesktopChecks(test, open)
 
-test('WebKit starts cleanly and keeps drafts isolated while switching conversations', async ({ page }) => {
+test.extend({ hasTouch: true })('WebKit starts cleanly and keeps drafts isolated while switching conversations', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await open(page)
   await expect(page.locator('.browser-chat-title')).toHaveCount(0)
   await editor(page).fill('session draft')
-  await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
-  await showSidebarView(page, 'bots')
-  await page.getByRole('button', { name: /Research · @/ }).click()
+  await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
+  await page.locator('#browser-navigation').getByRole('button', { name: 'Explore a product idea', exact: true }).click()
   await expect(editor(page)).toBeVisible()
   await expect(editor(page)).not.toHaveText('session draft')
-  await editor(page).fill('bot draft')
-  await page.getByRole('button', { name: /^(Open navigation|Back to home)$/ }).click()
-  await showSidebarView(page, 'sessions')
+  await editor(page).fill('idea draft')
+  await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()
   await page.locator('.browser-sessions-pane button[data-slot="row-button"]').filter({ hasText: 'Plan a calmer working week' }).click()
   await expect(editor(page)).toHaveText('session draft')
 })

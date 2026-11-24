@@ -264,6 +264,12 @@ export function browserPlugin(root: string): Plugin {
   }
 }
 
+function excludeBundledBotMode(source: string): string {
+  const bundled = "'../plugins/*/plugin.{js,ts,tsx}'"
+  const botMode = "'!../plugins/hermes-bots/plugin.{js,ts,tsx}'"
+  return source.replace(bundled, `[${bundled}, ${botMode}]`)
+}
+
 function applyBrowserTransform(code: string, id: string, root: string, order: number): { code: string; map: null } | null {
   const normalized = id.replaceAll('\\', '/').split('?')[0]
   const entry = registry.find(item => item.kind === 'browser-transform' && item.order === order && normalized.endsWith('/desktop/src/' + item.module))
@@ -295,6 +301,7 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     exposeBrowserSettingsRowRefs,
     presentBrowserKanbanOrchestration,
     useBrowserMessagingPresentation: source => useBrowserMessagingPresentation(source, root),
+    excludeBundledBotMode,
     useBrowserCatalogIdleTask: source => useBrowserCatalogIdleTask(source, root),
     useBrowserErrorFallback: source => useBrowserErrorFallback(source, root),
     useBrowserStylesheetOwner,
