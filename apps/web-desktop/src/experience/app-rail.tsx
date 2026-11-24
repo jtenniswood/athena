@@ -98,7 +98,7 @@ export function BrowserAppRail({ items, rail, onMove, onContextMenu }: {
   function reorderWithKeyboard(event: KeyboardEvent<HTMLDivElement>) {
     if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return
     const button = event.target
-    if (!(button instanceof HTMLButtonElement) || !button.draggable) return
+    if (!(button instanceof HTMLButtonElement)) return
     const key = railItemFor(button, event.currentTarget)?.dataset.railKey
     if (!key) return
     event.preventDefault()
