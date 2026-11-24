@@ -2973,6 +2973,53 @@ test('separated profiles replace Chat in the desktop rail and open their own con
   await expect(writer).toHaveAttribute('aria-pressed', 'true')
 })
 
+test('the separated desktop rail adds profiles between the roster and Kanban', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await page.route('**/api/athena/preferences', route => route.abort())
+  const createdProfile = { name: 'new-rail-profile', display_name: 'New rail profile', path: '/workspace/new-rail-profile' }
+  let created = false
+  await page.route('**/api/profiles', async route => {
+    if (route.request().method() === 'POST') {
+      expect(route.request().postDataJSON()).toEqual({ name: createdProfile.name, clone_from: 'default' })
+      created = true
+      await route.fulfill({ json: { ok: true, name: createdProfile.name, path: createdProfile.path } })
+      return
+    }
+    if (!created) return route.continue()
+    const response = await route.fetch()
+    const data = await response.json()
+    await route.fulfill({ response, json: { ...data, profiles: [...data.profiles, createdProfile] } })
+  })
+  await open(page)
+  const rail = page.getByRole('navigation', { name: 'App navigation' })
+  const add = rail.getByRole('button', { name: 'New profile', exact: true })
+  const kanban = rail.getByRole('button', { name: 'Kanban', exact: true })
+  const centers = await rail.locator('img[alt="Athena"], button.browser-profile-choice, button[aria-label="New profile"], button[aria-label="Kanban"]').evaluateAll(items =>
+    items.map(item => {
+      const { y, height } = item.getBoundingClientRect()
+      return y + height / 2
+    })
+  )
+  expect(centers).toHaveLength(7)
+  for (let i = 2; i < centers.length; i++) {
+    expect(centers[i] - centers[i - 1]).toBeCloseTo(centers[1] - centers[0], 1)
+  }
+
+  await kanban.click()
+  const dialog = page.getByRole('dialog', { name: 'New profile', exact: true })
+  await add.click()
+  await expect(dialog.getByRole('textbox', { name: 'Name', exact: true })).toBeFocused()
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(add).toBeFocused()
+
+  await add.press('Enter')
+  await dialog.getByRole('textbox', { name: 'Name', exact: true }).fill(createdProfile.name)
+  await dialog.getByRole('button', { name: 'Create profile', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  await expect(rail.getByRole('button', { name: createdProfile.display_name, exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page).toHaveURL(/#\/$/)
+})
+
 test('Sessions avatar editing preserves the conversation and targets the clicked profile', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 })
   const writes = []

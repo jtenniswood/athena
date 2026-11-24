@@ -5,7 +5,7 @@ import { BrowserEngineHost, BrowserSessionsSurface, BrowserBotsSurface, BrowserC
 import { useBrowserConversation } from './conversation'
 import { useBrowserSessionActions } from './conversation-actions'
 import { selectBrowserSession } from './selection'
-import { BrowserProfileEditor } from './profile-editor'
+import { BrowserProfileCreator, BrowserProfileEditor } from './profile-editor'
 import { useBrowserProfiles, useBrowserActiveProfile } from './profiles'
 import { useBrowserNewChatProfile } from './new-chat-profile'
 import { useBrowserProfileGrouping } from './profile-section'
@@ -25,7 +25,7 @@ export const browserEngine = Object.freeze({
   surfaces: {
     Host: BrowserEngineHost, Sessions: BrowserSessionsSurface, Bots: BrowserBotsSurface,
     Conversation: BrowserConversationSurface, Status: BrowserStatusSurface, Page: BrowserPageSurface,
-    ProfileEditor: BrowserProfileEditor
+    ProfileCreator: BrowserProfileCreator, ProfileEditor: BrowserProfileEditor
   },
   conversations: { useCurrent: useBrowserConversation, useActions: useBrowserSessionActions, select: selectBrowserSession },
   profiles: { useProfiles: useBrowserProfiles, useNewChat: useBrowserNewChatProfile, useActive: useBrowserActiveProfile, useGrouping: useBrowserProfileGrouping },

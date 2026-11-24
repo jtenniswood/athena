@@ -18,7 +18,7 @@ import { BrowserSidebarNavigation } from './sidebar-extras'
 import { BrowserSessionsPane } from './sidebar-sections'
 import { BrowserBotsFallback } from './browser-bots-fallback'
 import { installTranscriptPreferences } from './transcript-preferences'
-import { Codicon, SidebarProvider } from '../upstream/browser-api'
+import { Codicon, SidebarProvider, useI18n } from '../upstream/browser-api'
 import { BrowserChatActionsMenu } from './chat-actions-menu'
 import { currentPwaUpdate, subscribePwaUpdate, type PwaUpdateNotice } from '../pwa/register'
 
@@ -33,7 +33,9 @@ export function BrowserShell() {
 }
 function BrowserLayout() {
   const engine = useBrowserEngine()
-  const { Sessions: BrowserSessionsSurface, Bots: BrowserBotsSurface, Conversation: BrowserConversationSurface, Status: BrowserStatusSurface, Page: BrowserPageSurface } = engine.surfaces
+  const { Sessions: BrowserSessionsSurface, Bots: BrowserBotsSurface, Conversation: BrowserConversationSurface, Status: BrowserStatusSurface, Page: BrowserPageSurface, ProfileCreator: BrowserProfileCreator } = engine.surfaces
+  const { t } = useI18n()
+  const [creatingProfile, setCreatingProfile] = useState(false)
   const presentationMode = engine.profiles.useGrouping()
   useEffect(() => installTranscriptPreferences(), [])
   const navigate = useNavigate(), location = useLocation()
@@ -87,12 +89,21 @@ function BrowserLayout() {
     <BrowserActionError />
     <BrowserArchiveConfirmation />
     <AppSettingsRegistration />
+    <BrowserProfileCreator open={creatingProfile} onClose={() => setCreatingProfile(false)} onCreated={openProfileChat} />
     <div className="browser-workspace">
       {!navigation.mobile && <nav id="browser-app-navigation" className="browser-app-navigation" aria-label="App navigation" ref={rail}>
         <img src="/athena.svg" alt="Athena" width={32} height={32} className="shrink-0" />
         {presentationMode ? <BrowserToolbarButton tooltip="Chat" aria-label="Chat" aria-current={chatSelected ? 'page' : undefined} onClick={openChat}>
           <Codicon name="comment" />
-        </BrowserToolbarButton> : <BrowserProfileNavigation vertical active={chatSelected} onActivate={openProfileChat} />}
+        </BrowserToolbarButton> : <>
+          <BrowserProfileNavigation vertical active={chatSelected} onActivate={openProfileChat} />
+          <BrowserToolbarButton tooltip={t.profiles.newProfile} aria-label={t.profiles.newProfile} aria-haspopup="dialog" onClick={event => {
+            event.currentTarget.focus()
+            setCreatingProfile(true)
+          }}>
+            <Codicon name="add" />
+          </BrowserToolbarButton>
+        </>}
         <BrowserToolbarButton tooltip={KANBAN_ROUTE.label} aria-label={KANBAN_ROUTE.label} aria-current={kanban ? 'page' : undefined} onClick={() => { if (!kanban) openRoute(KANBAN_ROUTE.path) }}>
           <Codicon name={KANBAN_ROUTE.icon} />
         </BrowserToolbarButton>

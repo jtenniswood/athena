@@ -16,6 +16,7 @@ export interface BrowserEngine {
     Conversation: ComponentType
     Status: ComponentType
     Page: ComponentType
+    ProfileCreator: ComponentType<{ open: boolean; onClose(): void; onCreated(profile: string): void }>
     ProfileEditor: ComponentType<{ profile: string | null; onClose(): void }>
   }
   readonly conversations: {
