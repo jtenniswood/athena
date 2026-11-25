@@ -131,7 +131,7 @@ function ResponseActivityButton({ active, contentId, duration, expanded, onToggl
       onClick={onToggle}
       type="button"
     >
-      {working && <span aria-hidden="true" className="browser-response-activity-pulse" />}
+      {working && <span aria-hidden="true" className="browser-response-activity-spinner" />}
       <span role="status">{label}</span>
       {seconds !== undefined && <span className="browser-response-activity-time">{formatElapsed(seconds)}</span>}
       <span aria-hidden="true" className="browser-response-activity-chevron" />

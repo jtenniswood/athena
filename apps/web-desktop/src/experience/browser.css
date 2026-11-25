@@ -329,17 +329,19 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
   transform: rotate(-45deg);
 }
 .browser-response-activity[aria-expanded="true"] .browser-response-activity-chevron { transform: rotate(45deg); }
-.browser-response-activity-pulse {
-  width: .375rem;
-  height: .375rem;
+.browser-response-activity-spinner {
+  box-sizing: border-box;
+  flex: none;
+  width: .625rem;
+  height: .625rem;
+  border: 1px solid #4d83ff;
+  border-right-color: transparent;
   border-radius: 50%;
-  background: currentColor;
-  animation: browser-response-pulse 1.6s ease-in-out infinite alternate;
 }
-@keyframes browser-response-pulse { to { opacity: .35; } }
-@media (prefers-reduced-motion: reduce) {
-  .browser-response-activity-pulse { animation: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .browser-response-activity-spinner { animation: browser-response-spin .8s linear infinite; }
 }
+@keyframes browser-response-spin { to { transform: rotate(1turn); } }
 
 .browser-response-content, [data-browser-commentary] { display: contents; }
 .browser-response-content[data-activity-summary] [data-slot="aui_turn-duration"],
