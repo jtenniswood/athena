@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test'
 import { createServer, request } from 'node:http'
 import { request as requestHttps } from 'node:https'
 import { execFileSync } from 'node:child_process'
+import { createProxyServer } from 'http-proxy-3'
+import { createPreviewGateway } from '../../scripts/preview/gateway.mjs'
 import { getBrowserTarget } from './test-target.mjs'
 
 const { image, url } = getBrowserTarget()
@@ -10,14 +12,21 @@ test.use({ colorScheme: 'dark' })
 
 // An expired edge session redirects network requests while the installed PWA
 // can still serve its cached shell. No real proxy account or gateway is used.
-test('configuration recovery reaches proxy sign-in and preserves browser data', async ({ page }, testInfo) => {
-  let container, server
+async function exerciseProxySignIn(page, testInfo, live) {
+  let container, server, gateway
+  const upgradedSockets = new Set()
   let expired = false
   try {
     let upstream = url
     if (!upstream) {
       if (!image) throw new Error('HERMES_TEST_IMAGE is required in CI')
-      container = execFileSync('docker', ['run', '-d', '--rm', '-p', '127.0.0.1::80', image], { encoding: 'utf8' }).trim()
+      const args = ['run', '-d', '--rm', '-p', '127.0.0.1::80']
+      if (live) {
+        gateway = createPreviewGateway()
+        await new Promise(resolve => gateway.server.listen(0, '0.0.0.0', resolve))
+        args.push('--add-host', 'host.docker.internal:host-gateway', '-e', `HERMES_GATEWAY_URL=http://host.docker.internal:${gateway.server.address().port}`)
+      }
+      container = execFileSync('docker', [...args, image], { encoding: 'utf8' }).trim()
       const port = execFileSync('docker', ['port', container, '80/tcp'], { encoding: 'utf8' }).trim().split(':').at(-1)
       upstream = `http://127.0.0.1:${port}`
     }
@@ -34,7 +43,7 @@ test('configuration recovery reaches proxy sign-in and preserves browser data', 
         res.writeHead(302, { Location: target.searchParams.get('return') || '/' }); res.end()
       } else if (expired) {
         res.writeHead(302, { Location: `/cdn-cgi/access/login?return=${encodeURIComponent(req.url)}` }); res.end()
-      } else if (target.pathname === '/api/status') {
+      } else if (!live && target.pathname === '/api/status') {
         // Model an authenticated edge session before expiry and after sign-in.
         res.setHeader('Content-Type', 'application/json')
         res.end(JSON.stringify({ auth_required: false }))
@@ -46,22 +55,41 @@ test('configuration recovery reaches proxy sign-in and preserves browser data', 
         req.pipe(proxy)
       }
     })
+    if (live) {
+      const socketProxy = createProxyServer({ target: upstream, ws: true })
+      socketProxy.on('error', (_error, _request, socket) => socket.destroy())
+      server.on('upgrade', (req, socket, head) => {
+        upgradedSockets.add(socket)
+        socket.once('close', () => upgradedSockets.delete(socket))
+        socketProxy.ws(req, socket, head)
+      })
+    }
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
     const origin = `http://127.0.0.1:${server.address().port}`
     await page.goto(`${origin}/?fixture=keep#/preview-week`)
     await page.waitForFunction(() => navigator.serviceWorker.controller && typeof window.hermesDesktop?.getConnection === 'function')
-    await page.evaluate(() => localStorage.setItem('hermes:composer-drafts:v3', JSON.stringify({ 'preview-week': 'Keep my saved draft' })))
+    const editor = page.locator('[contenteditable="true"]:visible').first()
+    if (live) {
+      await expect(editor).toBeVisible({ timeout: 30000 })
+      await editor.fill('Keep my saved draft')
+    } else {
+      await page.evaluate(() => localStorage.setItem('hermes:composer-drafts:v3', JSON.stringify({ 'preview-week': 'Keep my saved draft' })))
+    }
     expired = true
-    const response = await page.reload()
-    expect(response.fromServiceWorker()).toBe(true)
-    await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
-    await expect(page.locator('.athena-sign-in-status')).toBeHidden()
-    await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
-    expect(await page.evaluate(() => Boolean(window.hermesDesktop))).toBe(false)
-    await expect(page.getByText('Connection help', { exact: true })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Copy diagnostics' })).toHaveCount(0)
-    await page.screenshot({ path: testInfo.outputPath('reconnect-sign-in.png') })
-    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    if (live) {
+      await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+    } else {
+      const response = await page.reload()
+      expect(response.fromServiceWorker()).toBe(true)
+      await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toBeVisible()
+      await expect(page.locator('.athena-sign-in-status')).toBeHidden()
+      await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
+      expect(await page.evaluate(() => Boolean(window.hermesDesktop))).toBe(false)
+      await expect(page.getByText('Connection help', { exact: true })).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Copy diagnostics' })).toHaveCount(0)
+      await page.screenshot({ path: testInfo.outputPath('reconnect-sign-in.png') })
+      await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    }
     await expect(page.getByRole('heading', { name: 'Proxy sign-in' })).toBeVisible()
     await page.getByRole('link', { name: 'Sign in', exact: true }).click()
     await page.waitForFunction(() => typeof window.hermesDesktop?.getConnection === 'function')
@@ -69,12 +97,23 @@ test('configuration recovery reaches proxy sign-in and preserves browser data', 
     await expect.poll(() => page.evaluate(() => new URL(location.href).searchParams.has('hermes-reconnect'))).toBe(false)
     expect(new URL(page.url()).searchParams.get('fixture')).toBe('keep')
     expect(new URL(page.url()).hash).toBe('#/preview-week')
+    if (live) await expect(editor).toHaveText('Keep my saved draft')
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hermes:composer-drafts:v3'))['preview-week'])).toBe('Keep my saved draft')
   } finally {
+    for (const socket of upgradedSockets) socket.destroy()
     server?.closeAllConnections()
     if (server) await new Promise(resolve => server.close(resolve))
     if (container) execFileSync('docker', ['stop', container], { stdio: 'ignore' })
+    await gateway?.close()
   }
+}
+
+test('configuration recovery reaches proxy sign-in and preserves browser data', async ({ page }, testInfo) => {
+  await exerciseProxySignIn(page, testInfo, false)
+})
+
+test('live session recovery reaches proxy sign-in and preserves browser data', async ({ page }, testInfo) => {
+  await exerciseProxySignIn(page, testInfo, true)
 })
 
 test('unavailable configuration after reconnect offers retry', async ({ page, context }) => {

@@ -310,6 +310,56 @@ test('existing cookie sessions bypass sign-in', async ({ page, context }) => {
   await expect(page.getByRole('heading', { name: 'Welcome to Athena' })).toHaveCount(0)
 })
 
+test('a live Hermes session expiry opens sign-in and restores the selected chat and draft', async ({ page, context }) => {
+  await hermesAuth(context, { signedIn: true })
+  await context.route('**/api/session-expiry-fixture', route => route.fulfill({ status: 401, json: { detail: 'unauthorized' } }))
+  const chat = `${origin}/?source=bookmark#/preview-week`
+  await page.goto(chat)
+  await expect(editor(page)).toBeVisible({ timeout: 30000 })
+  await editor(page).fill('Keep this unsent text')
+
+  // An authorization failure on one endpoint should leave a valid session alone.
+  const failure = () => page.evaluate(() => window.hermesDesktop.api({ path: '/api/session-expiry-fixture' }).catch(error => error.message))
+  const sessionChecked = page.waitForResponse(response => response.url().endsWith('/api/auth/me') && response.ok())
+  expect(await failure()).toContain('401:')
+  await sessionChecked
+  await expect(editor(page)).toHaveText('Keep this unsent text')
+  expect(page.url()).toBe(chat)
+
+  await context.clearCookies()
+  const login = page.waitForRequest(request => request.isNavigationRequest() && new URL(request.url()).pathname === '/login')
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  expect(new URL((await login).url()).searchParams.get('next')).toBe('/?source=bookmark#/preview-week')
+  await expect(page).toHaveURL(chat)
+  await expect(editor(page)).toHaveText('Keep this unsent text')
+})
+
+test('live session expiry keeps an unsent attachment before redirecting', async ({ page, context }) => {
+  await hermesAuth(context, { signedIn: true })
+  const chat = `${origin}/#/preview-week`
+  await page.goto(chat)
+  await expect(editor(page)).toBeVisible({ timeout: 30000 })
+  await page.getByRole('button', { name: 'Add context', exact: true }).click()
+  const picker = page.waitForEvent('filechooser')
+  await page.getByRole('menuitem', { name: 'Files…', exact: true }).click()
+  await (await picker).setFiles({ name: 'unsent.txt', mimeType: 'text/plain', buffer: Buffer.from('Keep this attachment') })
+  const remove = page.getByRole('button', { name: 'Remove unsent.txt', exact: true })
+  await expect(remove).toBeVisible()
+
+  await context.clearCookies()
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await expect(page.getByText('Your session has expired.', { exact: false })).toBeVisible()
+  await expect(remove).toBeVisible()
+  expect(page.url()).toBe(chat)
+
+  await remove.click()
+  const login = page.waitForRequest(request => request.isNavigationRequest() && new URL(request.url()).pathname === '/login')
+  await page.getByRole('button', { name: 'Sign in again', exact: true }).click()
+  await login
+  await expect(page).toHaveURL(chat)
+  await expect(editor(page)).toBeVisible()
+})
+
 test('a proxy login page cannot be mistaken for a verified Hermes session', async ({ page, context }) => {
   await hermesAuth(context)
   await context.route('**/api/auth/me', route => route.fulfill({ contentType: 'text/html', body: '<h1>Proxy sign-in</h1>' }))
@@ -418,12 +468,11 @@ test('Gateway settings uses standard browser sign-in', async ({ page, context })
   await context.route('**/login', route => route.fulfill({ contentType: 'text/html', body: '<h1>Hermes sign-in</h1>' }))
   await page.goto(`${origin}/#/preview-week`)
   await expect(editor(page)).toBeVisible({ timeout: 30000 })
-  await context.clearCookies()
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
-  await page.getByRole('menuitem', { name: 'Settings', exact: true }).click()
   await page.getByRole('navigation', { name: 'Settings categories' }).getByRole('button', { name: 'Gateway', exact: true }).click()
   const form = page.getByRole('region', { name: 'Gateway connection', exact: true })
   await expect(form.getByLabel('Sign-in method')).toContainText('Browser sign-in')
+  await context.clearCookies()
   const popupReady = page.waitForEvent('popup')
   await form.getByRole('button', { name: 'Sign in', exact: true }).click()
   const popup = await popupReady

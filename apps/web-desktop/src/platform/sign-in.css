@@ -56,3 +56,33 @@
 .athena-sign-in-advanced form { display: grid; gap: 0.75rem; padding-top: 0.75rem; }
 .athena-sign-in-advanced p { margin-block: 0.75rem; color: var(--sign-in-muted); }
 .athena-sign-in [hidden] { display: none; }
+
+.athena-session-recovery {
+  position: fixed;
+  z-index: 1000;
+  top: max(0.75rem, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--web-space-2) var(--web-space-4);
+  width: max-content;
+  max-width: calc(100% - 1.5rem);
+  padding: var(--web-space-2) var(--web-space-3);
+  border: 1px solid var(--web-border);
+  border-radius: var(--web-radius-panel);
+  background: var(--web-surface);
+  color: var(--web-text);
+  box-shadow: var(--web-shadow-panel);
+  font-size: var(--web-text-body);
+}
+
+.athena-session-recovery button {
+  min-height: var(--web-control-regular);
+  padding-inline: var(--web-space-2);
+  border-radius: var(--web-radius-control);
+  background: var(--web-accent);
+  color: var(--web-on-accent);
+  cursor: pointer;
+}

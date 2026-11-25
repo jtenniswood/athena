@@ -1,6 +1,7 @@
 import { androidWebState, isAndroidApp } from './platform/android'
 import { buildInfo } from './build-info'
 import { completeStartup, recoverStartupChunk, restoreStartupLocation, showStartupRecovery } from './platform/startup-recovery'
+import { monitorBrowserSession } from './platform/session-recovery'
 import { startBrowserApplication } from './startup'
 import './web.css'
 import './experience/styles/tokens.css'
@@ -30,6 +31,7 @@ async function start(): Promise<void> {
     restoreStartupLocation()
     await startBrowserApplication()
     completeStartup()
+    monitorBrowserSession()
     void androidWebState(true, buildInfo.wrapperRevision)
   } catch (error) {
     if (recoverStartupChunk(error, buildInfo.wrapperRevision)) return

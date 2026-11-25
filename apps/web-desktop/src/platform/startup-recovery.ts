@@ -41,10 +41,7 @@ export function showStartupRecovery(error: unknown, revision: string): void {
       section.setAttribute('aria-busy', 'true')
       status.textContent = reconnecting ? 'Reconnecting…' : 'Opening sign-in…'
       status.hidden = false
-      try { sessionStorage.setItem(RETURN_HASH_KEY, url.hash) } catch { /* Navigation remains available without storage. */ }
-      url.searchParams.set('hermes-reconnect', '1')
-      if (url.href === window.location.href) window.location.reload()
-      else window.location.assign(url.href)
+      navigateThroughProxy()
     }
     card.append(signIn)
     root.replaceChildren(section)
@@ -67,6 +64,15 @@ export function showStartupRecovery(error: unknown, revision: string): void {
   actions.append(diagnosticsButton(stage, wrapperRevision))
   section.append(actions)
   root.replaceChildren(section)
+}
+
+/** Bypass cached app shells and let the edge proxy authenticate this navigation. */
+export function navigateThroughProxy(): void {
+  const url = new URL(window.location.href)
+  try { sessionStorage.setItem(RETURN_HASH_KEY, url.hash) } catch { /* Navigation remains available without storage. */ }
+  url.searchParams.set('hermes-reconnect', '1')
+  if (url.href === window.location.href) window.location.reload()
+  else window.location.replace(url.href)
 }
 
 function diagnosticsButton(stage: RecoveryStage, wrapperRevision: string): HTMLButtonElement {
