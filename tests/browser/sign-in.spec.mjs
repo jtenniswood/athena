@@ -334,7 +334,9 @@ test('a live Hermes session expiry opens sign-in and restores the selected chat 
   await expect(editor(page)).toHaveText('Keep this unsent text')
 })
 
-test('live session expiry keeps an unsent attachment before redirecting', async ({ page, context }) => {
+// The proxy-expiry suite covers the installed worker with real HTTP responses.
+// Keep the worker out of this test so WebKit routes the synthetic auth responses.
+test.extend({ serviceWorkers: 'block' })('live session expiry keeps an unsent attachment before redirecting', async ({ page, context }) => {
   await hermesAuth(context, { signedIn: true })
   const chat = `${origin}/#/preview-week`
   await page.goto(chat)
