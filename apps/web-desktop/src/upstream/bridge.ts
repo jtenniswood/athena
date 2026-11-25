@@ -6,6 +6,7 @@ import { assertSafeConnectionChange, beginOperation, setActiveWork } from '../pl
 import { beginBrowserTransition } from '../platform/browser-transition'
 import { claimBrowserAmbientCue } from '../platform/ambient-claims'
 import { browserSignInTarget } from '../platform/sign-in-target'
+import { requestBrowserSessionCheck } from '../platform/session-recovery'
 import { browserDefaultProfile } from '../platform/browser-default-profile'
 import { createWebZoomBridge } from '../platform/display'
 import { webNotify } from '../platform/notifications'
@@ -31,8 +32,11 @@ function nativeOwner(connectionId?: string | null): 'local' {
 const sharedStartupReadPaths = new Set(['/api/status', '/api/config', '/api/config/defaults', '/api/model/info'])
 
 export function createWebBridge(): Window['hermesDesktop'] {
-  // Keep drafts and the recovery screen mounted; Athena offers sign-in in its settings.
-  window.addEventListener('hermes:browser-reauth-required', event => event.preventDefault())
+  // Athena verifies the session and saves drafts before navigating to sign-in.
+  window.addEventListener('hermes:browser-reauth-required', event => {
+    event.preventDefault()
+    requestBrowserSessionCheck()
+  })
   const token = resolveToken()
   if (token) sessionStorage.setItem(webappSessionKey(''), token)
   if (!installBrowserDesktopBridge()) throw new Error('The official Hermes Webapp bridge could not start.')
@@ -139,6 +143,12 @@ export function createWebBridge(): Window['hermesDesktop'] {
           sharedStartupReadPaths.has(request.path.split('?')[0])
         const response = share ? await readStartup<T>(request) : await native.api<T>(request)
         return tagRegistrySessionResponse(request.path, response, WEB_CONNECTION_ID) as T
+      } catch (error) {
+        // A proxy can deny the request, redirect it across origins, or return a login page.
+        if (error instanceof TypeError || (error instanceof Error && /^(?:401:|403:|Hermes API returned HTML)/.test(error.message))) {
+          requestBrowserSessionCheck()
+        }
+        throw error
       } finally {
         // A read begun during a write must not be shared with a later caller.
         if (!read) startupReads.clear()

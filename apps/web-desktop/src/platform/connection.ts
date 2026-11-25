@@ -280,10 +280,6 @@ export async function apiFetch<T>(request: HermesApiRequest): Promise<T> {
   const text = await res.text()
 
   if (!res.ok) {
-    // Do NOT navigate away on 401. The app shell must stay mounted so the user
-    // can reach Settings -> Gateway (change the URL, switch gateways, sign in).
-    // Boot surfaces the reauth state via the WS path (getGatewayWsUrl ->
-    // GatewayReauthRequiredError) which drives the boot-failure sign-in branch.
     // Same error contract as the Electron IPC handler: reject with "NNN: msg".
     throw new Error(`${res.status}: ${text || res.statusText}`)
   }

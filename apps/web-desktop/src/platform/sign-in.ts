@@ -1,7 +1,7 @@
 import { buildInfo } from '../build-info'
 import { connectionState } from './connection-state'
 import { baseUrl, browserLoginUrl, checkBrowserSession, fetchStatus, openOauthLoginPopup, resolveToken } from './connection'
-import { browserSignInTarget } from './sign-in-target'
+import { browserReturnPath, browserSignInTarget } from './sign-in-target'
 import { createSignInView } from './sign-in-view'
 import { androidWebState, isAndroidApp } from './android'
 
@@ -88,9 +88,7 @@ export async function waitForSignIn(): Promise<void> {
           connectionState().update({ authMode: 'oauth', token: '' })
           connected(); return
         }
-        const url = new URL(window.location.href)
-        const returnTo = url.pathname.startsWith('//') ? '/' : `${url.pathname}${url.search}${url.hash}`
-        const target = browserSignInTarget(returnTo)
+        const target = browserSignInTarget(browserReturnPath())
         path = target.path
         signIn.textContent = target.label
         setStatus('Sign in to start chatting with Hermes Agent.')
