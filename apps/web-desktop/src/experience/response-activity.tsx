@@ -106,6 +106,14 @@ export function BrowserResponseActivity({ children, indices }: PropsWithChildren
 }
 
 
+function syncResponseSpinner(element: HTMLSpanElement | null) {
+  // Keep the same phase when the live transcript recreates the spinner.
+  // With reduced motion enabled, there is no CSS animation to synchronize.
+  for (const animation of element?.getAnimations() ?? []) {
+    animation.startTime = 0
+  }
+}
+
 function ResponseActivityButton({ active, contentId, duration, expanded, onToggle }: {
   active: boolean
   contentId: string
@@ -131,7 +139,7 @@ function ResponseActivityButton({ active, contentId, duration, expanded, onToggl
       onClick={onToggle}
       type="button"
     >
-      {working && <span aria-hidden="true" className="browser-response-activity-spinner" />}
+      {working && <span aria-hidden="true" className="browser-response-activity-spinner" ref={syncResponseSpinner} />}
       <span role="status">{label}</span>
       {seconds !== undefined && <span className="browser-response-activity-time">{formatElapsed(seconds)}</span>}
       <span aria-hidden="true" className="browser-response-activity-chevron" />

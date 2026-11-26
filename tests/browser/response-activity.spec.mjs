@@ -77,13 +77,27 @@ test('live activity stays on one line and leaves approval and the final reply vi
   await expect(progress).toHaveAttribute('aria-expanded', 'false')
   await expect(page.getByText('I am checking the details.', { exact: true })).toBeHidden()
 
+  const spinner = progress.locator('.browser-response-activity-spinner')
+  const spinStart = () => spinner.evaluate(async element => {
+    const [animation] = element.getAnimations()
+    await animation.ready
+    return animation.startTime
+  })
+  const initialSpinStart = await spinStart()
+
   approval()
   await expect(progress).toHaveAccessibleName('Waiting for your input')
+  await expect(spinner).toHaveCount(0)
   const card = page.locator('[data-slot="tool-approval-card"][data-request-id="activity-approval"]')
   await expect(card.getByRole('button', { name: 'Reject' })).toBeVisible()
   await card.getByRole('button', { name: 'Reject' }).click()
 
   emit('tool.complete', { name: 'terminal', tool_call_id: 'live-command', result: { output: '/workspace', exit_code: 0 } })
+  emit('tool.start', { name: 'terminal', tool_call_id: 'next-command', args: { command: 'date' } })
+  await expect(progress).toHaveAccessibleName(/^Working/)
+  expect(await spinStart()).toBe(initialSpinStart)
+
+  emit('tool.complete', { name: 'terminal', tool_call_id: 'next-command', result: { output: 'Thursday', exit_code: 0 } })
   emit('message.complete', { status: 'complete', text: 'The check is finished.' })
 
   await expect(progress).toHaveAccessibleName(/^Response activity \d/)
