@@ -187,7 +187,7 @@
   padding-inline:var(--web-space-3);
   border-block-end:1px solid var(--web-border-subtle);
 }
-.browser-mobile-titlebar > img { margin-inline-start:auto; }
+.browser-mobile-titlebar > img { margin-inline-end:auto; }
 .browser-sidebar-header {
   display:flex;
   align-items:center;
@@ -402,7 +402,12 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
  .browser-scrim { display:block; position:absolute; inset:0; inset-inline-start:var(--browser-app-navigation-width); z-index:60; padding:0; border:0; background:#0004; cursor:default; }
 }
 @media (pointer: coarse) and (width < 48rem), (pointer: coarse) and (max-height: 27rem) {
- .browser-navigation { inset-inline-start:0; inset-inline-end:0; width:100%; box-shadow:none; }
+ .browser-navigation { inset-inline-start:0; inset-inline-end:0; width:100%; border-inline-end:0; box-shadow:none; }
+ .browser-sessions-pane { padding-top:0; }
+ /* The mobile list can use the full safe-area width without a reserved scrollbar gutter. */
+ .browser-sessions-pane [data-sessions-mode] { width:auto; margin-inline:0; padding-block-end:0; scrollbar-gutter:auto; }
+ .browser-sessions-pane [data-slot="sidebar-content"] { padding-inline:0; }
+ .browser-sessions-pane .browser-combined-profiles-section { --browser-profiles-gutter:0px; }
  .browser-main { --chat-toolbar-safe-top:calc(env(safe-area-inset-top,0px) / var(--web-ui-scale,1)); }
  /* The Android WebView already starts below the system status bar. */
  .browser-shell[data-android-app] .browser-main { --chat-toolbar-safe-top:0px; }
