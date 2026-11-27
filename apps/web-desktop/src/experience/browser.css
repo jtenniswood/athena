@@ -187,7 +187,7 @@
   padding-inline:var(--web-space-3);
   border-block-end:1px solid var(--web-border-subtle);
 }
-.browser-mobile-titlebar > img { margin-inline-start:auto; }
+.browser-mobile-titlebar > img { margin-inline-end:auto; }
 .browser-sidebar-header {
   display:flex;
   align-items:center;
