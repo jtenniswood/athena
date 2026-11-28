@@ -666,50 +666,35 @@ body > [data-slot='fan-menu'] {
   display: none !important;
 }
 
-/* On touch, place the floating Stop/Restore control beside Expand and Edit.
-   The selectable bubble above them takes the full width of the message. */
-[data-slot='aui_user-bubble-actions'] [data-context-menu-skip]:has(> [data-selectable-text='true']) {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+/* Give the sent-message actions full touch targets. */
+.browser-user-message-layout:has(> [data-selectable-text='true']) {
+  > .browser-user-message-controls > button {
+    border-radius: var(--web-radius-control);
+    cursor: pointer;
 
-  > .justify-end {
-    padding: 0;
-  }
+    &:hover {
+      background: var(--chrome-action-hover);
+      color: var(--web-text);
+    }
 
-  > .pointer-events-none {
-    position: static;
-    padding: 0;
-    background: transparent;
+    &:focus-visible {
+      outline: var(--web-focus-ring);
+      outline-offset: -2px;
+    }
 
-    > button {
-      border-radius: var(--web-radius-control);
-      cursor: pointer;
+    > .codicon {
+      /* Restore sets a smaller font size inline. */
+      font-size: var(--web-icon-size) !important;
+    }
 
-      &:hover {
-        background: var(--chrome-action-hover);
-        color: var(--web-text);
-      }
-
-      &:focus-visible {
-        outline: var(--web-focus-ring);
-        outline-offset: -2px;
-      }
-
-      > .codicon {
-        /* Restore sets a smaller font size inline. */
-        font-size: var(--web-icon-size) !important;
-      }
-
-      > svg {
-        width: var(--web-icon-size);
-        height: var(--web-icon-size);
-        translate: none;
-      }
+    > svg {
+      width: var(--web-icon-size);
+      height: var(--web-icon-size);
+      translate: none;
     }
   }
 
-  > :is(.justify-end, .pointer-events-none) > button {
+  > :is(.browser-user-message-edit, .browser-user-message-controls) > button {
     width: max(44px, 2.75rem);
     height: max(44px, 2.75rem);
   }
