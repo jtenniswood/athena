@@ -541,7 +541,31 @@ html[data-experience="browser"] span:has(> img[src*="nous-girl.jpg"]) { display:
 .browser-bots-control[data-active] { color:var(--web-accent); }
 .browser-bots-search { display:flex; min-width:0; align-items:center; gap:var(--web-space-1); padding:0 var(--web-space-2) var(--web-space-1); }
 
-/* Keep the upstream inner scroll box and popover portal intact at browser zoom. */
+/* Keep avatar controls and profile fields inside the dialog's vertical scroll area. */
+@media (width < 48rem) {
+  [data-browser-bot-dialog] > .grid > .grid:has(> .grid > .inline-grid > button[aria-pressed]) {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-wrap: anywhere;
+
+    & > button {
+      white-space: normal;
+    }
+
+    & > .grid:has(> .inline-grid > button[aria-pressed]) {
+      grid-template-columns: minmax(0, 1fr);
+
+      & > .inline-grid {
+        max-inline-size: 100%;
+        grid-auto-columns: minmax(0, 1fr);
+      }
+
+      & > .inline-grid > button {
+        min-inline-size: 0;
+        padding-inline: .25rem;
+      }
+    }
+  }
+}
 
 .browser-roster-action-row { display: flex; align-items: center; min-width: 0; }
 .browser-roster-action-row > :first-child { flex: 1; min-width: 0; }
