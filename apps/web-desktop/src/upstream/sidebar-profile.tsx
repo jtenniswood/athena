@@ -1,7 +1,7 @@
 import { arrayMove } from '@dnd-kit/sortable'
 import { compactNumber } from '@hermes/shared'
 import { useStore } from '@nanostores/react'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { startNewProjectDrag, startNewSessionDrag, type NewSessionSplitHandler } from '@/app/chat/new-session-drag'
 import { renameGatewayGroup, reorderGatewayGroups, toggleGatewayGroup } from '@/app/chat/sidebar/gateway-group-preferences'
 import { ReorderableList, useSortableBindings } from '@/app/chat/sidebar/reorderable-list'
@@ -14,11 +14,13 @@ import { Input } from '@/components/ui/input'
 import { ProfileGlyph } from '@/components/ui/profile-glyph'
 import type { SessionInfo } from '@/hermes'
 import { useI18n } from '@/i18n'
+import { useBots } from '@/plugins/hermes-bots/i18n'
 import { $sidebarGrouping, $sidebarRowMeta } from '@/store/layout'
 import { $newProjectDropPlacement } from '@/store/projects'
 import { BrowserProfileGroup, BrowserProfileNesting } from '../experience/sidebar-profile'
 import { BrowserHideProfileItem, useHiddenProfileGroups } from '../experience/profile-list-visibility'
 import { useBrowserProfileGrouping, useBrowserProfileSection } from './profile-section'
+import { BrowserProfileEditor } from './profile-editor'
 import { openBrowserProfileProjectCreate } from './project-create'
 
 export function useBrowserSidebarFigures(totals?: { tokens: number; costUsd: number }) {
@@ -73,17 +75,23 @@ interface ProfileGroupController {
 
 export function BrowserProfileGroupControllerSurface({ model }: { model: ProfileGroupController }) {
   const { t } = useI18n(), s = t.sidebar, copy = s.gatewayGroups
+  const editProfileLabel = useBots().bot.editTitle
   const { group, sessions, sortable } = model
   const grouping = useStore($sidebarGrouping)
   const renameLabel = group.profile ? 'Rename profile' : copy.rename
   const browserProfile = useBrowserProfileSection(group.profile)
+  const [editingProfile, setEditingProfile] = useState(false)
   const label = model.alias || browserProfile?.label || model.label
   const figures = useBrowserSidebarFigures(model.usage ? { tokens: model.usage.tokens, costUsd: model.usage.cost_usd } : undefined)
   const toggle = () => toggleGatewayGroup(group.id)
   const actions = <div className="flex items-center gap-1">
-    <DropdownMenu><DropdownMenuTrigger asChild><Button aria-label={`${copy.actions}: ${label}`} size="icon-xs" variant="ghost"><Codicon name="ellipsis" /></Button></DropdownMenuTrigger>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild><Button aria-label={`${copy.actions}: ${label}`} data-browser-profile-menu={browserProfile && !model.embedded ? '' : undefined} size="icon-xs" variant="ghost"><Codicon name="ellipsis" /></Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {browserProfile && group.profile && !model.embedded && <BrowserHideProfileItem profile={group.profile} />}
+        {browserProfile && group.profile && !model.embedded && <>
+          <DropdownMenuItem onSelect={() => setEditingProfile(true)}>{editProfileLabel}</DropdownMenuItem>
+          <BrowserHideProfileItem profile={group.profile} />
+        </>}
         <DropdownMenuItem onSelect={() => { model.setDraft(model.alias || ''); model.setRenaming(true) }}>{renameLabel}</DropdownMenuItem>
         <DropdownMenuItem disabled={model.first} onSelect={() => model.onMove(-1)}>{copy.moveUp}</DropdownMenuItem>
         <DropdownMenuItem disabled={model.last} onSelect={() => model.onMove(1)}>{copy.moveDown}</DropdownMenuItem>
@@ -117,7 +125,8 @@ export function BrowserProfileGroupControllerSurface({ model }: { model: Profile
   </DialogContent></Dialog>
   return <BrowserProfileGroup ref={sortable.ref} style={sortable.style}
     data-gateway-group={group.profile ? group.id : undefined} data-gateway-section={!group.profile ? group.id : undefined}
-    empty={Boolean(group.profile) && sessions.length === 0} emptyLabel={s.noSessions} dialog={dialog}
+    empty={Boolean(group.profile) && sessions.length === 0} emptyLabel={s.noSessions}
+    dialog={<>{dialog}{editingProfile && <BrowserProfileEditor profile={group.profile ?? null} onClose={() => setEditingProfile(false)} />}</>}
     model={{ label, open: model.open, toggle, activate: toggle, toggleLabel: s.projects.toggle(label, !model.open), figures, actions,
       reorder: { label: `${copy.reorder}: ${label}`, dragging: sortable.dragging, bindings: sortable.dragHandleProps },
       icon: group.profile ? browserProfile?.picture ?? <ProfileGlyph className="size-full" color={group.color ?? null} isDefault={group.profile === 'default'} name={group.profile} /> : <Codicon name="remote" /> }}>

@@ -7,6 +7,7 @@ import type { BrowserProfile, BrowserProfiles } from '../experience/contracts/pr
 import { readHiddenProfiles } from '../experience/browser-preferences'
 import { browserPreference } from '../platform/preferences'
 import { readBrowserTabProfile, rememberBrowserTabProfile } from '../platform/tab-profile'
+import { browserProfileRosterRow, browserProfileRow } from './profile-avatars'
 
 function label(value: string) {
   const text = value.replaceAll('-', ' ').trim()
@@ -78,9 +79,9 @@ export function useBrowserProfiles(): BrowserProfiles {
   const defaultProfile = profiles.find(item => item.is_default)
   const ordered = sortByProfileOrder(profiles, defaultProfile && !order.includes(defaultProfile.name) ? [defaultProfile.name, ...order] : order)
   const item = (name: string, displayName?: string): BrowserProfile => {
-    const bot = roster.find(row => row.name === name || row.targetProfile === name || row.route?.targetProfile === name)
-    const appearance = botAppearance(name, bot ? botRosterMeta(bot, metadata) : undefined)
-    return { key: name, label: label(displayName || name), botName: bot?.name || name, appearance: { color: appearance.color ?? null, image: appearance.image ?? null, shape: appearance.shape } }
+    const bot = browserProfileRosterRow(roster, name) ?? browserProfileRow(name)
+    const appearance = botAppearance(name, botRosterMeta(bot, metadata))
+    return { key: name, label: label(displayName || name), botName: bot.name, appearance: { color: appearance.color ?? null, image: appearance.image ?? null, shape: appearance.shape } }
   }
   return {
     active,

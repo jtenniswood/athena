@@ -5,7 +5,7 @@ import { ContribWiring, WiredPane } from '@/app/contrib/wiring'
 import { createPluginContext } from '@/contrib/plugin'
 import { host } from '@hermes/plugin-sdk'
 import { startFaceClock, stopFaceClock } from '@/plugins/hermes-bots/avatar'
-import { migrateBotMeta, primeRoster } from '@/plugins/hermes-bots/data'
+import { migrateBotMeta } from '@/plugins/hermes-bots/data'
 import { BOTS_LOCALES } from '@/plugins/hermes-bots/i18n'
 import { ID, setPluginCtx } from '@/plugins/hermes-bots/shared'
 import { useContributions } from '@/contrib/react/use-contributions'
@@ -16,6 +16,7 @@ import type { BrowserHostPanel } from '../experience/contracts/host'
 import type { BrowserNavigate } from '../experience/contracts/selection'
 import { BrowserWorkspace } from './browser-workspace'
 import { BrowserPageRoutes } from './browser-routes'
+import { publishBrowserProfileRoster } from './profile-avatars'
 import { useBrowserSettings } from './settings'
 
 /** Mount engine contributions once; Athena supplies the product shell. */
@@ -27,11 +28,19 @@ export function BrowserEngineHost({ children }: { children: ReactNode }) {
     setPluginCtx(context)
     const disposeLocales = context.i18n.register(BOTS_LOCALES)
     startFaceClock()
-    void migrateBotMeta(context.storage).catch(() => undefined)
+    const metadata = migrateBotMeta(context.storage).catch(() => undefined)
+    let loading: AbortController | undefined
     const unsubscribe = host.state.gateway.subscribe(state => {
-      if (state === 'open') void primeRoster()
+      loading?.abort()
+      if (state !== 'open') return
+      const controller = new AbortController()
+      loading = controller
+      void metadata.then(() => {
+        if (!controller.signal.aborted) return publishBrowserProfileRoster(controller.signal)
+      })
     })
     return () => {
+      loading?.abort()
       unsubscribe()
       stopFaceClock()
       disposeLocales()
