@@ -41,14 +41,13 @@ for (const width of [1100, 390]) {
     await editor.fill('Keep this unsent draft')
     const viewport = page.locator('[data-slot="aui_thread-viewport"]:visible')
     await expect(viewport).toContainText('Earlier discussion 20')
-    await viewport.evaluate(node => { node.scrollTop = node.scrollHeight })
+    await expect.poll(() => viewport.evaluate(node => node.scrollHeight - node.clientHeight)).toBeGreaterThan(100)
     await expect(viewport).toHaveAttribute('data-following', 'true')
-    // Startup can still restore the saved bottom position while history lays out.
-    await expect(async () => {
-      await viewport.evaluate(node => { node.scrollTop = 0 })
-      await expect(viewport).toHaveAttribute('data-following', 'false', { timeout: 500 })
-      expect(await viewport.evaluate(node => node.scrollTop)).toBeLessThan(2)
-    }).toPass({ timeout: 5000 })
+    // Wheel input cancels the transcript's saved-position restoration.
+    await viewport.hover({ position: { x: 20, y: 150 } })
+    await page.mouse.wheel(0, -(await viewport.evaluate(node => node.scrollHeight)))
+    await expect(viewport).toHaveAttribute('data-following', 'false')
+    await expect.poll(() => viewport.evaluate(node => node.scrollTop)).toBeLessThan(2)
 
     gateway.send(JSON.stringify({
       jsonrpc: '2.0', id: serverRequestId, method: 'approval',
