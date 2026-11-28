@@ -239,7 +239,7 @@ test('chat hover previews cache purpose summaries without selecting the chat or 
   page.on('websocket', socket => socket.on('framesent', ({ payload }) => {
     try { if (JSON.parse(String(payload)).method === 'llm.oneshot') generations++ } catch { /* Ignore transport frames. */ }
   }))
-  const fullTitle = 'Explore a product idea with a deliberately long title that should fade at the edge and remain fully readable in the preview card'
+  const fullTitle = 'Explore a product idea with a deliberately long title that should truncate in the sidebar and remain fully readable in the preview card'
   await page.route(/\/api\/profiles\/sessions/, async route => {
     const response = await route.fetch()
     await route.fulfill({ response, body: (await response.text()).replaceAll('Explore a product idea', fullTitle) })
@@ -260,11 +260,9 @@ test('chat hover previews cache purpose summaries without selecting the chat or 
   await expect(editor(page)).toHaveText('Keep this draft while previewing another chat')
   const titleStyle = await row.locator('.browser-session-title').evaluate(node => ({
     overflow: getComputedStyle(node).textOverflow,
-    mask: getComputedStyle(node).maskImage,
     animation: getComputedStyle(node.firstElementChild).animationName
   }))
-  expect(titleStyle.overflow).toBe('clip')
-  expect(titleStyle.mask).toContain('linear-gradient')
+  expect(titleStyle.overflow).toBe('ellipsis')
   expect(titleStyle.animation).toBe('none')
   await page.keyboard.press('Escape')
   await expect(card).toHaveCount(0)
@@ -317,12 +315,18 @@ test('failed purpose summaries retain the latest-reply preview without retrying 
       } else server.send(message)
     })
   })
+  await page.emulateMedia({ colorScheme: 'dark' })
   await open(page)
   await editor(page).fill('Keep this draft after a summary failure')
   const row = page.locator('[data-web-session-id="preview-idea"]').first()
   const card = page.locator('.browser-session-preview:visible')
   await row.hover()
   await expect(card.locator('.browser-session-generation p')).toContainText('one person, one problem, and one small experiment')
+  const colors = await card.evaluate(node => ({
+    surface: getComputedStyle(node).backgroundColor,
+    pointer: getComputedStyle(node.querySelector('[data-slot="tooltip-arrow"]').parentElement, '::after').backgroundColor
+  }))
+  expect(colors.surface).toBe(colors.pointer)
   await expect.poll(() => generations).toBe(1)
   await page.keyboard.press('Escape')
   await editor(page).hover()
