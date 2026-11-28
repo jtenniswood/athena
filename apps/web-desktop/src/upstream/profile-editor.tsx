@@ -4,11 +4,11 @@ import { $profiles, refreshActiveProfile } from '@/store/profile'
 import { CreateProfileDialog } from '@/app/profiles/create-profile-dialog'
 import { $lastRoster } from '@/plugins/hermes-bots/data'
 import { requestForBot } from '@/plugins/hermes-bots/routing'
-import { WEB_CONNECTION_ID } from '../platform/connection'
-import { ensureBotMetadata } from '@/plugins/hermes-bots/canonical-chat'
+import { mergeServerMeta } from '@/plugins/hermes-bots/profile-ops'
 import { EditProfileDialog } from '@/plugins/hermes-bots/edit-profile-dialog'
 import type { RosterRow } from '@/plugins/hermes-bots/types'
 import { reportActionFailure } from '../experience/action-errors'
+import { browserProfileRosterRow, browserProfileRow, loadBrowserProfileAvatar } from './profile-avatars'
 
 export function BrowserProfileCreator({ open, onClose, onCreated }: { open: boolean; onClose(): void; onCreated(profile: string): void }) {
   const profiles = useStore($profiles)
@@ -25,22 +25,16 @@ export function BrowserProfileEditor({ profile, onClose }: { profile: string | n
     let cancelled = false
     setEditing(null)
     if (!profile) return
-    const row = $lastRoster.get().find(bot => bot.name === profile || bot.targetProfile === profile || bot.route?.targetProfile === profile)
-    // Profile editing also works before the shared profile metadata has loaded.
-    const bot: RosterRow = row ?? {
-      ...$profiles.get().find(item => item.name === profile),
-      name: profile,
-      sourceScoped: true,
-      route: { connectionId: WEB_CONNECTION_ID, mode: 'remote', profile, targetProfile: profile }
-    }
+    const bot = browserProfileRosterRow($lastRoster.get(), profile) ?? browserProfileRow(profile)
     const prepare = async () => {
-      let target = bot
-      if (!row) {
-        const result = await requestForBot<{ profiles?: RosterRow[] }>(bot, 'profiles.list', {})
-        const details = result.profiles?.find(item => item.name === profile)
-        if (details) target = { ...details, sourceScoped: true, route: bot.route }
-      }
-      await ensureBotMetadata(target)
+      const fetchedAt = Date.now()
+      const result = await requestForBot<{ profiles?: RosterRow[] }>(bot, 'profiles.list', {})
+      const profileName = bot.route?.targetProfile ?? bot.name
+      const details = result.profiles?.find(item => item.name === profileName)
+      const target = details ? { ...bot, ...details, name: bot.name, sourceScoped: bot.sourceScoped, route: bot.route } : bot
+      if (cancelled) return target
+      mergeServerMeta([target], fetchedAt)
+      await loadBrowserProfileAvatar(target)
       return target
     }
     void prepare().then(target => {
