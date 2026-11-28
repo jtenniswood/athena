@@ -136,8 +136,9 @@ test('accepted sends position their real mounted renderer transcript', async ({ 
     const prompt = page.locator('[data-slot="aui_user-message-root"]').last()
     await expect(prompt).toContainText(text)
     await expect.poll(() => prompt.evaluate(node => node.closest('[data-slot="aui_turn-pair"]').style.minHeight)).not.toBe('')
-    // Both turns stay below the floating header. Allow two layout pixels
-    // for viewport scaling, integer scroll dimensions and scroll clamping.
+    // The first turn stops at its natural top. Fractional layout and
+    // integer scroll offsets can move the result by up to two layout pixels.
+    const targetGap = fresh ? 0 : 12
     await expect.poll(() => prompt.evaluate((node, target) => {
       const turn = node.closest('[data-slot="aui_turn-pair"]')
       const viewport = node.closest('[data-slot="aui_thread-viewport"]')
@@ -145,7 +146,7 @@ test('accepted sends position their real mounted renderer transcript', async ({ 
       const headerClearance = Number.parseFloat(getComputedStyle(viewport).scrollPaddingBlockStart) || 0
       const gap = (turn.getBoundingClientRect().top - viewport.getBoundingClientRect().top) / scale - headerClearance
       return Math.abs(gap - target)
-    }, fresh ? 0 : 12)).toBeLessThanOrEqual(2)
+    }, targetGap)).toBeLessThanOrEqual(2)
   }
 })
 
