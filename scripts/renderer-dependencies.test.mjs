@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { compareRendererDependencies, shikiOverrides } from './renderer-dependencies.mjs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+import { compareRendererDependencies, readShikiBaseline, shikiOverrides } from './renderer-dependencies.mjs'
 
 test('renderer dependencies inherit upstream and reject independent version drift', () => {
   const policy = { packages: ['react', 'router'], overrides: {} }
@@ -39,4 +42,15 @@ test('Shiki lock inheritance preserves the separate majors used by the renderer 
     'shiki@4': '4.5.0'
   })
   assert.throws(() => shikiOverrides({ ...snapshots, '@shikijs/types@4.6.0': {} }), /Multiple official Shiki resolutions/)
+})
+
+test('dependency synchronization also reads the npm lockfiles used by earlier renderer releases', t => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'athena-renderer-dependencies-'))
+  t.after(() => rmSync(directory, { force: true, recursive: true }))
+  writeFileSync(path.join(directory, 'package-lock.json'), JSON.stringify({ packages: {
+    'node_modules/@shikijs/types': { version: '4.6.0' },
+    'node_modules/@shikijs/vscode-textmate': { version: '10.1.0' },
+    'node_modules/other': { version: '1.0.0' }
+  } }))
+  assert.deepEqual(readShikiBaseline(directory), { '@shikijs/types': '4.6.0', '@shikijs/vscode-textmate': '10.1.0' })
 })

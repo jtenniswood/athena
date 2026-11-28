@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -25,6 +25,22 @@ export function shikiOverrides(snapshots) {
   return Object.fromEntries(resolutions)
 }
 
+export function readShikiBaseline(rendererRoot) {
+  const pnpmLock = path.join(rendererRoot, 'pnpm-lock.yaml')
+  if (existsSync(pnpmLock)) {
+    const { parse } = createRequire(import.meta.url)('yaml')
+    const lock = parse(readFileSync(pnpmLock, 'utf8'))
+    return shikiOverrides(lock.snapshots ?? {})
+  }
+
+  // Older releases recorded the renderer closure in npm's lockfile.
+  const lock = manifest(path.join(rendererRoot, 'package-lock.json'))
+  const resolutions = Object.fromEntries(Object.entries(lock.packages).filter(([name]) =>
+    /^node_modules\/@shikijs\//.test(name)).map(([name, entry]) => [name.slice('node_modules/'.length), entry.version]))
+  if (!resolutions['@shikijs/types']) throw new Error('The official renderer lock has no Shiki baseline.')
+  return resolutions
+}
+
 /** Inherit direct renderer versions and its locked Shiki family; retain only reviewed exceptions. */
 export function syncRendererDependencies(root = repositoryRoot) {
   verifyRenderer(root)
@@ -41,10 +57,7 @@ export function syncRendererDependencies(root = repositoryRoot) {
       browser[section][name] = override?.version ?? expected[name]
     }
   }
-  const { parse } = createRequire(import.meta.url)('yaml')
-  const lockPath = path.join(root, '.renderer', rendererLock(root).rev, 'pnpm-lock.yaml')
-  const lock = parse(readFileSync(lockPath, 'utf8'))
-  const resolutions = shikiOverrides(lock.snapshots ?? {})
+  const resolutions = readShikiBaseline(path.join(root, '.renderer', rendererLock(root).rev))
   const workspacePath = path.join(root, 'pnpm-workspace.yaml')
   const workspace = readFileSync(workspacePath, 'utf8').replace(/\n# Official renderer transitive baseline\n(overrides: .*\n)?/, '\n')
   if (/^overrides:/m.test(workspace)) throw new Error('Review existing pnpm overrides before inheriting the renderer baseline.')
