@@ -45,8 +45,11 @@ for (const width of [1100, 390]) {
     await expect(viewport).toHaveAttribute('data-following', 'true')
     // Wheel input cancels the transcript's saved-position restoration.
     await viewport.hover({ position: { x: 20, y: 150 } })
-    await page.mouse.wheel(0, -(await viewport.evaluate(node => node.scrollHeight)))
+    await page.mouse.wheel(0, -400)
     await expect(viewport).toHaveAttribute('data-following', 'false')
+    // Browsers apply wheel deltas differently. Position the reader at the top
+    // after the gesture has unlocked bottom-follow in the renderer.
+    await viewport.evaluate(node => { node.scrollTop = 0 })
     await expect.poll(() => viewport.evaluate(node => node.scrollTop)).toBeLessThan(2)
 
     gateway.send(JSON.stringify({
