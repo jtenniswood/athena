@@ -1,5 +1,5 @@
 # Build this optional extension on the matching Hermes gateway release.
-ARG HERMES_GATEWAY_IMAGE=nousresearch/hermes-agent@sha256:ef0650d523ee1b5ab32c779acabc446d9936869a9932591553688a62bcf0c42f
+ARG HERMES_GATEWAY_IMAGE=nousresearch/hermes-agent@sha256:bc79a80fc9cb97521f4380c5d5b2ad88e2469e50fc1d5027339bbb42cc206854
 FROM ${HERMES_GATEWAY_IMAGE}
 WORKDIR /opt/hermes
 COPY athena_cron_chat.py gateway/athena_cron_chat.py
