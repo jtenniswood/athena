@@ -463,6 +463,34 @@ body[data-hide-auxiliary-transcript-content] .browser-shell [data-slot="aui_assi
 .browser-shell [data-slot="aui_thread-viewport"] [data-slot="aui_user-message-root"].sticky { position:static !important; }
 .browser-shell [data-slot="aui_thread-viewport"] [data-sticky-prompt-clip] { clip-path:none; }
 
+.browser-user-message-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.browser-user-message {
+  --human-msg-line-height: 1.55;
+  grid-column: 1 / -1;
+  border: 0;
+  border-radius: 1.375rem;
+  padding: .625rem var(--web-space-4);
+  background: color-mix(in srgb, var(--web-text) 10%, var(--ui-chat-surface-background));
+  color: var(--web-text);
+  line-height: var(--human-msg-line-height);
+}
+
+.browser-user-message-edit {
+  grid-area: 2 / 1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.browser-user-message-controls {
+  grid-area: 2 / 2;
+  justify-self: end;
+  align-self: center;
+}
+
 /* Keep the live approval above the composer when the reader is away from the latest turn. */
 .browser-shell [data-approval-stack]:has([data-slot="card-stack"]:not([data-stack-count="0"])) {
   position:sticky;

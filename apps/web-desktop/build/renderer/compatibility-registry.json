@@ -2855,26 +2855,26 @@
     "removal": "Remove when upstream supports a browser policy that fixes message bubble transparency at 0%."
   },
   {
-    "name": "browser-tap-message-expansion",
+    "name": "browser-full-user-message",
     "kind": "browser-transform",
     "order": 20,
     "module": "components/assistant-ui/thread/user-message.tsx",
     "sourceRoot": "renderer",
     "sourceHash": "fab389641f515728709fdad4308f59ffc04f6bb9ac8f4317250cff9b41a84015",
     "inputHash": "fab389641f515728709fdad4308f59ffc04f6bb9ac8f4317250cff9b41a84015",
-    "outputHash": "af583f3db3b2c5ac9296b814f3e5c2e52e03c28899a387298be9eb654505d8dc",
+    "outputHash": "79106a4426852d881e11828f3bbaef4b950f9dfaff80a207ef3d0433c0dc43fa",
     "handlers": [
-      "expandBrowserMessageOnTap"
+      "showFullBrowserUserMessage"
     ],
-    "reason": "Let users tap a truncated touch message to expand or collapse it while preserving text selection and inline controls.",
+    "reason": "Show sent prompts at full height and give message controls their own row while preserving selection and editing.",
     "owner": "apps/web-desktop/build/renderer/transforms/transcript.ts",
     "tests": [
       {
-        "file": "tests/browser/mobile-message-expansion.spec.mjs",
-        "scenario": "tapping a truncated message card reveals its full text"
+        "file": "tests/browser/user-message-layout.spec.mjs",
+        "scenario": "long sent messages show all text and can still be edited"
       }
     ],
-    "removal": "Remove when the upstream touch bubble supports tapping its text area to toggle expansion."
+    "removal": "Remove when the upstream renderer supports unclamped prompts and non-overlapping message controls."
   },
   {
     "name": "browser-profile-settings-tabs",
