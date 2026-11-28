@@ -303,6 +303,18 @@ ${code.slice(scopeMarkerStart + scopeMarker.length)}`
       if (code.split(target).length !== 2) throw new Error('Connection preference listener changed')
       return { code: code.replace(target, 'if (previous?.[connectionId] !== profile) {'), map: null }
     }
+    if (normalizedId.endsWith('/desktop/src/lib/hermes-cloud-agents.ts')) {
+      const target = 'export const transferAvailable = (): boolean => !servedByHermesCloud()'
+      if (code.split(target).length !== 2) throw new Error('Cloud transfer capability changed')
+      return { code: code.replace(target, target + ' && Boolean(window.hermesDesktop?.connections)'), map: null }
+    }
+    if (normalizedId.endsWith('/desktop/src/app/settings/backup-palette.ts')) {
+      const imported = "import { servedByHermesCloud } from '@/lib/hermes-cloud-host'"
+      const target = '...(servedByHermesCloud()'
+      if (code.split(imported).length !== 2 || code.split(target).length !== 2) throw new Error('Cloud transfer palette changed')
+      return { code: code.replace(imported, "import { transferAvailable } from '@/lib/hermes-cloud-agents'")
+        .replace(target, '...(!transferAvailable()'), map: null }
+    }
     if (normalizedId.endsWith('/desktop/src/lib/browser-desktop-bridge.ts')) {
       // Athena persists its own owner ID. The native browser transport must
       // always address the configured origin, never a saved-gateway relay.

@@ -2473,7 +2473,7 @@
     "sourceRoot": "renderer",
     "sourceHash": "6ff4043b56fdfa69f7d17152e0c95128e385618a1482139392facb15ade8e689",
     "inputHash": "6ff4043b56fdfa69f7d17152e0c95128e385618a1482139392facb15ade8e689",
-    "outputHash": "59bbbb3325f917f9de4e31112abc6f48aee0f4bb50138c7fa8bd1652dc430b77",
+    "outputHash": "4fd5d1bc8b57c5163cea71fa3b0364c55292b2725f9d8132e48515ae9e51e52c",
     "handlers": [
       "useBrowserSettingsController"
     ],
@@ -4081,5 +4081,43 @@
     ],
     "sourceRoot": "renderer",
     "inputHash": "98e4569661b3faf293ef868b6226a06025e4cda1c346194900a46c25272f4f19"
+  },
+  {
+    "name": "browser-cloud-transfer-capability",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "lib/hermes-cloud-agents.ts",
+    "reason": "Require a saved gateway registry before offering inter-gateway transfers.",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings groups and renamed search preserve destinations"
+      }
+    ],
+    "removal": "Remove when the upstream settings and palette honor the single-gateway host capability.",
+    "sourceHash": "60df0c2b82cd8dc69473a76cd887ce7d7b9116c21c9e6e0a35d34d838abcc8ab",
+    "outputHash": "2ccb682e574784cbe60862425b73a99023e314e763fa2c5253b6c96658fc454b",
+    "handler": "browser-cloud-transfer-capability",
+    "sourceRoot": "renderer"
+  },
+  {
+    "name": "browser-cloud-transfer-palette",
+    "kind": "renderer-transform",
+    "order": 30,
+    "module": "app/settings/backup-palette.ts",
+    "reason": "Use the same transfer capability for palette commands as for the backup page.",
+    "owner": "apps/web-desktop/build/renderer/transforms.ts",
+    "tests": [
+      {
+        "file": "tests/browser/browser.spec.mjs",
+        "scenario": "settings groups and renamed search preserve destinations"
+      }
+    ],
+    "removal": "Remove when the upstream settings and palette honor the single-gateway host capability.",
+    "sourceHash": "9394de745e61c5c10da69bc9c70812d5fc64775c287b7b5287ffedb87071c4d2",
+    "outputHash": "d838cb93fcde78f844d817c81202b61cf5884e5ff3faf1edd8dfba6f03c8afd3",
+    "handler": "browser-cloud-transfer-palette",
+    "sourceRoot": "renderer"
   }
 ]
