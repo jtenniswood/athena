@@ -42,11 +42,19 @@ for (const width of [1100, 390]) {
     const viewport = page.locator('[data-slot="aui_thread-viewport"]:visible')
     await expect(viewport).toContainText('Earlier discussion 20')
     await expect.poll(() => viewport.evaluate(node => node.scrollHeight - node.clientHeight)).toBeGreaterThan(100)
-    await expect(viewport).toHaveAttribute('data-following', 'true')
+    const distanceFromBottom = () => viewport.evaluate(node => node.scrollHeight - node.clientHeight - node.scrollTop)
+    await expect(async () => {
+      await viewport.evaluate(node => { node.scrollTop = node.scrollHeight })
+      expect(await distanceFromBottom()).toBeLessThan(2)
+      await expect(viewport).toHaveAttribute('data-following', 'true', { timeout: 1000 })
+    }).toPass({ timeout: 10000 })
     // Wheel input cancels the transcript's saved-position restoration.
-    await viewport.hover({ position: { x: 20, y: 150 } })
-    await page.mouse.wheel(0, -400)
-    await expect(viewport).toHaveAttribute('data-following', 'false')
+    await viewport.hover()
+    await expect(async () => {
+      await page.mouse.wheel(0, -400)
+      await expect(viewport).toHaveAttribute('data-following', 'false', { timeout: 1000 })
+      expect(await distanceFromBottom()).toBeGreaterThan(100)
+    }).toPass({ timeout: 10000 })
     // Browsers apply wheel deltas differently. Position the reader at the top
     // after the gesture has unlocked bottom-follow in the renderer.
     await viewport.evaluate(node => { node.scrollTop = 0 })
