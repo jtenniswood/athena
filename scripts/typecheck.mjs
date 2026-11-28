@@ -9,14 +9,25 @@ const fatalCodes = new Set([2307, 2688, 6053, 7016])
 // These renderer-facing types live beside Electron implementations upstream.
 // Read their original declarations without checking the native process bodies.
 export function rendererTypeDeclaration(fileName, text) {
-  const contract = fileName.replaceAll('\\', '/').endsWith('/electron/challenge-window.ts') ? 'ChallengeOutcome'
-    : fileName.replaceAll('\\', '/').endsWith('/electron/machine-profile.ts') ? 'MachineProfile' : null
+  const module = fileName.replaceAll('\\', '/').match(/\/electron\/([^/]+)$/)?.[1]
+  const contract = {
+    'challenge-window.ts': 'ChallengeOutcome',
+    'machine-profile.ts': 'MachineProfile',
+    'presence.ts': 'PresenceSnapshot',
+    'preview-guest-throttle.ts': 'previewPartitionForProfile'
+  }[module]
   if (!contract) return text
   const source = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true)
   const declaration = source.statements.find(statement =>
-    (ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement)) && statement.name.text === contract &&
-    statement.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword))
+    (ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement) || ts.isFunctionDeclaration(statement)) &&
+      statement.name?.text === contract &&
+      statement.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword))
   if (!declaration) throw new Error(`Missing renderer type contract: ${contract}`)
+  if (ts.isFunctionDeclaration(declaration)) {
+    if (!declaration.type || !declaration.body) throw new Error(`Missing renderer function signature: ${contract}`)
+    const signature = text.slice(declaration.getStart(source), declaration.body.getStart(source)).trimEnd()
+    return signature.replace('export function', 'export declare function') + ';'
+  }
   return declaration.getText(source)
 }
 export function classifyDiagnostics(diagnostics, baseline) {

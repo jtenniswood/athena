@@ -65,7 +65,7 @@ function rewrite(code: string, id: string): { code: string; map: null } | null {
       return { code: exposeGoalResumeAction(code), map: null }
     }
     if (normalizedId.endsWith('/desktop/src/components/assistant-ui/markdown-text.tsx')) {
-      const target = '        remarkPlugins={REMARK_PLUGINS}'
+      const target = '            remarkPlugins={REMARK_PLUGINS}'
       const anchor = "import { defaultRemarkPlugins } from 'streamdown'\n"
       if (code.split(target).length !== 2 || code.split(anchor).length !== 2) throw new Error('Response Markdown plugin configuration changed')
       const imports = `import type { Root } from 'hast'
@@ -92,7 +92,7 @@ const INLINE_URL_REHYPE_PLUGINS = [...Object.values(defaultRehypePlugins), rehyp
 `
       return {
         code: code.replace(anchor, "import { defaultRehypePlugins, defaultRemarkPlugins } from 'streamdown'\n" + imports + inlineLinks)
-          .replace(target, '        rehypePlugins={previewOnly ? undefined : INLINE_URL_REHYPE_PLUGINS}\n' + target),
+          .replace(target, '            rehypePlugins={previewOnly ? undefined : INLINE_URL_REHYPE_PLUGINS}\n' + target),
         map: null
       }
     }
@@ -148,9 +148,9 @@ export async function reconnectGatewayAfterPending(options?: GatewayReconnectOpt
         }
 
 ${switchTarget}`)
-      const appliedTarget = 'desktop.onConnectionApplied?.(() => void softSwitch())'
+      const appliedTarget = 'desktop.onConnectionApplied?.(detail => void softSwitch(detail))'
       if (patched.split(appliedTarget).length !== 2) throw new Error('Browser connection completion no longer matches gateway boot')
-      patched = patched.replace(appliedTarget, 'desktop.onConnectionApplied?.(() => softSwitch())')
+      patched = patched.replace(appliedTarget, 'desktop.onConnectionApplied?.(detail => softSwitch(detail))')
       const importTarget = 'type GatewayReconnectOptions, reconnectGateway, registerGatewayReconnect'
       if (patched.split(importTarget).length !== 2) throw new Error('Browser reconnect imports no longer match gateway boot')
       patched = patched.replace(importTarget, 'type GatewayReconnectOptions, reconnectGateway, reconnectGatewayAfterPending, registerGatewayReconnect')
@@ -302,6 +302,16 @@ ${code.slice(scopeMarkerStart + scopeMarker.length)}`
       const target = 'if (previous[connectionId] !== profile) {'
       if (code.split(target).length !== 2) throw new Error('Connection preference listener changed')
       return { code: code.replace(target, 'if (previous?.[connectionId] !== profile) {'), map: null }
+    }
+    if (normalizedId.endsWith('/desktop/src/lib/browser-desktop-bridge.ts')) {
+      // Athena persists its own owner ID. The native browser transport must
+      // always address the configured origin, never a saved-gateway relay.
+      const relays = "return (window as Window & { __HERMES_UI_SURFACE__?: string }).__HERMES_UI_SURFACE__ === 'webapp'"
+      const active = '$connection.get()?.connectionId ?? LOCAL_CONNECTION_ID'
+      if (code.split(relays).length !== 2 || code.split(active).length !== 2) {
+        throw new Error('Browser bridge connection routing changed')
+      }
+      return { code: code.replace(relays, 'return false').replace(active, 'LOCAL_CONNECTION_ID'), map: null }
     }
     if (normalizedId.endsWith('/desktop/src/store/gateway-shared-route.ts')) {
       const target = 'export async function sharedPrimaryRoute(profile: string): Promise<boolean> {'

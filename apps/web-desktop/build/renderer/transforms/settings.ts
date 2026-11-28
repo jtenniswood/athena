@@ -337,10 +337,8 @@ export function filterBrowserSettingsPalette(source: string, root: string): stri
   const dialog = '<DialogPrimitive.Content\n        aria-describedby={undefined}'
   if (source.split(dialog).length !== 2) throw new Error('Browser settings search dialog changed')
   const start = 'items: [\n          ...SECTIONS.map'
-  const end = `            run: go(settingsTab(entry.tab))
-          }))
-        ]`
-  if (source.split(start).length !== 3 || source.split(end).length !== 3) throw new Error('Browser settings palette grouping changed')
+  const end = / {10}\.\.\.backupPaletteEntries\(t\)\.map\([^\n]+\n {8}\]/g
+  if (source.split(start).length !== 3 || [...source.matchAll(end)].length !== 2) throw new Error('Browser settings palette grouping changed')
   const marketplaceGroup = `// Pinned at the top: drills into the Marketplace browser.
           {
             items: [`
@@ -366,9 +364,7 @@ export function filterBrowserSettingsPalette(source: string, root: string): stri
   return `import { isSettingsSectionVisible, presentSettingsPalette, settingsPageLabel } from ${owner}\n` + paletteSource
     .replace(dialog, dialog + "\n        data-browser-command-palette=\"\"")
     .replaceAll(start, 'items: presentSettingsPalette([\n          ...SECTIONS.map')
-    .replaceAll(end, `            run: go(settingsTab(entry.tab))
-          }))
-        ], (tab, label) => ({ icon: Settings2, id: 'set-' + tab, label, keywords: ['settings'], run: go(settingsTab(tab)) }))`)
+    .replaceAll(end, match => match + ", (tab, label) => ({ icon: Settings2, id: 'set-' + tab, label, keywords: ['settings'], run: go(settingsTab(tab)) }))")
     .replaceAll(sectionTarget, '...SECTIONS.filter(section => isSettingsSectionVisible(section.id)).map(section => ({')
     .replaceAll(nonConfigTarget, '...NON_CONFIG_SETTINGS.filter(entry => isSettingsSectionVisible(entry.tab)).map(entry => ({')
     .replaceAll('heading: t.settings.nav.apiKeys,', "heading: settingsPageLabel('keys', t.settings.nav.apiKeys),")

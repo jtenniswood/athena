@@ -20,4 +20,4 @@ allowBuilds:
   unicode-animations: false
 
 # Official renderer transitive baseline
-overrides: {"@shikijs/core":"4.6.0","@shikijs/engine-javascript":"4.6.0","@shikijs/engine-oniguruma":"4.6.0","@shikijs/langs":"4.6.0","@shikijs/primitive":"4.6.0","@shikijs/themes":"4.6.0","@shikijs/types":"4.6.0","@shikijs/vscode-textmate":"10.1.0"}
+overrides: {"@shikijs/core@3":"3.23.0","@shikijs/core@4":"4.5.0","@shikijs/engine-javascript@3":"3.23.0","@shikijs/engine-javascript@4":"4.5.0","@shikijs/engine-oniguruma@3":"3.23.0","@shikijs/engine-oniguruma@4":"4.5.0","@shikijs/langs@3":"3.23.0","@shikijs/langs@4":"4.5.0","@shikijs/primitive@4":"4.5.0","@shikijs/themes@3":"3.23.0","@shikijs/themes@4":"4.5.0","@shikijs/types@3":"3.23.0","@shikijs/types@4":"4.5.0","@shikijs/vscode-textmate@10":"10.0.2","shiki@3":"3.23.0","shiki@4":"4.5.0"}

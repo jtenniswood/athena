@@ -50,7 +50,7 @@ export function expandBrowserMessageOnTap(source: string): string {
 
 /** Keep the renderer's response grouping and add a single browser disclosure. */
 export function useBrowserResponseActivity(source: string, root: string): string {
-  const owner = JSON.stringify(path.join(root, 'src/experience/response-activity'))
+  const owner = JSON.stringify(path.join(root, 'src/upstream/response-activity'))
   return `import { BrowserResponseActivity } from ${owner}\n` + replaceBrowserContract(source, [[
     `          {section.indices.map(index => (
             <ThreadPrimitive.MessageByIndex components={components} index={index} key={index} />
@@ -65,7 +65,7 @@ export function useBrowserResponseActivity(source: string, root: string): string
 
 /** Mark public commentary at the same boundary as its Markdown and timestamp. */
 export function markBrowserCommentaryParts(source: string, root: string): string {
-  const owner = JSON.stringify(path.join(root, 'src/experience/response-activity'))
+  const owner = JSON.stringify(path.join(root, 'src/upstream/response-activity'))
   return `import { BrowserCommentaryPart } from ${owner}\n` + replaceBrowserContract(source, [[
     `    <>
       <TimelineTimestamp className="mb-0.5 block" completedAt={completedAt} timestamp={timestamp} />

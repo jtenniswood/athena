@@ -13,15 +13,6 @@ export function useBrowserMessagingPresentation(source: string, root: string): s
   ])
 }
 
-export function useBrowserCatalogIdleTask(source: string, root: string): string {
-  const before = `  const id = requestIdleCallback(() => void queryClient.prefetchQuery(catalogQuery(kind)), { timeout: 5_000 })
-
-  return () => cancelIdleCallback(id)`
-  if (source.split(before).length !== 2) throw new Error('Catalog idle prefetch boundary changed')
-  return `import { scheduleBrowserIdleTask } from ${JSON.stringify(path.join(root, 'src/platform/idle'))}\n` +
-    source.replace(before, '  return scheduleBrowserIdleTask(() => void queryClient.prefetchQuery(catalogQuery(kind)))')
-}
-
 export function useBrowserStylesheetOwner(source: string): string {
   // entry.ts loads web.css, which already imports the complete renderer stylesheet.
   // A second Tailwind compilation loads later and overrides responsive utilities.

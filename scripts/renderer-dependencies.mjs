@@ -1,10 +1,29 @@
 import { readFileSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { rendererLock, repositoryRoot, verifyRenderer } from './renderer.mjs'
 
 const manifest = file => JSON.parse(readFileSync(file, 'utf8'))
 const versions = value => ({ ...value.dependencies, ...value.devDependencies })
+
+/** Keep each Shiki major on its own upstream dependency family. */
+export function shikiOverrides(snapshots) {
+  const resolutions = new Map()
+  for (const key of Object.keys(snapshots)) {
+    if (!key.startsWith('shiki@') && !key.startsWith('@shikijs/')) continue
+    const match = /^(shiki|@shikijs\/[^@]+)@((\d+)\.\d+\.\d+)$/.exec(key)
+    if (!match) throw new Error(`Review the official Shiki resolution: ${key}`)
+    const [, name, version, major] = match
+    const selector = `${name}@${major}`
+    if (resolutions.has(selector)) throw new Error(`Multiple official Shiki resolutions for ${selector}`)
+    resolutions.set(selector, version)
+  }
+  if (![...resolutions.keys()].some(name => name.startsWith('@shikijs/types@'))) {
+    throw new Error('The official renderer lock has no Shiki baseline.')
+  }
+  return Object.fromEntries(resolutions)
+}
 
 /** Inherit direct renderer versions and its locked Shiki family; retain only reviewed exceptions. */
 export function syncRendererDependencies(root = repositoryRoot) {
@@ -16,16 +35,16 @@ export function syncRendererDependencies(root = repositoryRoot) {
   const expected = versions(upstream)
   for (const section of ['dependencies', 'devDependencies']) {
     for (const name of Object.keys(browser[section] || {})) {
-      if (!expected[name]) continue
+      if (!policy.packages.includes(name) || !expected[name]) continue
       const override = policy.overrides[name]
       if (override && override.upstream !== expected[name]) throw new Error(`Review the renderer dependency override: ${name}`)
       browser[section][name] = override?.version ?? expected[name]
     }
   }
-  const lock = manifest(path.join(root, '.renderer', rendererLock(root).rev, 'package-lock.json'))
-  const resolutions = Object.fromEntries(Object.entries(lock.packages).filter(([name]) =>
-    /^node_modules\/@shikijs\//.test(name)).map(([name, entry]) => [name.slice('node_modules/'.length), entry.version]))
-  if (!resolutions['@shikijs/types']) throw new Error('The official renderer lock has no Shiki baseline.')
+  const { parse } = createRequire(import.meta.url)('yaml')
+  const lockPath = path.join(root, '.renderer', rendererLock(root).rev, 'pnpm-lock.yaml')
+  const lock = parse(readFileSync(lockPath, 'utf8'))
+  const resolutions = shikiOverrides(lock.snapshots ?? {})
   const workspacePath = path.join(root, 'pnpm-workspace.yaml')
   const workspace = readFileSync(workspacePath, 'utf8').replace(/\n# Official renderer transitive baseline\n(overrides: .*\n)?/, '\n')
   if (/^overrides:/m.test(workspace)) throw new Error('Review existing pnpm overrides before inheriting the renderer baseline.')

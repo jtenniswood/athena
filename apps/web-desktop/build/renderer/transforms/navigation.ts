@@ -102,10 +102,10 @@ export function useBrowserDefaultSessionProfile(source: string, root: string): s
 }
 
 export function keepBrowserWorkspaceRoute(source: string, root: string): string {
-  const target = "import { Navigate, Route, Routes, useParams } from 'react-router'"
+  const target = "import { Navigate, Route, Routes, useLocation, useParams } from 'react-router'"
   if (source.split(target).length !== 2) throw new Error('Browser workspace routes changed')
   const owner = JSON.stringify(path.join(root, 'src/upstream/browser-routes'))
-  return source.replace(target, `import { Navigate, Route, useParams } from 'react-router'\nimport { BrowserWorkspaceRoutes as Routes } from ${owner}`)
+  return source.replace(target, `import { Navigate, Route, useLocation, useParams } from 'react-router'\nimport { BrowserWorkspaceRoutes as Routes } from ${owner}`)
 }
 
 export function useBrowserOverlayFocusOwner(source: string, root: string): string {

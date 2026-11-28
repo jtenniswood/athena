@@ -9,7 +9,7 @@ import { isCardTool, isSilentTool } from '@/lib/tool-render-class'
 import { $showReasoning } from '@/store/reasoning-disclosure'
 import { sessionAwaitingInput } from '@/store/prompts'
 import { $showToolActivity } from '@/store/tool-activity'
-import { useShowAuxiliaryTranscriptContent } from './transcript-preferences'
+import { useShowAuxiliaryTranscriptContent } from '../experience/transcript-preferences'
 
 const emptyCutoffs: Readonly<Record<string, number>> = {}
 const Commentary = createContext(emptyCutoffs)

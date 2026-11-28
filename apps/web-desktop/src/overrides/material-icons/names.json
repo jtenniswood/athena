@@ -278,6 +278,7 @@
     "IconClipboard": "content_paste",
     "IconClock": "schedule",
     "IconCloud": "cloud",
+    "IconCloudUpload": "cloud_upload",
     "IconCommand": "keyboard_command_key",
     "IconCopy": "content_copy",
     "IconCornerDownLeft": "keyboard_return",

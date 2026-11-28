@@ -40,17 +40,15 @@ test('catalog prefetch works without idle callbacks and cancels on unmount', () 
       pending.set(++next, callback)
       return next
     }
-    const { scheduleBrowserIdleTask } = load('src/platform/idle.ts', {
+    const window = {
       setTimeout: schedule, clearTimeout: id => pending.delete(id),
       ...(native ? { requestIdleCallback: schedule, cancelIdleCallback: id => pending.delete(id) } : {})
-    })
+    }
     let prefetched
-    const { useBrowserCatalogIdleTask } = load('build/renderer/browser-plugin.ts')
     const source = readFileSync(path.join(root, '../desktop/src/app/capabilities/catalog/catalog-data.ts'), 'utf8')
-    const output = useBrowserCatalogIdleTask(source, root)
-    const parsed = ts.createSourceFile('catalog.ts', output, ts.ScriptTarget.Latest, true)
+    const parsed = ts.createSourceFile('catalog.ts', source, ts.ScriptTarget.Latest, true)
     const fn = parsed.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'prefetchCatalogWhenIdle').getText(parsed)
-    const context = vm.createContext({ exports: {}, scheduleBrowserIdleTask,
+    const context = vm.createContext({ exports: {}, window,
       catalogQuery: kind => ({ kind }), queryClient: { prefetchQuery: query => { prefetched = query.kind } } })
     vm.runInContext(ts.transpileModule(fn, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context)
     const cancel = context.exports.prefetchCatalogWhenIdle('plugins')
@@ -62,8 +60,16 @@ test('catalog prefetch works without idle callbacks and cancels on unmount', () 
     pending.values().next().value()
     assert.equal(prefetched, 'plugins')
     assert.equal(native ? calls[0].timeout : calls[0], native ? 5_000 : 0)
-    assert.throws(() => useBrowserCatalogIdleTask(source.replace('return () => cancelIdleCallback(id)', ''), root), /boundary changed/)
   }
+})
+
+test('both group creation paths select the room through browser navigation', () => {
+  const { useBrowserRosterSelection } = createBuildModuleLoader().load(path.join(root, 'build/renderer/transforms/roster.ts'))
+  const source = readFileSync(path.join(root, '../desktop/src/plugins/hermes-bots/roster-pane-dialogs.tsx'), 'utf8')
+  const output = useBrowserRosterSelection(source, root, 'created-group')
+  assert.match(output, /<CreateGroupChatDialog[\s\S]*?onCreated=\{selectBrowserGroup\}/)
+  assert.equal(output.split('onCreated={selectBrowserGroup}').length - 1, 2)
+  assert.doesNotMatch(output, /openGroupChat/)
 })
 
 test('browser crash recovery keeps the boundary lifecycle and replaces desktop-only actions', () => {
@@ -406,7 +412,7 @@ test('browser microphone capture distinguishes insecure origins and lets getUser
   const context = vm.createContext({
     exports: {}, DOMException,
     window: { isSecureContext: false }, navigator: {},
-    require: () => ({ useState: value => [value, () => {}], useRef: current => ({ current }), useEffect: () => {}, hostHas: () => false, meterContextsClosed: async () => {} })
+    require: () => ({ atom: value => ({ get: () => value, set: next => { value = next } }), useState: value => [value, () => {}], useRef: current => ({ current }), useEffect: () => {}, hostHas: () => false, meterContextsClosed: async () => {} })
   })
   vm.runInContext(ts.transpileModule(output, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, context)
   const copy = { microphoneUnsupported: 'Unsupported', microphoneAccessDenied: 'Access denied', microphonePermissionDenied: 'Permission denied', noMicrophone: 'No microphone' }
@@ -425,12 +431,12 @@ test('latest renderer keeps None grouping integrated and handles layout-less too
   const layoutFile = path.join(root, '../desktop/src/store/layout.ts')
   const layout = readFileSync(layoutFile, 'utf8')
   const layoutOutput = browserPlugin(root).transform(layout, layoutFile)?.code
-  assert.match(layoutOutput, /SIDEBAR_GROUPING_ORDER = \['none', 'date', 'project', 'status', 'profile'\]/)
+  assert.match(layoutOutput, /SIDEBAR_GROUPING_ORDER = \['none', 'project'\]/)
   assert.match(layoutOutput, /SIDEBAR_DEFAULT_GROUPING: SidebarGrouping = 'none'/)
 
   const filterFile = path.join(root, '../desktop/src/app/chat/sidebar/filter-menu.tsx')
   const filter = browserPlugin(root).transform(readFileSync(filterFile, 'utf8'), filterFile)?.code
-  assert.match(filter, /none: \{ icon: 'list-unordered', label: 'None' \}/)
+  assert.match(filter, /setSidebarGrouping\(grouping === 'project' \? 'none' : 'project'\)/)
 
   const tooltip = readFileSync(path.join(root, '../desktop/src/components/ui/tooltip.tsx'), 'utf8')
   assert.match(tooltip, /while \(candidate && !hasLayout\(candidate\)\)/)

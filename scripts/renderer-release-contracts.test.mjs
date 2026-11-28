@@ -13,11 +13,24 @@ function transformed(module) {
 }
 test('shared browser routes reuse the primary without asking the native backend', async () => {
   const output = transformed('store/gateway-shared-route.ts')
-  const realm = vm.createContext({ exports: {}, require: () => ({}), window: { __HERMES_WEB_BRIDGE__: true, hermesDesktop: { getConnection() { throw Error('Unexpected native route lookup') } } } })
+  let lookups = 0
+  const descriptor = { profile: 'writer', sharedPrimary: true }
+  const realm = vm.createContext({
+    exports: {},
+    require: () => ({ withTimeout: promise => promise }),
+    window: { __HERMES_WEB_BRIDGE__: true, hermesDesktop: { getConnection: async () => { lookups++; return descriptor } } }
+  })
   vm.runInContext(ts.transpileModule(output, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, realm)
   assert.equal(await realm.exports.sharedPrimaryRoute('writer'), true)
+  assert.equal(lookups, 0)
+  assert.equal(await realm.exports.sharedPrimaryConnection('writer'), descriptor)
+  assert.equal(lookups, 1)
   realm.window.__HERMES_WEB_BRIDGE__ = false
+  assert.equal(await realm.exports.sharedPrimaryRoute('writer'), true)
+  realm.window.hermesDesktop.getConnection = async () => ({ sharedPrimary: false })
   assert.equal(await realm.exports.sharedPrimaryRoute('writer'), false)
+  realm.window.hermesDesktop.getConnection = async () => { throw new Error('Route unavailable') }
+  await assert.rejects(realm.exports.sharedPrimaryRoute('writer'), /Route unavailable/)
 })
 test('connection preference listener tolerates an absent previous snapshot', () => {
   const output = transformed('store/connections.ts')
