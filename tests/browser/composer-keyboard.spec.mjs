@@ -137,13 +137,16 @@ test('accepted sends position their real mounted renderer transcript', async ({ 
     await expect(prompt).toContainText(text)
     await expect.poll(() => prompt.evaluate(node => node.closest('[data-slot="aui_turn-pair"]').style.minHeight)).not.toBe('')
     // Both turns stay below the floating header. The first turn stops at its natural top.
-    await expect.poll(() => prompt.evaluate(node => {
+    // Scroll offsets can be rounded to a whole pixel while layout positions are fractional.
+    const targetGap = fresh ? 0 : 12
+    await expect.poll(() => prompt.evaluate((node, target) => {
       const turn = node.closest('[data-slot="aui_turn-pair"]')
       const viewport = node.closest('[data-slot="aui_thread-viewport"]')
       const scale = viewport.getBoundingClientRect().height / viewport.offsetHeight
       const headerClearance = Number.parseFloat(getComputedStyle(viewport).scrollPaddingBlockStart) || 0
-      return (turn.getBoundingClientRect().top - viewport.getBoundingClientRect().top) / scale - headerClearance
-    })).toBeCloseTo(fresh ? 0 : 12, 0)
+      const gap = (turn.getBoundingClientRect().top - viewport.getBoundingClientRect().top) / scale - headerClearance
+      return Math.abs(gap - target)
+    }, targetGap)).toBeLessThanOrEqual(1)
   }
 })
 
