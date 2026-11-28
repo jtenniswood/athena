@@ -17,8 +17,9 @@ function hermesPostLoginTarget(next) {
   return execFileSync('python3', ['-c', `
 import ast, pathlib, sys
 source = ast.parse(pathlib.Path(sys.argv[1]).read_text())
+validators = {'is_safe_next_path', 'is_same_origin_path'}
 selected = [node for node in source.body if
-    isinstance(node, ast.FunctionDef) and node.name == 'is_safe_next_path' or
+    isinstance(node, ast.FunctionDef) and node.name in validators or
     isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == '_NEXT_DENY_PREFIXES' for target in node.targets)]
 namespace = {}
 exec(compile(ast.Module(body=selected, type_ignores=[]), sys.argv[1], 'exec'), namespace)

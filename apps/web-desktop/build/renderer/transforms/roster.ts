@@ -4,7 +4,7 @@ import { replaceBrowserContract } from './contract'
 export function useBrowserRosterDialogFocus(source: string, root: string): string {
   const owner = JSON.stringify(path.join(root, 'src/experience/ui/dialog-focus'))
   const targets = [
-    ['export function GroupDialog({ bot, onClose }: GroupDialogProps) {', 'true', '      <DialogContent className="max-w-sm">', '      <DialogContent className="max-w-sm" data-browser-bot-dialog="section" onCloseAutoFocus={browserReturnFocus}>'],
+    ['export function GroupDialog({ bot, onClose, onCreated }: GroupDialogProps) {', 'true', '      <DialogContent className="max-w-sm">', '      <DialogContent className="max-w-sm" data-browser-bot-dialog="section" onCloseAutoFocus={browserReturnFocus}>'],
     ['export function EditProfileDialog({ bot, open, onClose }: EditProfileDialogProps) {', 'open', '      <DialogContent\n', '      <DialogContent\n        data-browser-bot-dialog={advanced ? \'advanced\' : \'section\'}\n        onCloseAutoFocus={browserReturnFocus}\n'],
     ['}: ConfirmDialogProps) {', 'open', '      <DialogContent\n', '      <DialogContent\n        data-browser-bot-dialog="confirm"\n        onCloseAutoFocus={browserReturnFocus}\n']
   ]
@@ -20,7 +20,7 @@ export function useBrowserBotDialogFocus(source: string, root: string): string {
   const owner = JSON.stringify(path.join(root, 'src/experience/ui/dialog-focus'))
   const changes = [
     ['export function CreateAgentDialog({ open, onClose, onConfigureModel, roster }: CreateAgentDialogProps) {', 'export function CreateAgentDialog({ open, onClose, onConfigureModel, roster }: CreateAgentDialogProps) {\n  const browserReturnFocus = useBrowserDialogReturnFocus(open)'],
-    ['export function CreateGroupChatDialog({ open, roster, onClose, onCreated }: CreateGroupChatDialogProps) {', 'export function CreateGroupChatDialog({ open, roster, onClose, onCreated }: CreateGroupChatDialogProps) {\n  const browserReturnFocus = useBrowserDialogReturnFocus(open)'],
+    ['export function CreateGroupChatDialog({ open, roster, onClose, onCreated, seed }: CreateGroupChatDialogProps) {', 'export function CreateGroupChatDialog({ open, roster, onClose, onCreated, seed }: CreateGroupChatDialogProps) {\n  const browserReturnFocus = useBrowserDialogReturnFocus(open)'],
     ['      <DialogContent\n', '      <DialogContent\n        data-browser-bot-dialog={advanced ? \'advanced\' : \'create\'}\n        onCloseAutoFocus={browserReturnFocus}\n'],
     ['      <DialogContent className="max-w-md">', '      <DialogContent className="max-w-md" data-browser-bot-dialog="group" onCloseAutoFocus={browserReturnFocus}>']
   ]
@@ -47,7 +47,7 @@ export function useBrowserRosterActionSurfaces(source: string, root: string): st
   const end = '    </ContextMenu>\n  )'
   const replacements = [
     '  return <BrowserBotRowActions bot={bot} row={row} onDelete={onDelete} onEdit={onEdit} onGroup={onGroup} onNewSection={onNewSection} />',
-    '  return <BrowserGroupRowActions name={group} deleteLabel={b.group.deleteAction} row={row} onOpen={() => onOpen(group)} onDelete={() => onDisband({ name: group, members })} />'
+    '  return <BrowserGroupRowActions name={group} deleteLabel={b.group.disbandAction} row={row} onOpen={() => onOpen(group)} onDelete={() => onDisband({ name: group, members })} />'
   ]
   if (source.split(start).length !== 3 || source.split(end).length !== 3) throw new Error('Browser roster action boundary changed')
   for (const replacement of replacements) {
@@ -138,8 +138,9 @@ export function useBrowserRosterSelection(source: string, root: string, surface:
   }
   let output = source
   for (const [target, replacement] of replacements[surface]) {
-    if (output.split(target).length !== 2) throw new Error(`Browser ${surface} selection target changed`)
-    output = output.replace(target, replacement)
+    const count = surface === 'created-group' && target.startsWith('onCreated=') ? 2 : 1
+    if (output.split(target).length !== count + 1) throw new Error(`Browser ${surface} selection target changed`)
+    output = output.replaceAll(target, replacement)
   }
   const command = surface === 'bot' ? 'selectBrowserBot' : 'selectBrowserGroup'
   return `import { ${command} } from ${JSON.stringify(path.join(root, 'src/upstream/roster-selection.ts'))}\n` + output

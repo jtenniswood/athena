@@ -22,6 +22,8 @@ function navigation({ active = 'default', all = false, hidden = ['archived'], na
     useRef: value => ({ current: value }),
     useState: value => [typeof value === 'function' ? value() : value, () => {}],
     useEffect: () => {},
+    useLayoutEffect: () => {},
+    useBrowserProfileMenuActions: () => ({ manage: [], layout: { key: 'profile-layout' } }),
     useBrowserEngine: () => ({ profiles: { useProfiles: () => model }, surfaces: { ProfileEditor: 'editor' } }),
     useMobileBrowser: () => false,
     readHiddenProfiles: () => hidden,
@@ -29,11 +31,13 @@ function navigation({ active = 'default', all = false, hidden = ['archived'], na
     BrowserActionSurface: 'surface',
     avatarColor: () => null
   })
-  const tree = BrowserProfileNavigation({})
+  const tree = BrowserProfileNavigation({ combined: false })
   const surface = tree.props.children.find(child => child.type === 'surface')
+  const visibility = surface.props.groups.flatMap(group => group.actions).find(action => action.key === 'visible-profiles')
+  const actions = visibility.children.flatMap(group => group.actions)
   return {
     selections,
-    toggle: name => surface.props.groups.flatMap(group => group.actions).find(action => action.key === `profile-${name}`).run()
+    toggle: name => actions.find(action => action.key === `profile-${name}`).run()
   }
 }
 

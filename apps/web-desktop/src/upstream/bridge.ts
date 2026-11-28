@@ -104,7 +104,11 @@ export function createWebBridge(): Window['hermesDesktop'] {
     openPreviewInBrowser: openBrowserExternalLink,
     // Preserve selection and dialog focus when the browser denies clipboard access.
     writeClipboard,
-    getConnection: async profile => ownedConnection(await native.getConnection(profile)),
+    // All served profiles on Athena share the configured gateway's socket.
+    getConnection: async profile => ({
+      ...ownedConnection(await native.getConnection(profile)),
+      sharedPrimary: Boolean(profile?.trim())
+    }),
     getConnectionFor: async payload => ownedConnection(await native.getConnectionFor!({ ...payload, connectionId: nativeOwner(payload.connectionId) })),
     getProfileRoutes: async profiles => (await native.getProfileRoutes(profiles)).map(route => ({ ...route, connectionId: WEB_CONNECTION_ID, mode: 'remote' as const })),
     getAgentRoster: async () => {
@@ -141,7 +145,8 @@ export function createWebBridge(): Window['hermesDesktop'] {
       try {
         const share = read && request.body === undefined && !request.upload &&
           sharedStartupReadPaths.has(request.path.split('?')[0])
-        const response = share ? await readStartup<T>(request) : await native.api<T>(request)
+        const target = request.connectionId ? { ...request, connectionId: nativeOwner(request.connectionId) } : request
+        const response = share ? await readStartup<T>(target) : await native.api<T>(target)
         return tagRegistrySessionResponse(request.path, response, WEB_CONNECTION_ID) as T
       } catch (error) {
         // A proxy can deny the request, redirect it across origins, or return a login page.

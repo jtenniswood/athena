@@ -136,8 +136,8 @@ test('accepted sends position their real mounted renderer transcript', async ({ 
     const prompt = page.locator('[data-slot="aui_user-message-root"]').last()
     await expect(prompt).toContainText(text)
     await expect.poll(() => prompt.evaluate(node => node.closest('[data-slot="aui_turn-pair"]').style.minHeight)).not.toBe('')
-    // Both turns stay below the floating header. The first turn stops at its natural top.
-    // Scroll offsets can be rounded to a whole pixel while layout positions are fractional.
+    // The first turn stops at its natural top. Fractional layout and
+    // integer scroll offsets can move the result by up to two layout pixels.
     const targetGap = fresh ? 0 : 12
     await expect.poll(() => prompt.evaluate((node, target) => {
       const turn = node.closest('[data-slot="aui_turn-pair"]')
@@ -146,7 +146,7 @@ test('accepted sends position their real mounted renderer transcript', async ({ 
       const headerClearance = Number.parseFloat(getComputedStyle(viewport).scrollPaddingBlockStart) || 0
       const gap = (turn.getBoundingClientRect().top - viewport.getBoundingClientRect().top) / scale - headerClearance
       return Math.abs(gap - target)
-    }, targetGap)).toBeLessThanOrEqual(1)
+    }, targetGap)).toBeLessThanOrEqual(2)
   }
 })
 

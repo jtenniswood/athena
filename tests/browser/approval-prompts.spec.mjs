@@ -41,14 +41,24 @@ for (const width of [1100, 390]) {
     await editor.fill('Keep this unsent draft')
     const viewport = page.locator('[data-slot="aui_thread-viewport"]:visible')
     await expect(viewport).toContainText('Earlier discussion 20')
-    await viewport.evaluate(node => { node.scrollTop = node.scrollHeight })
-    await expect(viewport).toHaveAttribute('data-following', 'true')
-    // Startup can still restore the saved bottom position while history lays out.
+    await expect.poll(() => viewport.evaluate(node => node.scrollHeight - node.clientHeight)).toBeGreaterThan(100)
+    const distanceFromBottom = () => viewport.evaluate(node => node.scrollHeight - node.clientHeight - node.scrollTop)
     await expect(async () => {
-      await viewport.evaluate(node => { node.scrollTop = 0 })
-      await expect(viewport).toHaveAttribute('data-following', 'false', { timeout: 500 })
-      expect(await viewport.evaluate(node => node.scrollTop)).toBeLessThan(2)
-    }).toPass({ timeout: 5000 })
+      await viewport.evaluate(node => { node.scrollTop = node.scrollHeight })
+      expect(await distanceFromBottom()).toBeLessThan(2)
+      await expect(viewport).toHaveAttribute('data-following', 'true', { timeout: 1000 })
+    }).toPass({ timeout: 10000 })
+    // Wheel input cancels the transcript's saved-position restoration.
+    await viewport.hover()
+    await expect(async () => {
+      await page.mouse.wheel(0, -400)
+      await expect(viewport).toHaveAttribute('data-following', 'false', { timeout: 1000 })
+      expect(await distanceFromBottom()).toBeGreaterThan(100)
+    }).toPass({ timeout: 10000 })
+    // Browsers apply wheel deltas differently. Position the reader at the top
+    // after the gesture has unlocked bottom-follow in the renderer.
+    await viewport.evaluate(node => { node.scrollTop = 0 })
+    await expect.poll(() => viewport.evaluate(node => node.scrollTop)).toBeLessThan(2)
 
     gateway.send(JSON.stringify({
       jsonrpc: '2.0', id: serverRequestId, method: 'approval',

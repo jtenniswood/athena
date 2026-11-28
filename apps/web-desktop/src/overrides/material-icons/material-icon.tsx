@@ -1,5 +1,5 @@
 import { forwardRef, type CSSProperties, type SVGProps } from 'react'
-import { Codicon } from '@/components/ui/codicon'
+import { Codicon } from '../../upstream/renderer-codicon'
 import names from './names.json'
 import outlines from './outlined-paths.json'
 

@@ -108,7 +108,6 @@ export {
 } from './transforms/roster'
 import {
   useBrowserMessagingPresentation,
-  useBrowserCatalogIdleTask,
   useBrowserStylesheetOwner,
   useBrowserErrorFallback,
   useBrowserConnectingVisual,
@@ -130,7 +129,6 @@ export {
 } from './transforms/sidebar'
 export {
   useBrowserMessagingPresentation,
-  useBrowserCatalogIdleTask,
   useBrowserStylesheetOwner,
   useBrowserErrorFallback,
   useBrowserConnectingVisual,
@@ -302,7 +300,6 @@ function applyBrowserTransform(code: string, id: string, root: string, order: nu
     presentBrowserKanbanOrchestration,
     useBrowserMessagingPresentation: source => useBrowserMessagingPresentation(source, root),
     excludeBundledBotMode,
-    useBrowserCatalogIdleTask: source => useBrowserCatalogIdleTask(source, root),
     useBrowserErrorFallback: source => useBrowserErrorFallback(source, root),
     useBrowserStylesheetOwner,
     keepBrowserPluginManagementInSettings,

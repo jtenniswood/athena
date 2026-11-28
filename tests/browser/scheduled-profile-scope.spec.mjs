@@ -31,10 +31,12 @@ for (const width of [1440, 390]) {
       await page.goto(app.origin + '/?profile=research#/preview-research?profile=research')
       if (width === 390) await page.locator('#browser-navigation').getByRole('button', { name: 'Research Notes', exact: true }).click()
       await expect(editor(page)).toBeVisible({ timeout: 30000 })
-      const chatRoute = new URL(page.url()).hash
+      // This fixture is the Research Bot's canonical chat. Wait for the
+      // roster to resolve its owner before recording the mounted conversation.
       const conversation = page.locator('[data-browser-conversation-id]')
-      const chatId = await conversation.getAttribute('data-browser-conversation-id')
-      expect(chatId).toBeTruthy()
+      const chatId = 'web-single::research'
+      await expect(conversation).toHaveAttribute('data-browser-conversation-id', chatId)
+      const chatRoute = new URL(page.url()).hash
       await editor(page).fill('Keep this Research draft while reviewing scheduled tasks')
       if (width === 390) {
         await page.getByRole('button', { name: 'Back to chat history', exact: true }).click()

@@ -2373,14 +2373,20 @@ for (const width of [390, 1440]) {
     const trigger = await settingsTrigger(page)
     await (await settingsTrigger(page)).click()
     await expect(page.locator('.browser-settings-group-heading')).toHaveText([
-      'Preferences', 'Assistant', 'Tools', 'Service', 'Maintenance'
+      'Preferences', 'Assistant', 'Tools', 'Service', 'Maintenance', 'Other Settings', 'Panels'
     ])
     await expect(page.locator('.browser-settings-category-button:not(.is-child) > span:not(.codicon)')).toHaveText([
       'Appearance', 'Chat panel', 'Theme', 'Notifications', 'Sounds', 'Keyboard Shortcuts', 'Models', 'AI Connections', 'Chat', 'Voice',
-      'Profiles', 'Memory', 'Workspace', 'Webhooks', 'Plugins', 'Permissions',
-      'Credentials', 'Gateway', 'Command center', 'Billing', 'System updates', 'Archived Chats', 'Configuration', 'Advanced'
+      'Profiles', 'Memory', 'Workspace', 'Webhooks', 'Kanban', 'Plugins', 'Permissions',
+      'Credentials', 'Gateway', 'Command center', 'Billing', 'System updates', 'Archived Chats', 'Configuration', 'Advanced',
+      'Backup', 'Capabilities', 'Messaging', 'Artifacts', 'Scheduled'
     ])
     await page.screenshot({ path: testInfo.outputPath('settings-groups.png') })
+    await page.getByRole('button', { name: 'Backup', exact: true }).click()
+    const backup = page.getByRole('main', { name: 'Backup', exact: true })
+    await expect(backup.getByText('Back up this agent', { exact: true })).toBeVisible()
+    await expect(backup.getByText('Transfer to Hermes Cloud', { exact: true })).toHaveCount(0)
+    if (width < 896) await page.getByRole('button', { name: 'Back', exact: true }).click()
     await page.getByRole('button', { name: 'Appearance', exact: true }).click()
     await expect(page.locator('#setting-field-appearance\\.language')).toBeVisible()
     await expect(page.locator('#setting-field-appearance\\.user-bubble')).toHaveCount(0)

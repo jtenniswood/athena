@@ -4,6 +4,9 @@ import ts from 'typescript'
 /** Extract the renderer's existing page/control lifecycle, without generating a browser frame. */
 export function useBrowserSettingsController(source: string, root: string): string {
   const replacements = [
+    ["import { servedByHermesCloud } from '@/lib/hermes-cloud-host'", "import { transferAvailable } from '@/lib/hermes-cloud-agents'"],
+    ['icon: servedByHermesCloud() ? Archive : CloudUpload', 'icon: transferAvailable() ? CloudUpload : Archive'],
+    ['label: servedByHermesCloud() ? t.settings.nav.backupOnly : t.settings.nav.backup', 'label: transferAvailable() ? t.settings.nav.backup : t.settings.nav.backupOnly'],
     ["useRouteEnumParam('tab', SETTINGS_VIEWS, 'config:model' as SettingsViewId)", 'useBrowserSettingsDestination(SETTINGS_VIEWS)'],
     ['const subpage = resolveSettingsSubpage(activeView, params)', 'const subpage = browserSettingsSubpage(activeView, params, resolveSettingsSubpage)'],
     ['const destination = page ?? settingsSubpages(view)[0]?.id', 'const destination = page ?? browserSettingsDefaultSubpage(view, settingsSubpages(view))'],

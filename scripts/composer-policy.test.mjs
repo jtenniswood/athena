@@ -34,6 +34,7 @@ function composer({ preference = 'queue', busy = true, disabled = false, attachm
     if (name.endsWith('/touch-interaction')) return { isTouchInteraction: () => false }
     if (name.endsWith('/onboarding-session')) return { isOnboardingChat: () => false }
     if (name.endsWith('/composer-outbox')) return { journalOutgoingSend: () => ({ move() {}, retire() {} }) }
+    if (name === '@/store/backend-transition') return { changesBackend: kind => kind === 'starting' || kind === 'stopping' }
     if (name.endsWith('/notifications')) return { notify() {} }
     if (name === '@hermes/shared') return { randomUuid: () => crypto.randomUUID(), SLASH_COMMAND_RE: /^\/\w/ }
     if (name.endsWith('pane-visibility')) return { usePaneVisible: () => true }
@@ -42,6 +43,8 @@ function composer({ preference = 'queue', busy = true, disabled = false, attachm
     if (name.endsWith('/path-refs')) return { pathifyRefs: value => value }
     if (name.endsWith('/haptics')) return { triggerHaptic() {} }
     if (name.endsWith('/clarify')) return { hasClarifyRequest: () => false }
+    if (name.endsWith('/paused-replies')) return { isReplyPaused: () => false, useReplyPaused: () => false }
+    if (name.endsWith('/use-composer-queue')) return { freezeQueuedDraftText: text => text }
     if (name.endsWith('/parked-card-answers')) return {
       answerParkedCard: () => { if (parked) calls.push('answer-card'); return parked },
       yieldParkedCardsToMessage: () => yielded, skipParkedCards() {}
